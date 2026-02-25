@@ -1,0 +1,369 @@
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { Eye, EyeOff, Building2, Shield } from "lucide-react";
+import { useBranding } from "@/contexts/BrandingContext";
+import { useAuth } from "@/contexts/AuthContext";
+
+const floatingOrbs = [
+{ size: 420, x: 60, y: -5, color: "#FF870F", opacity: 0.12, duration: 18, delay: 0 },
+{ size: 350, x: -10, y: 70, color: "#87FF0F", opacity: 0.09, duration: 22, delay: 2 },
+{ size: 280, x: 40, y: 40, color: "#FF870F", opacity: 0.07, duration: 25, delay: 5 },
+{ size: 200, x: 80, y: 55, color: "#87FF0F", opacity: 0.06, duration: 20, delay: 8 },
+{ size: 160, x: 25, y: 20, color: "#FF9A3C", opacity: 0.08, duration: 16, delay: 3 }];
+
+
+// Generate particles with gradient density: dense at bottom, sparse toward middle
+const particles = Array.from({ length: 250 }, (_, i) => {
+  const rand = Math.random();
+  const y = 100 - rand * rand * 50;
+  const heightFactor = (y - 50) / 50;
+  return {
+    x: Math.random() * 100,
+    y,
+    size: Math.random() * 2 + 0.5 + heightFactor * 1.5,
+    duration: Math.random() * 10 + 12,
+    delay: Math.random() * 15,
+    opacity: (Math.random() * 0.4 + 0.15) * (0.4 + heightFactor * 0.6),
+    color: i % 3 === 0 ? "#FF870F" : i % 3 === 1 ? "#FF9A3C" : "#87FF0F"
+  };
+});
+const Login = () => {
+  const navigate = useNavigate();
+  const { programName, programSubtitle, logoUrl, logoOnlyUrl, displayMode } = useBranding();
+  const activeLogo = displayMode === "logo-only" ? logoOnlyUrl : logoUrl;
+  const auth = useAuth();
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    if (!username.trim() || !password.trim()) {
+      setError("กรุณากรอก Username และรหัสผ่าน");
+      return;
+    }
+    setIsLoading(true);
+    await new Promise((r) => setTimeout(r, 800));
+    const success = auth.login(username.trim(), password.trim());
+    setIsLoading(false);
+    if (!success) {
+      setError("Username หรือรหัสผ่านไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง");
+      return;
+    }
+    // Redirect based on role
+    const nonDashboardRoles = ["Employee", "Accountant", "Executive"];
+    const loggedUser = auth.currentUser;
+    if (loggedUser && nonDashboardRoles.includes(loggedUser.role)) {
+      navigate("/check-in");
+    } else {
+      navigate("/dashboard");
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex bg-background">
+      {/* Left Panel */}
+      <div className="hidden lg:flex lg:w-1/2 bg-gradient-dark relative overflow-hidden flex-col justify-between p-12">
+        {/* Animated floating orbs */}
+        <div className="absolute inset-0">
+          {floatingOrbs.map((orb, i) =>
+          <div
+            key={i}
+            className="absolute rounded-full"
+            style={{
+              width: orb.size,
+              height: orb.size,
+              left: `${orb.x}%`,
+              top: `${orb.y}%`,
+              background: `radial-gradient(circle, ${orb.color}, transparent 70%)`,
+              opacity: orb.opacity,
+              animation: `loginFloat${i} ${orb.duration}s ease-in-out ${orb.delay}s infinite`,
+              filter: "blur(40px)",
+              transform: "translate(-50%, -50%)"
+            }} />
+
+          )}
+        </div>
+
+        {/* Sparkle particles */}
+        <div className="absolute inset-0 pointer-events-none">
+          {particles.map((p, i) =>
+          <div
+            key={`p-${i}`}
+            className="absolute rounded-full"
+            style={{
+              width: p.size,
+              height: p.size,
+              left: `${p.x}%`,
+              top: `${p.y}%`,
+              backgroundColor: p.color,
+              opacity: 0,
+              animation: `sparkle ${p.duration}s ease-in-out ${p.delay}s infinite`,
+              boxShadow: `0 0 ${p.size * 2}px ${p.color}`
+            }} />
+
+          )}
+        </div>
+
+        {/* Grid pattern overlay */}
+        <div
+          className="absolute inset-0 opacity-5"
+          style={{
+            backgroundImage: `linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)`,
+            backgroundSize: "40px 40px"
+          }} />
+
+
+        {/* Logo */}
+        <div className="relative z-10">
+          <div className={`flex items-center gap-3 mb-2 ${displayMode === "logo-only" ? "max-w-[180px]" : ""}`}>
+            {activeLogo ?
+            <img
+              src={activeLogo}
+              alt="Logo"
+              className={`flex-shrink-0 ${displayMode === "logo-only" ? "w-full max-h-20 object-contain rounded-xl" : "w-12 h-12 object-cover rounded-none"}`} /> :
+
+
+            <div
+              className={`flex items-center justify-center flex-shrink-0 ${displayMode === "logo-only" ? "w-20 h-20 rounded-xl" : "w-12 h-12 rounded-none"}`}
+              style={{ background: "linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary) / 0.7))" }}>
+
+                <Building2 className={`text-black ${displayMode === "logo-only" ? "w-12 h-12" : "w-7 h-7"}`} />
+              </div>
+            }
+            {displayMode === "logo-and-name" &&
+            <div>
+                <h1 className="text-white text-xl font-bold font-display">{programName}</h1>
+                <p className="text-xs" style={{ color: "rgba(255,255,255,0.5)" }}>
+                  {programSubtitle}
+                </p>
+              </div>
+            }
+          </div>
+        </div>
+
+        {/* Main content */}
+        <div className="relative z-10">
+          <div
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium mb-6"
+            style={{ background: "hsl(var(--primary) / 0.15)", color: "hsl(var(--primary))", border: "1px solid hsl(var(--primary) / 0.3)" }}>
+
+            <Shield className="w-4 h-4" />
+            Secure Access Portal
+          </div>
+          <h2 className="text-4xl font-bold text-white font-display leading-tight mb-4">
+            ระบบบริหาร
+            <br />
+            <span style={{ color: "hsl(var(--primary))" }}>จัดการพนักงาน</span>องค์กร
+          </h2>
+          <p className="text-lg leading-relaxed mb-8" style={{ color: "rgba(255,255,255,0.6)" }}>
+            Human Resources & Organization Management System ครบวงจร ติดตามเวลา ลา OT และโครงสร้างองค์กร
+          </p>
+
+          {/* Feature pills */}
+          <div className="flex flex-wrap gap-2">
+            {["ระบบลางาน", "บันทึกเวลา", "โครงสร้างองค์กร", "รายงาน Excel/PDF", "GPS Check-in"].map((f) =>
+            <span
+              key={f}
+              className="px-3 py-1.5 rounded-full text-xs font-medium"
+              style={{
+                background: "rgba(255,255,255,0.08)",
+                color: "rgba(255,255,255,0.7)",
+                border: "1px solid rgba(255,255,255,0.12)"
+              }}>
+
+                {f}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Bottom stats */}
+        <div className="relative z-10 grid grid-cols-3 gap-4">
+          {[
+          { label: "พนักงาน", value: "500+" },
+          { label: "แผนก", value: "24" },
+          { label: "สาขา", value: "8" }].
+          map((s) =>
+          <div
+            key={s.label}
+            className="text-center p-3 rounded-xl"
+            style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)" }}>
+
+              <div className="text-2xl font-bold font-display" style={{ color: "hsl(var(--primary))" }}>
+                {s.value}
+              </div>
+              <div className="text-xs mt-0.5" style={{ color: "rgba(255,255,255,0.5)" }}>
+                {s.label}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Right Panel - Login Form */}
+      <div className="flex-1 flex items-center justify-center p-6 lg:p-12">
+        <div className="w-full max-w-md animate-fade-in">
+          {/* Mobile logo */}
+          <div className="flex items-center gap-3 mb-8 lg:hidden">
+            {activeLogo ?
+            <img
+              src={activeLogo}
+              alt="Logo"
+              className={`rounded-xl object-cover ${displayMode === "logo-only" ? "w-20 h-20" : "w-10 h-10"}`} /> :
+
+
+            <div
+              className={`rounded-xl flex items-center justify-center ${displayMode === "logo-only" ? "w-20 h-20" : "w-10 h-10"}`}
+              style={{ background: "linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary) / 0.7))" }}>
+
+                <Building2 className={`text-black ${displayMode === "logo-only" ? "w-10 h-10" : "w-6 h-6"}`} />
+              </div>
+            }
+            {displayMode === "logo-and-name" &&
+            <div>
+                <h1 className="text-xl font-bold font-display">{programName}</h1>
+                <p className="text-xs text-muted-foreground">{programSubtitle}</p>
+              </div>
+            }
+          </div>
+
+          <div className="mb-8">
+            <h2 className="text-3xl font-bold font-display mb-2">ยินดีต้อนรับ 👋</h2>
+            <p className="text-muted-foreground">กรุณาเข้าสู่ระบบด้วยข้อมูลพนักงานของคุณ</p>
+          </div>
+
+          <form onSubmit={handleLogin} className="space-y-5">
+            {/* Username */}
+            <div>
+              <label className="block text-sm font-semibold mb-2">ชื่อผู้ใช้ </label>
+              <input
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="username"
+                className="w-full px-4 py-3 rounded-xl border text-sm transition-all duration-200 outline-none focus:ring-2"
+                style={{
+                  background: "hsl(var(--card))",
+                  borderColor: username ? "hsl(var(--primary))" : "hsl(var(--border))",
+                  boxShadow: username ? "0 0 0 3px hsl(var(--primary) / 0.12)" : "none",
+                  color: "hsl(var(--foreground))"
+                }} />
+
+              <p className="text-xs text-muted-foreground mt-1.5">
+                ตัวอย่าง: somchai.j
+              </p>
+            </div>
+
+            {/* Password */}
+            <div>
+              <label className="block text-sm font-semibold mb-2">รหัสผ่าน</label>
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="รหัสผ่านของคุณ"
+                  className="w-full px-4 py-3 pr-12 rounded-xl border text-sm transition-all duration-200 outline-none"
+                  style={{
+                    background: "hsl(var(--card))",
+                    borderColor: password ? "hsl(var(--primary))" : "hsl(var(--border))",
+                    boxShadow: password ? "0 0 0 3px hsl(var(--primary) / 0.12)" : "none",
+                    color: "hsl(var(--foreground))"
+                  }} />
+
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-lg text-muted-foreground hover:text-foreground transition-colors">
+
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+
+            {/* Remember + Forgot */}
+            <div className="flex items-center justify-between">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" className="w-4 h-4 rounded accent-primary" />
+                <span className="text-sm text-muted-foreground">จดจำการเข้าสู่ระบบ</span>
+              </label>
+              <button type="button" className="text-sm font-medium" style={{ color: "hsl(var(--primary))" }}>
+                ลืมรหัสผ่าน?
+              </button>
+            </div>
+
+            {/* Error */}
+            {error &&
+            <div className="p-3 rounded-xl text-sm" style={{ background: "hsl(0 84% 95%)", color: "hsl(0 84% 40%)" }}>
+                {error}
+              </div>
+            }
+
+            {/* Submit */}
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full py-3.5 rounded-xl text-sm font-bold transition-all duration-200 flex items-center justify-center gap-2 animate-pulse-orange"
+              style={{
+                background: isLoading ? "hsl(var(--muted))" : "linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary) / 0.8))",
+                color: isLoading ? "hsl(var(--muted-foreground))" : "hsl(var(--primary-foreground))",
+                boxShadow: isLoading ? "none" : "0 4px 20px hsl(var(--primary) / 0.4)"
+              }}>
+
+              {isLoading ?
+              <>
+                  <div className="w-4 h-4 border-2 border-muted-foreground border-t-transparent rounded-full animate-spin" />
+                  กำลังเข้าสู่ระบบ...
+                </> :
+
+              "เข้าสู่ระบบ"
+              }
+            </button>
+          </form>
+
+          {/* Demo credentials */}
+          <div
+            className="mt-6 p-4 rounded-xl text-sm"
+            style={{ background: "hsl(var(--primary) / 0.08)", border: "1px solid hsl(var(--primary) / 0.2)" }}>
+
+            <p className="font-semibold mb-3" style={{ color: "hsl(var(--primary))" }}>
+              🔑 Demo Access
+            </p>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {[
+              { label: "Admin", username: "kanchana.s", password: "admin1234", icon: "🛡️" },
+              { label: "HR", username: "somying.r", password: "hr1234", icon: "💼" },
+              { label: "Manager", username: "somchai.j", password: "mgr1234", icon: "👔" },
+              { label: "Employee", username: "mana.k", password: "emp1234", icon: "👤" },
+              { label: "Accountant", username: "suda.d", password: "acc1234", icon: "📊" },
+              { label: "Executive", username: "thanakorn.b", password: "exec1234", icon: "👑" }].
+              map((demo) =>
+              <button
+                key={demo.label}
+                type="button"
+                onClick={() => {setUsername(demo.username);setPassword(demo.password);}}
+                className="text-left p-2.5 rounded-lg transition-all hover:scale-[1.01]"
+                style={{ background: "hsl(var(--primary) / 0.05)", border: "1px solid hsl(var(--primary) / 0.15)" }}>
+
+                  <p className="font-semibold text-xs text-center" style={{ color: "hsl(var(--primary))" }}>
+                    {demo.icon} {demo.label}
+                  </p>
+                </button>
+              )}
+            </div>
+          </div>
+
+          <p className="text-center text-xs text-muted-foreground mt-6">
+            © 2025 {programName}. ระบบบริหารจัดการพนักงานองค์กร
+          </p>
+        </div>
+      </div>
+    </div>);
+
+};
+
+export default Login;

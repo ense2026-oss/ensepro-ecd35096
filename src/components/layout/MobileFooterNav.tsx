@@ -1,0 +1,167 @@
+import { NavLink, useLocation } from "react-router-dom";
+import { usePendingCounts } from "@/contexts/PendingCountsContext";
+import { useAuth } from "@/contexts/AuthContext";
+import { useIsMobile } from "@/hooks/use-mobile";
+import {
+  LayoutDashboard,
+  Users,
+  GitBranch,
+  Clock,
+  CalendarDays,
+  Settings,
+  FileText,
+  Bell,
+  MapPin,
+} from "lucide-react";
+
+const allMenuItems = [
+  { icon: LayoutDashboard, label: "หน้าหลัก", path: "/dashboard", adminOnly: false, hideOnMobile: false },
+  { icon: Users, label: "พนักงาน", path: "/employees", adminOnly: false, hideOnMobile: false, employeeSelfOnly: true },
+  { icon: GitBranch, label: "องค์กร", path: "/organization", adminOnly: true, hideOnMobile: false },
+  { icon: Clock, label: "เวลา", path: "/attendance", adminOnly: true, hideOnMobile: false },
+  { icon: CalendarDays, label: "ลางาน", path: "/leave", adminOnly: false, hideOnMobile: false },
+  { icon: Clock, label: "โอที", path: "/overtime", adminOnly: false, hideOnMobile: false },
+  { icon: CalendarDays, label: "จัดกะ", path: "/shift-management", adminOnly: true, hideOnMobile: false },
+  { icon: FileText, label: "รายงาน", path: "/reports", adminOnly: true, hideOnMobile: false },
+  { icon: Settings, label: "ตั้งค่า", path: "/settings", adminOnly: true, hideOnMobile: true },
+];
+
+const MobileFooterNav = () => {
+  const location = useLocation();
+  const { leavePending, attendancePending, overtimePending } = usePendingCounts();
+  const { currentUser, hasAdminAccess } = useAuth();
+  const isMobile = useIsMobile();
+
+  const menuItems = allMenuItems.filter(
+    (item) => (!item.adminOnly || hasAdminAccess) && !(item.hideOnMobile && isMobile)
+  );
+
+  const dynamicBadges: Record<string, number> = {
+    "/attendance": attendancePending,
+    "/leave": leavePending,
+    "/overtime": overtimePending,
+  };
+
+  const isActive = (path: string) => location.pathname === path || (path === "/employees" && location.pathname.startsWith("/employees/"));
+
+  const midIndex = Math.floor(menuItems.length / 2);
+  const leftItems = menuItems.slice(0, midIndex);
+  const rightItems = menuItems.slice(midIndex);
+
+  const renderItem = (item: typeof menuItems[0]) => {
+    const linkPath = (item as any).employeeSelfOnly && !hasAdminAccess && currentUser
+      ? `/employees/${currentUser.id}`
+      : item.path;
+    const active = isActive(item.path);
+    const badgeCount = dynamicBadges[item.path] ?? 0;
+    return (
+      <NavLink
+        key={item.path}
+        to={linkPath}
+        className="flex flex-col items-center justify-center py-1.5 relative flex-1 min-w-0"
+      >
+        <div className="relative">
+          <item.icon
+            className="w-[22px] h-[22px] transition-colors"
+            style={{
+              color: active ? "hsl(var(--primary))" : "hsl(var(--muted-foreground))",
+            }}
+          />
+          {badgeCount > 0 && (
+            <span
+              className="absolute -top-1 -right-1.5 w-3.5 h-3.5 rounded-full text-[8px] font-bold flex items-center justify-center"
+              style={{ background: "#FF870F", color: "#fff" }}
+            >
+              {badgeCount}
+            </span>
+          )}
+        </div>
+        <span
+          className="text-[9px] mt-0.5 font-medium leading-tight truncate max-w-[48px] text-center"
+          style={{
+            color: active ? "hsl(var(--primary))" : "hsl(var(--muted-foreground))",
+          }}
+        >
+          {item.label}
+        </span>
+        {active && (
+          <div
+            className="absolute bottom-0 w-6 h-0.5 rounded-full"
+            style={{ background: "hsl(var(--primary))" }}
+          />
+        )}
+      </NavLink>
+    );
+  };
+
+  return (
+    <div className="fixed bottom-0 left-0 right-0 z-50 lg:hidden">
+      <div
+        className="relative border-t"
+        style={{
+          background: "hsl(var(--card))",
+          borderColor: "hsl(var(--border))",
+          boxShadow: "0 -4px 20px hsl(0 0% 0% / 0.08)",
+        }}
+      >
+        {/* Center Check-in Button (floating) */}
+        <NavLink
+          to="/check-in"
+          className="absolute left-1/2 -translate-x-1/2 -top-5 z-10"
+        >
+          <div className="relative flex items-center justify-center">
+            {/* Wave rings */}
+            <div
+              className="absolute w-16 h-16 rounded-full animate-[wave-ping_1.8s_ease-out_infinite]"
+              style={{
+                background: isActive("/check-in")
+                  ? "hsl(var(--primary) / 0.2)"
+                  : "hsl(90 100% 40% / 0.2)",
+              }}
+            />
+            <div
+              className="absolute w-14 h-14 rounded-full animate-[wave-ping_1.8s_ease-out_0.5s_infinite]"
+              style={{
+                background: isActive("/check-in")
+                  ? "hsl(var(--primary) / 0.15)"
+                  : "hsl(90 100% 40% / 0.15)",
+              }}
+            />
+            {/* Button */}
+            <div
+              className="w-12 h-12 rounded-full flex flex-col items-center justify-center transition-all duration-200 relative z-10"
+              style={{
+                background: isActive("/check-in")
+                  ? "linear-gradient(135deg, hsl(var(--primary)), hsl(31 100% 60%))"
+                  : "linear-gradient(135deg, hsl(90 100% 40%), hsl(90 100% 30%))",
+                boxShadow: "0 3px 12px hsl(var(--primary) / 0.35)",
+                border: "3px solid hsl(var(--card))",
+              }}
+            >
+              <MapPin className="w-4 h-4 text-white" />
+              <span className="text-[7px] font-bold text-white leading-tight mt-0.5">ลงเวลา</span>
+            </div>
+          </div>
+        </NavLink>
+
+        {/* Menu items with space-between layout */}
+        <div className="flex items-end pt-2 pb-[env(safe-area-inset-bottom,8px)]">
+          {/* Left half */}
+          <div className="flex flex-1 justify-around">
+            {leftItems.map(renderItem)}
+          </div>
+
+          {/* Center spacer for the floating button */}
+          <div className="w-[58px] flex-shrink-0" />
+
+          {/* Right half */}
+          <div className="flex flex-1 justify-around">
+            {rightItems.map(renderItem)}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default MobileFooterNav;
