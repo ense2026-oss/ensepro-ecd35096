@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Building2, MapPin, Shield, Clock, Calendar, Workflow, ScanFace, Palette, Banknote, ChevronRight } from "lucide-react";
+import { Building2, MapPin, Shield, Clock, Calendar, Workflow, ScanFace, Palette, Banknote, FileSignature, ChevronRight } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import LocationsSettings from "@/components/settings/LocationsSettings";
@@ -11,6 +11,7 @@ import ApprovalSettings from "@/components/settings/ApprovalSettings";
 import FaceScannerSettings from "@/components/settings/FaceScannerSettings";
 import DisplaySettings from "@/components/settings/DisplaySettings";
 import PayrollSettings from "@/components/settings/PayrollSettings";
+import ContractSettings from "@/components/settings/ContractSettings";
 
 const tabs = [
   { id: "company", label: "ข้อมูลบริษัท", icon: Building2 },
@@ -18,11 +19,11 @@ const tabs = [
   { id: "roles", label: "สิทธิ์ผู้ใช้งาน", icon: Shield },
   { id: "shifts", label: "กะการทำงาน", icon: Clock },
   { id: "payroll", label: "ตั้งค่าเงินเดือน", icon: Banknote },
+  { id: "contracts", label: "สัญญาจ้าง", icon: FileSignature },
   { id: "leave-types", label: "ประเภทการลา", icon: Calendar },
   { id: "approval", label: "ระบบอนุมัติ", icon: Workflow },
   { id: "face-scanner", label: "เครื่องสแกนหน้า", icon: ScanFace },
   { id: "display", label: "การแสดงผล", icon: Palette },
-  
 ];
 
 
@@ -61,6 +62,9 @@ const Settings = () => {
 
       case "payroll":
         return <PayrollSettings />;
+
+      case "contracts":
+        return <ContractSettings />;
 
       default:
         return null;

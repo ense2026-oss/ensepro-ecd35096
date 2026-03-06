@@ -19,6 +19,7 @@ import {
   Shield,
   MapPin,
   Banknote,
+  FileSignature,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -34,6 +35,7 @@ const allNavItems = [
       { icon: LayoutDashboard, label: "หน้าหลัก", path: "/dashboard", adminOnly: false },
       { icon: Users, label: "ข้อมูลพนักงาน", path: "/employees", adminOnly: false, employeeSelfOnly: true },
       { icon: GitBranch, label: "โครงสร้างองค์กร", path: "/organization", adminOnly: true },
+      { icon: FileSignature, label: "จัดการสัญญาจ้าง", path: "/contracts", adminOnly: true },
     ],
   },
   {

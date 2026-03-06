@@ -7,6 +7,7 @@ import { EmployeeProvider } from "./contexts/EmployeeContext";
 import { BrandingProvider } from "./contexts/BrandingContext";
 import { PendingCountsProvider } from "./contexts/PendingCountsContext";
 import { TimeEditProvider } from "./contexts/TimeEditContext";
+import { ContractProvider } from "./contexts/ContractContext";
 import { AuthProvider } from "./contexts/AuthContext";
 import { OrgProvider } from "./contexts/OrgContext";
 import MainLayout from "./components/layout/MainLayout";
@@ -25,6 +26,7 @@ import OvertimeRequest from "./pages/OvertimeRequest";
 import CheckIn from "./pages/CheckIn";
 import ShiftManagement from "./pages/ShiftManagement";
 import Payroll from "./pages/Payroll";
+import Contracts from "./pages/Contracts";
 import NotFound from "./pages/NotFound";
 import { applyDisplaySettings } from "./components/settings/DisplaySettings";
 
@@ -50,6 +52,7 @@ const App = () => (
         <EmployeeProvider>
         <AuthProvider>
         <PendingCountsProvider>
+        <ContractProvider>
         <TimeEditProvider>
         <Routes>
           <Route path="/" element={<ResponsiveRedirect />} />
@@ -59,6 +62,7 @@ const App = () => (
             <Route path="/employees" element={<Employees />} />
             <Route path="/employees/:id" element={<EmployeeProfile />} />
             <Route path="/organization" element={<Organization />} />
+            <Route path="/contracts" element={<Contracts />} />
             <Route path="/attendance" element={<Attendance />} />
             <Route path="/leave" element={<Leave />} />
             <Route path="/overtime" element={<OvertimeRequest />} />
@@ -73,6 +77,7 @@ const App = () => (
           <Route path="*" element={<NotFound />} />
         </Routes>
         </TimeEditProvider>
+        </ContractProvider>
         </PendingCountsProvider>
         </AuthProvider>
         </EmployeeProvider>
