@@ -117,7 +117,7 @@ const Employees = () => {
             <table className="w-full">
               <thead>
                 <tr className="border-b" style={{ borderColor: "hsl(var(--border))" }}>
-                  {["พนักงาน", "ชื่อเล่น", "แผนก / ตำแหน่ง", "ประเภท", "เริ่มงาน", "สถานะ", ""].map((h) => (
+                  {["พนักงาน", "แผนก / ตำแหน่ง", "ประเภท", "เริ่มงาน", "สถานะ", ""].map((h) => (
                     <th key={h} className="text-left px-4 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
@@ -125,7 +125,7 @@ const Employees = () => {
               <tbody>
                 {filtered.map((emp, idx) => {
                   const sc = statusConfig[emp.status];
-                  const displayName = `${emp.firstName} ${emp.lastName}`;
+                  const displayName = `${emp.prefix}${emp.firstName} ${emp.lastName}`;
                   return (
                     <tr key={emp.id} className="border-b hover:bg-muted/30 transition-colors" style={{ borderColor: "hsl(var(--border))" }}>
                       <td className="px-4 py-3.5">
@@ -137,9 +137,6 @@ const Employees = () => {
                             <p className="text-xs text-muted-foreground">({emp.nickname})</p>
                           </div>
                         </div>
-                      </td>
-                      <td className="px-4 py-3.5">
-                        <span className="text-sm text-muted-foreground">{emp.nickname}</span>
                       </td>
                       <td className="px-4 py-3.5">
                         <p className="text-sm font-medium">{emp.dept}</p>
