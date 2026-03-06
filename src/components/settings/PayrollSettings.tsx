@@ -144,19 +144,19 @@ const PayrollSettings = () => {
             </div>
             <div className="space-y-3">
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">เงื่อนไขตัดเบี้ยขยัน</p>
-              <div className="flex flex-wrap gap-4">
-                <div className="flex items-center gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="flex items-center gap-3">
                   <Switch checked={deductLate} onCheckedChange={setDeductLate} />
-                  <span className="text-sm">มาสาย เกิน</span>
+                  <span className="text-sm min-w-[5rem]">มาสายเกิน</span>
                   <input type="number" value={lateThreshold} onChange={(e) => setLateThreshold(e.target.value)}
-                    className={`${inputClass} w-14 text-center`} disabled={!deductLate} />
+                    className={`${inputClass} flex-1 text-center`} disabled={!deductLate} />
                   <span className="text-sm text-muted-foreground">ครั้ง</span>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-3">
                   <Switch checked={deductAbsent} onCheckedChange={setDeductAbsent} />
-                  <span className="text-sm">ขาดงาน เกิน</span>
+                  <span className="text-sm min-w-[5rem]">ขาดงานเกิน</span>
                   <input type="number" value={absentThreshold} onChange={(e) => setAbsentThreshold(e.target.value)}
-                    className={`${inputClass} w-14 text-center`} disabled={!deductAbsent} />
+                    className={`${inputClass} flex-1 text-center`} disabled={!deductAbsent} />
                   <span className="text-sm text-muted-foreground">วัน</span>
                 </div>
               </div>
