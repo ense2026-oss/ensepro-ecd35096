@@ -7,6 +7,7 @@ import { EmployeeProvider } from "./contexts/EmployeeContext";
 import { BrandingProvider } from "./contexts/BrandingContext";
 import { PendingCountsProvider } from "./contexts/PendingCountsContext";
 import { TimeEditProvider } from "./contexts/TimeEditContext";
+import { ContractProvider } from "./contexts/ContractContext";
 import { AuthProvider } from "./contexts/AuthContext";
 import { OrgProvider } from "./contexts/OrgContext";
 import MainLayout from "./components/layout/MainLayout";
