@@ -19,6 +19,7 @@ import {
   Shield,
   MapPin,
   Banknote,
+  FileSignature,
 } from "lucide-react";
 
 interface SidebarProps {
