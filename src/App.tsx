@@ -52,6 +52,7 @@ const App = () => (
         <EmployeeProvider>
         <AuthProvider>
         <PendingCountsProvider>
+        <ContractProvider>
         <TimeEditProvider>
         <Routes>
           <Route path="/" element={<ResponsiveRedirect />} />
@@ -61,6 +62,7 @@ const App = () => (
             <Route path="/employees" element={<Employees />} />
             <Route path="/employees/:id" element={<EmployeeProfile />} />
             <Route path="/organization" element={<Organization />} />
+            <Route path="/contracts" element={<Contracts />} />
             <Route path="/attendance" element={<Attendance />} />
             <Route path="/leave" element={<Leave />} />
             <Route path="/overtime" element={<OvertimeRequest />} />
@@ -75,6 +77,7 @@ const App = () => (
           <Route path="*" element={<NotFound />} />
         </Routes>
         </TimeEditProvider>
+        </ContractProvider>
         </PendingCountsProvider>
         </AuthProvider>
         </EmployeeProvider>

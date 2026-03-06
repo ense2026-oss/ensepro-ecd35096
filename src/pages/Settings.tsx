@@ -63,6 +63,9 @@ const Settings = () => {
       case "payroll":
         return <PayrollSettings />;
 
+      case "contracts":
+        return <ContractSettings />;
+
       default:
         return null;
     }
