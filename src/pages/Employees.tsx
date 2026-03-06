@@ -117,7 +117,7 @@ const Employees = () => {
             <table className="w-full">
               <thead>
                 <tr className="border-b" style={{ borderColor: "hsl(var(--border))" }}>
-                  {["พนักงาน", "UUID", "แผนก / ตำแหน่ง", "ประเภท", "เริ่มงาน", "สถานะ", ""].map((h) => (
+                  {["พนักงาน", "ชื่อเล่น", "แผนก / ตำแหน่ง", "ประเภท", "เริ่มงาน", "สถานะ", ""].map((h) => (
                     <th key={h} className="text-left px-4 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
@@ -139,7 +139,7 @@ const Employees = () => {
                         </div>
                       </td>
                       <td className="px-4 py-3.5">
-                        <code className="text-xs text-muted-foreground font-mono bg-muted px-2 py-0.5 rounded-md">{emp.id.slice(0, 8)}...</code>
+                        <span className="text-sm text-muted-foreground">{emp.nickname}</span>
                       </td>
                       <td className="px-4 py-3.5">
                         <p className="text-sm font-medium">{emp.dept}</p>
