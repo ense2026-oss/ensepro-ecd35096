@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import { usePendingCounts } from "@/contexts/PendingCountsContext";
 import { useBranding } from "@/contexts/BrandingContext";
@@ -66,10 +66,46 @@ const Sidebar = ({ collapsed, onToggle, onNavigate }: SidebarProps) => {
   const activeLogo = displayMode === "logo-only" ? logoOnlyUrl : logoUrl;
   const { currentUser, hasAdminAccess, logout } = useAuth();
 
-  // Filter nav items based on role
+  // Module settings: listen for real-time changes
+  const [enabledModules, setEnabledModules] = useState<Record<string, boolean>>(() => {
+    try {
+      const saved = localStorage.getItem("module-settings");
+      return saved ? JSON.parse(saved) : {};
+    } catch { return {}; }
+  });
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail) setEnabledModules(detail);
+    };
+    window.addEventListener("module-settings-changed", handler);
+    return () => window.removeEventListener("module-settings-changed", handler);
+  }, []);
+
+  // Module id mapping: path → module id
+  const pathToModule: Record<string, string> = {
+    "/employees": "employees",
+    "/organization": "organization",
+    "/contracts": "contracts",
+    "/attendance": "attendance",
+    "/leave": "leave",
+    "/overtime": "overtime",
+    "/check-in": "check-in",
+    "/shift-management": "shift-management",
+    "/payroll": "payroll",
+    "/reports": "reports",
+  };
+
+  // Filter nav items based on role AND module settings
   const navItems = allNavItems.map((section) => ({
     ...section,
-    items: section.items.filter((item) => !item.adminOnly || hasAdminAccess),
+    items: section.items.filter((item) => {
+      if (item.adminOnly && !hasAdminAccess) return false;
+      const moduleId = pathToModule[item.path];
+      if (moduleId && enabledModules[moduleId] === false) return false;
+      return true;
+    }),
   })).filter((section) => section.items.length > 0);
 
   const userInitials = currentUser
