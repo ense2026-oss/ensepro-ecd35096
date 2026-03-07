@@ -27,15 +27,45 @@ const allMenuItems = [
   { icon: Settings, label: "ตั้งค่า", path: "/settings", adminOnly: true, hideOnMobile: true },
 ];
 
+const pathToModuleMap: Record<string, string> = {
+  "/attendance": "attendance",
+  "/leave": "leave",
+  "/overtime": "overtime",
+  "/shift-management": "shifts",
+  "/contracts": "contracts",
+  "/payroll": "payroll",
+  "/reports": "reports",
+  "/organization": "organization",
+};
+
 const MobileFooterNav = () => {
   const location = useLocation();
   const { leavePending, attendancePending, overtimePending } = usePendingCounts();
   const { currentUser, hasAdminAccess } = useAuth();
   const isMobile = useIsMobile();
 
-  const menuItems = allMenuItems.filter(
-    (item) => (!item.adminOnly || hasAdminAccess) && !(item.hideOnMobile && isMobile)
-  );
+  const getModuleSettings = useCallback(() => {
+    try {
+      const saved = localStorage.getItem('module-settings');
+      return saved ? JSON.parse(saved) : {};
+    } catch { return {}; }
+  }, []);
+
+  const [moduleSettings, setModuleSettings] = useState<Record<string, boolean>>(getModuleSettings);
+
+  useEffect(() => {
+    const handler = () => setModuleSettings(getModuleSettings());
+    window.addEventListener('module-settings-changed', handler);
+    return () => window.removeEventListener('module-settings-changed', handler);
+  }, [getModuleSettings]);
+
+  const menuItems = allMenuItems.filter((item) => {
+    if (item.adminOnly && !hasAdminAccess) return false;
+    if (item.hideOnMobile && isMobile) return false;
+    const moduleId = pathToModuleMap[item.path];
+    if (moduleId && moduleSettings[moduleId] === false) return false;
+    return true;
+  });
 
   const dynamicBadges: Record<string, number> = {
     "/attendance": attendancePending,
