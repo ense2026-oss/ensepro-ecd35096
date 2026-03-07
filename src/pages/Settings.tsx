@@ -85,7 +85,7 @@ const Settings = () => {
 
       <div className="flex flex-col lg:flex-row gap-5">
         {/* Tab nav */}
-        <div className="lg:w-56 flex-shrink-0">
+        <div className="lg:w-56 flex-shrink-0 lg:sticky lg:top-4 lg:self-start">
           {isMobile ? (
             /* Mobile: icon-only tabs in a single row */
             <div className="card-base p-2 flex justify-between">
