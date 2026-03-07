@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import { usePendingCounts } from "@/contexts/PendingCountsContext";
 import { useBranding } from "@/contexts/BrandingContext";
