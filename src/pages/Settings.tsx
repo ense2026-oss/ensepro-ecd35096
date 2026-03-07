@@ -68,6 +68,9 @@ const Settings = () => {
       case "contracts":
         return <ContractSettings />;
 
+      case "modules":
+        return <ModuleSettings />;
+
       default:
         return null;
     }
