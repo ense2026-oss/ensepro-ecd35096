@@ -74,14 +74,14 @@ const Sidebar = ({ collapsed, onToggle, onNavigate }: SidebarProps) => {
     } catch { return {}; }
   });
 
-  useState(() => {
+  useEffect(() => {
     const handler = (e: Event) => {
       const detail = (e as CustomEvent).detail;
       if (detail) setEnabledModules(detail);
     };
     window.addEventListener("module-settings-changed", handler);
     return () => window.removeEventListener("module-settings-changed", handler);
-  });
+  }, []);
 
   // Module id mapping: path → module id
   const pathToModule: Record<string, string> = {
