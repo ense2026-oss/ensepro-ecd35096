@@ -121,13 +121,6 @@ const Contracts = () => {
 
       {/* Dialogs */}
       <ContractFormDialog open={formOpen} onOpenChange={setFormOpen} editContract={editContract} />
-      {detailContract && (
-        <ContractDetailDialog
-          open={!!detailContract}
-          onOpenChange={(open) => !open && setDetailContract(null)}
-          contract={detailContract}
-        />
-      )}
     </div>
   );
 };

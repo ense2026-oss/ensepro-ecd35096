@@ -283,7 +283,7 @@ const ContractDetail = () => {
                   </div>
                   <div>
                     <p className="text-muted-foreground text-xs mb-0.5">แผนก</p>
-                    <p className="font-medium">{e.department || "—"}</p>
+                    <p className="font-medium">{e.dept || "—"}</p>
                   </div>
                   <div>
                     <p className="text-muted-foreground text-xs mb-0.5">อีเมล</p>
