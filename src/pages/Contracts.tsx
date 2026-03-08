@@ -15,11 +15,11 @@ const ALL_STATUSES: ContractStatus[] = ["draft", "pending_employee", "pending_hr
 const Contracts = () => {
   const { contracts } = useContracts();
   const { employees } = useEmployees();
+  const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [formOpen, setFormOpen] = useState(false);
   const [editContract, setEditContract] = useState<Contract | null>(null);
-  const [detailContract, setDetailContract] = useState<Contract | null>(null);
 
   const emp = (id: string) => {
     const e = employees.find((x) => x.id === id);
