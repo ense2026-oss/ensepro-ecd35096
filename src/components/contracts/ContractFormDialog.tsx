@@ -95,7 +95,7 @@ const ContractFormDialog = ({ open, onOpenChange, editContract }: Props) => {
         endDate: form.endDate,
         salary: Number(form.salary),
         witness1Id: form.witness1Id || null,
-        witness2Id: settings.witnessCount === 2 ? form.witness2Id || null : null,
+        witness2Id: form.witness2Id || null,
         executiveId: form.executiveId,
         details: { notes: form.notes },
       });
