@@ -193,19 +193,17 @@ const ContractFormDialog = ({ open, onOpenChange, editContract }: Props) => {
           </div>
 
           {/* Witness 2 */}
-          {settings.witnessCount === 2 && (
-            <div className="grid gap-1.5">
-              <Label>พยานคนที่ 2</Label>
-              <Select value={form.witness2Id} onValueChange={(v) => set("witness2Id", v)}>
-                <SelectTrigger><SelectValue placeholder="เลือกพยาน" /></SelectTrigger>
-                <SelectContent>
-                  {managers.map((e) => (
-                    <SelectItem key={e.id} value={e.id}>{e.firstName} {e.lastName}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
+          <div className="grid gap-1.5">
+            <Label>พยานคนที่ 2</Label>
+            <Select value={form.witness2Id} onValueChange={(v) => set("witness2Id", v)}>
+              <SelectTrigger><SelectValue placeholder="เลือกพยาน" /></SelectTrigger>
+              <SelectContent>
+                {managers.map((e) => (
+                  <SelectItem key={e.id} value={e.id}>{e.firstName} {e.lastName}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
           {/* Executive */}
           <div className="grid gap-1.5">
