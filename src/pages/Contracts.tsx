@@ -8,18 +8,18 @@ import { useContracts, ContractStatus, STATUS_LABELS, Contract } from "@/context
 import { useEmployees } from "@/contexts/EmployeeContext";
 import ContractStatusBadge from "@/components/contracts/ContractStatusBadge";
 import ContractFormDialog from "@/components/contracts/ContractFormDialog";
-import ContractDetailDialog from "@/components/contracts/ContractDetailDialog";
+import { useNavigate } from "react-router-dom";
 
 const ALL_STATUSES: ContractStatus[] = ["draft", "pending_employee", "pending_hr_review", "pending_witness_1", "pending_witness_2", "pending_executive", "pending_final_review", "completed"];
 
 const Contracts = () => {
   const { contracts } = useContracts();
   const { employees } = useEmployees();
+  const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [formOpen, setFormOpen] = useState(false);
   const [editContract, setEditContract] = useState<Contract | null>(null);
-  const [detailContract, setDetailContract] = useState<Contract | null>(null);
 
   const emp = (id: string) => {
     const e = employees.find((x) => x.id === id);
@@ -99,7 +99,7 @@ const Contracts = () => {
                 </TableRow>
               ) : (
                 filtered.map((c) => (
-                  <TableRow key={c.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setDetailContract(c)}>
+                  <TableRow key={c.id} className="cursor-pointer hover:bg-muted/50" onClick={() => navigate(`/contracts/${c.id}`)}>
                     <TableCell className="font-mono text-xs">{c.contractNumber}</TableCell>
                     <TableCell className="font-medium max-w-[200px] truncate">{c.title}</TableCell>
                     <TableCell>{emp(c.employeeId)}</TableCell>
@@ -121,13 +121,6 @@ const Contracts = () => {
 
       {/* Dialogs */}
       <ContractFormDialog open={formOpen} onOpenChange={setFormOpen} editContract={editContract} />
-      {detailContract && (
-        <ContractDetailDialog
-          open={!!detailContract}
-          onOpenChange={(open) => !open && setDetailContract(null)}
-          contract={detailContract}
-        />
-      )}
     </div>
   );
 };
