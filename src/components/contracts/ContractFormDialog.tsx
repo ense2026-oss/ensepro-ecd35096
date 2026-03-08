@@ -95,7 +95,7 @@ const ContractFormDialog = ({ open, onOpenChange, editContract }: Props) => {
         endDate: form.endDate,
         salary: Number(form.salary),
         witness1Id: form.witness1Id || null,
-        witness2Id: settings.witnessCount === 2 ? form.witness2Id || null : null,
+        witness2Id: form.witness2Id || null,
         executiveId: form.executiveId,
         details: { notes: form.notes },
       });
@@ -112,7 +112,7 @@ const ContractFormDialog = ({ open, onOpenChange, editContract }: Props) => {
         details: { notes: form.notes },
         status: "draft",
         witness1Id: form.witness1Id || null,
-        witness2Id: settings.witnessCount === 2 ? form.witness2Id || null : null,
+        witness2Id: form.witness2Id || null,
         executiveId: form.executiveId,
         createdBy: "h0k8i9j1-8901-2345-67h2-345678901234",
       });
@@ -193,19 +193,17 @@ const ContractFormDialog = ({ open, onOpenChange, editContract }: Props) => {
           </div>
 
           {/* Witness 2 */}
-          {settings.witnessCount === 2 && (
-            <div className="grid gap-1.5">
-              <Label>พยานคนที่ 2</Label>
-              <Select value={form.witness2Id} onValueChange={(v) => set("witness2Id", v)}>
-                <SelectTrigger><SelectValue placeholder="เลือกพยาน" /></SelectTrigger>
-                <SelectContent>
-                  {managers.map((e) => (
-                    <SelectItem key={e.id} value={e.id}>{e.firstName} {e.lastName}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
+          <div className="grid gap-1.5">
+            <Label>พยานคนที่ 2</Label>
+            <Select value={form.witness2Id} onValueChange={(v) => set("witness2Id", v)}>
+              <SelectTrigger><SelectValue placeholder="เลือกพยาน" /></SelectTrigger>
+              <SelectContent>
+                {managers.map((e) => (
+                  <SelectItem key={e.id} value={e.id}>{e.firstName} {e.lastName}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
           {/* Executive */}
           <div className="grid gap-1.5">
