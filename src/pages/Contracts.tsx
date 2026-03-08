@@ -99,7 +99,7 @@ const Contracts = () => {
                 </TableRow>
               ) : (
                 filtered.map((c) => (
-                  <TableRow key={c.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setDetailContract(c)}>
+                  <TableRow key={c.id} className="cursor-pointer hover:bg-muted/50" onClick={() => navigate(`/contracts/${c.id}`)}>
                     <TableCell className="font-mono text-xs">{c.contractNumber}</TableCell>
                     <TableCell className="font-medium max-w-[200px] truncate">{c.title}</TableCell>
                     <TableCell>{emp(c.employeeId)}</TableCell>
