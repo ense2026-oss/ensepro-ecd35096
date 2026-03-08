@@ -112,7 +112,7 @@ const ContractFormDialog = ({ open, onOpenChange, editContract }: Props) => {
         details: { notes: form.notes },
         status: "draft",
         witness1Id: form.witness1Id || null,
-        witness2Id: settings.witnessCount === 2 ? form.witness2Id || null : null,
+        witness2Id: form.witness2Id || null,
         executiveId: form.executiveId,
         createdBy: "h0k8i9j1-8901-2345-67h2-345678901234",
       });
