@@ -27,6 +27,7 @@ import CheckIn from "./pages/CheckIn";
 import ShiftManagement from "./pages/ShiftManagement";
 import Payroll from "./pages/Payroll";
 import Contracts from "./pages/Contracts";
+import ContractDetail from "./pages/ContractDetail";
 import NotFound from "./pages/NotFound";
 import { applyDisplaySettings } from "./components/settings/DisplaySettings";
 

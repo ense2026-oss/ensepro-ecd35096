@@ -8,7 +8,7 @@ import { useContracts, ContractStatus, STATUS_LABELS, Contract } from "@/context
 import { useEmployees } from "@/contexts/EmployeeContext";
 import ContractStatusBadge from "@/components/contracts/ContractStatusBadge";
 import ContractFormDialog from "@/components/contracts/ContractFormDialog";
-import ContractDetailDialog from "@/components/contracts/ContractDetailDialog";
+import { useNavigate } from "react-router-dom";
 
 const ALL_STATUSES: ContractStatus[] = ["draft", "pending_employee", "pending_hr_review", "pending_witness_1", "pending_witness_2", "pending_executive", "pending_final_review", "completed"];
 
