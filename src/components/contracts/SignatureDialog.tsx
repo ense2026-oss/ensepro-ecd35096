@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Pencil, Upload } from "lucide-react";
+import { processFileUpload } from "@/utils/fileCompression";
 
 interface Props {
   open: boolean;
