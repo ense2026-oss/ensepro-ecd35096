@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useBranding } from "@/contexts/BrandingContext";
 import { Upload, X } from "lucide-react";
+import { processFileUpload } from "@/utils/fileCompression";
 
 interface CompanyInfo {
   name: string;
