@@ -10,6 +10,7 @@ import ContractStatusBadge from "@/components/contracts/ContractStatusBadge";
 import SignatureDialog from "@/components/contracts/SignatureDialog";
 import { toast } from "sonner";
 import { processFileUpload } from "@/utils/fileCompression";
+import LazyImage from "@/components/ui/lazy-image";
 
 const ContractDetail = () => {
   const { id } = useParams<{ id: string }>();
