@@ -95,19 +95,16 @@ const EmployeeProfile = () => {
   const [passwordError, setPasswordError] = useState("");
   const photoInputRef = useRef<HTMLInputElement>(null);
 
-  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      const photoUrl = reader.result as string;
-      setData((d) => d ? { ...d, photoUrl } : d);
-      if (employee) {
-        updateEmployee(employee.id, { photoUrl });
-        toast.success("อัพโหลดรูปภาพสำเร็จ");
-      }
-    };
-    reader.readAsDataURL(file);
+    const photoUrl = await processFileUpload(file, { maxWidth: 400, maxHeight: 400, quality: 0.8 });
+    if (!photoUrl) return;
+    setData((d) => d ? { ...d, photoUrl } : d);
+    if (employee) {
+      updateEmployee(employee.id, { photoUrl });
+      toast.success("อัพโหลดรูปภาพสำเร็จ");
+    }
   };
 
   // Not found

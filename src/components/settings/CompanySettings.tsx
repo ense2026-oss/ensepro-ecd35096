@@ -75,20 +75,18 @@ const CompanySettings = () => {
     toast({ title: "บันทึกสำเร็จ", description: "โลโก้และชื่อโปรแกรมถูกอัปเดตแล้ว" });
   };
 
-  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleLogoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => setPreviewLogo(reader.result as string);
-    reader.readAsDataURL(file);
+    const compressed = await processFileUpload(file, { maxWidth: 300, maxHeight: 300, quality: 0.8 });
+    if (compressed) setPreviewLogo(compressed);
   };
 
-  const handleLogoOnlyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleLogoOnlyChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => setPreviewLogoOnly(reader.result as string);
-    reader.readAsDataURL(file);
+    const compressed = await processFileUpload(file, { maxWidth: 300, maxHeight: 300, quality: 0.8 });
+    if (compressed) setPreviewLogoOnly(compressed);
   };
 
   const handleRemoveLogo = () => {

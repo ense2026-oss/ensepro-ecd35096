@@ -88,14 +88,11 @@ const SignatureDialog = ({ open, onOpenChange, onSign, signerName }: Props) => {
     setHasDrawn(false);
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      setUploadedImage(ev.target?.result as string);
-    };
-    reader.readAsDataURL(file);
+    const compressed = await processFileUpload(file, { maxWidth: 440, maxHeight: 200, quality: 0.9 });
+    if (compressed) setUploadedImage(compressed);
   };
 
   const handleConfirm = () => {
