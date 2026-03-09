@@ -12,6 +12,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { TaxDeduction, DEFAULT_TAX_DEDUCTION, calculateTotalDeductions, calculateAnnualIncome, calculateExpenseDeduction, calculateProgressiveTax, formatCurrency } from "@/utils/taxCalculation";
 import { processFileUpload } from "@/utils/fileCompression";
+import LazyImage from "@/components/ui/lazy-image";
 
 const TAB_CONFIG = [
   { key: "personal",   label: "ข้อมูลส่วนตัว",   icon: User },
@@ -603,7 +604,7 @@ const EmployeeProfile = () => {
         <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5">
           <div className="relative flex-shrink-0">
             {emp.photoUrl ? (
-              <img src={emp.photoUrl} alt={emp.firstName} className="w-24 h-24 rounded-2xl object-cover" />
+              <LazyImage src={emp.photoUrl} alt={emp.firstName} className="w-24 h-24 rounded-2xl" />
             ) : (
               <div className="w-24 h-24 rounded-2xl flex items-center justify-center text-3xl font-bold"
                 style={{ background: emp.avatarColor, color: emp.avatarTextColor }}>{emp.avatar}</div>

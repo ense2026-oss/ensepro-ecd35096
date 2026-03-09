@@ -9,6 +9,7 @@ import SignatureDialog from "./SignatureDialog";
 import { Check, Circle, Send, FileDown, Paperclip, Upload, X } from "lucide-react";
 import { toast } from "sonner";
 import { processFileUpload } from "@/utils/fileCompression";
+import LazyImage from "@/components/ui/lazy-image";
 
 interface Props {
   open: boolean;
@@ -144,7 +145,7 @@ const ContractDetailDialog = ({ open, onOpenChange, contract }: Props) => {
                   <div key={s.id} className="border rounded-lg p-2 text-xs">
                     <p className="font-medium">{emp(s.signerId)} ({s.signerRole})</p>
                     <p className="text-muted-foreground">{new Date(s.signedAt).toLocaleDateString("th-TH")} • {s.signatureType === "draw" ? "วาดลายเซ็น" : "อัพโหลด"}</p>
-                    {s.signatureData && <img src={s.signatureData} alt="sig" className="h-10 mt-1 bg-white rounded" />}
+                    {s.signatureData && <LazyImage src={s.signatureData} alt="sig" className="h-10 mt-1 bg-white rounded" />}
                   </div>
                 ))}
               </div>
