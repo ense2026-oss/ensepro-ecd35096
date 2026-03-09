@@ -604,7 +604,7 @@ const EmployeeProfile = () => {
         <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5">
           <div className="relative flex-shrink-0">
             {emp.photoUrl ? (
-              <img src={emp.photoUrl} alt={emp.firstName} className="w-24 h-24 rounded-2xl object-cover" />
+              <LazyImage src={emp.photoUrl} alt={emp.firstName} className="w-24 h-24 rounded-2xl" />
             ) : (
               <div className="w-24 h-24 rounded-2xl flex items-center justify-center text-3xl font-bold"
                 style={{ background: emp.avatarColor, color: emp.avatarTextColor }}>{emp.avatar}</div>

@@ -196,7 +196,7 @@ const ContractDetail = () => {
                     <p className="text-xs text-muted-foreground mb-1">{roleLabels[s.signerRole] || s.signerRole}</p>
                     <div className="border rounded-lg p-3 bg-muted/30">
                       {s.signatureData && (
-                        <img src={s.signatureData} alt="signature" className="h-12 mx-auto bg-white rounded mb-2" />
+                        <LazyImage src={s.signatureData} alt="signature" className="h-12 mx-auto bg-white rounded mb-2" />
                       )}
                       <p className="text-xs font-medium text-center">{emp(s.signerId)}</p>
                       <p className="text-xs text-muted-foreground text-center">
