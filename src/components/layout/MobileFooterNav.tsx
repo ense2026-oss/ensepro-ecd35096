@@ -36,6 +36,7 @@ const pathToModuleMap: Record<string, string> = {
   "/payroll": "payroll",
   "/reports": "reports",
   "/organization": "organization",
+  "/check-in": "check-in",
 };
 
 const MobileFooterNav = () => {
@@ -74,6 +75,8 @@ const MobileFooterNav = () => {
   };
 
   const isActive = (path: string) => location.pathname === path || (path === "/employees" && location.pathname.startsWith("/employees/"));
+
+  const isCheckInEnabled = moduleSettings['check-in'] !== false;
 
   const midIndex = Math.floor(menuItems.length / 2);
   const leftItems = menuItems.slice(0, midIndex);
@@ -135,60 +138,69 @@ const MobileFooterNav = () => {
           boxShadow: "0 -4px 20px hsl(0 0% 0% / 0.08)",
         }}
       >
-        {/* Center Check-in Button (floating) */}
-        <NavLink
-          to="/check-in"
-          className="absolute left-1/2 -translate-x-1/2 -top-5 z-10"
-        >
-          <div className="relative flex items-center justify-center">
-            {/* Wave rings */}
-            <div
-              className="absolute w-16 h-16 rounded-full animate-[wave-ping_1.8s_ease-out_infinite]"
-              style={{
-                background: isActive("/check-in")
-                  ? "hsl(var(--primary) / 0.2)"
-                  : "hsl(90 100% 40% / 0.2)",
-              }}
-            />
-            <div
-              className="absolute w-14 h-14 rounded-full animate-[wave-ping_1.8s_ease-out_0.5s_infinite]"
-              style={{
-                background: isActive("/check-in")
-                  ? "hsl(var(--primary) / 0.15)"
-                  : "hsl(90 100% 40% / 0.15)",
-              }}
-            />
-            {/* Button */}
-            <div
-              className="w-12 h-12 rounded-full flex flex-col items-center justify-center transition-all duration-200 relative z-10"
-              style={{
-                background: isActive("/check-in")
-                  ? "linear-gradient(135deg, hsl(var(--primary)), hsl(31 100% 60%))"
-                  : "linear-gradient(135deg, hsl(90 100% 40%), hsl(90 100% 30%))",
-                boxShadow: "0 3px 12px hsl(var(--primary) / 0.35)",
-                border: "3px solid hsl(var(--card))",
-              }}
-            >
-              <MapPin className="w-4 h-4 text-white" />
-              <span className="text-[7px] font-bold text-white leading-tight mt-0.5">ลงเวลา</span>
+        {/* Center Check-in Button (floating) - hidden when check-in module is disabled */}
+        {isCheckInEnabled && (
+          <NavLink
+            to="/check-in"
+            className="absolute left-1/2 -translate-x-1/2 -top-5 z-10"
+          >
+            <div className="relative flex items-center justify-center">
+              {/* Wave rings */}
+              <div
+                className="absolute w-16 h-16 rounded-full animate-[wave-ping_1.8s_ease-out_infinite]"
+                style={{
+                  background: isActive("/check-in")
+                    ? "hsl(var(--primary) / 0.2)"
+                    : "hsl(90 100% 40% / 0.2)",
+                }}
+              />
+              <div
+                className="absolute w-14 h-14 rounded-full animate-[wave-ping_1.8s_ease-out_0.5s_infinite]"
+                style={{
+                  background: isActive("/check-in")
+                    ? "hsl(var(--primary) / 0.15)"
+                    : "hsl(90 100% 40% / 0.15)",
+                }}
+              />
+              {/* Button */}
+              <div
+                className="w-12 h-12 rounded-full flex flex-col items-center justify-center transition-all duration-200 relative z-10"
+                style={{
+                  background: isActive("/check-in")
+                    ? "linear-gradient(135deg, hsl(var(--primary)), hsl(31 100% 60%))"
+                    : "linear-gradient(135deg, hsl(90 100% 40%), hsl(90 100% 30%))",
+                  boxShadow: "0 3px 12px hsl(var(--primary) / 0.35)",
+                  border: "3px solid hsl(var(--card))",
+                }}
+              >
+                <MapPin className="w-4 h-4 text-white" />
+                <span className="text-[7px] font-bold text-white leading-tight mt-0.5">ลงเวลา</span>
+              </div>
             </div>
-          </div>
-        </NavLink>
+          </NavLink>
+        )}
 
-        {/* Menu items with space-between layout */}
+        {/* Menu items - full width when check-in is disabled, split layout when enabled */}
         <div className="flex items-end pt-2 pb-[env(safe-area-inset-bottom,8px)]">
-          {/* Left half */}
-          <div className="flex flex-1 justify-around">
-            {leftItems.map(renderItem)}
-          </div>
-
-          {/* Center spacer for the floating button */}
-          <div className="w-[58px] flex-shrink-0" />
-
-          {/* Right half */}
-          <div className="flex flex-1 justify-around">
-            {rightItems.map(renderItem)}
-          </div>
+          {isCheckInEnabled ? (
+            <>
+              {/* Left half */}
+              <div className="flex flex-1 justify-around">
+                {leftItems.map(renderItem)}
+              </div>
+              {/* Center spacer for the floating button */}
+              <div className="w-[58px] flex-shrink-0" />
+              {/* Right half */}
+              <div className="flex flex-1 justify-around">
+                {rightItems.map(renderItem)}
+              </div>
+            </>
+          ) : (
+            /* Full width layout when no center button */
+            <div className="flex flex-1 justify-around">
+              {menuItems.map(renderItem)}
+            </div>
+          )}
         </div>
       </div>
     </div>

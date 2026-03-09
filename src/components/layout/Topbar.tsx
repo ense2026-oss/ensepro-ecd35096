@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { Search, Bell, ChevronDown, Settings, User, LogOut, Menu, MapPin, Clock, CalendarDays, Users, FileText, LayoutDashboard, GitBranch } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -22,6 +22,21 @@ const Topbar = ({ onMenuToggle, pageTitle = "Dashboard", pageSubtitle = "ภา�
   const notifRef = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLDivElement>(null);
+
+  // Module settings for check-in visibility
+  const getModuleSettings = useCallback(() => {
+    try {
+      const saved = localStorage.getItem('module-settings');
+      return saved ? JSON.parse(saved) : {};
+    } catch { return {}; }
+  }, []);
+  const [moduleSettings, setModuleSettings] = useState<Record<string, boolean>>(getModuleSettings);
+  useEffect(() => {
+    const handler = () => setModuleSettings(getModuleSettings());
+    window.addEventListener('module-settings-changed', handler);
+    return () => window.removeEventListener('module-settings-changed', handler);
+  }, [getModuleSettings]);
+  const isCheckInEnabled = moduleSettings['check-in'] !== false;
 
   // Demo searchable items
   const searchableItems = [
@@ -172,19 +187,21 @@ const Topbar = ({ onMenuToggle, pageTitle = "Dashboard", pageSubtitle = "ภา�
 
       {/* Right: Actions */}
       <div className="flex items-center gap-2">
-        {/* Check-in Button */}
-        <button
-          onClick={() => navigate("/check-in")}
-          className="flex items-center gap-2 px-2.5 lg:px-3 py-2 rounded-xl text-sm font-bold text-primary-foreground transition-all hover:opacity-90"
-          style={{
-            background: "linear-gradient(135deg, hsl(var(--primary)), hsl(31 100% 60%))",
-            boxShadow: "0 2px 8px hsl(var(--primary) / 0.3)",
-          }}
-          title="ลงเวลา"
-        >
-          <MapPin className="w-4 h-4" />
-          <span className="hidden lg:inline">ลงเวลา</span>
-        </button>
+        {/* Check-in Button - hidden when check-in module is disabled */}
+        {isCheckInEnabled && (
+          <button
+            onClick={() => navigate("/check-in")}
+            className="flex items-center gap-2 px-2.5 lg:px-3 py-2 rounded-xl text-sm font-bold text-primary-foreground transition-all hover:opacity-90"
+            style={{
+              background: "linear-gradient(135deg, hsl(var(--primary)), hsl(31 100% 60%))",
+              boxShadow: "0 2px 8px hsl(var(--primary) / 0.3)",
+            }}
+            title="ลงเวลา"
+          >
+            <MapPin className="w-4 h-4" />
+            <span className="hidden lg:inline">ลงเวลา</span>
+          </button>
+        )}
 
         {/* Notification */}
         <div className="relative" ref={notifRef}>
