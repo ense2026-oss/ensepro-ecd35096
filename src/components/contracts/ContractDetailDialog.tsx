@@ -9,6 +9,7 @@ import SignatureDialog from "./SignatureDialog";
 import { Check, Circle, Send, FileDown, Paperclip, Upload, X } from "lucide-react";
 import { toast } from "sonner";
 import { processFileUpload } from "@/utils/fileCompression";
+import LazyImage from "@/components/ui/lazy-image";
 
 interface Props {
   open: boolean;
