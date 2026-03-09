@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useContracts, ContractStatus, STATUS_LABELS, Contract } from "@/contexts/ContractContext";
 import { useEmployees } from "@/contexts/EmployeeContext";
+import { useAuth } from "@/contexts/AuthContext";
 import ContractStatusBadge from "@/components/contracts/ContractStatusBadge";
 import ContractFormDialog from "@/components/contracts/ContractFormDialog";
 import { useNavigate } from "react-router-dom";
@@ -15,6 +16,7 @@ const ALL_STATUSES: ContractStatus[] = ["draft", "pending_employee", "pending_hr
 const Contracts = () => {
   const { contracts } = useContracts();
   const { employees } = useEmployees();
+  const { currentUser, hasAdminAccess } = useAuth();
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -26,22 +28,32 @@ const Contracts = () => {
     return e ? `${e.firstName} ${e.lastName}` : id;
   };
 
-  const filtered = contracts.filter((c) => {
+  // Employee sees only their own contracts
+  const visibleContracts = hasAdminAccess
+    ? contracts
+    : contracts.filter((c) => c.employeeId === currentUser?.id);
+
+  const filtered = visibleContracts.filter((c) => {
     const matchSearch = !search || c.title.includes(search) || c.contractNumber.includes(search) || emp(c.employeeId).includes(search);
     const matchStatus = statusFilter === "all" || c.status === statusFilter;
     return matchSearch && matchStatus;
   });
 
+  const pageTitle = hasAdminAccess ? "จัดการสัญญาจ้าง" : "สัญญาจ้างของฉัน";
+  const pageDesc = hasAdminAccess ? "สร้าง ติดตาม และลงนามสัญญาจ้างพนักงาน" : "ดูและลงนามสัญญาจ้างของคุณ";
+
   return (
     <div className="space-y-5">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h2 className="text-xl font-bold font-display">จัดการสัญญาจ้าง</h2>
-          <p className="text-sm text-muted-foreground mt-0.5">สร้าง ติดตาม และลงนามสัญญาจ้างพนักงาน</p>
+          <h2 className="text-xl font-bold font-display">{pageTitle}</h2>
+          <p className="text-sm text-muted-foreground mt-0.5">{pageDesc}</p>
         </div>
-        <Button onClick={() => { setEditContract(null); setFormOpen(true); }} className="gap-1.5">
-          <Plus className="w-4 h-4" />สร้างสัญญาใหม่
-        </Button>
+        {hasAdminAccess && (
+          <Button onClick={() => { setEditContract(null); setFormOpen(true); }} className="gap-1.5">
+            <Plus className="w-4 h-4" />สร้างสัญญาใหม่
+          </Button>
+        )}
       </div>
 
       {/* Filters */}
@@ -65,10 +77,10 @@ const Contracts = () => {
       {/* Summary cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { label: "ทั้งหมด", count: contracts.length, color: "hsl(var(--primary))" },
-          { label: "แบบร่าง", count: contracts.filter((c) => c.status === "draft").length, color: "hsl(var(--muted-foreground))" },
-          { label: "กำลังดำเนินการ", count: contracts.filter((c) => !["draft", "completed"].includes(c.status)).length, color: "hsl(30 100% 50%)" },
-          { label: "เสร็จสิ้น", count: contracts.filter((c) => c.status === "completed").length, color: "hsl(142 70% 45%)" },
+          { label: "ทั้งหมด", count: visibleContracts.length, color: "hsl(var(--primary))" },
+          { label: "แบบร่าง", count: visibleContracts.filter((c) => c.status === "draft").length, color: "hsl(var(--muted-foreground))" },
+          { label: "กำลังดำเนินการ", count: visibleContracts.filter((c) => !["draft", "completed"].includes(c.status)).length, color: "hsl(30 100% 50%)" },
+          { label: "เสร็จสิ้น", count: visibleContracts.filter((c) => c.status === "completed").length, color: "hsl(142 70% 45%)" },
         ].map((s) => (
           <div key={s.label} className="card-base p-4 text-center">
             <p className="text-2xl font-bold" style={{ color: s.color }}>{s.count}</p>
@@ -107,7 +119,7 @@ const Contracts = () => {
                     <TableCell className="text-xs">{c.startDate} — {c.endDate}</TableCell>
                     <TableCell><ContractStatusBadge status={c.status} /></TableCell>
                     <TableCell className="text-right">
-                      {c.status === "draft" && (
+                      {hasAdminAccess && c.status === "draft" && (
                         <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setEditContract(c); setFormOpen(true); }}>แก้ไข</Button>
                       )}
                     </TableCell>

@@ -35,7 +35,7 @@ const allNavItems = [
       { icon: LayoutDashboard, label: "หน้าหลัก", path: "/dashboard", adminOnly: false },
       { icon: Users, label: "ข้อมูลพนักงาน", path: "/employees", adminOnly: false, employeeSelfOnly: true },
       { icon: GitBranch, label: "โครงสร้างองค์กร", path: "/organization", adminOnly: true },
-      { icon: FileSignature, label: "จัดการสัญญาจ้าง", path: "/contracts", adminOnly: true },
+      { icon: FileSignature, label: "จัดการสัญญาจ้าง", labelEmployee: "สัญญาจ้างของฉัน", path: "/contracts", adminOnly: false },
     ],
   },
   {
@@ -237,13 +237,13 @@ const Sidebar = ({ collapsed, onToggle, onNavigate }: SidebarProps) => {
                     key={item.path}
                     to={linkPath}
                     className={`sidebar-item ${isActive ? "active" : ""} ${collapsed ? "justify-center" : ""}`}
-                    title={collapsed ? item.label : undefined}
+                    title={collapsed ? ((item as any).labelEmployee && !hasAdminAccess ? (item as any).labelEmployee : item.label) : undefined}
                     onClick={onNavigate}
                   >
                     <item.icon className="w-5 h-5 flex-shrink-0" />
                     {!collapsed && (
                       <>
-                        <span className="flex-1">{item.label}</span>
+                        <span className="flex-1">{(item as any).labelEmployee && !hasAdminAccess ? (item as any).labelEmployee : item.label}</span>
                         {badgeCount > 0 && (
                           <span
                             className="text-xs font-bold px-1.5 py-0.5 rounded-full min-w-[20px] text-center"
