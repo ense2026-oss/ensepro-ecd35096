@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useContracts, ContractStatus, STATUS_LABELS, Contract } from "@/contexts/ContractContext";
 import { useEmployees } from "@/contexts/EmployeeContext";
+import { useAuth } from "@/contexts/AuthContext";
 import ContractStatusBadge from "@/components/contracts/ContractStatusBadge";
 import ContractFormDialog from "@/components/contracts/ContractFormDialog";
 import { useNavigate } from "react-router-dom";
@@ -15,6 +16,7 @@ const ALL_STATUSES: ContractStatus[] = ["draft", "pending_employee", "pending_hr
 const Contracts = () => {
   const { contracts } = useContracts();
   const { employees } = useEmployees();
+  const { currentUser, hasAdminAccess } = useAuth();
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -26,22 +28,32 @@ const Contracts = () => {
     return e ? `${e.firstName} ${e.lastName}` : id;
   };
 
-  const filtered = contracts.filter((c) => {
+  // Employee sees only their own contracts
+  const visibleContracts = hasAdminAccess
+    ? contracts
+    : contracts.filter((c) => c.employeeId === currentUser?.id);
+
+  const filtered = visibleContracts.filter((c) => {
     const matchSearch = !search || c.title.includes(search) || c.contractNumber.includes(search) || emp(c.employeeId).includes(search);
     const matchStatus = statusFilter === "all" || c.status === statusFilter;
     return matchSearch && matchStatus;
   });
 
+  const pageTitle = hasAdminAccess ? "จัดการสัญญาจ้าง" : "สัญญาจ้างของฉัน";
+  const pageDesc = hasAdminAccess ? "สร้าง ติดตาม และลงนามสัญญาจ้างพนักงาน" : "ดูและลงนามสัญญาจ้างของคุณ";
+
   return (
     <div className="space-y-5">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h2 className="text-xl font-bold font-display">จัดการสัญญาจ้าง</h2>
-          <p className="text-sm text-muted-foreground mt-0.5">สร้าง ติดตาม และลงนามสัญญาจ้างพนักงาน</p>
+          <h2 className="text-xl font-bold font-display">{pageTitle}</h2>
+          <p className="text-sm text-muted-foreground mt-0.5">{pageDesc}</p>
         </div>
-        <Button onClick={() => { setEditContract(null); setFormOpen(true); }} className="gap-1.5">
-          <Plus className="w-4 h-4" />สร้างสัญญาใหม่
-        </Button>
+        {hasAdminAccess && (
+          <Button onClick={() => { setEditContract(null); setFormOpen(true); }} className="gap-1.5">
+            <Plus className="w-4 h-4" />สร้างสัญญาใหม่
+          </Button>
+        )}
       </div>
 
       {/* Filters */}
