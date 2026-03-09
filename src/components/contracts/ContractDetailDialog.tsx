@@ -8,6 +8,7 @@ import ContractStatusBadge from "./ContractStatusBadge";
 import SignatureDialog from "./SignatureDialog";
 import { Check, Circle, Send, FileDown, Paperclip, Upload, X } from "lucide-react";
 import { toast } from "sonner";
+import { processFileUpload } from "@/utils/fileCompression";
 
 interface Props {
   open: boolean;
