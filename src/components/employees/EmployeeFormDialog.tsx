@@ -4,6 +4,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Save, X, ScanFace, Upload, Camera } from "lucide-react";
 import type { Employee } from "@/contexts/EmployeeContext";
 import { useOrg } from "@/contexts/OrgContext";
+import { processFileUpload } from "@/utils/fileCompression";
 
 interface EmployeeFormDialogProps {
   open: boolean;
@@ -64,12 +65,11 @@ const EmployeeFormDialog = ({ open, onOpenChange, employee, onSave }: EmployeeFo
   const [errors, setErrors] = useState<string[]>([]);
   const photoInputRef = useRef<HTMLInputElement>(null);
 
-  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => setForm((f) => ({ ...f, photoUrl: reader.result as string }));
-    reader.readAsDataURL(file);
+    const compressed = await processFileUpload(file, { maxWidth: 400, maxHeight: 400, quality: 0.8 });
+    if (compressed) setForm((f) => ({ ...f, photoUrl: compressed }));
   };
 
   const handleRemovePhoto = () => {

@@ -9,6 +9,7 @@ import { useEmployees } from "@/contexts/EmployeeContext";
 import ContractStatusBadge from "@/components/contracts/ContractStatusBadge";
 import SignatureDialog from "@/components/contracts/SignatureDialog";
 import { toast } from "sonner";
+import { processFileUpload } from "@/utils/fileCompression";
 
 const ContractDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -81,21 +82,20 @@ const ContractDetail = () => {
     toast.success("ลงนามเรียบร้อยแล้ว");
   };
 
-  const handleFileAttach = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileAttach = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      addAttachment({
-        contractId: contract.id,
-        fileName: file.name,
-        fileUrl: ev.target?.result as string,
-        fileType: file.type,
-        uploadedBy: "h0k8i9j1-8901-2345-67h2-345678901234",
-      });
-      toast.success("แนบไฟล์เรียบร้อย");
-    };
-    reader.readAsDataURL(file);
+    const imageOpts = file.type.startsWith("image/") ? { maxWidth: 1200, maxHeight: 1200, quality: 0.7 } : undefined;
+    const result = await processFileUpload(file, imageOpts);
+    if (!result) return;
+    addAttachment({
+      contractId: contract.id,
+      fileName: file.name,
+      fileUrl: result,
+      fileType: file.type,
+      uploadedBy: "h0k8i9j1-8901-2345-67h2-345678901234",
+    });
+    toast.success("แนบไฟล์เรียบร้อย");
     e.target.value = "";
   };
 

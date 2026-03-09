@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Pencil, Upload } from "lucide-react";
+import { processFileUpload } from "@/utils/fileCompression";
 
 interface Props {
   open: boolean;
@@ -87,14 +88,11 @@ const SignatureDialog = ({ open, onOpenChange, onSign, signerName }: Props) => {
     setHasDrawn(false);
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      setUploadedImage(ev.target?.result as string);
-    };
-    reader.readAsDataURL(file);
+    const compressed = await processFileUpload(file, { maxWidth: 440, maxHeight: 200, quality: 0.9 });
+    if (compressed) setUploadedImage(compressed);
   };
 
   const handleConfirm = () => {
