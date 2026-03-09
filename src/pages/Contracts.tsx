@@ -77,10 +77,10 @@ const Contracts = () => {
       {/* Summary cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { label: "ทั้งหมด", count: contracts.length, color: "hsl(var(--primary))" },
-          { label: "แบบร่าง", count: contracts.filter((c) => c.status === "draft").length, color: "hsl(var(--muted-foreground))" },
-          { label: "กำลังดำเนินการ", count: contracts.filter((c) => !["draft", "completed"].includes(c.status)).length, color: "hsl(30 100% 50%)" },
-          { label: "เสร็จสิ้น", count: contracts.filter((c) => c.status === "completed").length, color: "hsl(142 70% 45%)" },
+          { label: "ทั้งหมด", count: visibleContracts.length, color: "hsl(var(--primary))" },
+          { label: "แบบร่าง", count: visibleContracts.filter((c) => c.status === "draft").length, color: "hsl(var(--muted-foreground))" },
+          { label: "กำลังดำเนินการ", count: visibleContracts.filter((c) => !["draft", "completed"].includes(c.status)).length, color: "hsl(30 100% 50%)" },
+          { label: "เสร็จสิ้น", count: visibleContracts.filter((c) => c.status === "completed").length, color: "hsl(142 70% 45%)" },
         ].map((s) => (
           <div key={s.label} className="card-base p-4 text-center">
             <p className="text-2xl font-bold" style={{ color: s.color }}>{s.count}</p>
