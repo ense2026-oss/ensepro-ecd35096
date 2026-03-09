@@ -36,6 +36,7 @@ const pathToModuleMap: Record<string, string> = {
   "/payroll": "payroll",
   "/reports": "reports",
   "/organization": "organization",
+  "/check-in": "check-in",
 };
 
 const MobileFooterNav = () => {
