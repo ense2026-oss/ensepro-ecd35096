@@ -9,6 +9,7 @@ import { useEmployees } from "@/contexts/EmployeeContext";
 import ContractStatusBadge from "@/components/contracts/ContractStatusBadge";
 import SignatureDialog from "@/components/contracts/SignatureDialog";
 import { toast } from "sonner";
+import { processFileUpload } from "@/utils/fileCompression";
 
 const ContractDetail = () => {
   const { id } = useParams<{ id: string }>();
