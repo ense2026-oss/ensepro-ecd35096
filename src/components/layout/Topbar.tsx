@@ -187,19 +187,21 @@ const Topbar = ({ onMenuToggle, pageTitle = "Dashboard", pageSubtitle = "ภา�
 
       {/* Right: Actions */}
       <div className="flex items-center gap-2">
-        {/* Check-in Button */}
-        <button
-          onClick={() => navigate("/check-in")}
-          className="flex items-center gap-2 px-2.5 lg:px-3 py-2 rounded-xl text-sm font-bold text-primary-foreground transition-all hover:opacity-90"
-          style={{
-            background: "linear-gradient(135deg, hsl(var(--primary)), hsl(31 100% 60%))",
-            boxShadow: "0 2px 8px hsl(var(--primary) / 0.3)",
-          }}
-          title="ลงเวลา"
-        >
-          <MapPin className="w-4 h-4" />
-          <span className="hidden lg:inline">ลงเวลา</span>
-        </button>
+        {/* Check-in Button - hidden when check-in module is disabled */}
+        {isCheckInEnabled && (
+          <button
+            onClick={() => navigate("/check-in")}
+            className="flex items-center gap-2 px-2.5 lg:px-3 py-2 rounded-xl text-sm font-bold text-primary-foreground transition-all hover:opacity-90"
+            style={{
+              background: "linear-gradient(135deg, hsl(var(--primary)), hsl(31 100% 60%))",
+              boxShadow: "0 2px 8px hsl(var(--primary) / 0.3)",
+            }}
+            title="ลงเวลา"
+          >
+            <MapPin className="w-4 h-4" />
+            <span className="hidden lg:inline">ลงเวลา</span>
+          </button>
+        )}
 
         {/* Notification */}
         <div className="relative" ref={notifRef}>
