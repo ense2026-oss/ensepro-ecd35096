@@ -119,7 +119,7 @@ const Contracts = () => {
                     <TableCell className="text-xs">{c.startDate} — {c.endDate}</TableCell>
                     <TableCell><ContractStatusBadge status={c.status} /></TableCell>
                     <TableCell className="text-right">
-                      {c.status === "draft" && (
+                      {hasAdminAccess && c.status === "draft" && (
                         <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setEditContract(c); setFormOpen(true); }}>แก้ไข</Button>
                       )}
                     </TableCell>
