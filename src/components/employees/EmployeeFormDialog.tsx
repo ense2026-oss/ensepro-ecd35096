@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Save, X, ScanFace, Upload, Camera } from "lucide-react";
@@ -60,10 +60,17 @@ const SectionLabel = ({ children }: { children: React.ReactNode }) => (
 
 const EmployeeFormDialog = ({ open, onOpenChange, employee, onSave }: EmployeeFormDialogProps) => {
   const isEdit = !!employee;
-  const { departments } = useOrg();
+  const { departments, affiliations, affiliationNames, allPositions } = useOrg();
   const [form, setForm] = useState<Omit<Employee, "id" | "education" | "workHistory">>(EMPTY);
   const [errors, setErrors] = useState<string[]>([]);
   const photoInputRef = useRef<HTMLInputElement>(null);
+
+  // Filter positions based on selected affiliation
+  const filteredPositions = useMemo(() => {
+    const aff = affiliations.find((a) => a.name === form.dept);
+    if (aff) return aff.positions.map((p) => p.name);
+    return allPositions;
+  }, [form.dept, affiliations, allPositions]);
 
   const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -95,8 +102,8 @@ const EmployeeFormDialog = ({ open, onOpenChange, employee, onSave }: EmployeeFo
     const errs: string[] = [];
     if (!form.firstName.trim()) errs.push("กรุณากรอกชื่อ");
     if (!form.lastName.trim()) errs.push("กรุณากรอกนามสกุล");
-    if (!form.dept.trim() || form.dept === "-- เลือกแผนก --") errs.push("กรุณาเลือกแผนก");
-    if (!form.position.trim()) errs.push("กรุณากรอกตำแหน่ง");
+    if (!form.dept.trim() || form.dept === "-- เลือกสังกัด --") errs.push("กรุณาเลือกสังกัด");
+    if (!form.position.trim() || form.position === "-- เลือกตำแหน่ง --") errs.push("กรุณาเลือกตำแหน่ง");
     if (errs.length) { setErrors(errs); return; }
 
     // Auto-generate avatar data
@@ -172,8 +179,8 @@ const EmployeeFormDialog = ({ open, onOpenChange, employee, onSave }: EmployeeFo
 
           <SectionLabel>ข้อมูลการทำงาน</SectionLabel>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <SelectField label="แผนก" value={form.dept} onChange={set("dept")} options={["-- เลือกแผนก --", ...departments]} />
-            <InputField label="ตำแหน่ง" value={form.position} onChange={set("position")} required />
+            <SelectField label="สังกัด (แผนก/หน่วยงาน)" value={form.dept} onChange={set("dept")} options={["-- เลือกสังกัด --", ...affiliationNames]} />
+            <SelectField label="ตำแหน่ง" value={form.position} onChange={set("position")} options={["-- เลือกตำแหน่ง --", ...filteredPositions]} />
             <SelectField label="ประเภทพนักงาน" value={form.employeeType} onChange={set("employeeType")} options={["พนักงานประจำ", "พนักงานชั่วคราว", "พนักงานทดลองงาน"]} />
             <InputField label="เงินเดือน (บาท)" value={form.salary} onChange={set("salary")} type="number" />
             <div className="space-y-1.5">
