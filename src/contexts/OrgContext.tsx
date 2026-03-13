@@ -137,6 +137,26 @@ const findDeptHead = (node: OrgNode, deptName: string): string | null => {
   return null;
 };
 
+/* ═══════════════════ Initial Affiliations ═══════════════════ */
+const INITIAL_AFFILIATIONS: Affiliation[] = [
+  {
+    id: 1, name: "รถไฟฟ้าขสมช",
+    positions: [
+      { id: 1, name: "เจ้าหน้าที่วิจัย" },
+      { id: 2, name: "วิศวกรระบบราง" },
+      { id: 3, name: "พนักงานขับรถไฟฟ้า" },
+    ],
+  },
+  {
+    id: 2, name: "เตาเผาขยะสวนดอก",
+    positions: [
+      { id: 1, name: "เจ้าหน้าที่ควบคุมเตาเผา" },
+      { id: 2, name: "ช่างซ่อมบำรุง" },
+      { id: 3, name: "เจ้าหน้าที่สิ่งแวดล้อม" },
+    ],
+  },
+];
+
 /* ═══════════════════ Context ═══════════════════ */
 interface OrgContextType {
   orgTree: OrgNode;
@@ -146,6 +166,10 @@ interface OrgContextType {
   updateNode: (id: string, updater: (n: OrgNode) => OrgNode) => void;
   addChild: (parentId: string, child: OrgNode) => void;
   removeNode: (id: string) => void;
+  affiliations: Affiliation[];
+  setAffiliations: Dispatch<SetStateAction<Affiliation[]>>;
+  allPositions: string[];
+  affiliationNames: string[];
 }
 
 const OrgContext = createContext<OrgContextType | null>(null);
