@@ -102,8 +102,8 @@ const EmployeeFormDialog = ({ open, onOpenChange, employee, onSave }: EmployeeFo
     const errs: string[] = [];
     if (!form.firstName.trim()) errs.push("กรุณากรอกชื่อ");
     if (!form.lastName.trim()) errs.push("กรุณากรอกนามสกุล");
-    if (!form.dept.trim() || form.dept === "-- เลือกแผนก --") errs.push("กรุณาเลือกแผนก");
-    if (!form.position.trim()) errs.push("กรุณากรอกตำแหน่ง");
+    if (!form.dept.trim() || form.dept === "-- เลือกสังกัด --") errs.push("กรุณาเลือกสังกัด");
+    if (!form.position.trim() || form.position === "-- เลือกตำแหน่ง --") errs.push("กรุณาเลือกตำแหน่ง");
     if (errs.length) { setErrors(errs); return; }
 
     // Auto-generate avatar data
