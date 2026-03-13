@@ -485,8 +485,26 @@ const Organization = () => {
                 </SelectContent>
               </Select>
             </div>
-            <FormInput label="ตำแหน่ง" value={form.position} onChange={setField("position")} required placeholder="เช่น ผู้จัดการ, หัวหน้า" />
-            <FormInput label="แผนก/หน่วยงาน" value={form.dept} onChange={setField("dept")} />
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">ตำแหน่ง <span className="text-destructive">*</span></label>
+              <Select value={form.position} onValueChange={setField("position")}>
+                <SelectTrigger className="rounded-xl border-border bg-muted/30"><SelectValue placeholder="เลือกตำแหน่ง" /></SelectTrigger>
+                <SelectContent>
+                  {(affiliations.find((a) => a.name === form.dept)?.positions || affiliations.flatMap((a) => a.positions))
+                    .filter((p, i, arr) => arr.findIndex((x) => x.name === p.name) === i)
+                    .map((p) => <SelectItem key={p.id + "-" + p.name} value={p.name}>{p.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">สังกัด (แผนก/หน่วยงาน)</label>
+              <Select value={form.dept} onValueChange={setField("dept")}>
+                <SelectTrigger className="rounded-xl border-border bg-muted/30"><SelectValue placeholder="เลือกสังกัด" /></SelectTrigger>
+                <SelectContent>
+                  {affiliationNames.map((name) => <SelectItem key={name} value={name}>{name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
             <FormInput label="อีเมล" value={form.email} onChange={setField("email")} type="email" />
             <FormInput label="เบอร์โทร" value={form.phone} onChange={setField("phone")} />
             <FormInput label="จำนวนคนในทีม" value={String(form.headCount)} onChange={(v) => setForm((f) => ({ ...f, headCount: Number(v) || 0 }))} type="number" />
