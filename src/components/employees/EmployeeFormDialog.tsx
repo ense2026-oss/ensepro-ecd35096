@@ -71,9 +71,6 @@ const EmployeeFormDialog = ({ open, onOpenChange, employee, onSave }: EmployeeFo
     if (aff) return aff.positions.map((p) => p.name);
     return allPositions;
   }, [form.dept, affiliations, allPositions]);
-  const [form, setForm] = useState<Omit<Employee, "id" | "education" | "workHistory">>(EMPTY);
-  const [errors, setErrors] = useState<string[]>([]);
-  const photoInputRef = useRef<HTMLInputElement>(null);
 
   const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
