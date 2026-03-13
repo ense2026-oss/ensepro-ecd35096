@@ -176,12 +176,20 @@ const OrgContext = createContext<OrgContextType | null>(null);
 
 export const OrgProvider = ({ children }: { children: ReactNode }) => {
   const [orgTree, setOrgTree] = useState<OrgNode>(INITIAL_ORG);
+  const [affiliations, setAffiliations] = useState<Affiliation[]>(INITIAL_AFFILIATIONS);
 
   const departments = useMemo(() => {
     const set = new Set<string>();
     collectDepartments(orgTree, set);
     return Array.from(set).sort();
   }, [orgTree]);
+
+  const affiliationNames = useMemo(() => affiliations.map((a) => a.name), [affiliations]);
+  const allPositions = useMemo(() => {
+    const set = new Set<string>();
+    affiliations.forEach((a) => a.positions.forEach((p) => set.add(p.name)));
+    return Array.from(set).sort();
+  }, [affiliations]);
 
   const getDeptHead = useCallback((deptName: string) => {
     return findDeptHead(orgTree, deptName);
@@ -200,7 +208,7 @@ export const OrgProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   return (
-    <OrgContext.Provider value={{ orgTree, setOrgTree, departments, getDeptHead, updateNode, addChild, removeNode }}>
+    <OrgContext.Provider value={{ orgTree, setOrgTree, departments, getDeptHead, updateNode, addChild, removeNode, affiliations, setAffiliations, allPositions, affiliationNames }}>
       {children}
     </OrgContext.Provider>
   );
