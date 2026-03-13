@@ -163,7 +163,7 @@ const OrgNodeCard = ({
 /* ═══════════════════ Main Component ═══════════════════ */
 const Organization = () => {
   const { employees } = useEmployees();
-  const { orgTree, updateNode, addChild, removeNode } = useOrg();
+  const { orgTree, updateNode, addChild, removeNode, affiliations, affiliationNames } = useOrg();
   const [expandedMap, setExpandedMap] = useState<Record<string, boolean>>({ "1": true, "2": true });
   const [searchTerm, setSearchTerm] = useState("");
 
