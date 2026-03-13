@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Building2, MapPin, Shield, Clock, Calendar, Workflow, ScanFace, Palette, Banknote, FileSignature, ToggleRight, ChevronRight } from "lucide-react";
+import { Building2, MapPin, Shield, Clock, Calendar, Workflow, ScanFace, Palette, Banknote, FileSignature, ToggleRight, ChevronRight, Network } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import LocationsSettings from "@/components/settings/LocationsSettings";
@@ -13,9 +13,11 @@ import DisplaySettings from "@/components/settings/DisplaySettings";
 import PayrollSettings from "@/components/settings/PayrollSettings";
 import ContractSettings from "@/components/settings/ContractSettings";
 import ModuleSettings from "@/components/settings/ModuleSettings";
+import AffiliationSettings from "@/components/settings/AffiliationSettings";
 
 const tabs = [
   { id: "company", label: "ข้อมูลบริษัท", icon: Building2 },
+  { id: "affiliations", label: "จัดการสังกัด", icon: Network },
   { id: "locations", label: "พื้นที่เข้างาน", icon: MapPin },
   { id: "roles", label: "สิทธิ์ผู้ใช้งาน", icon: Shield },
   { id: "shifts", label: "กะการทำงาน", icon: Clock },
