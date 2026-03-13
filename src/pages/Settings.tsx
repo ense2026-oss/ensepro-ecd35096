@@ -42,6 +42,8 @@ const Settings = () => {
     switch (activeTab) {
       case "company":
         return <CompanySettings />;
+      case "affiliations":
+        return <AffiliationSettings />;
 
       case "locations":
         return <LocationsSettings />;

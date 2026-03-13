@@ -60,7 +60,17 @@ const SectionLabel = ({ children }: { children: React.ReactNode }) => (
 
 const EmployeeFormDialog = ({ open, onOpenChange, employee, onSave }: EmployeeFormDialogProps) => {
   const isEdit = !!employee;
-  const { departments } = useOrg();
+  const { departments, affiliations, affiliationNames, allPositions } = useOrg();
+  const [form, setForm] = useState<Omit<Employee, "id" | "education" | "workHistory">>(EMPTY);
+  const [errors, setErrors] = useState<string[]>([]);
+  const photoInputRef = useRef<HTMLInputElement>(null);
+
+  // Filter positions based on selected affiliation
+  const filteredPositions = useMemo(() => {
+    const aff = affiliations.find((a) => a.name === form.dept);
+    if (aff) return aff.positions.map((p) => p.name);
+    return allPositions;
+  }, [form.dept, affiliations, allPositions]);
   const [form, setForm] = useState<Omit<Employee, "id" | "education" | "workHistory">>(EMPTY);
   const [errors, setErrors] = useState<string[]>([]);
   const photoInputRef = useRef<HTMLInputElement>(null);
