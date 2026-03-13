@@ -1,6 +1,17 @@
-import { createContext, useContext, useState, useMemo, useCallback, type ReactNode } from "react";
+import { createContext, useContext, useState, useMemo, useCallback, type ReactNode, type Dispatch, type SetStateAction } from "react";
 
 /* ═══════════════════ Types ═══════════════════ */
+export interface Position {
+  id: number;
+  name: string;
+}
+
+export interface Affiliation {
+  id: number;
+  name: string;
+  positions: Position[];
+}
+
 export interface OrgNode {
   id: string;
   name: string;
