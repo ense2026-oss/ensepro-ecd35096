@@ -326,6 +326,12 @@ const Organization = () => {
                       onEdit={(p) => handleEdit(p, aff.id)}
                       onAdd={() => handleAdd(aff.id)}
                       onDelete={(p) => handleDeleteClick(p, aff.id)}
+                      isDragging={dragAffId === aff.id && dragFromIdx === idx}
+                      dragOverIndex={dragAffId === aff.id ? dragOverIdx : null}
+                      onDragStart={(i) => handleDragStart(aff.id, i)}
+                      onDragOver={handleDragOver}
+                      onDragEnd={handleDragEnd}
+                      onDrop={(e, i) => handleDrop(aff.id, i)}
                     />
                   ))}
                   {aff.positions.length === 0 && (
