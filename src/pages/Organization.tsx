@@ -22,6 +22,12 @@ const PositionNode = ({
   onEdit,
   onAdd,
   onDelete,
+  isDragging,
+  dragOverIndex,
+  onDragStart,
+  onDragOver,
+  onDragEnd,
+  onDrop,
 }: {
   position: Position;
   index: number;
@@ -30,58 +36,54 @@ const PositionNode = ({
   onEdit: (p: Position) => void;
   onAdd: (afterLevel: number) => void;
   onDelete: (p: Position) => void;
+  isDragging: boolean;
+  dragOverIndex: number | null;
+  onDragStart: (idx: number) => void;
+  onDragOver: (e: React.DragEvent, idx: number) => void;
+  onDragEnd: () => void;
+  onDrop: (e: React.DragEvent, idx: number) => void;
 }) => {
   const code = `POS${String(position.id).padStart(5, "0")}`;
+  const isOver = dragOverIndex === index;
 
   return (
-    <div className="relative flex items-start">
+    <div
+      className={`relative flex items-start transition-opacity ${isDragging ? "opacity-40" : ""}`}
+      draggable
+      onDragStart={() => onDragStart(index)}
+      onDragOver={(e) => onDragOver(e, index)}
+      onDragEnd={onDragEnd}
+      onDrop={(e) => onDrop(e, index)}
+    >
       {/* Vertical connector line */}
       <div className="flex flex-col items-center" style={{ width: 24, minHeight: "100%" }}>
-        {/* Top vertical line */}
         <div className="w-0.5 bg-border" style={{ height: 28 }} />
-        {/* Horizontal branch */}
         <div className="flex items-center" style={{ height: 0 }}>
           <div className="h-0.5 bg-border" style={{ width: 20 }} />
         </div>
-        {/* Bottom vertical line (only if not last) */}
-        {index < total - 1 && (
-          <div className="w-0.5 bg-border flex-1" />
-        )}
+        {index < total - 1 && <div className="w-0.5 bg-border flex-1" />}
       </div>
 
-      {/* Indent spacer based on level */}
       {level > 0 && <div style={{ width: level * 32 }} className="flex-shrink-0" />}
 
       {/* Node card */}
       <div className="flex items-center gap-3 py-2 flex-1 min-w-0">
-        <div className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-card border border-border shadow-sm min-w-[200px] max-w-xs transition-all hover:shadow-md">
+        <div className={`flex items-center gap-3 px-4 py-3 rounded-2xl bg-card border-2 shadow-sm min-w-[200px] max-w-xs transition-all hover:shadow-md cursor-grab active:cursor-grabbing ${isOver ? "border-primary ring-2 ring-primary/20" : "border-border"}`}>
+          <GripVertical className="w-4 h-4 text-muted-foreground flex-shrink-0" />
           <div className="flex flex-col min-w-0">
             <span className="text-sm font-bold text-foreground truncate">{position.name}</span>
             <span className="text-xs text-muted-foreground">({code})</span>
           </div>
         </div>
 
-        {/* Action buttons */}
         <div className="flex items-center gap-1.5">
-          <button
-            onClick={() => onAdd(level)}
-            className="w-8 h-8 rounded-full flex items-center justify-center bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
-            title="เพิ่มตำแหน่ง"
-          >
+          <button onClick={() => onAdd(level)} className="w-8 h-8 rounded-full flex items-center justify-center bg-primary/10 text-primary hover:bg-primary/20 transition-colors" title="เพิ่มตำแหน่ง">
             <Plus className="w-4 h-4" />
           </button>
-          <button
-            onClick={() => onEdit(position)}
-            className="w-8 h-8 rounded-full flex items-center justify-center bg-accent text-accent-foreground hover:bg-accent/80 transition-colors"
-            title="แก้ไข"
-          >
+          <button onClick={() => onEdit(position)} className="w-8 h-8 rounded-full flex items-center justify-center bg-accent text-accent-foreground hover:bg-accent/80 transition-colors" title="แก้ไข">
             <Edit className="w-4 h-4" />
           </button>
-          <button
-            onClick={() => onDelete(position)}
-            className="w-8 h-8 rounded-full flex items-center justify-center bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors"
-            title="ลบ"
-          >
+          <button onClick={() => onDelete(position)} className="w-8 h-8 rounded-full flex items-center justify-center bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors" title="ลบ">
             <Trash2 className="w-4 h-4" />
           </button>
         </div>
