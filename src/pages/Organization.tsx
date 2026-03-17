@@ -96,6 +96,45 @@ const PositionNode = ({
 const Organization = () => {
   const { affiliations, setAffiliations } = useOrg();
 
+  // Drag & drop state
+  const [dragAffId, setDragAffId] = useState<number | null>(null);
+  const [dragFromIdx, setDragFromIdx] = useState<number | null>(null);
+  const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
+
+  const handleDragStart = (affId: number, idx: number) => {
+    setDragAffId(affId);
+    setDragFromIdx(idx);
+  };
+
+  const handleDragOver = (e: React.DragEvent, _idx: number) => {
+    e.preventDefault();
+    setDragOverIdx(_idx);
+  };
+
+  const handleDrop = (affId: number, toIdx: number) => {
+    if (dragAffId !== affId || dragFromIdx === null || dragFromIdx === toIdx) {
+      handleDragEnd();
+      return;
+    }
+    setAffiliations((prev) =>
+      prev.map((a) => {
+        if (a.id !== affId) return a;
+        const positions = [...a.positions];
+        const [moved] = positions.splice(dragFromIdx, 1);
+        positions.splice(toIdx, 0, moved);
+        return { ...a, positions };
+      })
+    );
+    handleDragEnd();
+    toast.success("เรียงลำดับตำแหน่งสำเร็จ");
+  };
+
+  const handleDragEnd = () => {
+    setDragAffId(null);
+    setDragFromIdx(null);
+    setDragOverIdx(null);
+  };
+
   // Expanded affiliations
   const [expandedAffs, setExpandedAffs] = useState<Record<number, boolean>>(
     () => Object.fromEntries(affiliations.map((a) => [a.id, true]))
