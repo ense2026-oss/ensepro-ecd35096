@@ -1,5 +1,5 @@
-import { useState, useMemo } from "react";
-import { Plus, Edit, Trash2, Save, Building2, Users, ChevronDown, ChevronRight, AlertCircle } from "lucide-react";
+import { useState, useRef, useCallback } from "react";
+import { Plus, Edit, Trash2, Save, Building2, Users, ChevronDown, ChevronRight, AlertCircle, GripVertical } from "lucide-react";
 import { useOrg, type Affiliation, type Position } from "@/contexts/OrgContext";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose,
