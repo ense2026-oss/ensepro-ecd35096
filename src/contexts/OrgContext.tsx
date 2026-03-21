@@ -4,6 +4,7 @@ import { createContext, useContext, useState, useMemo, useCallback, type ReactNo
 export interface Position {
   id: number;
   name: string;
+  children?: Position[];
 }
 
 export interface Affiliation {
