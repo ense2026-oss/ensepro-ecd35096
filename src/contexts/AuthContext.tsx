@@ -40,6 +40,7 @@ interface AuthContextType {
     email: string;
     dept: string;
     position: string;
+    employeeId: string | null;
   } | null;
 }
 
@@ -50,6 +51,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [role, setRole] = useState<AppRole>("employee");
+  const [employeeId, setEmployeeId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   const fetchProfileAndRole = useCallback(async (userId: string) => {
@@ -75,6 +77,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (roleData) {
         setRole(roleData.role as AppRole);
       }
+
+      // Fetch linked employee ID
+      const { data: empData } = await supabase
+        .from("employees")
+        .select("id")
+        .eq("user_id", userId)
+        .maybeSingle();
+
+      setEmployeeId(empData?.id ?? null);
     } catch (err) {
       console.error("Error fetching profile/role:", err);
     }
@@ -143,6 +154,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setSession(null);
     setProfile(null);
     setRole("employee");
+    setEmployeeId(null);
     try {
       await supabase.auth.signOut();
     } catch (err) {
@@ -175,6 +187,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     email: user.email || "",
     dept: "",
     position: "",
+    employeeId,
   } : null;
 
   return (

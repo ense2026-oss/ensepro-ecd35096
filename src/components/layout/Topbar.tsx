@@ -303,7 +303,7 @@ const Topbar = ({ onMenuToggle, pageTitle = "Dashboard", pageSubtitle = "ภา�
               </div>
               <div className="p-2">
                 {[
-                  { icon: User, label: "โปรไฟล์", path: currentUser ? `/employees/${currentUser.id}` : "/profile", show: true },
+                  { icon: User, label: "โปรไฟล์", path: currentUser?.employeeId ? `/employees/${currentUser.employeeId}` : "/profile", show: true },
                   { icon: Settings, label: "ตั้งค่า", path: "/settings", show: hasAdminAccess },
                 ].filter((item) => item.show).map((item) => (
                   <button
