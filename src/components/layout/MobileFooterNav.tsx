@@ -45,6 +45,7 @@ const MobileFooterNav = () => {
   const { leavePending, attendancePending, overtimePending } = usePendingCounts();
   const { currentUser, role } = useAuth();
   const isMobile = useIsMobile();
+  const { canAccessRoute, isSelfOnly } = usePermissions();
 
   const getModuleSettings = useCallback(() => {
     try {
