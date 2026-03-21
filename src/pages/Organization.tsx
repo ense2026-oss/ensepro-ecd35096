@@ -14,81 +14,29 @@ import { toast } from "sonner";
 const countAllPositions = (positions: Position[]): number =>
   positions.reduce((s, p) => s + 1 + countAllPositions(p.children || []), 0);
 
-const findPositionById = (positions: Position[], id: number): Position | null => {
-  for (const p of positions) {
-    if (p.id === id) return p;
-    const found = findPositionById(p.children || [], id);
-    if (found) return found;
-  }
-  return null;
-};
-
-const addChildToPosition = (positions: Position[], parentId: number, child: Position): Position[] =>
-  positions.map((p) =>
-    p.id === parentId
-      ? { ...p, children: [...(p.children || []), child] }
-      : { ...p, children: addChildToPosition(p.children || [], parentId, child) }
-  );
-
-const updatePositionName = (positions: Position[], targetId: number, newName: string): Position[] =>
-  positions.map((p) =>
-    p.id === targetId
-      ? { ...p, name: newName }
-      : { ...p, children: updatePositionName(p.children || [], targetId, newName) }
-  );
-
-const removePosition = (positions: Position[], targetId: number): Position[] =>
-  positions
-    .filter((p) => p.id !== targetId)
-    .map((p) => ({ ...p, children: removePosition(p.children || [], targetId) }));
-
-const reorderSiblings = (positions: Position[], fromIdx: number, toIdx: number): Position[] => {
-  const arr = [...positions];
-  const [moved] = arr.splice(fromIdx, 1);
-  arr.splice(toIdx, 0, moved);
-  return arr;
-};
-
-const reorderInParent = (positions: Position[], parentId: number, fromIdx: number, toIdx: number): Position[] =>
-  positions.map((p) =>
-    p.id === parentId
-      ? { ...p, children: reorderSiblings(p.children || [], fromIdx, toIdx) }
-      : { ...p, children: reorderInParent(p.children || [], parentId, fromIdx, toIdx) }
-  );
+const collectAllIds = (positions: Position[]): string[] =>
+  positions.flatMap((p) => [p.id, ...collectAllIds(p.children || [])]);
 
 /* ═══════════════════ Position Tree Node ═══════════════════ */
 const PositionNode = ({
-  position,
-  index,
-  total,
-  level = 0,
-  onEdit,
-  onAddSub,
-  onDelete,
-  isDraggingId,
-  dragOverId,
-  onDragStart,
-  onDragOver,
-  onDragEnd,
-  onDrop,
+  position, index, total, level = 0,
+  onEdit, onAddSub, onDelete,
+  isDraggingId, dragOverId,
+  onDragStart, onDragOver, onDragEnd, onDrop,
   parentId = null,
 }: {
-  position: Position;
-  index: number;
-  total: number;
-  level?: number;
+  position: Position; index: number; total: number; level?: number;
   onEdit: (p: Position) => void;
   onAddSub: (parentPos: Position) => void;
   onDelete: (p: Position) => void;
-  isDraggingId: number | null;
-  dragOverId: number | null;
-  onDragStart: (posId: number, parentId: number | null, idx: number) => void;
-  onDragOver: (e: React.DragEvent, posId: number) => void;
+  isDraggingId: string | null;
+  dragOverId: string | null;
+  onDragStart: (posId: string, parentId: string | null, idx: number) => void;
+  onDragOver: (e: React.DragEvent, posId: string) => void;
   onDragEnd: () => void;
-  onDrop: (e: React.DragEvent, posId: number, parentId: number | null, idx: number) => void;
-  parentId?: number | null;
+  onDrop: (e: React.DragEvent, posId: string, parentId: string | null, idx: number) => void;
+  parentId?: string | null;
 }) => {
-  const code = `POS${String(position.id).padStart(5, "0")}`;
   const isOver = dragOverId === position.id;
   const isDragging = isDraggingId === position.id;
   const children = position.children || [];
@@ -103,7 +51,6 @@ const PositionNode = ({
         onDragEnd={onDragEnd}
         onDrop={(e) => { e.stopPropagation(); onDrop(e, position.id, parentId, index); }}
       >
-        {/* Connector lines */}
         <div className="flex flex-col items-center" style={{ width: 24, minHeight: "100%" }}>
           <div className="w-0.5 bg-border" style={{ height: 28 }} />
           <div className="flex items-center" style={{ height: 0 }}>
@@ -112,13 +59,11 @@ const PositionNode = ({
           {(index < total - 1 || children.length > 0) && <div className="w-0.5 bg-border flex-1" />}
         </div>
 
-        {/* Node card */}
         <div className="flex items-center gap-3 py-2 flex-1 min-w-0">
           <div className={`flex items-center gap-3 px-4 py-3 rounded-2xl bg-card border-2 shadow-sm min-w-[200px] max-w-xs transition-all hover:shadow-md cursor-grab active:cursor-grabbing ${isOver ? "border-primary ring-2 ring-primary/20" : "border-border"}`}>
             <GripVertical className="w-4 h-4 text-muted-foreground flex-shrink-0" />
             <div className="flex flex-col min-w-0">
               <span className="text-sm font-bold text-foreground truncate">{position.name}</span>
-              <span className="text-xs text-muted-foreground">({code})</span>
             </div>
           </div>
 
@@ -136,25 +81,14 @@ const PositionNode = ({
         </div>
       </div>
 
-      {/* Render children recursively */}
       {children.length > 0 && (
         <div className="ml-10">
           {children.map((child, idx) => (
             <PositionNode
-              key={child.id}
-              position={child}
-              index={idx}
-              total={children.length}
-              level={level + 1}
-              onEdit={onEdit}
-              onAddSub={onAddSub}
-              onDelete={onDelete}
-              isDraggingId={isDraggingId}
-              dragOverId={dragOverId}
-              onDragStart={onDragStart}
-              onDragOver={onDragOver}
-              onDragEnd={onDragEnd}
-              onDrop={onDrop}
+              key={child.id} position={child} index={idx} total={children.length} level={level + 1}
+              onEdit={onEdit} onAddSub={onAddSub} onDelete={onDelete}
+              isDraggingId={isDraggingId} dragOverId={dragOverId}
+              onDragStart={onDragStart} onDragOver={onDragOver} onDragEnd={onDragEnd} onDrop={onDrop}
               parentId={position.id}
             />
           ))}
@@ -166,144 +100,129 @@ const PositionNode = ({
 
 /* ═══════════════════ Main Component ═══════════════════ */
 const Organization = () => {
-  const { affiliations, setAffiliations } = useOrg();
+  const { affiliations, addPosition, updatePosition, deletePosition, reorderPositions, loading } = useOrg();
 
-  // Drag & drop state — track by position id + parent context
-  const [dragInfo, setDragInfo] = useState<{ posId: number; parentId: number | null; idx: number; affId: number } | null>(null);
-  const [dragOverPosId, setDragOverPosId] = useState<number | null>(null);
+  // Drag state
+  const [dragInfo, setDragInfo] = useState<{ posId: string; parentId: string | null; idx: number; affId: string } | null>(null);
+  const [dragOverPosId, setDragOverPosId] = useState<string | null>(null);
 
-  const handleDragStart = (affId: number, posId: number, parentId: number | null, idx: number) => {
+  const handleDragStart = (affId: string, posId: string, parentId: string | null, idx: number) => {
     setDragInfo({ posId, parentId, idx, affId });
   };
 
-  const handleDragOver = (e: React.DragEvent, posId: number) => {
+  const handleDragOver = (e: React.DragEvent, posId: string) => {
     e.preventDefault();
     setDragOverPosId(posId);
   };
 
-  const handleDrop = (affId: number, _posId: number, parentId: number | null, toIdx: number) => {
+  const handleDrop = async (affId: string, _posId: string, parentId: string | null, toIdx: number) => {
     if (!dragInfo || dragInfo.affId !== affId || dragInfo.parentId !== parentId) {
-      handleDragEnd();
-      return;
+      handleDragEnd(); return;
     }
     const fromIdx = dragInfo.idx;
     if (fromIdx === toIdx) { handleDragEnd(); return; }
 
-    setAffiliations((prev) =>
-      prev.map((a) => {
-        if (a.id !== affId) return a;
-        if (parentId === null) {
-          return { ...a, positions: reorderSiblings(a.positions, fromIdx, toIdx) };
+    // Find siblings
+    const aff = affiliations.find((a) => a.id === affId);
+    if (!aff) { handleDragEnd(); return; }
+
+    let siblings: Position[];
+    if (parentId === null) {
+      siblings = [...aff.positions];
+    } else {
+      const findChildren = (positions: Position[], pid: string): Position[] | null => {
+        for (const p of positions) {
+          if (p.id === pid) return p.children || [];
+          const found = findChildren(p.children || [], pid);
+          if (found) return found;
         }
-        return { ...a, positions: reorderInParent(a.positions, parentId, fromIdx, toIdx) };
-      })
-    );
+        return null;
+      };
+      siblings = [...(findChildren(aff.positions, parentId) || [])];
+    }
+
+    const [moved] = siblings.splice(fromIdx, 1);
+    siblings.splice(toIdx, 0, moved);
+    await reorderPositions(siblings.map((s) => s.id));
     handleDragEnd();
     toast.success("เรียงลำดับตำแหน่งสำเร็จ");
   };
 
-  const handleDragEnd = () => {
-    setDragInfo(null);
-    setDragOverPosId(null);
-  };
+  const handleDragEnd = () => { setDragInfo(null); setDragOverPosId(null); };
 
-  // Expanded affiliations
-  const [expandedAffs, setExpandedAffs] = useState<Record<number, boolean>>(
-    () => Object.fromEntries(affiliations.map((a) => [a.id, true]))
-  );
-  const toggleAff = (id: number) => setExpandedAffs((m) => ({ ...m, [id]: !m[id] }));
+  // Expanded
+  const [expandedAffs, setExpandedAffs] = useState<Record<string, boolean>>({});
+  const toggleAff = (id: string) => setExpandedAffs((m) => ({ ...m, [id]: !m[id] }));
 
-  // Dialog states
+  // Dialogs
   const [editOpen, setEditOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   const [editingPos, setEditingPos] = useState<Position | null>(null);
-  const [editingAffId, setEditingAffId] = useState<number | null>(null);
-  const [deletingPos, setDeletingPos] = useState<{ pos: Position; affId: number } | null>(null);
-  const [addAffId, setAddAffId] = useState<number | null>(null);
+  const [deletingPos, setDeletingPos] = useState<Position | null>(null);
+  const [addAffId, setAddAffId] = useState<string | null>(null);
   const [addParentPos, setAddParentPos] = useState<Position | null>(null);
-
   const [formName, setFormName] = useState("");
 
-  // Stats
   const totalPositions = affiliations.reduce((s, a) => s + countAllPositions(a.positions), 0);
 
-  // Handlers
-  const handleAddRoot = (affId: number) => {
-    setAddAffId(affId);
-    setAddParentPos(null);
-    setFormName("");
-    setAddOpen(true);
+  const handleAddRoot = (affId: string) => {
+    setAddAffId(affId); setAddParentPos(null); setFormName(""); setAddOpen(true);
   };
 
-  const handleAddSub = (parentPos: Position, affId: number) => {
-    setAddAffId(affId);
-    setAddParentPos(parentPos);
-    setFormName("");
-    setAddOpen(true);
+  const handleAddSub = (parentPos: Position, affId: string) => {
+    setAddAffId(affId); setAddParentPos(parentPos); setFormName(""); setAddOpen(true);
   };
 
-  const handleAddSave = () => {
-    if (!formName.trim()) { toast.error("กรุณากรอกชื่อตำแหน่ง"); return; }
-    const newPos: Position = { id: Date.now(), name: formName.trim() };
-
-    setAffiliations((prev) =>
-      prev.map((a) => {
-        if (a.id !== addAffId) return a;
-        if (!addParentPos) {
-          return { ...a, positions: [...a.positions, newPos] };
-        }
-        return { ...a, positions: addChildToPosition(a.positions, addParentPos.id, newPos) };
-      })
-    );
+  const handleAddSave = async () => {
+    if (!formName.trim() || !addAffId) { toast.error("กรุณากรอกชื่อตำแหน่ง"); return; }
+    setSaving(true);
+    await addPosition(addAffId, addParentPos?.id || null, formName.trim());
+    setSaving(false);
     setAddOpen(false);
     toast.success(`เพิ่มตำแหน่ง "${formName}" สำเร็จ`);
   };
 
-  const handleEdit = (pos: Position, affId: number) => {
-    setEditingPos(pos);
-    setEditingAffId(affId);
-    setFormName(pos.name);
-    setEditOpen(true);
+  const handleEdit = (pos: Position, _affId: string) => {
+    setEditingPos(pos); setFormName(pos.name); setEditOpen(true);
   };
 
-  const handleEditSave = () => {
+  const handleEditSave = async () => {
     if (!formName.trim() || !editingPos) { toast.error("กรุณากรอกชื่อตำแหน่ง"); return; }
-    setAffiliations((prev) =>
-      prev.map((a) =>
-        a.id === editingAffId
-          ? { ...a, positions: updatePositionName(a.positions, editingPos.id, formName.trim()) }
-          : a
-      )
-    );
+    setSaving(true);
+    await updatePosition(editingPos.id, formName.trim());
+    setSaving(false);
     setEditOpen(false);
     toast.success("แก้ไขตำแหน่งสำเร็จ");
   };
 
-  const handleDeleteClick = (pos: Position, affId: number) => {
-    setDeletingPos({ pos, affId });
-    setDeleteOpen(true);
+  const handleDeleteClick = (pos: Position) => {
+    setDeletingPos(pos); setDeleteOpen(true);
   };
 
-  const handleDeleteConfirm = () => {
+  const handleDeleteConfirm = async () => {
     if (!deletingPos) return;
-    setAffiliations((prev) =>
-      prev.map((a) =>
-        a.id === deletingPos.affId
-          ? { ...a, positions: removePosition(a.positions, deletingPos.pos.id) }
-          : a
-      )
-    );
+    setSaving(true);
+    await deletePosition(deletingPos.id);
+    setSaving(false);
     setDeleteOpen(false);
-    toast.success(`ลบตำแหน่ง "${deletingPos.pos.name}" สำเร็จ`);
+    toast.success(`ลบตำแหน่ง "${deletingPos.name}" สำเร็จ`);
   };
 
-  const childrenCount = (deletingPos?.pos.children?.length || 0);
+  const childrenCount = deletingPos?.children?.length || 0;
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <div className="w-8 h-8 border-3 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-5 animate-fade-in">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-xl font-bold font-display">โครงสร้างตำแหน่ง</h2>
@@ -311,7 +230,6 @@ const Organization = () => {
         </div>
       </div>
 
-      {/* Stats */}
       <div className="card-base p-4">
         <div className="flex items-center gap-6 flex-wrap">
           <div className="flex items-center gap-2">
@@ -335,15 +253,12 @@ const Organization = () => {
         </div>
       </div>
 
-      {/* Affiliation Trees */}
       {affiliations.map((aff) => {
         const isExpanded = expandedAffs[aff.id] ?? true;
         return (
           <div key={aff.id} className="card-base overflow-hidden">
-            <button
-              onClick={() => toggleAff(aff.id)}
-              className="w-full flex items-center gap-3 px-5 py-4 hover:bg-muted/50 transition-colors text-left"
-            >
+            <button onClick={() => toggleAff(aff.id)}
+              className="w-full flex items-center gap-3 px-5 py-4 hover:bg-muted/50 transition-colors text-left">
               <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-primary text-primary-foreground font-bold text-sm">
                 {aff.name.charAt(0)}
               </div>
@@ -364,11 +279,9 @@ const Organization = () => {
                       <span className="text-xs text-muted-foreground">{aff.name}</span>
                     </div>
                   </div>
-                  <button
-                    onClick={() => handleAddRoot(aff.id)}
+                  <button onClick={() => handleAddRoot(aff.id)}
                     className="w-8 h-8 rounded-full flex items-center justify-center bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
-                    title="เพิ่มตำแหน่งหลัก"
-                  >
+                    title="เพิ่มตำแหน่งหลัก">
                     <Plus className="w-4 h-4" />
                   </button>
                 </div>
@@ -376,14 +289,10 @@ const Organization = () => {
                 <div className="ml-6">
                   {aff.positions.map((pos, idx) => (
                     <PositionNode
-                      key={pos.id}
-                      position={pos}
-                      index={idx}
-                      total={aff.positions.length}
-                      level={0}
+                      key={pos.id} position={pos} index={idx} total={aff.positions.length} level={0}
                       onEdit={(p) => handleEdit(p, aff.id)}
                       onAddSub={(p) => handleAddSub(p, aff.id)}
-                      onDelete={(p) => handleDeleteClick(p, aff.id)}
+                      onDelete={(p) => handleDeleteClick(p)}
                       isDraggingId={dragInfo?.affId === aff.id ? dragInfo.posId : null}
                       dragOverId={dragInfo?.affId === aff.id ? dragOverPosId : null}
                       onDragStart={(posId, parentId, i) => handleDragStart(aff.id, posId, parentId, i)}
@@ -410,7 +319,7 @@ const Organization = () => {
         </div>
       )}
 
-      {/* ═══ Add Position Dialog ═══ */}
+      {/* Add Dialog */}
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -436,29 +345,24 @@ const Organization = () => {
               <label className="text-xs font-medium text-muted-foreground">
                 ชื่อตำแหน่ง{addParentPos ? "ย่อย" : ""} <span className="text-destructive">*</span>
               </label>
-              <input
-                value={formName}
-                onChange={(e) => setFormName(e.target.value)}
+              <input value={formName} onChange={(e) => setFormName(e.target.value)}
                 placeholder={addParentPos ? "เช่น ช่างเทคนิค" : "เช่น เจ้าหน้าที่วิจัย"}
-                className="w-full px-3 py-2 text-sm rounded-xl border border-border bg-muted/30 outline-none focus:ring-2 focus:ring-primary/30 transition-all"
-              />
+                className="w-full px-3 py-2 text-sm rounded-xl border border-border bg-muted/30 outline-none focus:ring-2 focus:ring-primary/30 transition-all" />
             </div>
           </div>
           <DialogFooter>
             <DialogClose asChild>
               <button className="px-4 py-2 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors">ยกเลิก</button>
             </DialogClose>
-            <button
-              onClick={handleAddSave}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold text-primary-foreground bg-primary hover:bg-primary/90 transition-all"
-            >
+            <button onClick={handleAddSave} disabled={saving}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold text-primary-foreground bg-primary hover:bg-primary/90 transition-all disabled:opacity-50">
               <Plus className="w-4 h-4" /> เพิ่ม
             </button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* ═══ Edit Position Dialog ═══ */}
+      {/* Edit Dialog */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -471,28 +375,23 @@ const Organization = () => {
               <label className="text-xs font-medium text-muted-foreground">
                 ชื่อตำแหน่ง <span className="text-destructive">*</span>
               </label>
-              <input
-                value={formName}
-                onChange={(e) => setFormName(e.target.value)}
-                className="w-full px-3 py-2 text-sm rounded-xl border border-border bg-muted/30 outline-none focus:ring-2 focus:ring-primary/30 transition-all"
-              />
+              <input value={formName} onChange={(e) => setFormName(e.target.value)}
+                className="w-full px-3 py-2 text-sm rounded-xl border border-border bg-muted/30 outline-none focus:ring-2 focus:ring-primary/30 transition-all" />
             </div>
           </div>
           <DialogFooter>
             <DialogClose asChild>
               <button className="px-4 py-2 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors">ยกเลิก</button>
             </DialogClose>
-            <button
-              onClick={handleEditSave}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold text-primary-foreground bg-primary hover:bg-primary/90 transition-all"
-            >
+            <button onClick={handleEditSave} disabled={saving}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold text-primary-foreground bg-primary hover:bg-primary/90 transition-all disabled:opacity-50">
               <Save className="w-4 h-4" /> บันทึก
             </button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* ═══ Delete Dialog ═══ */}
+      {/* Delete Dialog */}
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -500,7 +399,7 @@ const Organization = () => {
               <AlertCircle className="w-5 h-5 text-destructive" /> ยืนยันการลบ
             </AlertDialogTitle>
             <AlertDialogDescription>
-              คุณต้องการลบตำแหน่ง <strong>"{deletingPos?.pos.name}"</strong> หรือไม่?
+              คุณต้องการลบตำแหน่ง <strong>"{deletingPos?.name}"</strong> หรือไม่?
               {childrenCount > 0 && (
                 <span className="block mt-1 text-destructive font-medium">
                   ⚠️ ตำแหน่งนี้มีตำแหน่งย่อย {childrenCount} รายการ ซึ่งจะถูกลบทั้งหมด
@@ -510,10 +409,8 @@ const Organization = () => {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>ยกเลิก</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteConfirm}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
+            <AlertDialogAction onClick={handleDeleteConfirm} disabled={saving}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
               ลบ
             </AlertDialogAction>
           </AlertDialogFooter>
