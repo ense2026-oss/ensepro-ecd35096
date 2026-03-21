@@ -227,11 +227,11 @@ const Sidebar = ({ collapsed, onToggle, onNavigate }: SidebarProps) => {
             )}
             <div className="space-y-1">
               {section.items.map((item) => {
-                const selfOnly = isSelfOnly(role, item.path);
+                const selfOnly = permSelfOnly(role, item.path);
                 const linkPath = selfOnly && currentUser
                   ? `/employees/${currentUser.employeeId || currentUser.id}`
                   : item.path;
-                const displayLabel = getLabelForRole(role, item.path, item.label);
+                const displayLabel = item.label;
                 const isActive = location.pathname === item.path || location.pathname === linkPath || (item.path === "/employees" && location.pathname.startsWith("/employees/"));
                 const badgeCount: number = dynamicBadges[item.path] ?? 0;
                 return (

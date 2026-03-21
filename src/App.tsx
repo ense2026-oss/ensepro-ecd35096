@@ -89,6 +89,7 @@ const App = () => (
           <Route path="/login" element={<LoginRoute />} />
           <Route element={
             <ProtectedRoute>
+              <PermissionsProvider>
               <OrgProvider>
               <EmployeeProvider>
               <PendingCountsProvider>
@@ -100,6 +101,7 @@ const App = () => (
               </PendingCountsProvider>
               </EmployeeProvider>
               </OrgProvider>
+              </PermissionsProvider>
             </ProtectedRoute>
           }>
             <Route path="/dashboard" element={<Dashboard />} />

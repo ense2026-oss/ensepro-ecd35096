@@ -54,7 +54,7 @@ const MainLayout = () => {
   const currentPath = "/" + location.pathname.split("/")[1]; // e.g. /employees/123 → /employees
   if (!canAccessRoute(role, currentPath)) {
     // Redirect to first accessible page
-    const defaultPage = canAccess(role, "/dashboard") ? "/dashboard" : "/notifications";
+    const defaultPage = canAccessRoute(role, "/dashboard") ? "/dashboard" : "/notifications";
     return <Navigate to={defaultPage} replace />;
   }
 

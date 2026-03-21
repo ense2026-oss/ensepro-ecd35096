@@ -85,8 +85,8 @@ const MobileFooterNav = () => {
   const rightItems = menuItems.slice(midIndex);
 
   const renderItem = (item: typeof menuItems[0]) => {
-    const selfOnly = isSelfOnly(role, item.path);
-    const linkPath = selfOnly && currentUser
+    const selfOnlyCheck = isSelfOnly(role, item.path);
+    const linkPath = selfOnlyCheck && currentUser
       ? `/employees/${currentUser.employeeId || currentUser.id}`
       : item.path;
     const active = isActive(item.path);
