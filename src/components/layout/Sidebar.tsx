@@ -229,7 +229,7 @@ const Sidebar = ({ collapsed, onToggle, onNavigate }: SidebarProps) => {
             <div className="space-y-1">
               {section.items.map((item) => {
                 const linkPath = (item as any).employeeSelfOnly && !hasAdminAccess && currentUser
-                  ? `/employees/${currentUser.id}`
+                  ? `/employees/${currentUser.employeeId || currentUser.id}`
                   : item.path;
                 const isActive = location.pathname === item.path || location.pathname === linkPath || (item.path === "/employees" && location.pathname.startsWith("/employees/"));
                 const badgeCount: number = dynamicBadges[item.path] ?? 0;

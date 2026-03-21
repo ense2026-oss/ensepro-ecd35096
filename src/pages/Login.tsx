@@ -67,8 +67,7 @@ const Login = () => {
         return;
       }
       setSuccess("สมัครสมาชิกสำเร็จ! กำลังเข้าสู่ระบบ...");
-      // Auto-confirm is on, so auth state change will trigger navigation
-      setTimeout(() => navigate("/dashboard"), 1000);
+      // Route guard (LoginRoute) will redirect once auth state updates
     } else {
       const { error: loginErr } = await auth.login(email.trim(), password.trim());
       setIsLoading(false);
@@ -76,7 +75,7 @@ const Login = () => {
         setError("Email หรือรหัสผ่านไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง");
         return;
       }
-      navigate("/dashboard");
+      // Route guard (LoginRoute) will redirect once auth state updates
     }
   };
 
