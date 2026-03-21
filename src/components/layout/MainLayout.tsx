@@ -4,6 +4,7 @@ import Sidebar from "./Sidebar";
 import Topbar from "./Topbar";
 import MobileFooterNav from "./MobileFooterNav";
 import { useAuth } from "@/contexts/AuthContext";
+import { canAccess, getRestrictedPaths, isSelfOnly } from "@/config/roleAccess";
 
 const pageTitles: Record<string, { title: string; subtitle: string }> = {
   "/dashboard": { title: "หน้าหลัก", subtitle: "ภาพรวมระบบบริหารจัดการพนักงาน" },
@@ -19,15 +20,14 @@ const pageTitles: Record<string, { title: string; subtitle: string }> = {
   "/notifications": { title: "การแจ้งเตือน", subtitle: "รายการแจ้งเตือนและการอนุมัติ" },
   "/settings": { title: "ตั้งค่าระบบ", subtitle: "กำหนดค่าระบบ บริษัท และสิทธิ์การใช้งาน" },
   "/profile": { title: "โปรไฟล์ของฉัน", subtitle: "จัดการข้อมูลส่วนตัวและความปลอดภัย" },
+  "/contracts": { title: "จัดการสัญญาจ้าง", subtitle: "สร้างและจัดการสัญญาจ้างพนักงาน" },
 };
-
-const adminOnlyPaths = ["/organization", "/attendance", "/reports", "/settings", "/shift-management", "/payroll"];
 
 const MainLayout = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const location = useLocation();
-  const { user, loading, profileReady, currentUser, hasAdminAccess } = useAuth();
+  const { user, loading, profileReady, currentUser, role } = useAuth();
 
   // Still bootstrapping auth — show loader, don't redirect
   if (loading || !profileReady) {
@@ -49,25 +49,28 @@ const MainLayout = () => {
   // Employee ID for self-routes (fallback to auth id)
   const selfEmployeeId = currentUser?.employeeId || user.id;
 
-  // Redirect employee from admin-only pages
-  if (!hasAdminAccess && adminOnlyPaths.some((p) => location.pathname.startsWith(p))) {
-    return <Navigate to="/check-in" replace />;
+  // Check role-based access for current path
+  const currentPath = "/" + location.pathname.split("/")[1]; // e.g. /employees/123 → /employees
+  if (!canAccess(role, currentPath)) {
+    // Redirect to first accessible page
+    const defaultPage = canAccess(role, "/dashboard") ? "/dashboard" : "/notifications";
+    return <Navigate to={defaultPage} replace />;
   }
 
-  // Redirect employee from /employees list to their own profile
-  if (!hasAdminAccess && location.pathname === "/employees") {
+  // Redirect self-only users from list view to their own profile
+  if (isSelfOnly(role, "/employees") && location.pathname === "/employees") {
     return <Navigate to={`/employees/${selfEmployeeId}`} replace />;
   }
 
   // Block employee from viewing other employees' profiles
-  if (!hasAdminAccess && location.pathname.startsWith("/employees/")) {
+  if (isSelfOnly(role, "/employees") && location.pathname.startsWith("/employees/")) {
     const viewingId = location.pathname.split("/employees/")[1];
     if (viewingId && viewingId !== selfEmployeeId) {
       return <Navigate to={`/employees/${selfEmployeeId}`} replace />;
     }
   }
 
-  const pageInfo = pageTitles[location.pathname] ?? { title: "HRPro", subtitle: "ระบบบริหารจัดการพนักงาน" };
+  const pageInfo = pageTitles[location.pathname] ?? pageTitles[currentPath] ?? { title: "HRPro", subtitle: "ระบบบริหารจัดการพนักงาน" };
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
