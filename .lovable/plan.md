@@ -1,27 +1,28 @@
 
 
-## แก้ไข Console Errors และปรับปรุงความเร็ว Dashboard
+## แก้ไข: LoginRoute Redirect Loop → หน้าขาว + Console Errors
 
-### ปัญหาที่พบ
+### สาเหตุ
 
-1. **"Function components cannot be given refs"** — `StatCard` และ `Skeleton` ไม่ได้ใช้ `forwardRef` แต่ถูกส่ง ref ผ่าน animation หรือ parent component
-2. **Dashboard โหลดช้า** — `fetchAll()` ดึงข้อมูลทุกตาราง 6 queries พร้อมกันทุกครั้ง + Realtime trigger `fetchAll()` ซ้ำทั้งหมดเมื่อมีการเปลี่ยนแปลงในตารางใดตารางหนึ่ง
-3. **TikTok Ads SDK error** — เป็น external script ไม่ใช่โค้ดของเรา ไม่ต้องแก้
+`LoginRoute` ใช้ `useEffect` + `navigate` เพื่อ redirect ไป `/dashboard` เมื่อ login สำเร็จ แต่ `navigate` จาก `useNavigate()` เปลี่ยน reference ทุกครั้งที่ render → useEffect re-run → navigate อีก → re-render → **วนซ้ำไม่สิ้นสุด** → "Maximum update depth exceeded" + "Throttling navigation"
 
-### แผนแก้ไข
+### แก้ไข
 
-#### 1. แก้ `Skeleton` ให้ใช้ `forwardRef` (`src/components/ui/skeleton.tsx`)
-- เปลี่ยนจาก function component ธรรมดาเป็น `React.forwardRef`
+**ไฟล์**: `src/App.tsx` (บรรทัด 72-85)
 
-#### 2. แก้ `StatCard` ให้ใช้ `forwardRef` (`src/pages/Dashboard.tsx`)
-- เปลี่ยน `StatCard` เป็น `forwardRef` component
+เปลี่ยน `LoginRoute` จากใช้ `useEffect` + `useNavigate` เป็นใช้ `<Navigate>` component โดยตรง ซึ่งไม่ทำให้เกิด loop:
 
-#### 3. ปรับปรุงความเร็ว Dashboard (`src/pages/Dashboard.tsx`)
-- **จำกัดคอลัมน์ที่ดึง**: ใช้ `.select("id, status, ...")` แทน `.select("*")` สำหรับ `attendance_records` และตารางอื่นๆ
-- **เพิ่ม filter วันที่สำหรับ leave/OT**: ดึงเฉพาะข้อมูลเดือนนี้แทนทั้งหมด
-- **Debounce realtime callback**: เพิ่ม debounce 500ms เพื่อไม่ให้ fetchAll ถูกเรียกซ้ำถี่เกินไปเมื่อมี event หลายตารางพร้อมกัน
+```tsx
+const LoginRoute = () => {
+  const { user, loading } = useAuth();
+  if (loading) return null;
+  if (user) return <Navigate to="/dashboard" replace />;
+  return <Login />;
+};
+```
+
+ลบ `useNavigate` import ออกจาก react-router-dom (ถ้าไม่ใช้ที่อื่น)
 
 ### ไฟล์ที่แก้ไข
-1. `src/components/ui/skeleton.tsx` — เพิ่ม forwardRef
-2. `src/pages/Dashboard.tsx` — เพิ่ม forwardRef ให้ StatCard, optimize queries, debounce realtime
+1. `src/App.tsx` — เปลี่ยน LoginRoute เป็น declarative redirect
 
