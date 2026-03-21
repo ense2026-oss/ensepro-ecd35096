@@ -156,10 +156,10 @@ const CheckIn = () => {
   const { currentUser } = useAuth();
 
   const currentEmployee = {
-    name: currentUser ? `${currentUser.prefix || ""}${currentUser.firstName} ${currentUser.lastName}` : "",
+    name: currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : "",
     position: currentUser?.position || "",
     department: currentUser?.dept || "",
-    phone: currentUser?.phone || "",
+    phone: "",
     email: currentUser?.email || "",
     initials: currentUser?.firstName?.charAt(0) || "",
   };

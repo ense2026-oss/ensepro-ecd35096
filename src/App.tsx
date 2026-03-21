@@ -8,7 +8,7 @@ import { BrandingProvider } from "./contexts/BrandingContext";
 import { PendingCountsProvider } from "./contexts/PendingCountsContext";
 import { TimeEditProvider } from "./contexts/TimeEditContext";
 import { ContractProvider } from "./contexts/ContractContext";
-import { AuthProvider } from "./contexts/AuthContext";
+import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { OrgProvider } from "./contexts/OrgContext";
 import MainLayout from "./components/layout/MainLayout";
 import Login from "./pages/Login";
@@ -31,16 +31,49 @@ import ContractDetail from "./pages/ContractDetail";
 import NotFound from "./pages/NotFound";
 import { applyDisplaySettings } from "./components/settings/DisplaySettings";
 
-// Redirect based on device
-const ResponsiveRedirect = () => {
-  const isMobile = window.innerWidth < 1024;
-  return <Navigate to={isMobile ? "/check-in" : "/dashboard"} replace />;
-};
-
 // Apply saved display settings on load
 applyDisplaySettings();
 
 const queryClient = new QueryClient();
+
+// Auth guard component
+const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-3 border-primary border-t-transparent rounded-full animate-spin" />
+          <p className="text-sm text-muted-foreground">กำลังโหลด...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return <>{children}</>;
+};
+
+// Redirect based on auth state
+const AuthRedirect = () => {
+  const { user, loading } = useAuth();
+  if (loading) return null;
+  if (!user) return <Navigate to="/login" replace />;
+  const isMobile = window.innerWidth < 1024;
+  return <Navigate to={isMobile ? "/check-in" : "/dashboard"} replace />;
+};
+
+// Redirect away from login if already authenticated
+const LoginRoute = () => {
+  const { user, loading } = useAuth();
+  if (loading) return null;
+  if (user) return <Navigate to="/dashboard" replace />;
+  return <Login />;
+};
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -56,9 +89,9 @@ const App = () => (
         <ContractProvider>
         <TimeEditProvider>
         <Routes>
-          <Route path="/" element={<ResponsiveRedirect />} />
-          <Route path="/login" element={<Login />} />
-          <Route element={<MainLayout />}>
+          <Route path="/" element={<AuthRedirect />} />
+          <Route path="/login" element={<LoginRoute />} />
+          <Route element={<ProtectedRoute><MainLayout /></ProtectedRoute>}>
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/employees" element={<Employees />} />
             <Route path="/employees/:id" element={<EmployeeProfile />} />
