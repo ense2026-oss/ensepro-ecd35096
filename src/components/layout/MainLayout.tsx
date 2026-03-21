@@ -31,7 +31,7 @@ const MainLayout = () => {
   const { canAccessRoute, isSelfOnly, loading: permLoading } = usePermissions();
 
   // Still bootstrapping auth — show loader, don't redirect
-  if (loading || !profileReady) {
+  if (loading || !profileReady || permLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-3">
