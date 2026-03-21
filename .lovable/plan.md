@@ -1,119 +1,34 @@
 
-# แผนเพิ่มระบบรายการหัก/รายรับแบบยืดหยุ่น (Custom Payroll Items)
 
-## สรุปภาพรวม
+## แผนเพิ่มระบบ Sub-Position (ตำแหน่งย่อย)
 
-จากตาราง Excel ที่แชร์มา ระบบเงินเดือนปัจจุบันยังขาดรายการหักที่สามารถเพิ่ม/ลบได้ตามสถานการณ์จริง เช่น หักเงิน กยศ., หักผ่อนชำระหนี้, หักค่าประกันการทำงาน, ค่าตอบแทนวิชาชีพ เป็นต้น แผนนี้จะเพิ่มระบบรายการ "รายรับเพิ่มเติม" และ "รายการหักเพิ่มเติม" ที่สามารถกำหนดเองได้ทั้งในระดับ Template (ใช้ซ้ำทุกเดือน) และระดับรายเดือนต่อพนักงาน
+### สิ่งที่จะเปลี่ยน
 
-## สิ่งที่จะเปลี่ยนแปลง
+#### 1. แก้ไข Type `Position` ใน `src/contexts/OrgContext.tsx`
+- เพิ่ม field `children?: Position[]` เพื่อรองรับโครงสร้างแบบ tree
+- อัปเดต demo data ให้มีตัวอย่าง sub-position (เช่น "วิศวกรระบบราง" มี sub เป็น "ช่างเทคนิคระบบราง")
 
-### 1. สร้าง Custom Payroll Items System
+#### 2. แก้ไข `PositionNode` ใน `src/pages/Organization.tsx`
+- ปุ่ม **+** บน position node จะเปลี่ยนจาก "เพิ่มตำแหน่งในสังกัด" เป็น **"เพิ่ม sub-position ภายใต้ตำแหน่งนี้"**
+- Render children ของแต่ละ position แบบ recursive พร้อมเยื้อง (indent) และเส้นเชื่อมเพิ่มขึ้นตาม level
+- Drag & drop จะทำงานเฉพาะ sibling ในระดับเดียวกัน
 
-เพิ่มระบบรายการรายรับ/รายหักที่ยืดหยุ่น โดยแบ่งเป็น 2 ประเภท:
+#### 3. ปรับ Dialog เพิ่มตำแหน่ง
+- เพิ่ม state `addParentPosId` เพื่อระบุว่ากำลังเพิ่ม sub ของ position ไหน
+- แสดงชื่อ parent position ใน dialog เพื่อความชัดเจน
+- ปุ่ม + ที่ root node ของสังกัด ยังคงเพิ่มตำแหน่งระดับบนสุด
 
-- **รายรับเพิ่มเติม (Additional Income)**: เช่น ค่าตอบแทนวิชาชีพ, เบี้ยเลี้ยง, ค่าตำแหน่ง
-- **รายการหักเพิ่มเติม (Additional Deductions)**: เช่น หักเงิน กยศ., หักผ่อนชำระหนี้, หักค่าประกันการทำงาน
+#### 4. ปรับ handlers (Add/Edit/Delete)
+- `handleAddSave` — ถ้ามี `parentPosId` จะ insert เข้า `children` ของ position นั้นแบบ recursive
+- `handleDeleteConfirm` — ลบ position แบบ recursive (รวม children ทั้งหมด)
+- `handleEditSave` — แก้ไขชื่อแบบ recursive find
 
-แต่ละรายการจะมี:
-- ชื่อรายการ (เช่น "หักเงิน กยศ.")
-- จำนวนเงิน (บาท)
-- ประเภท (income หรือ deduction)
-- สถานะ (ใช้งาน/ไม่ใช้งาน)
+### ไฟล์ที่แก้ไข
+1. `src/contexts/OrgContext.tsx` — เพิ่ม `children` ใน Position type + demo data
+2. `src/pages/Organization.tsx` — recursive render, ปรับ handlers, ปรับ dialog
 
-### 2. เพิ่ม Custom Items ใน Employee Context
+### Technical Details
+- ใช้ recursive component `PositionNode` ที่มีอยู่แล้ว โดยเพิ่มการ render `position.children` ด้านล่างของแต่ละ node
+- Helper function `findAndUpdate(positions, targetId, updater)` สำหรับ recursive CRUD
+- เส้นเชื่อมใช้ CSS border เดิม + indent เพิ่ม 32px ต่อ level
 
-เพิ่ม field `customPayrollItems` ใน Employee interface เพื่อเก็บรายการประจำตัวพนักงาน (รายการที่หักทุกเดือน) พร้อม mock data ตัวอย่างตามที่เห็นใน Excel
-
-### 3. เพิ่มหน้าจัดการรายการในหน้า Payroll
-
-- เพิ่มปุ่ม "แก้ไขรายการ" ในแต่ละแถวของตารางเงินเดือน
-- เปิด Dialog ที่แสดงรายรับ/รายหักเพิ่มเติมของพนักงานคนนั้น
-- มีปุ่ม "+ เพิ่มรายการ" สำหรับเพิ่มรายการใหม่
-- สามารถแก้ไขจำนวนเงิน, เปิด/ปิด, หรือลบรายการได้
-
-### 4. ปรับ calcPayroll ให้รวม Custom Items
-
-- นำรายรับเพิ่มเติมมารวมใน grossPay
-- นำรายหักเพิ่มเติมมารวมใน totalDeduct
-- ผลลัพธ์ netPay = grossPay - totalDeduct (รวม custom items แล้ว)
-
-### 5. ปรับ PayslipDialog
-
-- เพิ่มแสดงรายรับเพิ่มเติมในส่วน "รายได้"
-- เพิ่มแสดงรายหักเพิ่มเติมในส่วน "รายการหัก"
-- แต่ละรายการแสดงชื่อและจำนวนเงินชัดเจน
-
-### 6. ปรับ Export Excel/PDF
-
-- เพิ่มคอลัมน์รายรับ/รายหักเพิ่มเติมในตาราง Excel
-- เพิ่มรายการใน PDF สลิปเงินเดือน
-- ปรับตาราง ภ.ง.ด.1 ให้สะท้อนรายได้รวมที่ถูกต้อง
-
-### 7. เพิ่มการตั้งค่า Template รายการหักในหน้า PayrollSettings
-
-เพิ่มส่วน "รายการหักเพิ่มเติมเริ่มต้น" ในหน้าตั้งค่าเงินเดือน เพื่อกำหนด Template รายการที่ใช้บ่อย เช่น กยศ., ผ่อนชำระหนี้ ฯลฯ เพื่อให้สะดวกเมื่อเพิ่มรายการให้พนักงานใหม่
-
-## ตัวอย่างหน้าจอ (Wireframe)
-
-```text
-+-------------------------------------------------------+
-|  ตารางเงินเดือน                                        |
-+------+--------+-----+-------+------+------+-----+-----+
-| ชื่อ  | เงินเดือน| OT  | ค่าวิชาชีพ| รวมรับ | หัก SSF| หัก กยศ.| สุทธิ |
-+------+--------+-----+-------+------+------+------+-----+
-| สมชาย | 15,000 |7,506| 1,000 |23,506|  750 |   -  |20,856|
-|       |        |     |       |      |      |      | [แก้ไข]|
-+------+--------+-----+-------+------+------+------+-----+
-```
-
-```text
-+------------------------------------------+
-|  Dialog: แก้ไขรายการ - สมชาย              |
-|                                          |
-|  รายรับเพิ่มเติม                          |
-|  [ค่าตอบแทนวิชาชีพ]  [1,000]  [x ลบ]     |
-|  [+ เพิ่มรายรับ]                          |
-|                                          |
-|  รายการหักเพิ่มเติม                       |
-|  [หักเงิน กยศ.]       [500]   [x ลบ]     |
-|  [หักผ่อนชำระหนี้]     [1,200] [x ลบ]     |
-|  [หักค่าประกันการทำงาน] [300]  [x ลบ]     |
-|  [+ เพิ่มรายการหัก]                       |
-|                                          |
-|  [บันทึก]                                 |
-+------------------------------------------+
-```
-
-## รายละเอียดทางเทคนิค
-
-### ไฟล์ที่ต้องแก้ไข/สร้าง
-
-| ไฟล์ | การเปลี่ยนแปลง |
-|---|---|
-| `src/contexts/EmployeeContext.tsx` | เพิ่ม `CustomPayrollItem` interface และ `customPayrollItems` field ใน Employee + mock data |
-| `src/pages/Payroll.tsx` | ปรับ `calcPayroll` ให้รวม custom items, เพิ่ม `CustomItemsDialog`, ปรับ `PayslipDialog` และตาราง |
-| `src/utils/exportPayroll.ts` | ปรับ `calcPayrollForExport`, `exportPayslipPdf`, `exportPayslipExcel`, `exportAllPayslipsExcel` ให้รวม custom items |
-| `src/components/settings/PayrollSettings.tsx` | เพิ่มส่วนจัดการ Template รายการหักเพิ่มเติม |
-
-### Data Model
-
-```text
-interface CustomPayrollItem {
-  id: string;
-  name: string;           // ชื่อรายการ เช่น "หักเงิน กยศ."
-  type: "income" | "deduction";
-  amount: number;          // จำนวนเงิน (บาท)
-  enabled: boolean;        // เปิด/ปิดใช้งานรายเดือน
-}
-
-// เพิ่มใน Employee interface
-customPayrollItems?: CustomPayrollItem[];
-```
-
-### Mock Data ตัวอย่าง (ตาม Excel ที่แชร์มา)
-
-พนักงานบางคนจะมีรายการหักเพิ่มเติมเป็นตัวอย่าง:
-- ค่าตอบแทนวิชาชีพ (income): 1,000 บาท
-- หักค่าประกันการทำงาน (deduction): 300 บาท
-- หักเงิน กยศ. (deduction): 500 บาท
-- หักผ่อนชำระหนี้ (deduction): 1,200 บาท
