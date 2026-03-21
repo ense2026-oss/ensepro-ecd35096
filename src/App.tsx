@@ -1,8 +1,9 @@
+import { useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import { EmployeeProvider } from "./contexts/EmployeeContext";
 import { BrandingProvider } from "./contexts/BrandingContext";
 import { PendingCountsProvider } from "./contexts/PendingCountsContext";
@@ -70,8 +71,16 @@ const AuthRedirect = () => {
 // Redirect away from login if already authenticated
 const LoginRoute = () => {
   const { user, loading } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!loading && user) {
+      navigate("/dashboard", { replace: true });
+    }
+  }, [user, loading, navigate]);
+
   if (loading) return null;
-  if (user) return <Navigate to="/dashboard" replace />;
+  if (user) return null; // navigating away
   return <Login />;
 };
 

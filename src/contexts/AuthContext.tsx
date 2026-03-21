@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { User, Session } from "@supabase/supabase-js";
 
@@ -80,16 +80,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
+  const initialized = useRef(false);
+
   useEffect(() => {
     // Listen for auth state changes FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, newSession) => {
+        // Skip if this is the initial event — getSession handles it
+        if (!initialized.current) return;
+
         setSession(newSession);
         setUser(newSession?.user ?? null);
 
         if (newSession?.user) {
-          // Use setTimeout to avoid Supabase deadlock
-          setTimeout(() => fetchProfileAndRole(newSession.user.id), 0);
+          await fetchProfileAndRole(newSession.user.id);
         } else {
           setProfile(null);
           setRole("employee");
@@ -99,13 +103,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     );
 
     // THEN get initial session
-    supabase.auth.getSession().then(({ data: { session: initialSession } }) => {
+    supabase.auth.getSession().then(async ({ data: { session: initialSession } }) => {
       setSession(initialSession);
       setUser(initialSession?.user ?? null);
       if (initialSession?.user) {
-        fetchProfileAndRole(initialSession.user.id);
+        await fetchProfileAndRole(initialSession.user.id);
       }
       setLoading(false);
+      initialized.current = true;
     });
 
     return () => subscription.unsubscribe();
