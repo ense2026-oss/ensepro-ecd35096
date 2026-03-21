@@ -3,8 +3,7 @@ import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { usePendingCounts } from "@/contexts/PendingCountsContext";
 import { useBranding } from "@/contexts/BrandingContext";
 import { useAuth } from "@/contexts/AuthContext";
-import { canAccess, getLabelForRole, isSelfOnly } from "@/config/roleAccess";
-import type { AppRole } from "@/config/roleAccess";
+import { usePermissions } from "@/contexts/PermissionsContext";
 import {
   LayoutDashboard,
   Users,
