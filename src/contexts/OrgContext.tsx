@@ -191,7 +191,13 @@ export const OrgProvider = ({ children }: { children: ReactNode }) => {
   const affiliationNames = useMemo(() => affiliations.map((a) => a.name), [affiliations]);
   const allPositions = useMemo(() => {
     const set = new Set<string>();
-    affiliations.forEach((a) => a.positions.forEach((p) => set.add(p.name)));
+    const collectPositions = (positions: Position[]) => {
+      positions.forEach((p) => {
+        set.add(p.name);
+        if (p.children) collectPositions(p.children);
+      });
+    };
+    affiliations.forEach((a) => collectPositions(a.positions));
     return Array.from(set).sort();
   }, [affiliations]);
 
