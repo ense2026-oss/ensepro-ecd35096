@@ -138,11 +138,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const logout = useCallback(async () => {
-    await supabase.auth.signOut();
+    // Clear state FIRST to ensure UI reacts immediately
     setUser(null);
     setSession(null);
     setProfile(null);
     setRole("employee");
+    try {
+      await supabase.auth.signOut();
+    } catch (err) {
+      console.warn("signOut error (state already cleared):", err);
+    }
   }, []);
 
   const isAdmin = role === "admin";
