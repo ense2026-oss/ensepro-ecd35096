@@ -264,15 +264,17 @@ const Sidebar = ({ collapsed, onToggle, onNavigate }: SidebarProps) => {
 
       {/* Logout */}
       <div className="p-3 border-t" style={{ borderColor: "hsl(var(--sidebar-border))" }}>
-        <NavLink
-          to="/login"
-          onClick={() => logout()}
-          className={`sidebar-item ${collapsed ? "justify-center" : ""}`}
+        <button
+          onClick={async () => {
+            await logout();
+            navigate("/login");
+          }}
+          className={`sidebar-item w-full ${collapsed ? "justify-center" : ""}`}
           style={{ color: "rgba(255,255,255,0.5)" }}
         >
           <LogOut className="w-5 h-5 flex-shrink-0" />
           {!collapsed && <span>ออกจากระบบ</span>}
-        </NavLink>
+        </button>
       </div>
 
       {/* Toggle button */}
