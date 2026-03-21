@@ -1,26 +1,22 @@
 
 
-## แก้ไข: Maximum update depth exceeded ที่ LoginRoute
+## แก้ไข: Logout ไม่ทำงาน + 406 Error บน Published URL
 
-### สาเหตุ
-หลังจาก signup สำเร็จ (auto-confirm เปิดอยู่) เกิด race condition:
-1. `onAuthStateChange` fires → set user + set loading=false
-2. `getSession` resolves → set user + set loading=false อีกครั้ง
-3. `fetchProfileAndRole` ทำงานแบบ async → set profile + role → re-render อีก
-4. LoginRoute เห็น `user` → `<Navigate to="/dashboard">` → trigger navigation → re-render วนซ้ำ
+### ปัญหาที่ 1: Logout ไม่ทำงาน
+**ไฟล์**: `src/components/layout/Sidebar.tsx` (บรรทัด 267-276)
 
-### แก้ไข
+ปุ่ม logout ใช้ `<NavLink to="/login" onClick={() => logout()}>` ซึ่ง navigate ไป `/login` ก่อนที่ `signOut()` จะเสร็จ → LoginRoute เห็น user ยังอยู่ → redirect กลับ `/dashboard` → วนซ้ำ
 
-#### 1. `src/contexts/AuthContext.tsx`
-- ใช้ flag `initialized` ref เพื่อให้ `getSession` set state เฉพาะก่อน `onAuthStateChange` fire
-- ให้ `loading` เป็น `false` หลังจาก profile/role โหลดเสร็จ (ไม่ใช่ทันทีที่ได้ session)
-- เปลี่ยน flow: `getSession` ทำงานก่อน set initial state → `onAuthStateChange` จัดการ subsequent changes
+**แก้ไข**: เปลี่ยนเป็น `<button>` + `useNavigate` → `await logout()` แล้วค่อย `navigate("/login")`
 
-#### 2. `src/App.tsx` — LoginRoute
-- เพิ่มการ guard ที่ดีกว่า: ใช้ `session` แทน `user` เพื่อลด re-render
-- หรือใช้ `useEffect` + `useNavigate` แทน `<Navigate>` component เพื่อหลีกเลี่ยง render-loop
+MobileFooterNav ไม่มีปุ่ม logout จึงไม่ต้องแก้
+
+### ปัญหาที่ 2: 406 Error (company_settings)
+`BrandingProvider` query `company_settings` ทันทีที่โหลด แต่ RLS ต้อง `authenticated` เท่านั้น → ยังไม่ login → 406
+
+**แก้ไข**: เพิ่ม RLS policy ให้ `anon` อ่าน `company_settings` ได้ (เป็นข้อมูล branding ที่ไม่ sensitive)
 
 ### ไฟล์ที่แก้ไข
-1. `src/contexts/AuthContext.tsx` — แก้ race condition ระหว่าง getSession กับ onAuthStateChange
-2. `src/App.tsx` — แก้ LoginRoute ใช้ useEffect+useNavigate แทน Navigate component
+1. `src/components/layout/Sidebar.tsx` — เปลี่ยน logout จาก NavLink เป็น button + await
+2. Migration SQL — เพิ่ม `anon SELECT` policy บน `company_settings`
 
