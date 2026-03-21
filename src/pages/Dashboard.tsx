@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef, useCallback, forwardRef } from "react";
 import {
   Users,
   UserCheck,
@@ -42,8 +42,8 @@ interface StatCardProps {
   loading?: boolean;
 }
 
-const StatCard = ({ title, value, subtitle, icon: Icon, trend, color, bgColor, loading }: StatCardProps) => (
-  <div className="card-base p-3 sm:p-5 animate-fade-in">
+const StatCard = forwardRef<HTMLDivElement, StatCardProps>(({ title, value, subtitle, icon: Icon, trend, color, bgColor, loading }, ref) => (
+  <div ref={ref} className="card-base p-3 sm:p-5 animate-fade-in">
     <div className="flex items-start justify-between mb-2 sm:mb-4">
       <div className="flex-1 min-w-0">
         <p className="text-[11px] sm:text-sm text-muted-foreground font-medium leading-tight">{title}</p>
@@ -78,7 +78,8 @@ const StatCard = ({ title, value, subtitle, icon: Icon, trend, color, bgColor, l
       </div>
     )}
   </div>
-);
+));
+StatCard.displayName = "StatCard";
 
 const LEAVE_COLORS: Record<string, string> = {
   "ลาป่วย": "#FF870F",
@@ -109,10 +110,10 @@ const Dashboard = () => {
     try {
       const [empRes, attRes, leaveRes, otRes, teRes, monthAttRes] = await Promise.all([
         supabase.from("employees").select("id, first_name, last_name, dept, status, user_id, start_date"),
-        supabase.from("attendance_records").select("*").eq("date", today),
-        supabase.from("leave_requests").select("*, employees(first_name, last_name)"),
-        supabase.from("overtime_requests").select("*, employees(first_name, last_name)"),
-        supabase.from("time_edit_requests").select("*").eq("status", "pending"),
+        supabase.from("attendance_records").select("id, employee_id, date, status, late").eq("date", today),
+        supabase.from("leave_requests").select("id, employee_id, leave_type_name, date_from, date_to, days, status, created_at, employees(first_name, last_name)").gte("date_from", monthStart),
+        supabase.from("overtime_requests").select("id, employee_id, date, hours, status, ot_type, created_at, employees(first_name, last_name)").gte("date", monthStart),
+        supabase.from("time_edit_requests").select("id").eq("status", "pending"),
         supabase.from("attendance_records").select("date, status, late").gte("date", monthStart).lte("date", monthEnd),
       ]);
 
@@ -146,6 +147,12 @@ const Dashboard = () => {
     }
   };
 
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const debouncedFetch = useCallback(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => fetchAll(), 500);
+  }, [today, monthStart, monthEnd, currentUser?.id]);
+
   useEffect(() => {
     if (!currentUser?.id) return;
     
@@ -153,18 +160,19 @@ const Dashboard = () => {
 
     const channel = supabase
       .channel("dashboard-realtime")
-      .on("postgres_changes", { event: "*", schema: "public", table: "attendance_records" }, () => fetchAll())
-      .on("postgres_changes", { event: "*", schema: "public", table: "check_in_records" }, () => fetchAll())
-      .on("postgres_changes", { event: "*", schema: "public", table: "leave_requests" }, () => fetchAll())
-      .on("postgres_changes", { event: "*", schema: "public", table: "overtime_requests" }, () => fetchAll())
-      .on("postgres_changes", { event: "*", schema: "public", table: "time_edit_requests" }, () => fetchAll())
+      .on("postgres_changes", { event: "*", schema: "public", table: "attendance_records" }, debouncedFetch)
+      .on("postgres_changes", { event: "*", schema: "public", table: "check_in_records" }, debouncedFetch)
+      .on("postgres_changes", { event: "*", schema: "public", table: "leave_requests" }, debouncedFetch)
+      .on("postgres_changes", { event: "*", schema: "public", table: "overtime_requests" }, debouncedFetch)
+      .on("postgres_changes", { event: "*", schema: "public", table: "time_edit_requests" }, debouncedFetch)
       .subscribe();
 
     return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
       supabase.removeChannel(channel);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [today, monthStart, monthEnd, currentUser?.id]);
+  }, [today, monthStart, monthEnd, currentUser?.id, debouncedFetch]);
 
   // Derived stats
   const totalEmployees = employees.length;
