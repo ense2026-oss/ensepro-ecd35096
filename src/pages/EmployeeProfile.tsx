@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { ThaiDatePicker } from "@/components/ui/thai-date-picker";
 import { useEmployees } from "@/contexts/EmployeeContext";
+import { useOrg, type Position } from "@/contexts/OrgContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { TaxDeduction, DEFAULT_TAX_DEDUCTION, calculateTotalDeductions, calculateAnnualIncome, calculateExpenseDeduction, calculateProgressiveTax, formatCurrency } from "@/utils/taxCalculation";
@@ -83,7 +84,21 @@ const EmployeeProfile = () => {
   const navigate = useNavigate();
   const { getEmployeeById, updateEmployee } = useEmployees();
   const { currentUser } = useAuth();
+  const { affiliations } = useOrg();
   const canEditRestricted = currentUser?.role === "Admin" || currentUser?.role === "HR";
+
+  // Flatten position tree to get all position names for a given affiliation
+  const flattenPositionNames = (positions: Position[]): string[] => {
+    const names: string[] = [];
+    const walk = (list: Position[]) => {
+      for (const p of list) {
+        names.push(p.name);
+        if (p.children?.length) walk(p.children);
+      }
+    };
+    walk(positions);
+    return names;
+  };
 
   const employee = getEmployeeById(id || "");
 
@@ -225,8 +240,8 @@ const EmployeeProfile = () => {
       <SectionLabel>ข้อมูลการทำงาน</SectionLabel>
       {isEditing && canEditRestricted ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <InputField label="แผนก" value={emp.dept} onChange={set("dept")} />
-          <InputField label="ตำแหน่ง" value={emp.position} onChange={set("position")} />
+          <SelectField label="แผนก" value={emp.dept} onChange={(v) => { set("dept")(v); set("position")(""); }} options={["", ...affiliations.map(a => a.name)]} />
+          <SelectField label="ตำแหน่ง" value={emp.position} onChange={set("position")} options={["", ...flattenPositionNames(affiliations.find(a => a.name === emp.dept)?.positions || [])]} />
           <SelectField label="ประเภทพนักงาน" value={emp.employeeType} onChange={set("employeeType")} options={["พนักงานประจำ", "พนักงานชั่วคราว", "พนักงานทดลองงาน"]} />
           <DatePickerField label="วันที่เริ่มงาน" value={emp.startDate} onChange={set("startDate")} />
           <SelectField label="กะการทำงาน" value={emp.shift} onChange={set("shift")} options={["กะเช้า 08:00-17:00", "กะบ่าย 12:00-21:00", "กะดึก 00:00-08:00"]} />
