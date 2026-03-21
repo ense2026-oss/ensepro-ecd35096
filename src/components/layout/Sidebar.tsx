@@ -61,6 +61,7 @@ const allNavItems = [
 
 const Sidebar = ({ collapsed, onToggle, onNavigate }: SidebarProps) => {
   const location = useLocation();
+  const navigate = useNavigate();
   const { leavePending, attendancePending, overtimePending, notificationCount } = usePendingCounts();
   const { programName, programSubtitle, logoUrl, logoOnlyUrl, displayMode } = useBranding();
   const activeLogo = displayMode === "logo-only" ? logoOnlyUrl : logoUrl;
