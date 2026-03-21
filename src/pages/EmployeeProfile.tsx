@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { ThaiDatePicker } from "@/components/ui/thai-date-picker";
 import { useEmployees } from "@/contexts/EmployeeContext";
+import { useOrg, type Position } from "@/contexts/OrgContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { TaxDeduction, DEFAULT_TAX_DEDUCTION, calculateTotalDeductions, calculateAnnualIncome, calculateExpenseDeduction, calculateProgressiveTax, formatCurrency } from "@/utils/taxCalculation";
