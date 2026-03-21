@@ -78,7 +78,7 @@ const MobileFooterNav = () => {
 
   const isActive = (path: string) => location.pathname === path || (path === "/employees" && location.pathname.startsWith("/employees/"));
 
-  const isCheckInEnabled = moduleSettings['check-in'] !== false && canAccess(role, "/check-in");
+  const isCheckInEnabled = moduleSettings['check-in'] !== false && canAccessRoute(role, "/check-in");
 
   const midIndex = Math.floor(menuItems.length / 2);
   const leftItems = menuItems.slice(0, midIndex);
