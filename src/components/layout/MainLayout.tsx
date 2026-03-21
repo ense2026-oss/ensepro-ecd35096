@@ -4,7 +4,7 @@ import Sidebar from "./Sidebar";
 import Topbar from "./Topbar";
 import MobileFooterNav from "./MobileFooterNav";
 import { useAuth } from "@/contexts/AuthContext";
-import { canAccess, getRestrictedPaths, isSelfOnly } from "@/config/roleAccess";
+import { usePermissions } from "@/contexts/PermissionsContext";
 
 const pageTitles: Record<string, { title: string; subtitle: string }> = {
   "/dashboard": { title: "หน้าหลัก", subtitle: "ภาพรวมระบบบริหารจัดการพนักงาน" },
