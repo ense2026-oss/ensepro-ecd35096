@@ -80,7 +80,7 @@ const ContractFormDialog = ({ open, onOpenChange, editContract }: Props) => {
     }));
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!form.employeeId || !form.startDate || !form.endDate) {
       toast.error("กรุณากรอกข้อมูลให้ครบ");
       return;
@@ -89,7 +89,7 @@ const ContractFormDialog = ({ open, onOpenChange, editContract }: Props) => {
     const contractNumber = `CT-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 999) + 1).padStart(3, "0")}`;
 
     if (editContract) {
-      updateContract(editContract.id, {
+      await updateContract(editContract.id, {
         employeeId: form.employeeId,
         title: form.title,
         contractType: form.contractType,
@@ -103,7 +103,7 @@ const ContractFormDialog = ({ open, onOpenChange, editContract }: Props) => {
       });
       toast.success("แก้ไขสัญญาจ้างเรียบร้อย");
     } else {
-      addContract({
+      await addContract({
         contractNumber,
         employeeId: form.employeeId,
         title: form.title,
@@ -116,7 +116,7 @@ const ContractFormDialog = ({ open, onOpenChange, editContract }: Props) => {
         witness1Id: form.witness1Id || null,
         witness2Id: form.witness2Id || null,
         executiveId: form.executiveId,
-        createdBy: "h0k8i9j1-8901-2345-67h2-345678901234",
+        createdBy: user?.id || "",
       });
       toast.success("สร้างสัญญาจ้างเรียบร้อย");
     }
