@@ -14,6 +14,279 @@ export type Database = {
   }
   public: {
     Tables: {
+      employee_custom_payroll_items: {
+        Row: {
+          amount: number
+          created_at: string
+          employee_id: string
+          enabled: boolean
+          id: string
+          name: string
+          type: string
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          employee_id: string
+          enabled?: boolean
+          id?: string
+          name?: string
+          type?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          employee_id?: string
+          enabled?: boolean
+          id?: string
+          name?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_custom_payroll_items_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      employee_education: {
+        Row: {
+          created_at: string
+          employee_id: string
+          id: string
+          institution: string
+          level: string
+          major: string
+          sort_order: number
+          year: string
+        }
+        Insert: {
+          created_at?: string
+          employee_id: string
+          id?: string
+          institution?: string
+          level?: string
+          major?: string
+          sort_order?: number
+          year?: string
+        }
+        Update: {
+          created_at?: string
+          employee_id?: string
+          id?: string
+          institution?: string
+          level?: string
+          major?: string
+          sort_order?: number
+          year?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_education_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      employee_work_history: {
+        Row: {
+          company: string
+          created_at: string
+          employee_id: string
+          end_date: string
+          id: string
+          position: string
+          reason: string
+          sort_order: number
+          start_date: string
+        }
+        Insert: {
+          company?: string
+          created_at?: string
+          employee_id: string
+          end_date?: string
+          id?: string
+          position?: string
+          reason?: string
+          sort_order?: number
+          start_date?: string
+        }
+        Update: {
+          company?: string
+          created_at?: string
+          employee_id?: string
+          end_date?: string
+          id?: string
+          position?: string
+          reason?: string
+          sort_order?: number
+          start_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_work_history_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      employees: {
+        Row: {
+          address: string
+          avatar: string
+          avatar_color: string
+          avatar_text_color: string
+          birth_date: string
+          blood_group: string
+          children: number | null
+          children_after_2018: number | null
+          created_at: string
+          dept: string
+          email: string
+          emergency_name: string
+          emergency_phone: string
+          emergency_relation: string
+          employee_type: string
+          face_scan_id: string
+          father_name: string
+          father_phone: string
+          first_name: string
+          home_address: string
+          id: string
+          id_expire_date: string
+          id_issue_date: string
+          last_name: string
+          marital_status: string
+          mother_name: string
+          mother_phone: string
+          national_id: string
+          nationality: string
+          nickname: string
+          phone: string
+          photo_url: string | null
+          position: string
+          prefix: string
+          pvd_rate: number | null
+          religion: string
+          role: string
+          salary: string
+          shift: string
+          spouse_name: string
+          spouse_phone: string
+          start_date: string
+          status: string
+          tax_deductions: Json | null
+          updated_at: string
+          user_id: string | null
+          username: string
+        }
+        Insert: {
+          address?: string
+          avatar?: string
+          avatar_color?: string
+          avatar_text_color?: string
+          birth_date?: string
+          blood_group?: string
+          children?: number | null
+          children_after_2018?: number | null
+          created_at?: string
+          dept?: string
+          email?: string
+          emergency_name?: string
+          emergency_phone?: string
+          emergency_relation?: string
+          employee_type?: string
+          face_scan_id?: string
+          father_name?: string
+          father_phone?: string
+          first_name?: string
+          home_address?: string
+          id?: string
+          id_expire_date?: string
+          id_issue_date?: string
+          last_name?: string
+          marital_status?: string
+          mother_name?: string
+          mother_phone?: string
+          national_id?: string
+          nationality?: string
+          nickname?: string
+          phone?: string
+          photo_url?: string | null
+          position?: string
+          prefix?: string
+          pvd_rate?: number | null
+          religion?: string
+          role?: string
+          salary?: string
+          shift?: string
+          spouse_name?: string
+          spouse_phone?: string
+          start_date?: string
+          status?: string
+          tax_deductions?: Json | null
+          updated_at?: string
+          user_id?: string | null
+          username?: string
+        }
+        Update: {
+          address?: string
+          avatar?: string
+          avatar_color?: string
+          avatar_text_color?: string
+          birth_date?: string
+          blood_group?: string
+          children?: number | null
+          children_after_2018?: number | null
+          created_at?: string
+          dept?: string
+          email?: string
+          emergency_name?: string
+          emergency_phone?: string
+          emergency_relation?: string
+          employee_type?: string
+          face_scan_id?: string
+          father_name?: string
+          father_phone?: string
+          first_name?: string
+          home_address?: string
+          id?: string
+          id_expire_date?: string
+          id_issue_date?: string
+          last_name?: string
+          marital_status?: string
+          mother_name?: string
+          mother_phone?: string
+          national_id?: string
+          nationality?: string
+          nickname?: string
+          phone?: string
+          photo_url?: string | null
+          position?: string
+          prefix?: string
+          pvd_rate?: number | null
+          religion?: string
+          role?: string
+          salary?: string
+          shift?: string
+          spouse_name?: string
+          spouse_phone?: string
+          start_date?: string
+          status?: string
+          tax_deductions?: Json | null
+          updated_at?: string
+          user_id?: string | null
+          username?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
