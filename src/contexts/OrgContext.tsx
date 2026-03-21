@@ -4,6 +4,7 @@ import { createContext, useContext, useState, useMemo, useCallback, type ReactNo
 export interface Position {
   id: number;
   name: string;
+  children?: Position[];
 }
 
 export interface Affiliation {
@@ -143,7 +144,10 @@ const INITIAL_AFFILIATIONS: Affiliation[] = [
     id: 1, name: "รถไฟฟ้าขสมช",
     positions: [
       { id: 1, name: "เจ้าหน้าที่วิจัย" },
-      { id: 2, name: "วิศวกรระบบราง" },
+      { id: 2, name: "วิศวกรระบบราง", children: [
+        { id: 21, name: "ช่างเทคนิคระบบราง" },
+        { id: 22, name: "ผู้ช่วยวิศวกร" },
+      ]},
       { id: 3, name: "พนักงานขับรถไฟฟ้า" },
     ],
   },
@@ -187,7 +191,13 @@ export const OrgProvider = ({ children }: { children: ReactNode }) => {
   const affiliationNames = useMemo(() => affiliations.map((a) => a.name), [affiliations]);
   const allPositions = useMemo(() => {
     const set = new Set<string>();
-    affiliations.forEach((a) => a.positions.forEach((p) => set.add(p.name)));
+    const collectPositions = (positions: Position[]) => {
+      positions.forEach((p) => {
+        set.add(p.name);
+        if (p.children) collectPositions(p.children);
+      });
+    };
+    affiliations.forEach((a) => collectPositions(a.positions));
     return Array.from(set).sort();
   }, [affiliations]);
 
