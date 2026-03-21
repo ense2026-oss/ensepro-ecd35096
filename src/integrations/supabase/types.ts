@@ -35,6 +35,133 @@ export type Database = {
         }
         Relationships: []
       }
+      app_notifications: {
+        Row: {
+          action_label: string | null
+          created_at: string
+          description: string
+          id: string
+          is_read: boolean
+          target_employee: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          action_label?: string | null
+          created_at?: string
+          description?: string
+          id?: string
+          is_read?: boolean
+          target_employee?: string | null
+          title?: string
+          type?: string
+          user_id: string
+        }
+        Update: {
+          action_label?: string | null
+          created_at?: string
+          description?: string
+          id?: string
+          is_read?: boolean
+          target_employee?: string | null
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      attendance_records: {
+        Row: {
+          check_in: string
+          check_out: string
+          created_at: string
+          date: string
+          employee_id: string
+          id: string
+          late: boolean
+          ot_hours: number
+          status: string
+        }
+        Insert: {
+          check_in?: string
+          check_out?: string
+          created_at?: string
+          date?: string
+          employee_id: string
+          id?: string
+          late?: boolean
+          ot_hours?: number
+          status?: string
+        }
+        Update: {
+          check_in?: string
+          check_out?: string
+          created_at?: string
+          date?: string
+          employee_id?: string
+          id?: string
+          late?: boolean
+          ot_hours?: number
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendance_records_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      check_in_records: {
+        Row: {
+          check_in: string
+          check_out: string | null
+          created_at: string
+          date: string
+          employee_id: string
+          id: string
+          location: string
+          remark: string | null
+          source: string
+          within_radius: boolean
+        }
+        Insert: {
+          check_in?: string
+          check_out?: string | null
+          created_at?: string
+          date?: string
+          employee_id: string
+          id?: string
+          location?: string
+          remark?: string | null
+          source?: string
+          within_radius?: boolean
+        }
+        Update: {
+          check_in?: string
+          check_out?: string | null
+          created_at?: string
+          date?: string
+          employee_id?: string
+          id?: string
+          location?: string
+          remark?: string | null
+          source?: string
+          within_radius?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "check_in_records_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contract_attachments: {
         Row: {
           contract_id: string
@@ -497,6 +624,146 @@ export type Database = {
         }
         Relationships: []
       }
+      leave_requests: {
+        Row: {
+          created_at: string
+          date_from: string
+          date_to: string
+          days: number
+          employee_id: string
+          has_file: boolean
+          id: string
+          leave_type_id: string
+          leave_type_name: string
+          reason: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          date_from?: string
+          date_to?: string
+          days?: number
+          employee_id: string
+          has_file?: boolean
+          id?: string
+          leave_type_id: string
+          leave_type_name?: string
+          reason?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          date_from?: string
+          date_to?: string
+          days?: number
+          employee_id?: string
+          has_file?: boolean
+          id?: string
+          leave_type_id?: string
+          leave_type_name?: string
+          reason?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leave_requests_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leave_requests_leave_type_id_fkey"
+            columns: ["leave_type_id"]
+            isOneToOne: false
+            referencedRelation: "leave_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leave_types: {
+        Row: {
+          color: string
+          created_at: string
+          id: string
+          name: string
+          quota: number
+          require_doc: boolean
+          sort_order: number
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          id?: string
+          name?: string
+          quota?: number
+          require_doc?: boolean
+          sort_order?: number
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          id?: string
+          name?: string
+          quota?: number
+          require_doc?: boolean
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      overtime_requests: {
+        Row: {
+          approved_by: string | null
+          created_at: string
+          date: string
+          employee_id: string
+          end_time: string
+          hours: number
+          id: string
+          ot_type: string
+          reason: string
+          start_time: string
+          status: string
+        }
+        Insert: {
+          approved_by?: string | null
+          created_at?: string
+          date?: string
+          employee_id: string
+          end_time?: string
+          hours?: number
+          id?: string
+          ot_type?: string
+          reason?: string
+          start_time?: string
+          status?: string
+        }
+        Update: {
+          approved_by?: string | null
+          created_at?: string
+          date?: string
+          employee_id?: string
+          end_time?: string
+          hours?: number
+          id?: string
+          ot_type?: string
+          reason?: string
+          start_time?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "overtime_requests_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       positions: {
         Row: {
           affiliation_id: string
@@ -565,6 +832,63 @@ export type Database = {
           username?: string | null
         }
         Relationships: []
+      }
+      time_edit_requests: {
+        Row: {
+          attendance_id: string | null
+          created_at: string
+          date: string
+          employee_id: string
+          id: string
+          new_check_in: string
+          new_check_out: string
+          original_check_in: string
+          original_check_out: string
+          reason: string
+          status: string
+        }
+        Insert: {
+          attendance_id?: string | null
+          created_at?: string
+          date?: string
+          employee_id: string
+          id?: string
+          new_check_in?: string
+          new_check_out?: string
+          original_check_in?: string
+          original_check_out?: string
+          reason?: string
+          status?: string
+        }
+        Update: {
+          attendance_id?: string | null
+          created_at?: string
+          date?: string
+          employee_id?: string
+          id?: string
+          new_check_in?: string
+          new_check_out?: string
+          original_check_in?: string
+          original_check_out?: string
+          reason?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "time_edit_requests_attendance_id_fkey"
+            columns: ["attendance_id"]
+            isOneToOne: false
+            referencedRelation: "attendance_records"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "time_edit_requests_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
