@@ -76,6 +76,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (roleData) {
         setRole(roleData.role as AppRole);
       }
+
+      // Fetch linked employee ID
+      const { data: empData } = await supabase
+        .from("employees")
+        .select("id")
+        .eq("user_id", userId)
+        .maybeSingle();
+
+      setEmployeeId(empData?.id ?? null);
     } catch (err) {
       console.error("Error fetching profile/role:", err);
     }
