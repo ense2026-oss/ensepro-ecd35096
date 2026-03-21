@@ -38,11 +38,11 @@ Deno.serve(async (req) => {
         email: emp.email,
         password: "Test1234!",
         email_confirm: true,
-        user_metadata: { full_name: emp.name, role: emp.role },
+        user_metadata: { full_name: emp.name },
       });
 
       if (createError) {
-        results.push({ employee: emp.name, error: createError.message });
+        results.push({ employee: emp.name, error: createError.message, status: (createError as any).status, code: (createError as any).code });
         continue;
       }
 
