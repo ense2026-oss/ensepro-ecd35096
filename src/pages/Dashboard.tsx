@@ -147,6 +147,8 @@ const Dashboard = () => {
   };
 
   useEffect(() => {
+    if (!currentUser?.id) return;
+    
     fetchAll(true);
 
     const channel = supabase

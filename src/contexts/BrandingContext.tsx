@@ -38,24 +38,32 @@ export const BrandingProvider = ({ children }: { children: ReactNode }) => {
 
   // Fetch from DB
   useEffect(() => {
-    const fetch = async () => {
-      const { data } = await supabase
-        .from("company_settings")
-        .select("value")
-        .eq("key", "branding")
-        .maybeSingle();
-      if (data?.value) {
-        const v = data.value as any;
-        setState({
-          programName: v.programName ?? defaults.programName,
-          programSubtitle: v.programSubtitle ?? defaults.programSubtitle,
-          logoUrl: v.logoUrl ?? null,
-          logoOnlyUrl: v.logoOnlyUrl ?? null,
-          displayMode: v.displayMode ?? defaults.displayMode,
-        });
+    const fetchBranding = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("company_settings")
+          .select("value")
+          .eq("key", "branding")
+          .maybeSingle();
+        if (error) {
+          console.warn("Branding fetch skipped:", error.message);
+          return;
+        }
+        if (data?.value) {
+          const v = data.value as any;
+          setState({
+            programName: v.programName ?? defaults.programName,
+            programSubtitle: v.programSubtitle ?? defaults.programSubtitle,
+            logoUrl: v.logoUrl ?? null,
+            logoOnlyUrl: v.logoOnlyUrl ?? null,
+            displayMode: v.displayMode ?? defaults.displayMode,
+          });
+        }
+      } catch {
+        // Use defaults silently
       }
     };
-    fetch();
+    fetchBranding();
   }, []);
 
   // Save to DB on change
