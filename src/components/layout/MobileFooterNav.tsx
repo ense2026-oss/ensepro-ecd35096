@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from "react";
 import { usePendingCounts } from "@/contexts/PendingCountsContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { canAccess, isSelfOnly } from "@/config/roleAccess";
+import { usePermissions } from "@/contexts/PermissionsContext";
 import {
   LayoutDashboard,
   Users,
