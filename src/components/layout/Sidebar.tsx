@@ -103,8 +103,8 @@ const Sidebar = ({ collapsed, onToggle, onNavigate }: SidebarProps) => {
   const navItems = allNavItems.map((section) => ({
     ...section,
     items: section.items.filter((item) => {
-      // Role-based access
-      if (!canAccess(role, item.path)) return false;
+      // Role-based access (from DB permissions)
+      if (!canAccessRoute(role, item.path)) return false;
       // Module settings
       const moduleId = pathToModule[item.path];
       if (moduleId && enabledModules[moduleId] === false) return false;
