@@ -28,7 +28,7 @@ const particles = Array.from({ length: 250 }, (_, i) => {
 });
 
 const Login = () => {
-  const navigate = useNavigate();
+  const { programName, programSubtitle, logoUrl, logoOnlyUrl, displayMode } = useBranding();
   const { programName, programSubtitle, logoUrl, logoOnlyUrl, displayMode } = useBranding();
   const activeLogo = displayMode === "logo-only" ? logoOnlyUrl : logoUrl;
   const auth = useAuth();
