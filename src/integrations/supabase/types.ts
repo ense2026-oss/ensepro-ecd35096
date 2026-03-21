@@ -35,6 +35,195 @@ export type Database = {
         }
         Relationships: []
       }
+      contract_attachments: {
+        Row: {
+          contract_id: string
+          file_name: string
+          file_type: string
+          file_url: string
+          id: string
+          uploaded_at: string
+          uploaded_by: string
+        }
+        Insert: {
+          contract_id: string
+          file_name?: string
+          file_type?: string
+          file_url?: string
+          id?: string
+          uploaded_at?: string
+          uploaded_by: string
+        }
+        Update: {
+          contract_id?: string
+          file_name?: string
+          file_type?: string
+          file_url?: string
+          id?: string
+          uploaded_at?: string
+          uploaded_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contract_attachments_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contract_notifications: {
+        Row: {
+          contract_id: string
+          created_at: string
+          id: string
+          is_read: boolean
+          message: string
+          recipient_id: string
+        }
+        Insert: {
+          contract_id: string
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message?: string
+          recipient_id: string
+        }
+        Update: {
+          contract_id?: string
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message?: string
+          recipient_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contract_notifications_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contract_settings: {
+        Row: {
+          default_executive_id: string | null
+          id: string
+          updated_at: string
+          witness_count: number
+        }
+        Insert: {
+          default_executive_id?: string | null
+          id?: string
+          updated_at?: string
+          witness_count?: number
+        }
+        Update: {
+          default_executive_id?: string | null
+          id?: string
+          updated_at?: string
+          witness_count?: number
+        }
+        Relationships: []
+      }
+      contract_signatures: {
+        Row: {
+          contract_id: string
+          id: string
+          signature_data: string
+          signature_type: string
+          signed_at: string
+          signer_id: string
+          signer_role: string
+        }
+        Insert: {
+          contract_id: string
+          id?: string
+          signature_data?: string
+          signature_type?: string
+          signed_at?: string
+          signer_id: string
+          signer_role?: string
+        }
+        Update: {
+          contract_id?: string
+          id?: string
+          signature_data?: string
+          signature_type?: string
+          signed_at?: string
+          signer_id?: string
+          signer_role?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contract_signatures_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contracts: {
+        Row: {
+          contract_number: string
+          contract_type: string
+          created_at: string
+          created_by: string
+          details: Json
+          employee_id: string
+          end_date: string
+          executive_id: string
+          id: string
+          salary: number
+          start_date: string
+          status: string
+          title: string
+          updated_at: string
+          witness_1_id: string | null
+          witness_2_id: string | null
+        }
+        Insert: {
+          contract_number?: string
+          contract_type?: string
+          created_at?: string
+          created_by: string
+          details?: Json
+          employee_id: string
+          end_date?: string
+          executive_id: string
+          id?: string
+          salary?: number
+          start_date?: string
+          status?: string
+          title?: string
+          updated_at?: string
+          witness_1_id?: string | null
+          witness_2_id?: string | null
+        }
+        Update: {
+          contract_number?: string
+          contract_type?: string
+          created_at?: string
+          created_by?: string
+          details?: Json
+          employee_id?: string
+          end_date?: string
+          executive_id?: string
+          id?: string
+          salary?: number
+          start_date?: string
+          status?: string
+          title?: string
+          updated_at?: string
+          witness_1_id?: string | null
+          witness_2_id?: string | null
+        }
+        Relationships: []
+      }
       employee_custom_payroll_items: {
         Row: {
           amount: number
