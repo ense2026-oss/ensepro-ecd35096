@@ -71,6 +71,7 @@ const PositionNode = ({
   onDragOver,
   onDragEnd,
   onDrop,
+  parentId = null,
 }: {
   position: Position;
   index: number;
