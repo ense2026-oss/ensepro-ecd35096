@@ -104,50 +104,64 @@ const Dashboard = () => {
   const monthStart = format(startOfMonth(new Date()), "yyyy-MM-dd");
   const monthEnd = format(endOfMonth(new Date()), "yyyy-MM-dd");
 
-  useEffect(() => {
-    const load = async () => {
-      setLoading(true);
-      try {
-        const [empRes, attRes, leaveRes, otRes, teRes, monthAttRes] = await Promise.all([
-          supabase.from("employees").select("id, first_name, last_name, dept, status, user_id, start_date"),
-          supabase.from("attendance_records").select("*").eq("date", today),
-          supabase.from("leave_requests").select("*, employees(first_name, last_name)"),
-          supabase.from("overtime_requests").select("*, employees(first_name, last_name)"),
-          supabase.from("time_edit_requests").select("*").eq("status", "pending"),
-          supabase.from("attendance_records").select("date, status, late").gte("date", monthStart).lte("date", monthEnd),
-        ]);
+  const fetchAll = async (initial = false) => {
+    if (initial) setLoading(true);
+    try {
+      const [empRes, attRes, leaveRes, otRes, teRes, monthAttRes] = await Promise.all([
+        supabase.from("employees").select("id, first_name, last_name, dept, status, user_id, start_date"),
+        supabase.from("attendance_records").select("*").eq("date", today),
+        supabase.from("leave_requests").select("*, employees(first_name, last_name)"),
+        supabase.from("overtime_requests").select("*, employees(first_name, last_name)"),
+        supabase.from("time_edit_requests").select("*").eq("status", "pending"),
+        supabase.from("attendance_records").select("date, status, late").gte("date", monthStart).lte("date", monthEnd),
+      ]);
 
-        if (empRes.data) setEmployees(empRes.data);
-        if (attRes.data) setTodayAttendance(attRes.data);
-        if (leaveRes.data) setLeaveRequests(leaveRes.data);
-        if (otRes.data) setOtRequests(otRes.data);
-        if (teRes.data) setTimeEditRequests(teRes.data);
-        if (monthAttRes.data) setMonthlyAttendance(monthAttRes.data);
+      if (empRes.data) setEmployees(empRes.data);
+      if (attRes.data) setTodayAttendance(attRes.data);
+      if (leaveRes.data) setLeaveRequests(leaveRes.data);
+      if (otRes.data) setOtRequests(otRes.data);
+      if (teRes.data) setTimeEditRequests(teRes.data);
+      if (monthAttRes.data) setMonthlyAttendance(monthAttRes.data);
 
-        // For employee view: get own check-in today
-        if (currentUser?.id) {
-          const { data: emp } = await supabase
-            .from("employees")
-            .select("id")
-            .eq("user_id", currentUser.id)
+      if (currentUser?.id) {
+        const { data: emp } = await supabase
+          .from("employees")
+          .select("id")
+          .eq("user_id", currentUser.id)
+          .maybeSingle();
+        if (emp) {
+          const { data: ci } = await supabase
+            .from("check_in_records")
+            .select("*")
+            .eq("employee_id", emp.id)
+            .eq("date", today)
             .maybeSingle();
-          if (emp) {
-            const { data: ci } = await supabase
-              .from("check_in_records")
-              .select("*")
-              .eq("employee_id", emp.id)
-              .eq("date", today)
-              .maybeSingle();
-            setCheckInToday(ci);
-          }
+          setCheckInToday(ci);
         }
-      } catch (e) {
-        console.error("Dashboard load error:", e);
-      } finally {
-        setLoading(false);
       }
+    } catch (e) {
+      console.error("Dashboard load error:", e);
+    } finally {
+      if (initial) setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAll(true);
+
+    const channel = supabase
+      .channel("dashboard-realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "attendance_records" }, () => fetchAll())
+      .on("postgres_changes", { event: "*", schema: "public", table: "check_in_records" }, () => fetchAll())
+      .on("postgres_changes", { event: "*", schema: "public", table: "leave_requests" }, () => fetchAll())
+      .on("postgres_changes", { event: "*", schema: "public", table: "overtime_requests" }, () => fetchAll())
+      .on("postgres_changes", { event: "*", schema: "public", table: "time_edit_requests" }, () => fetchAll())
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
     };
-    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [today, monthStart, monthEnd, currentUser?.id]);
 
   // Derived stats
