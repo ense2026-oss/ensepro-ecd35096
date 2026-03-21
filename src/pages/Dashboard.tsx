@@ -147,6 +147,12 @@ const Dashboard = () => {
     }
   };
 
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const debouncedFetch = useCallback(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => fetchAll(), 500);
+  }, [today, monthStart, monthEnd, currentUser?.id]);
+
   useEffect(() => {
     if (!currentUser?.id) return;
     
@@ -154,18 +160,19 @@ const Dashboard = () => {
 
     const channel = supabase
       .channel("dashboard-realtime")
-      .on("postgres_changes", { event: "*", schema: "public", table: "attendance_records" }, () => fetchAll())
-      .on("postgres_changes", { event: "*", schema: "public", table: "check_in_records" }, () => fetchAll())
-      .on("postgres_changes", { event: "*", schema: "public", table: "leave_requests" }, () => fetchAll())
-      .on("postgres_changes", { event: "*", schema: "public", table: "overtime_requests" }, () => fetchAll())
-      .on("postgres_changes", { event: "*", schema: "public", table: "time_edit_requests" }, () => fetchAll())
+      .on("postgres_changes", { event: "*", schema: "public", table: "attendance_records" }, debouncedFetch)
+      .on("postgres_changes", { event: "*", schema: "public", table: "check_in_records" }, debouncedFetch)
+      .on("postgres_changes", { event: "*", schema: "public", table: "leave_requests" }, debouncedFetch)
+      .on("postgres_changes", { event: "*", schema: "public", table: "overtime_requests" }, debouncedFetch)
+      .on("postgres_changes", { event: "*", schema: "public", table: "time_edit_requests" }, debouncedFetch)
       .subscribe();
 
     return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
       supabase.removeChannel(channel);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [today, monthStart, monthEnd, currentUser?.id]);
+  }, [today, monthStart, monthEnd, currentUser?.id, debouncedFetch]);
 
   // Derived stats
   const totalEmployees = employees.length;
