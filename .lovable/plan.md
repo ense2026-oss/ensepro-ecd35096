@@ -1,54 +1,27 @@
 
 
-## แก้ไข: Console Errors + Dashboard โหลดไม่ได้
+## แก้ไข Console Errors และปรับปรุงความเร็ว Dashboard
 
-### สาเหตุหลัก
+### ปัญหาที่พบ
 
-จากภาพ console มี 3 ปัญหาที่เชื่อมโยงกัน:
-
-1. **WebSocket connection failed × 20+ ครั้ง → "Max reconnect attempts exceeded"**
-   - Contexts ทั้งหมด (PendingCounts, TimeEdit, Dashboard) สร้าง Realtime channel ทันทีที่ app โหลด แม้ยังไม่ login
-   - Channel ต้องการ authenticated session → ไม่มี token → WebSocket fail → reconnect วนซ้ำ 20 ครั้ง
-
-2. **406 Error บน company_settings** 
-   - BrandingProvider อยู่นอก AuthProvider → query ก่อนมี session
-   - Migration ที่เพิ่ม anon policy อาจยังไม่ apply หรือมีปัญหา — ต้องตรวจสอบ
-
-3. **"Throttling navigation to prevent browser from hanging"**
-   - เป็นผลพวงจาก error ข้างต้นที่ทำให้ auth state ไม่เสถียร → redirect loop
+1. **"Function components cannot be given refs"** — `StatCard` และ `Skeleton` ไม่ได้ใช้ `forwardRef` แต่ถูกส่ง ref ผ่าน animation หรือ parent component
+2. **Dashboard โหลดช้า** — `fetchAll()` ดึงข้อมูลทุกตาราง 6 queries พร้อมกันทุกครั้ง + Realtime trigger `fetchAll()` ซ้ำทั้งหมดเมื่อมีการเปลี่ยนแปลงในตารางใดตารางหนึ่ง
+3. **TikTok Ads SDK error** — เป็น external script ไม่ใช่โค้ดของเรา ไม่ต้องแก้
 
 ### แผนแก้ไข
 
-#### 1. ย้าย Providers ที่ต้องการ auth ไปอยู่ใน ProtectedRoute (`src/App.tsx`)
-- ย้าย OrgProvider, EmployeeProvider, PendingCountsProvider, ContractProvider, TimeEditProvider **ออกจาก** root level
-- ไปอยู่ **ภายใน** ProtectedRoute เพื่อไม่ให้ทำงานตอนอยู่หน้า login
-- คงเฉพาะ BrandingProvider + AuthProvider ไว้ที่ root
+#### 1. แก้ `Skeleton` ให้ใช้ `forwardRef` (`src/components/ui/skeleton.tsx`)
+- เปลี่ยนจาก function component ธรรมดาเป็น `React.forwardRef`
 
-```
-BrowserRouter
-  └── BrandingProvider
-    └── AuthProvider
-      └── Routes
-        ├── /login → LoginRoute
-        └── ProtectedRoute
-          └── OrgProvider
-            └── EmployeeProvider
-              └── PendingCountsProvider
-                └── ContractProvider
-                  └── TimeEditProvider
-                    └── MainLayout + Routes
-```
+#### 2. แก้ `StatCard` ให้ใช้ `forwardRef` (`src/pages/Dashboard.tsx`)
+- เปลี่ยน `StatCard` เป็น `forwardRef` component
 
-#### 2. แก้ BrandingProvider ให้ handle error gracefully (`src/contexts/BrandingContext.tsx`)
-- เพิ่ม try-catch รอบ query company_settings
-- ถ้า error ใช้ defaults แทน (ไม่ crash)
-
-#### 3. Guard realtime channels ใน Dashboard (`src/pages/Dashboard.tsx`)
-- ตรวจสอบว่า `user` มีค่าก่อนสร้าง channel
-- ถ้าไม่มี user ไม่ต้อง subscribe
+#### 3. ปรับปรุงความเร็ว Dashboard (`src/pages/Dashboard.tsx`)
+- **จำกัดคอลัมน์ที่ดึง**: ใช้ `.select("id, status, ...")` แทน `.select("*")` สำหรับ `attendance_records` และตารางอื่นๆ
+- **เพิ่ม filter วันที่สำหรับ leave/OT**: ดึงเฉพาะข้อมูลเดือนนี้แทนทั้งหมด
+- **Debounce realtime callback**: เพิ่ม debounce 500ms เพื่อไม่ให้ fetchAll ถูกเรียกซ้ำถี่เกินไปเมื่อมี event หลายตารางพร้อมกัน
 
 ### ไฟล์ที่แก้ไข
-1. `src/App.tsx` — ย้าย Providers เข้าไปใน ProtectedRoute
-2. `src/contexts/BrandingContext.tsx` — เพิ่ม error handling
-3. `src/pages/Dashboard.tsx` — guard realtime subscription ด้วย user check
+1. `src/components/ui/skeleton.tsx` — เพิ่ม forwardRef
+2. `src/pages/Dashboard.tsx` — เพิ่ม forwardRef ให้ StatCard, optimize queries, debounce realtime
 
