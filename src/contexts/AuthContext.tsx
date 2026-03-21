@@ -40,6 +40,7 @@ interface AuthContextType {
     email: string;
     dept: string;
     position: string;
+    employeeId: string | null;
   } | null;
 }
 
