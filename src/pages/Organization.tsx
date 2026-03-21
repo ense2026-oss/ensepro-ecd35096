@@ -92,7 +92,6 @@ const PositionNode = ({
   const isOver = dragOverId === position.id;
   const isDragging = isDraggingId === position.id;
   const children = position.children || [];
-  const parentId = (arguments[0] as any).parentId ?? null;
 
   return (
     <div className="relative">
