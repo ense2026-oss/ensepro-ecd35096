@@ -28,6 +28,7 @@ const MainLayout = () => {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const location = useLocation();
   const { user, loading, profileReady, currentUser, role } = useAuth();
+  const { canAccessRoute, isSelfOnly, loading: permLoading } = usePermissions();
 
   // Still bootstrapping auth — show loader, don't redirect
   if (loading || !profileReady) {
