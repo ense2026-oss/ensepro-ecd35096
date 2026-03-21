@@ -1,67 +1,21 @@
-import { useState } from "react";
-import { Plus, Edit, Trash2, Check, Users } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Plus, Edit, Trash2, Check, Users, Loader2 } from "lucide-react";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
-
-// --- Types ---
-type Scope = "self" | "department" | "all";
-
-interface ModulePermission {
-  view: boolean;
-  add: boolean;
-  edit: boolean;
-  delete: boolean;
-  approve: boolean;
-  scope: Scope;
-}
-
-interface ModulePermissions {
-  leave: ModulePermission;
-  ot: ModulePermission;
-  attendance: ModulePermission;
-  employee: ModulePermission;
-  organization: ModulePermission;
-  shiftManagement: ModulePermission;
-  payroll: ModulePermission;
-  reports: ModulePermission;
-  settings: ModulePermission;
-}
-
-interface Role {
-  id: number;
-  name: string;
-  desc: string;
-  users: number;
-  permissions: ModulePermissions;
-}
+import { supabase } from "@/integrations/supabase/client";
+import { usePermissions } from "@/contexts/PermissionsContext";
+import type { RolePermission, ModuleKey, ActionKey, Scope } from "@/contexts/PermissionsContext";
 
 // --- Module config ---
-type ModuleKey = keyof ModulePermissions;
-type ActionKey = "view" | "add" | "edit" | "delete" | "approve";
-
 interface ModuleConfig {
   key: ModuleKey;
   label: string;
@@ -79,147 +33,110 @@ const moduleConfigs: ModuleConfig[] = [
   { key: "payroll", label: "ระบบเงินเดือน", actions: ["view", "add", "edit", "delete"], hasScope: true },
   { key: "reports", label: "ระบบรายงาน", actions: ["view"], hasScope: true },
   { key: "settings", label: "การตั้งค่า", actions: ["view", "add", "edit", "delete"], hasScope: false },
+  { key: "contracts", label: "ระบบสัญญาจ้าง", actions: ["view", "add", "edit", "delete"], hasScope: true },
 ];
 
 const actionLabels: Record<ActionKey, string> = {
-  view: "ดู",
-  add: "เพิ่ม",
-  edit: "แก้ไข",
-  delete: "ลบ",
-  approve: "อนุมัติ",
-};
-
-const scopeLabels: Record<Scope, string> = {
-  self: "ตนเอง",
-  department: "แผนก",
-  all: "ทั้งหมด",
+  view: "ดู", add: "เพิ่ม", edit: "แก้ไข", delete: "ลบ", approve: "อนุมัติ",
 };
 
 const allActions: ActionKey[] = ["view", "add", "edit", "delete", "approve"];
 
-// --- Helpers ---
-const makePerm = (flags: Partial<Record<ActionKey, boolean>>, scope: Scope = "self"): ModulePermission => ({
-  view: false, add: false, edit: false, delete: false, approve: false,
-  ...flags,
-  scope,
-});
+// --- Types for local form state ---
+interface ModulePermission {
+  view: boolean; add: boolean; edit: boolean; delete: boolean; approve: boolean; scope: Scope;
+}
 
-const allTrue = (scope: Scope = "all"): ModulePermission => makePerm({ view: true, add: true, edit: true, delete: true, approve: true }, scope);
+type ModulePermissions = Record<ModuleKey, ModulePermission>;
 
-const defaultModulePermissions: ModulePermissions = {
-  leave: makePerm({}),
-  ot: makePerm({}),
-  attendance: makePerm({}),
-  employee: makePerm({}),
-  organization: makePerm({}),
-  shiftManagement: makePerm({}),
-  payroll: makePerm({}),
-  reports: makePerm({}),
-  settings: makePerm({}),
+interface RoleData {
+  name: string;
+  desc: string;
+  users: number;
+  permissions: ModulePermissions;
+}
+
+const emptyPerm = (): ModulePermission => ({ view: false, add: false, edit: false, delete: false, approve: false, scope: "self" });
+
+const emptyPermissions = (): ModulePermissions => {
+  const p = {} as ModulePermissions;
+  moduleConfigs.forEach((m) => { p[m.key] = emptyPerm(); });
+  return p;
 };
 
-// --- Default roles ---
-const defaultRoles: Role[] = [
-  {
-    id: 1, name: "Executive", desc: "กรรมการผู้จัดการ / ผู้บริหาร", users: 3,
-    permissions: {
-      leave: allTrue(), ot: allTrue(), attendance: allTrue(),
-      employee: makePerm({ view: true, add: true, edit: true, delete: true }, "all"),
-      organization: makePerm({ view: true, add: true, edit: true, delete: true }, "all"),
-      shiftManagement: makePerm({ view: true, add: true, edit: true, delete: true }, "all"),
-      payroll: makePerm({ view: true, add: true, edit: true, delete: true }, "all"),
-      reports: makePerm({ view: true }, "all"),
-      settings: makePerm({ view: true, add: true, edit: true, delete: true }, "all"),
-    },
-  },
-  {
-    id: 2, name: "Manager", desc: "ผู้จัดการ / หัวหน้าแผนก", users: 12,
-    permissions: {
-      leave: makePerm({ view: true, add: true, edit: true, approve: true }, "department"),
-      ot: makePerm({ view: true, add: true, edit: true, approve: true }, "department"),
-      attendance: makePerm({ view: true, edit: true, approve: true }, "department"),
-      employee: makePerm({ view: true, edit: true }, "department"),
-      organization: makePerm({ view: true }, "department"),
-      shiftManagement: makePerm({ view: true, add: true, edit: true }, "department"),
-      payroll: makePerm({}, "self"),
-      reports: makePerm({ view: true }, "department"),
-      settings: makePerm({ view: true }),
-    },
-  },
-  {
-    id: 3, name: "Admin", desc: "ผู้ดูแลระบบ", users: 2,
-    permissions: {
-      leave: makePerm({ view: true, add: true, edit: true, delete: true }, "all"),
-      ot: makePerm({ view: true, add: true, edit: true, delete: true }, "all"),
-      attendance: makePerm({ view: true, add: true, edit: true, delete: true }, "all"),
-      employee: makePerm({ view: true, add: true, edit: true, delete: true }, "all"),
-      organization: makePerm({ view: true, add: true, edit: true, delete: true }, "all"),
-      shiftManagement: makePerm({ view: true, add: true, edit: true, delete: true }, "all"),
-      payroll: makePerm({ view: true, add: true, edit: true, delete: true }, "all"),
-      reports: makePerm({ view: true }, "all"),
-      settings: makePerm({ view: true, add: true, edit: true, delete: true }, "all"),
-    },
-  },
-  {
-    id: 4, name: "HR", desc: "เจ้าหน้าที่ HR", users: 5,
-    permissions: {
-      leave: makePerm({ view: true, add: true, edit: true, approve: true }, "all"),
-      ot: makePerm({ view: true, add: true, edit: true, approve: true }, "all"),
-      attendance: makePerm({ view: true, edit: true, approve: true }, "all"),
-      employee: makePerm({ view: true, add: true, edit: true }, "all"),
-      organization: makePerm({ view: true }, "all"),
-      shiftManagement: makePerm({ view: true, add: true, edit: true, delete: true }, "all"),
-      payroll: makePerm({ view: true, add: true, edit: true, delete: true }, "all"),
-      reports: makePerm({ view: true }, "all"),
-      settings: makePerm({ view: true }),
-    },
-  },
-  {
-    id: 5, name: "Accountant", desc: "นักบัญชี", users: 8,
-    permissions: {
-      leave: makePerm({ view: true }, "self"),
-      ot: makePerm({ view: true }, "self"),
-      attendance: makePerm({ view: true }, "self"),
-      employee: makePerm({ view: true }, "self"),
-      organization: makePerm({ view: true }, "self"),
-      shiftManagement: makePerm({ view: true }, "self"),
-      payroll: makePerm({ view: true, add: true, edit: true, delete: true }, "all"),
-      reports: makePerm({ view: true }, "department"),
-      settings: makePerm({ view: true }),
-    },
-  },
-  {
-    id: 6, name: "Employee", desc: "พนักงานทั่วไป", users: 218,
-    permissions: {
-      leave: makePerm({ view: true, add: true }, "self"),
-      ot: makePerm({ view: true, add: true }, "self"),
-      attendance: makePerm({ view: true }, "self"),
-      employee: makePerm({ view: true }, "self"),
-      organization: makePerm({ view: true }, "self"),
-      shiftManagement: makePerm({}, "self"),
-      payroll: makePerm({}, "self"),
-      reports: makePerm({}, "self"),
-      settings: makePerm({}),
-    },
-  },
-];
+// Convert DB records to local form
+function dbToLocal(records: RolePermission[]): ModulePermissions {
+  const perms = emptyPermissions();
+  records.forEach((r) => {
+    const key = r.module as ModuleKey;
+    if (perms[key]) {
+      perms[key] = {
+        view: r.can_view, add: r.can_add, edit: r.can_edit,
+        delete: r.can_delete, approve: r.can_approve, scope: r.scope as Scope,
+      };
+    }
+  });
+  return perms;
+}
 
 // --- Component ---
 const RolesSettings = () => {
-  const [roles, setRoles] = useState<Role[]>(defaultRoles);
+  const { permissions: allPermissions, refreshPermissions } = usePermissions();
+  const [roles, setRoles] = useState<RoleData[]>([]);
+  const [userCounts, setUserCounts] = useState<Record<string, number>>({});
+  const [dbLoading, setDbLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [deleteId, setDeleteId] = useState<number | null>(null);
-  const [editingId, setEditingId] = useState<number | null>(null);
-  const [form, setForm] = useState({ name: "", desc: "", permissions: structuredClone(defaultModulePermissions) });
+  const [deleteRole, setDeleteRole] = useState<string | null>(null);
+  const [editingRole, setEditingRole] = useState<string | null>(null);
+  const [form, setForm] = useState({ name: "", desc: "", permissions: emptyPermissions() });
+
+  // Load roles from permissions context + count users
+  useEffect(() => {
+    const loadData = async () => {
+      setDbLoading(true);
+      // Build roles from permissions
+      const roleMap = new Map<string, { desc: string; perms: RolePermission[] }>();
+      allPermissions.forEach((p) => {
+        if (!roleMap.has(p.role_name)) {
+          roleMap.set(p.role_name, { desc: p.role_description, perms: [] });
+        }
+        roleMap.get(p.role_name)!.perms.push(p);
+      });
+
+      // Count users per role
+      const { data: userRoles } = await supabase.from("user_roles").select("role");
+      const counts: Record<string, number> = {};
+      (userRoles || []).forEach((ur: any) => {
+        const r = ur.role?.toLowerCase() || "";
+        counts[r] = (counts[r] || 0) + 1;
+      });
+      setUserCounts(counts);
+
+      const roleList: RoleData[] = [];
+      roleMap.forEach((val, key) => {
+        roleList.push({
+          name: key,
+          desc: val.desc,
+          users: counts[key] || 0,
+          permissions: dbToLocal(val.perms),
+        });
+      });
+      setRoles(roleList);
+      setDbLoading(false);
+    };
+    if (allPermissions.length > 0) loadData();
+    else setDbLoading(false);
+  }, [allPermissions]);
 
   const openAdd = () => {
-    setEditingId(null);
-    setForm({ name: "", desc: "", permissions: structuredClone(defaultModulePermissions) });
+    setEditingRole(null);
+    setForm({ name: "", desc: "", permissions: emptyPermissions() });
     setDialogOpen(true);
   };
 
-  const openEdit = (role: Role) => {
-    setEditingId(role.id);
+  const openEdit = (role: RoleData) => {
+    setEditingRole(role.name);
     setForm({ name: role.name, desc: role.desc, permissions: structuredClone(role.permissions) });
     setDialogOpen(true);
   };
@@ -237,49 +154,77 @@ const RolesSettings = () => {
   const setScope = (mod: ModuleKey, scope: Scope) => {
     setForm((f) => ({
       ...f,
-      permissions: {
-        ...f.permissions,
-        [mod]: { ...f.permissions[mod], scope },
-      },
+      permissions: { ...f.permissions, [mod]: { ...f.permissions[mod], scope } },
     }));
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!form.name.trim()) {
       toast({ title: "กรุณากรอกชื่อ Role", variant: "destructive" });
       return;
     }
-    if (editingId !== null) {
-      setRoles((prev) =>
-        prev.map((r) => (r.id === editingId ? { ...r, name: form.name, desc: form.desc, permissions: structuredClone(form.permissions) } : r))
-      );
-      toast({ title: "แก้ไข Role สำเร็จ", description: form.name });
-    } else {
-      const newId = Math.max(0, ...roles.map((r) => r.id)) + 1;
-      setRoles((prev) => [...prev, { id: newId, name: form.name, desc: form.desc, users: 0, permissions: structuredClone(form.permissions) }]);
-      toast({ title: "เพิ่ม Role สำเร็จ", description: form.name });
+    setSaving(true);
+    try {
+      const roleName = form.name.toLowerCase();
+      // Delete old records for this role then insert new
+      if (editingRole) {
+        await supabase.from("role_permissions").delete().eq("role_name", editingRole);
+      }
+      const rows = moduleConfigs.map((mod) => ({
+        role_name: roleName,
+        role_description: form.desc,
+        module: mod.key,
+        can_view: form.permissions[mod.key].view,
+        can_add: form.permissions[mod.key].add,
+        can_edit: form.permissions[mod.key].edit,
+        can_delete: form.permissions[mod.key].delete,
+        can_approve: form.permissions[mod.key].approve,
+        scope: form.permissions[mod.key].scope,
+      }));
+      const { error } = await supabase.from("role_permissions").insert(rows);
+      if (error) throw error;
+      await refreshPermissions();
+      toast({ title: editingRole ? "แก้ไข Role สำเร็จ" : "เพิ่ม Role สำเร็จ", description: form.name });
+      setDialogOpen(false);
+    } catch (e: any) {
+      toast({ title: "เกิดข้อผิดพลาด", description: e.message, variant: "destructive" });
+    } finally {
+      setSaving(false);
     }
-    setDialogOpen(false);
   };
 
-  const handleDelete = () => {
-    if (deleteId === null) return;
-    const role = roles.find((r) => r.id === deleteId);
+  const handleDelete = async () => {
+    if (!deleteRole) return;
+    const role = roles.find((r) => r.name === deleteRole);
     if (role && role.users > 0) {
       toast({ title: "ไม่สามารถลบได้", description: `มีผู้ใช้งาน ${role.users} คนที่ใช้ Role นี้อยู่`, variant: "destructive" });
-      setDeleteId(null);
+      setDeleteRole(null);
       return;
     }
-    setRoles((prev) => prev.filter((r) => r.id !== deleteId));
-    setDeleteId(null);
-    toast({ title: "ลบ Role สำเร็จ", description: role?.name });
+    try {
+      const { error } = await supabase.from("role_permissions").delete().eq("role_name", deleteRole);
+      if (error) throw error;
+      await refreshPermissions();
+      toast({ title: "ลบ Role สำเร็จ", description: role?.name });
+    } catch (e: any) {
+      toast({ title: "เกิดข้อผิดพลาด", description: e.message, variant: "destructive" });
+    }
+    setDeleteRole(null);
   };
 
-  const countModules = (perms: ModulePermissions) => {
-    return moduleConfigs.filter((m) => perms[m.key].view).length;
-  };
+  const countModules = (perms: ModulePermissions) =>
+    moduleConfigs.filter((m) => perms[m.key].view).length;
 
   const totalUsers = roles.reduce((sum, r) => sum + r.users, 0);
+
+  if (dbLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="w-6 h-6 animate-spin text-primary" />
+        <span className="ml-2 text-sm text-muted-foreground">กำลังโหลดข้อมูลสิทธิ์...</span>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -309,7 +254,7 @@ const RolesSettings = () => {
           </thead>
           <tbody>
             {roles.map((role) => (
-              <tr key={role.id} className="border-b hover:bg-muted/30 transition-colors" style={{ borderColor: "hsl(var(--border))" }}>
+              <tr key={role.name} className="border-b hover:bg-muted/30 transition-colors" style={{ borderColor: "hsl(var(--border))" }}>
                 <td className="px-4 py-3">
                   <span className="px-3 py-1 rounded-lg text-xs font-bold" style={{ background: "hsl(var(--primary-light))", color: "hsl(var(--primary))" }}>
                     {role.name}
@@ -330,7 +275,7 @@ const RolesSettings = () => {
                     <button onClick={() => openEdit(role)} className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground">
                       <Edit className="w-4 h-4" />
                     </button>
-                    <button onClick={() => setDeleteId(role.id)} className="p-1.5 rounded-lg hover:bg-destructive/10 transition-colors text-destructive">
+                    <button onClick={() => setDeleteRole(role.name)} className="p-1.5 rounded-lg hover:bg-destructive/10 transition-colors text-destructive">
                       <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
@@ -345,7 +290,7 @@ const RolesSettings = () => {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="sm:max-w-3xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{editingId ? "แก้ไข Role" : "เพิ่ม Role ใหม่"}</DialogTitle>
+            <DialogTitle>{editingRole ? "แก้ไข Role" : "เพิ่ม Role ใหม่"}</DialogTitle>
             <DialogDescription>กำหนดชื่อ คำอธิบาย และสิทธิ์การใช้งานรายระบบ</DialogDescription>
           </DialogHeader>
           <div className="space-y-5 pt-2">
@@ -356,7 +301,8 @@ const RolesSettings = () => {
                   value={form.name}
                   onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
                   placeholder="เช่น Manager"
-                  className="w-full px-3 py-2.5 text-sm rounded-xl border outline-none bg-muted/30 focus:ring-2 focus:ring-primary/30 transition-shadow"
+                  disabled={!!editingRole}
+                  className="w-full px-3 py-2.5 text-sm rounded-xl border outline-none bg-muted/30 focus:ring-2 focus:ring-primary/30 transition-shadow disabled:opacity-50"
                 />
               </div>
               <div>
@@ -442,11 +388,12 @@ const RolesSettings = () => {
               </button>
               <button
                 onClick={handleSave}
-                className="flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-bold text-primary-foreground"
+                disabled={saving}
+                className="flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-bold text-primary-foreground disabled:opacity-50"
                 style={{ background: "linear-gradient(135deg, hsl(var(--primary)), hsl(31 100% 60%))", boxShadow: "0 4px 12px hsl(var(--primary) / 0.3)" }}
               >
-                <Check className="w-4 h-4" />
-                {editingId ? "บันทึกการแก้ไข" : "เพิ่ม Role"}
+                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                {editingRole ? "บันทึกการแก้ไข" : "เพิ่ม Role"}
               </button>
             </div>
           </div>
@@ -454,7 +401,7 @@ const RolesSettings = () => {
       </Dialog>
 
       {/* Delete Confirmation */}
-      <AlertDialog open={deleteId !== null} onOpenChange={(open) => !open && setDeleteId(null)}>
+      <AlertDialog open={deleteRole !== null} onOpenChange={(open) => !open && setDeleteRole(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <div className="mx-auto w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center mb-2">
@@ -463,7 +410,7 @@ const RolesSettings = () => {
             <AlertDialogTitle className="text-center">ยืนยันการลบ Role</AlertDialogTitle>
             <AlertDialogDescription className="text-center">
               {(() => {
-                const role = roles.find((r) => r.id === deleteId);
+                const role = roles.find((r) => r.name === deleteRole);
                 if (role && role.users > 0) {
                   return <>Role "<span className="font-semibold text-foreground">{role.name}</span>" มีผู้ใช้งาน {role.users} คน<br />จะต้องย้ายผู้ใช้ไปยัง Role อื่นก่อนลบ</>;
                 }

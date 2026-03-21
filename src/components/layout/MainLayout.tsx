@@ -4,7 +4,7 @@ import Sidebar from "./Sidebar";
 import Topbar from "./Topbar";
 import MobileFooterNav from "./MobileFooterNav";
 import { useAuth } from "@/contexts/AuthContext";
-import { canAccess, getRestrictedPaths, isSelfOnly } from "@/config/roleAccess";
+import { usePermissions } from "@/contexts/PermissionsContext";
 
 const pageTitles: Record<string, { title: string; subtitle: string }> = {
   "/dashboard": { title: "หน้าหลัก", subtitle: "ภาพรวมระบบบริหารจัดการพนักงาน" },
@@ -28,9 +28,10 @@ const MainLayout = () => {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const location = useLocation();
   const { user, loading, profileReady, currentUser, role } = useAuth();
+  const { canAccessRoute, isSelfOnly, loading: permLoading } = usePermissions();
 
   // Still bootstrapping auth — show loader, don't redirect
-  if (loading || !profileReady) {
+  if (loading || !profileReady || permLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-3">
@@ -51,9 +52,9 @@ const MainLayout = () => {
 
   // Check role-based access for current path
   const currentPath = "/" + location.pathname.split("/")[1]; // e.g. /employees/123 → /employees
-  if (!canAccess(role, currentPath)) {
+  if (!canAccessRoute(role, currentPath)) {
     // Redirect to first accessible page
-    const defaultPage = canAccess(role, "/dashboard") ? "/dashboard" : "/notifications";
+    const defaultPage = canAccessRoute(role, "/dashboard") ? "/dashboard" : "/notifications";
     return <Navigate to={defaultPage} replace />;
   }
 

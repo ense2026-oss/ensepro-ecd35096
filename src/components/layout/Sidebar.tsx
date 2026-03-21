@@ -3,8 +3,7 @@ import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { usePendingCounts } from "@/contexts/PendingCountsContext";
 import { useBranding } from "@/contexts/BrandingContext";
 import { useAuth } from "@/contexts/AuthContext";
-import { canAccess, getLabelForRole, isSelfOnly } from "@/config/roleAccess";
-import type { AppRole } from "@/config/roleAccess";
+import { usePermissions } from "@/contexts/PermissionsContext";
 import {
   LayoutDashboard,
   Users,
@@ -68,6 +67,7 @@ const Sidebar = ({ collapsed, onToggle, onNavigate }: SidebarProps) => {
   const { programName, programSubtitle, logoUrl, logoOnlyUrl, displayMode } = useBranding();
   const activeLogo = displayMode === "logo-only" ? logoOnlyUrl : logoUrl;
   const { currentUser, role, logout } = useAuth();
+  const { canAccessRoute, isSelfOnly: permSelfOnly } = usePermissions();
 
   // Module settings: listen for real-time changes
   const [enabledModules, setEnabledModules] = useState<Record<string, boolean>>(() => {
@@ -103,8 +103,8 @@ const Sidebar = ({ collapsed, onToggle, onNavigate }: SidebarProps) => {
   const navItems = allNavItems.map((section) => ({
     ...section,
     items: section.items.filter((item) => {
-      // Role-based access
-      if (!canAccess(role, item.path)) return false;
+      // Role-based access (from DB permissions)
+      if (!canAccessRoute(role, item.path)) return false;
       // Module settings
       const moduleId = pathToModule[item.path];
       if (moduleId && enabledModules[moduleId] === false) return false;
@@ -227,11 +227,11 @@ const Sidebar = ({ collapsed, onToggle, onNavigate }: SidebarProps) => {
             )}
             <div className="space-y-1">
               {section.items.map((item) => {
-                const selfOnly = isSelfOnly(role, item.path);
+                const selfOnly = permSelfOnly(role, item.path);
                 const linkPath = selfOnly && currentUser
                   ? `/employees/${currentUser.employeeId || currentUser.id}`
                   : item.path;
-                const displayLabel = getLabelForRole(role, item.path, item.label);
+                const displayLabel = item.label;
                 const isActive = location.pathname === item.path || location.pathname === linkPath || (item.path === "/employees" && location.pathname.startsWith("/employees/"));
                 const badgeCount: number = dynamicBadges[item.path] ?? 0;
                 return (

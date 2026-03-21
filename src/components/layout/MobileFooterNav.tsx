@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from "react";
 import { usePendingCounts } from "@/contexts/PendingCountsContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { canAccess, isSelfOnly } from "@/config/roleAccess";
+import { usePermissions } from "@/contexts/PermissionsContext";
 import {
   LayoutDashboard,
   Users,
@@ -45,6 +45,7 @@ const MobileFooterNav = () => {
   const { leavePending, attendancePending, overtimePending } = usePendingCounts();
   const { currentUser, role } = useAuth();
   const isMobile = useIsMobile();
+  const { canAccessRoute, isSelfOnly } = usePermissions();
 
   const getModuleSettings = useCallback(() => {
     try {
@@ -62,8 +63,7 @@ const MobileFooterNav = () => {
   }, [getModuleSettings]);
 
   const menuItems = allMenuItems.filter((item) => {
-    // Role-based access
-    if (!canAccess(role, item.path)) return false;
+    if (!canAccessRoute(role, item.path)) return false;
     if (item.hideOnMobile && isMobile) return false;
     const moduleId = pathToModuleMap[item.path];
     if (moduleId && moduleSettings[moduleId] === false) return false;
@@ -78,15 +78,15 @@ const MobileFooterNav = () => {
 
   const isActive = (path: string) => location.pathname === path || (path === "/employees" && location.pathname.startsWith("/employees/"));
 
-  const isCheckInEnabled = moduleSettings['check-in'] !== false && canAccess(role, "/check-in");
+  const isCheckInEnabled = moduleSettings['check-in'] !== false && canAccessRoute(role, "/check-in");
 
   const midIndex = Math.floor(menuItems.length / 2);
   const leftItems = menuItems.slice(0, midIndex);
   const rightItems = menuItems.slice(midIndex);
 
   const renderItem = (item: typeof menuItems[0]) => {
-    const selfOnly = isSelfOnly(role, item.path);
-    const linkPath = selfOnly && currentUser
+    const selfOnlyCheck = isSelfOnly(role, item.path);
+    const linkPath = selfOnlyCheck && currentUser
       ? `/employees/${currentUser.employeeId || currentUser.id}`
       : item.path;
     const active = isActive(item.path);
