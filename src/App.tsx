@@ -9,6 +9,7 @@ import { PendingCountsProvider } from "./contexts/PendingCountsContext";
 import { TimeEditProvider } from "./contexts/TimeEditContext";
 import { ContractProvider } from "./contexts/ContractContext";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
+import { PermissionsProvider } from "./contexts/PermissionsContext";
 import { OrgProvider } from "./contexts/OrgContext";
 import MainLayout from "./components/layout/MainLayout";
 import Login from "./pages/Login";
