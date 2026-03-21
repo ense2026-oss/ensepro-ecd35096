@@ -42,8 +42,8 @@ interface StatCardProps {
   loading?: boolean;
 }
 
-const StatCard = ({ title, value, subtitle, icon: Icon, trend, color, bgColor, loading }: StatCardProps) => (
-  <div className="card-base p-3 sm:p-5 animate-fade-in">
+const StatCard = forwardRef<HTMLDivElement, StatCardProps>(({ title, value, subtitle, icon: Icon, trend, color, bgColor, loading }, ref) => (
+  <div ref={ref} className="card-base p-3 sm:p-5 animate-fade-in">
     <div className="flex items-start justify-between mb-2 sm:mb-4">
       <div className="flex-1 min-w-0">
         <p className="text-[11px] sm:text-sm text-muted-foreground font-medium leading-tight">{title}</p>
@@ -78,7 +78,8 @@ const StatCard = ({ title, value, subtitle, icon: Icon, trend, color, bgColor, l
       </div>
     )}
   </div>
-);
+));
+StatCard.displayName = "StatCard";
 
 const LEAVE_COLORS: Record<string, string> = {
   "ลาป่วย": "#FF870F",
