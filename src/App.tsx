@@ -92,15 +92,24 @@ const App = () => (
       <BrowserRouter>
         <BrandingProvider>
         <AuthProvider>
-        <OrgProvider>
-        <EmployeeProvider>
-        <PendingCountsProvider>
-        <ContractProvider>
-        <TimeEditProvider>
         <Routes>
           <Route path="/" element={<AuthRedirect />} />
           <Route path="/login" element={<LoginRoute />} />
-          <Route element={<ProtectedRoute><MainLayout /></ProtectedRoute>}>
+          <Route element={
+            <ProtectedRoute>
+              <OrgProvider>
+              <EmployeeProvider>
+              <PendingCountsProvider>
+              <ContractProvider>
+              <TimeEditProvider>
+                <MainLayout />
+              </TimeEditProvider>
+              </ContractProvider>
+              </PendingCountsProvider>
+              </EmployeeProvider>
+              </OrgProvider>
+            </ProtectedRoute>
+          }>
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/employees" element={<Employees />} />
             <Route path="/employees/:id" element={<EmployeeProfile />} />
@@ -120,11 +129,6 @@ const App = () => (
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
-        </TimeEditProvider>
-        </ContractProvider>
-        </PendingCountsProvider>
-        </EmployeeProvider>
-        </OrgProvider>
         </AuthProvider>
         </BrandingProvider>
       </BrowserRouter>
