@@ -82,9 +82,9 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <BrandingProvider>
+        <AuthProvider>
         <OrgProvider>
         <EmployeeProvider>
-        <AuthProvider>
         <PendingCountsProvider>
         <ContractProvider>
         <TimeEditProvider>
@@ -114,9 +114,9 @@ const App = () => (
         </TimeEditProvider>
         </ContractProvider>
         </PendingCountsProvider>
-        </AuthProvider>
         </EmployeeProvider>
         </OrgProvider>
+        </AuthProvider>
         </BrandingProvider>
       </BrowserRouter>
     </TooltipProvider>
