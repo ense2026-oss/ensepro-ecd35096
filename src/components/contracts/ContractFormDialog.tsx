@@ -21,6 +21,7 @@ const CONTRACT_TYPES: ContractType[] = ["จ้างงาน", "ทดลอ�
 const ContractFormDialog = ({ open, onOpenChange, editContract }: Props) => {
   const { employees } = useEmployees();
   const { addContract, updateContract, settings } = useContracts();
+  const { user } = useAuth();
   const activeEmployees = employees.filter((e) => e.status !== "inactive");
   const managers = employees.filter((e) => ["Admin", "Manager", "HR"].includes(e.role));
 
