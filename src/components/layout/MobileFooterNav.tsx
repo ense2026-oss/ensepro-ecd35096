@@ -63,8 +63,7 @@ const MobileFooterNav = () => {
   }, [getModuleSettings]);
 
   const menuItems = allMenuItems.filter((item) => {
-    // Role-based access
-    if (!canAccess(role, item.path)) return false;
+    if (!canAccessRoute(role, item.path)) return false;
     if (item.hideOnMobile && isMobile) return false;
     const moduleId = pathToModuleMap[item.path];
     if (moduleId && moduleSettings[moduleId] === false) return false;
