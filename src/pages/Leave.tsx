@@ -100,10 +100,11 @@ const Leave = () => {
 
     // Find leave type id
     const lt = leaveTypes.find((t) => t.name === record.type);
+    if (!lt) return;
 
-    await supabase.from("leave_requests").insert({
+    await supabase.from("leave_requests").insert([{
       employee_id: emp.id,
-      leave_type_id: lt?.id || null,
+      leave_type_id: lt.id,
       leave_type_name: record.type,
       date_from: record.from,
       date_to: record.to,
@@ -111,7 +112,7 @@ const Leave = () => {
       reason: record.reason,
       status: "pending",
       has_file: record.file,
-    });
+    }]);
 
     fetchLeaves();
     toast({ title: "สำเร็จ", description: "ยื่นคำขอลาเรียบร้อยแล้ว" });

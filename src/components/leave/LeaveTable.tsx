@@ -20,8 +20,8 @@ const statusConf: Record<string, { label: string; color: string; bg: string }> =
 
 interface LeaveTableProps {
   records: LeaveRecord[];
-  onApprove: (id: number) => void;
-  onReject: (id: number) => void;
+  onApprove: (id: string) => void;
+  onReject: (id: string) => void;
   hideActions?: boolean;
 }
 
