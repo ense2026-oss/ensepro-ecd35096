@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from "react";
 import { usePendingCounts } from "@/contexts/PendingCountsContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { canAccess, isSelfOnly } from "@/config/roleAccess";
 import {
   LayoutDashboard,
   Users,
@@ -16,15 +17,15 @@ import {
 } from "lucide-react";
 
 const allMenuItems = [
-  { icon: LayoutDashboard, label: "หน้าหลัก", path: "/dashboard", adminOnly: false, hideOnMobile: false },
-  { icon: Users, label: "พนักงาน", path: "/employees", adminOnly: false, hideOnMobile: false, employeeSelfOnly: true },
-  { icon: GitBranch, label: "องค์กร", path: "/organization", adminOnly: true, hideOnMobile: false },
-  { icon: Clock, label: "เวลา", path: "/attendance", adminOnly: true, hideOnMobile: false },
-  { icon: CalendarDays, label: "ลางาน", path: "/leave", adminOnly: false, hideOnMobile: false },
-  { icon: Clock, label: "โอที", path: "/overtime", adminOnly: false, hideOnMobile: false },
-  { icon: CalendarDays, label: "จัดกะ", path: "/shift-management", adminOnly: true, hideOnMobile: false },
-  { icon: FileText, label: "รายงาน", path: "/reports", adminOnly: true, hideOnMobile: false },
-  { icon: Settings, label: "ตั้งค่า", path: "/settings", adminOnly: true, hideOnMobile: true },
+  { icon: LayoutDashboard, label: "หน้าหลัก", path: "/dashboard", hideOnMobile: false },
+  { icon: Users, label: "พนักงาน", path: "/employees", hideOnMobile: false },
+  { icon: GitBranch, label: "องค์กร", path: "/organization", hideOnMobile: false },
+  { icon: Clock, label: "เวลา", path: "/attendance", hideOnMobile: false },
+  { icon: CalendarDays, label: "ลางาน", path: "/leave", hideOnMobile: false },
+  { icon: Clock, label: "โอที", path: "/overtime", hideOnMobile: false },
+  { icon: CalendarDays, label: "จัดกะ", path: "/shift-management", hideOnMobile: false },
+  { icon: FileText, label: "รายงาน", path: "/reports", hideOnMobile: false },
+  { icon: Settings, label: "ตั้งค่า", path: "/settings", hideOnMobile: true },
 ];
 
 const pathToModuleMap: Record<string, string> = {
@@ -42,7 +43,7 @@ const pathToModuleMap: Record<string, string> = {
 const MobileFooterNav = () => {
   const location = useLocation();
   const { leavePending, attendancePending, overtimePending } = usePendingCounts();
-  const { currentUser, hasAdminAccess } = useAuth();
+  const { currentUser, role } = useAuth();
   const isMobile = useIsMobile();
 
   const getModuleSettings = useCallback(() => {
@@ -61,7 +62,8 @@ const MobileFooterNav = () => {
   }, [getModuleSettings]);
 
   const menuItems = allMenuItems.filter((item) => {
-    if (item.adminOnly && !hasAdminAccess) return false;
+    // Role-based access
+    if (!canAccess(role, item.path)) return false;
     if (item.hideOnMobile && isMobile) return false;
     const moduleId = pathToModuleMap[item.path];
     if (moduleId && moduleSettings[moduleId] === false) return false;
@@ -76,15 +78,16 @@ const MobileFooterNav = () => {
 
   const isActive = (path: string) => location.pathname === path || (path === "/employees" && location.pathname.startsWith("/employees/"));
 
-  const isCheckInEnabled = moduleSettings['check-in'] !== false;
+  const isCheckInEnabled = moduleSettings['check-in'] !== false && canAccess(role, "/check-in");
 
   const midIndex = Math.floor(menuItems.length / 2);
   const leftItems = menuItems.slice(0, midIndex);
   const rightItems = menuItems.slice(midIndex);
 
   const renderItem = (item: typeof menuItems[0]) => {
-    const linkPath = (item as any).employeeSelfOnly && !hasAdminAccess && currentUser
-      ? `/employees/${currentUser.id}`
+    const selfOnly = isSelfOnly(role, item.path);
+    const linkPath = selfOnly && currentUser
+      ? `/employees/${currentUser.employeeId || currentUser.id}`
       : item.path;
     const active = isActive(item.path);
     const badgeCount = dynamicBadges[item.path] ?? 0;
@@ -138,14 +141,12 @@ const MobileFooterNav = () => {
           boxShadow: "0 -4px 20px hsl(0 0% 0% / 0.08)",
         }}
       >
-        {/* Center Check-in Button (floating) - hidden when check-in module is disabled */}
         {isCheckInEnabled && (
           <NavLink
             to="/check-in"
             className="absolute left-1/2 -translate-x-1/2 -top-5 z-10"
           >
             <div className="relative flex items-center justify-center">
-              {/* Wave rings */}
               <div
                 className="absolute w-16 h-16 rounded-full animate-[wave-ping_1.8s_ease-out_infinite]"
                 style={{
@@ -162,7 +163,6 @@ const MobileFooterNav = () => {
                     : "hsl(90 100% 40% / 0.15)",
                 }}
               />
-              {/* Button */}
               <div
                 className="w-12 h-12 rounded-full flex flex-col items-center justify-center transition-all duration-200 relative z-10"
                 style={{
@@ -180,23 +180,18 @@ const MobileFooterNav = () => {
           </NavLink>
         )}
 
-        {/* Menu items - full width when check-in is disabled, split layout when enabled */}
         <div className="flex items-end pt-2 pb-[env(safe-area-inset-bottom,8px)]">
           {isCheckInEnabled ? (
             <>
-              {/* Left half */}
               <div className="flex flex-1 justify-around">
                 {leftItems.map(renderItem)}
               </div>
-              {/* Center spacer for the floating button */}
               <div className="w-[58px] flex-shrink-0" />
-              {/* Right half */}
               <div className="flex flex-1 justify-around">
                 {rightItems.map(renderItem)}
               </div>
             </>
           ) : (
-            /* Full width layout when no center button */
             <div className="flex flex-1 justify-around">
               {menuItems.map(renderItem)}
             </div>

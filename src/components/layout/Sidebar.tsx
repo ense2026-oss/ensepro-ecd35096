@@ -3,6 +3,8 @@ import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { usePendingCounts } from "@/contexts/PendingCountsContext";
 import { useBranding } from "@/contexts/BrandingContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { canAccess, getLabelForRole, isSelfOnly } from "@/config/roleAccess";
+import type { AppRole } from "@/config/roleAccess";
 import {
   LayoutDashboard,
   Users,
@@ -32,29 +34,29 @@ const allNavItems = [
   {
     section: "หลัก",
     items: [
-      { icon: LayoutDashboard, label: "หน้าหลัก", path: "/dashboard", adminOnly: false },
-      { icon: Users, label: "ข้อมูลพนักงาน", path: "/employees", adminOnly: false, employeeSelfOnly: true },
-      { icon: GitBranch, label: "โครงสร้างองค์กร", path: "/organization", adminOnly: true },
-      { icon: FileSignature, label: "จัดการสัญญาจ้าง", labelEmployee: "สัญญาจ้างของฉัน", path: "/contracts", adminOnly: false },
+      { icon: LayoutDashboard, label: "หน้าหลัก", path: "/dashboard" },
+      { icon: Users, label: "ข้อมูลพนักงาน", path: "/employees" },
+      { icon: GitBranch, label: "โครงสร้างองค์กร", path: "/organization" },
+      { icon: FileSignature, label: "จัดการสัญญาจ้าง", path: "/contracts" },
     ],
   },
   {
     section: "การจัดการ",
     items: [
-      { icon: Clock, label: "บันทึกเวลา", path: "/attendance", adminOnly: true },
-      { icon: CalendarDays, label: "ระบบลางาน", path: "/leave", adminOnly: false },
-      { icon: Clock, label: "ระบบโอที", path: "/overtime", adminOnly: false },
-      { icon: MapPin, label: "ลงเวลาเข้า-ออกงาน", path: "/check-in", adminOnly: false },
-      { icon: CalendarDays, label: "จัดการกะทำงาน", path: "/shift-management", adminOnly: true },
-      { icon: Banknote, label: "จัดการเงินเดือน", path: "/payroll", adminOnly: true },
+      { icon: Clock, label: "บันทึกเวลา", path: "/attendance" },
+      { icon: CalendarDays, label: "ระบบลางาน", path: "/leave" },
+      { icon: Clock, label: "ระบบโอที", path: "/overtime" },
+      { icon: MapPin, label: "ลงเวลาเข้า-ออกงาน", path: "/check-in" },
+      { icon: CalendarDays, label: "จัดการกะทำงาน", path: "/shift-management" },
+      { icon: Banknote, label: "จัดการเงินเดือน", path: "/payroll" },
     ],
   },
   {
     section: "ระบบ",
     items: [
-      { icon: FileText, label: "รายงาน", path: "/reports", adminOnly: true },
-      { icon: Bell, label: "การแจ้งเตือน", path: "/notifications", adminOnly: false },
-      { icon: Settings, label: "ตั้งค่า", path: "/settings", adminOnly: true },
+      { icon: FileText, label: "รายงาน", path: "/reports" },
+      { icon: Bell, label: "การแจ้งเตือน", path: "/notifications" },
+      { icon: Settings, label: "ตั้งค่า", path: "/settings" },
     ],
   },
 ];
@@ -65,7 +67,7 @@ const Sidebar = ({ collapsed, onToggle, onNavigate }: SidebarProps) => {
   const { leavePending, attendancePending, overtimePending, notificationCount } = usePendingCounts();
   const { programName, programSubtitle, logoUrl, logoOnlyUrl, displayMode } = useBranding();
   const activeLogo = displayMode === "logo-only" ? logoOnlyUrl : logoUrl;
-  const { currentUser, hasAdminAccess, logout } = useAuth();
+  const { currentUser, role, logout } = useAuth();
 
   // Module settings: listen for real-time changes
   const [enabledModules, setEnabledModules] = useState<Record<string, boolean>>(() => {
@@ -84,7 +86,6 @@ const Sidebar = ({ collapsed, onToggle, onNavigate }: SidebarProps) => {
     return () => window.removeEventListener("module-settings-changed", handler);
   }, []);
 
-  // Module id mapping: path → module id
   const pathToModule: Record<string, string> = {
     "/employees": "employees",
     "/organization": "organization",
@@ -102,29 +103,27 @@ const Sidebar = ({ collapsed, onToggle, onNavigate }: SidebarProps) => {
   const navItems = allNavItems.map((section) => ({
     ...section,
     items: section.items.filter((item) => {
-      if (item.adminOnly && !hasAdminAccess) return false;
+      // Role-based access
+      if (!canAccess(role, item.path)) return false;
+      // Module settings
       const moduleId = pathToModule[item.path];
       if (moduleId && enabledModules[moduleId] === false) return false;
       return true;
     }),
   })).filter((section) => section.items.length > 0);
 
-  const userInitials = currentUser
-    ? currentUser.avatar
-    : "AD";
-  const userName = currentUser
-    ? `${currentUser.firstName} ${currentUser.lastName}`
-    : "Admin User";
+  const userInitials = currentUser ? currentUser.avatar : "AD";
+  const userName = currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : "Admin User";
   const userRole = currentUser?.role || "Administrator";
   const roleLabel: Record<string, string> = {
-    Admin: "Administrator",
-    Manager: "Manager",
-    HR: "HR",
+    Admin: "ผู้ดูแลระบบ",
+    Manager: "ผู้จัดการ",
+    HR: "ฝ่ายบุคคล",
     Employee: "พนักงาน",
-    Accountant: "บัญชี",
+    Accountant: "ฝ่ายบัญชี",
+    Executive: "ผู้บริหาร",
   };
 
-  // Dynamic badges based on context
   const dynamicBadges: Record<string, number> = {
     "/attendance": attendancePending,
     "/leave": leavePending,
@@ -228,9 +227,11 @@ const Sidebar = ({ collapsed, onToggle, onNavigate }: SidebarProps) => {
             )}
             <div className="space-y-1">
               {section.items.map((item) => {
-                const linkPath = (item as any).employeeSelfOnly && !hasAdminAccess && currentUser
+                const selfOnly = isSelfOnly(role, item.path);
+                const linkPath = selfOnly && currentUser
                   ? `/employees/${currentUser.employeeId || currentUser.id}`
                   : item.path;
+                const displayLabel = getLabelForRole(role, item.path, item.label);
                 const isActive = location.pathname === item.path || location.pathname === linkPath || (item.path === "/employees" && location.pathname.startsWith("/employees/"));
                 const badgeCount: number = dynamicBadges[item.path] ?? 0;
                 return (
@@ -238,13 +239,13 @@ const Sidebar = ({ collapsed, onToggle, onNavigate }: SidebarProps) => {
                     key={item.path}
                     to={linkPath}
                     className={`sidebar-item ${isActive ? "active" : ""} ${collapsed ? "justify-center" : ""}`}
-                    title={collapsed ? ((item as any).labelEmployee && !hasAdminAccess ? (item as any).labelEmployee : item.label) : undefined}
+                    title={collapsed ? displayLabel : undefined}
                     onClick={onNavigate}
                   >
                     <item.icon className="w-5 h-5 flex-shrink-0" />
                     {!collapsed && (
                       <>
-                        <span className="flex-1">{(item as any).labelEmployee && !hasAdminAccess ? (item as any).labelEmployee : item.label}</span>
+                        <span className="flex-1">{displayLabel}</span>
                         {badgeCount > 0 && (
                           <span
                             className="text-xs font-bold px-1.5 py-0.5 rounded-full min-w-[20px] text-center"
