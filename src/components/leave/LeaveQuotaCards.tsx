@@ -1,7 +1,7 @@
 import { Calendar } from "lucide-react";
 
 export interface LeaveType {
-  id: number;
+  id: string;
   name: string;
   quota: number;
   used: number;

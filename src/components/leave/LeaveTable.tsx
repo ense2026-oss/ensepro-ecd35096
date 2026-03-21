@@ -1,7 +1,7 @@
 import { CheckCircle, XCircle, FileText } from "lucide-react";
 
 export interface LeaveRecord {
-  id: number;
+  id: string;
   name: string;
   type: string;
   from: string;
@@ -20,8 +20,8 @@ const statusConf: Record<string, { label: string; color: string; bg: string }> =
 
 interface LeaveTableProps {
   records: LeaveRecord[];
-  onApprove: (id: number) => void;
-  onReject: (id: number) => void;
+  onApprove: (id: string) => void;
+  onReject: (id: string) => void;
   hideActions?: boolean;
 }
 

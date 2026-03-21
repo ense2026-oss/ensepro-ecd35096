@@ -1,8 +1,11 @@
-import { createContext, useContext, useState, useCallback, ReactNode } from "react";
+import { createContext, useContext, useState, useCallback, useEffect, ReactNode } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 export interface TimeEditRequest {
-  id: number;
-  attendanceId?: number;
+  id: string;
+  attendanceId?: string;
+  employeeId: string;
   employeeName: string;
   date: string;
   originalCheckIn: string;
@@ -28,13 +31,14 @@ export interface AppNotification {
 interface TimeEditContextType {
   editRequests: TimeEditRequest[];
   addEditRequest: (req: Omit<TimeEditRequest, "id" | "status" | "createdAt">) => void;
-  updateRequestStatus: (id: number, status: "approved" | "rejected") => void;
+  updateRequestStatus: (id: string, status: "approved" | "rejected") => void;
   notifications: AppNotification[];
   addNotification: (notif: Omit<AppNotification, "id">) => void;
   markNotifRead: (id: string) => void;
   markAllNotifsRead: () => void;
   deleteNotif: (id: string) => void;
   toggleNotifRead: (id: string) => void;
+  loading: boolean;
 }
 
 const TimeEditContext = createContext<TimeEditContextType | null>(null);
@@ -45,89 +49,154 @@ export const useTimeEditRequests = () => {
   return ctx;
 };
 
-// Initial seed data
-const seedRequests: TimeEditRequest[] = [
-  { id: 1, attendanceId: 2, employeeName: "สมหญิง รักงาน", date: "20/02/2569", originalCheckIn: "08:45", originalCheckOut: "17:30", newCheckIn: "08:00", newCheckOut: "17:30", reason: "ลืมสแกนนิ้ว เข้ามาถึงก่อน 08:00", status: "pending", createdAt: "20/02/2569 10:30" },
-  { id: 2, attendanceId: 7, employeeName: "ประสิทธิ์ ทำได้", date: "19/02/2569", originalCheckIn: "-", originalCheckOut: "-", newCheckIn: "08:00", newCheckOut: "17:00", reason: "ไปทำงานนอกสถานที่ ลืมแจ้ง", status: "rejected", createdAt: "19/02/2569 16:00" },
-];
-
-const seedNotifications: AppNotification[] = [
-  { id: "1", title: "คำขอลาป่วย", description: "สมชาย ใจดี ส่งคำขอลาป่วย 1 วัน (20 ก.พ. 2569)", type: "leave", time: "5 นาที", read: false, actionLabel: "อนุมัติ", targetEmployee: "สมชาย ใจดี" },
-  { id: "2", title: "อนุมัติ OT สำเร็จ", description: "อนุมัติ OT 3 รายการ แผนก IT วันที่ 19 ก.พ.", type: "ot", time: "1 ชม.", read: false },
-  { id: "3", title: "พนักงานใหม่รอยืนยัน", description: "มีพนักงานใหม่ 2 คนรอยืนยันข้อมูล", type: "employee", time: "2 ชม.", read: false, actionLabel: "ตรวจสอบ" },
-  { id: "4", title: "รายงานประจำเดือนพร้อม", description: "รายงานสรุปเดือน ม.ค. 2569 พร้อมดาวน์โหลด", type: "system", time: "1 วัน", read: false },
-  { id: "5", title: "คำขอแก้ไขเวลา", description: "นภา สดใส ขอแก้ไขเวลาเข้างาน 18 ก.พ.", type: "attendance", time: "1 วัน", read: true, actionLabel: "อนุมัติ", targetEmployee: "นภา สดใส" },
-  { id: "6", title: "ลาพักร้อนรออนุมัติ", description: "วิชัย เก่งกาจ ขอลาพักร้อน 4 วัน (25-28 ก.พ.)", type: "leave", time: "2 วัน", read: true, actionLabel: "อนุมัติ", targetEmployee: "วิชัย เก่งกาจ" },
-  { id: "7", title: "อนุมัติลากิจสำเร็จ", description: "คำขอลากิจของ ประภาส มั่นคง ได้รับการอนุมัติ", type: "approval", time: "2 วัน", read: true, targetEmployee: "ประภาส มั่นคง" },
-  { id: "8", title: "แจ้งเตือนวันเกิด", description: "พรุ่งนี้เป็นวันเกิดของ สมหญิง รักงาน (HR)", type: "employee", time: "3 วัน", read: true, targetEmployee: "สมหญิง รักงาน" },
-  { id: "9", title: "สรุป OT ประจำสัปดาห์", description: "แผนก Sales มี OT รวม 42 ชม. สูงสุด", type: "ot", time: "3 วัน", read: true },
-  { id: "10", title: "อัปเดตระบบ v2.1.0", description: "ระบบอัปเดตเรียบร้อยแล้ว", type: "system", time: "5 วัน", read: true },
-  { id: "11", title: "พนักงานมาสายซ้ำ", description: "นภา สดใส มาสายครบ 3 ครั้งในเดือนนี้", type: "attendance", time: "5 วัน", read: true, targetEmployee: "นภา สดใส" },
-  { id: "12", title: "ใบรับรองแพทย์", description: "สมชาย ใจดี แนบใบรับรองแพทย์ลาป่วย 2 วัน", type: "approval", time: "1 สัปดาห์", read: true, targetEmployee: "สมชาย ใจดี" },
-  // Demo notifications for มานะ ขยัน (Employee)
-  { id: "13", title: "อนุมัติลาพักร้อน", description: "คำขอลาพักร้อนของคุณ 3 วัน (3-5 มี.ค. 2569) ได้รับการอนุมัติแล้ว", type: "approval", time: "10 นาที", read: false, targetEmployee: "มานะ ขยัน" },
-  { id: "14", title: "แจ้งเตือนเข้างานสาย", description: "คุณเข้างานสายเวลา 08:22 น. วันที่ 19 ก.พ. 2569 (สายเกิน 15 นาที)", type: "attendance", time: "3 ชม.", read: false, targetEmployee: "มานะ ขยัน" },
-  { id: "15", title: "คำขอแก้ไขเวลาถูกปฏิเสธ", description: "คำขอแก้ไขเวลาเข้างานวันที่ 15 ก.พ. ถูกปฏิเสธ เหตุผล: หลักฐานไม่เพียงพอ", type: "attendance", time: "2 วัน", read: true, targetEmployee: "มานะ ขยัน" },
-  { id: "16", title: "เหลือวันลาพักร้อน", description: "คุณเหลือวันลาพักร้อน 5 วัน จากทั้งหมด 10 วัน สำหรับปี 2569", type: "leave", time: "3 วัน", read: true, targetEmployee: "มานะ ขยัน" },
-  { id: "17", title: "กะทำงานเปลี่ยนแปลง", description: "กะทำงานของคุณเปลี่ยนเป็น กะเช้า (08:00-17:00) ตั้งแต่ 1 มี.ค. 2569", type: "approval", time: "5 วัน", read: true, targetEmployee: "มานะ ขยัน" },
-];
+function timeAgo(dateStr: string): string {
+  const now = new Date();
+  const d = new Date(dateStr);
+  const diffMs = now.getTime() - d.getTime();
+  const mins = Math.floor(diffMs / 60000);
+  if (mins < 1) return "เมื่อสักครู่";
+  if (mins < 60) return `${mins} นาที`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs} ชม.`;
+  const days = Math.floor(hrs / 24);
+  if (days < 7) return `${days} วัน`;
+  return `${Math.floor(days / 7)} สัปดาห์`;
+}
 
 export const TimeEditProvider = ({ children }: { children: ReactNode }) => {
-  const [editRequests, setEditRequests] = useState<TimeEditRequest[]>(seedRequests);
-  const [notifications, setNotifications] = useState<AppNotification[]>(seedNotifications);
+  const { user } = useAuth();
+  const [editRequests, setEditRequests] = useState<TimeEditRequest[]>([]);
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const addEditRequest = useCallback((req: Omit<TimeEditRequest, "id" | "status" | "createdAt">) => {
-    const now = new Date();
-    const thaiYear = now.getFullYear() + 543;
-    const createdAt = `${String(now.getDate()).padStart(2, "0")}/${String(now.getMonth() + 1).padStart(2, "0")}/${thaiYear} ${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
-    const newReq: TimeEditRequest = {
-      ...req,
-      id: Date.now(),
-      status: "pending",
-      createdAt,
-    };
-    setEditRequests((prev) => [newReq, ...prev]);
-
-    // Auto-add notification
-    const notif: AppNotification = {
-      id: `ter-${newReq.id}`,
-      title: "คำขอแก้ไขเวลา",
-      description: `${req.employeeName} ขอแก้ไขเวลา ${req.date} → เข้า ${req.newCheckIn} / ออก ${req.newCheckOut}`,
-      type: "attendance",
-      time: "เมื่อสักครู่",
-      read: false,
-      actionLabel: "ตรวจสอบ",
-      targetEmployee: req.employeeName,
-    };
-    setNotifications((prev) => [notif, ...prev]);
+  // Fetch time edit requests
+  const fetchEditRequests = useCallback(async () => {
+    const { data } = await supabase
+      .from("time_edit_requests")
+      .select("*, employees(first_name, last_name)")
+      .order("created_at", { ascending: false });
+    if (data) {
+      setEditRequests(data.map((r: any) => ({
+        id: r.id,
+        attendanceId: r.attendance_id,
+        employeeId: r.employee_id,
+        employeeName: r.employees ? `${r.employees.first_name} ${r.employees.last_name}` : "",
+        date: r.date,
+        originalCheckIn: r.original_check_in,
+        originalCheckOut: r.original_check_out,
+        newCheckIn: r.new_check_in,
+        newCheckOut: r.new_check_out,
+        reason: r.reason,
+        status: r.status as "pending" | "approved" | "rejected",
+        createdAt: r.created_at,
+      })));
+    }
   }, []);
 
-  const updateRequestStatus = useCallback((id: number, status: "approved" | "rejected") => {
+  // Fetch notifications
+  const fetchNotifications = useCallback(async () => {
+    if (!user) return;
+    const { data } = await supabase
+      .from("app_notifications")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false });
+    if (data) {
+      setNotifications(data.map((n: any) => ({
+        id: n.id,
+        title: n.title,
+        description: n.description,
+        type: n.type as AppNotification["type"],
+        time: timeAgo(n.created_at),
+        read: n.is_read,
+        actionLabel: n.action_label,
+        targetEmployee: n.target_employee,
+      })));
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+    setLoading(true);
+    Promise.all([fetchEditRequests(), fetchNotifications()]).finally(() => setLoading(false));
+
+    // Realtime subscriptions
+    const channel = supabase
+      .channel("time-edit-context")
+      .on("postgres_changes", { event: "*", schema: "public", table: "time_edit_requests" }, () => fetchEditRequests())
+      .on("postgres_changes", { event: "*", schema: "public", table: "app_notifications" }, () => fetchNotifications())
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [user, fetchEditRequests, fetchNotifications]);
+
+  const addEditRequest = useCallback(async (req: Omit<TimeEditRequest, "id" | "status" | "createdAt">) => {
+    await supabase.from("time_edit_requests").insert({
+      employee_id: req.employeeId,
+      attendance_id: req.attendanceId || null,
+      date: req.date,
+      original_check_in: req.originalCheckIn,
+      original_check_out: req.originalCheckOut,
+      new_check_in: req.newCheckIn,
+      new_check_out: req.newCheckOut,
+      reason: req.reason,
+    });
+    // Auto-add notification for admins (simplified: notify self for now)
+    if (user) {
+      await supabase.from("app_notifications").insert({
+        user_id: user.id,
+        title: "คำขอแก้ไขเวลา",
+        description: `${req.employeeName} ขอแก้ไขเวลา ${req.date} → เข้า ${req.newCheckIn} / ออก ${req.newCheckOut}`,
+        type: "attendance",
+        action_label: "ตรวจสอบ",
+        target_employee: req.employeeName,
+      });
+    }
+  }, [user]);
+
+  const updateRequestStatus = useCallback(async (id: string, status: "approved" | "rejected") => {
+    await supabase.from("time_edit_requests").update({ status }).eq("id", id);
     setEditRequests((prev) => prev.map((r) => (r.id === id ? { ...r, status } : r)));
   }, []);
 
-  const addNotification = useCallback((notif: Omit<AppNotification, "id">) => {
-    setNotifications((prev) => [{ ...notif, id: `n-${Date.now()}` }, ...prev]);
-  }, []);
+  const addNotification = useCallback(async (notif: Omit<AppNotification, "id">) => {
+    if (!user) return;
+    await supabase.from("app_notifications").insert({
+      user_id: user.id,
+      title: notif.title,
+      description: notif.description,
+      type: notif.type,
+      action_label: notif.actionLabel,
+      target_employee: notif.targetEmployee,
+    });
+  }, [user]);
 
-  const markNotifRead = useCallback((id: string) => {
+  const markNotifRead = useCallback(async (id: string) => {
+    await supabase.from("app_notifications").update({ is_read: true }).eq("id", id);
     setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
   }, []);
 
-  const markAllNotifsRead = useCallback(() => {
+  const markAllNotifsRead = useCallback(async () => {
+    if (!user) return;
+    await supabase.from("app_notifications").update({ is_read: true }).eq("user_id", user.id);
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
-  }, []);
+  }, [user]);
 
-  const deleteNotif = useCallback((id: string) => {
+  const deleteNotif = useCallback(async (id: string) => {
+    await supabase.from("app_notifications").delete().eq("id", id);
     setNotifications((prev) => prev.filter((n) => n.id !== id));
   }, []);
 
-  const toggleNotifRead = useCallback((id: string) => {
-    setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: !n.read } : n)));
-  }, []);
+  const toggleNotifRead = useCallback(async (id: string) => {
+    const notif = notifications.find((n) => n.id === id);
+    if (!notif) return;
+    const newRead = !notif.read;
+    await supabase.from("app_notifications").update({ is_read: newRead }).eq("id", id);
+    setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: newRead } : n)));
+  }, [notifications]);
 
   return (
-    <TimeEditContext.Provider value={{ editRequests, addEditRequest, updateRequestStatus, notifications, addNotification, markNotifRead, markAllNotifsRead, deleteNotif, toggleNotifRead }}>
+    <TimeEditContext.Provider value={{ editRequests, addEditRequest, updateRequestStatus, notifications, addNotification, markNotifRead, markAllNotifsRead, deleteNotif, toggleNotifRead, loading }}>
       {children}
     </TimeEditContext.Provider>
   );

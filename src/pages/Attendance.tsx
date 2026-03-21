@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect } from "react";
+import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import { usePendingCounts } from "@/contexts/PendingCountsContext";
 import { Search, Download, CheckCircle, XCircle, Clock, AlertCircle, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Save, X, FileText, Check, RotateCcw, CalendarDays } from "lucide-react";
 import { ThaiDatePicker } from "@/components/ui/thai-date-picker";
@@ -9,9 +9,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import TimeInput24 from "@/components/ui/time-input-24";
 import { useTimeEditRequests, type TimeEditRequest } from "@/contexts/TimeEditContext";
+import { supabase } from "@/integrations/supabase/client";
 
 interface AttendanceRecord {
-  id: number;
+  id: string;
+  employeeId: string;
   name: string;
   dept: string;
   date: string;
@@ -21,20 +23,6 @@ interface AttendanceRecord {
   late: boolean;
   ot: number;
 }
-
-
-const initialAttendance: AttendanceRecord[] = [
-  { id: 1, name: "สมชาย ใจดี", dept: "ฝ่ายขาย", date: "20/02/2569", checkIn: "08:02", checkOut: "17:15", status: "present", late: false, ot: 0 },
-  { id: 2, name: "สมหญิง รักงาน", dept: "ฝ่าย HR", date: "20/02/2569", checkIn: "08:45", checkOut: "17:30", status: "late", late: true, ot: 0 },
-  { id: 3, name: "มานะ ขยัน", dept: "ฝ่าย IT", date: "20/02/2569", checkIn: "07:58", checkOut: "20:00", status: "present", late: false, ot: 2.5 },
-  { id: 4, name: "สุดา ดีใจ", dept: "ฝ่ายบัญชี", date: "20/02/2569", checkIn: "-", checkOut: "-", status: "leave", late: false, ot: 0 },
-  { id: 5, name: "วิชัย เก่งมาก", dept: "ฝ่ายผลิต", date: "20/02/2569", checkIn: "07:30", checkOut: "16:30", status: "present", late: false, ot: 0 },
-  { id: 6, name: "นิดา สุขใจ", dept: "ฝ่ายการตลาด", date: "20/02/2569", checkIn: "09:15", checkOut: "18:00", status: "late", late: true, ot: 0.5 },
-  { id: 7, name: "ประสิทธิ์ ทำได้", dept: "ฝ่ายขาย", date: "20/02/2569", checkIn: "-", checkOut: "-", status: "absent", late: false, ot: 0 },
-  { id: 8, name: "กาญจนา ใสซื่อ", dept: "ฝ่าย HR", date: "20/02/2569", checkIn: "08:00", checkOut: "17:00", status: "present", late: false, ot: 0 },
-];
-
-
 
 const statusConf: Record<string, { label: string; icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>; color: string; bg: string }> = {
   present: { label: "มาทำงาน", icon: CheckCircle, color: "hsl(90 100% 30%)", bg: "hsl(90 100% 92%)" },
@@ -53,7 +41,8 @@ const Attendance = () => {
   const { employees } = useEmployees();
   const { setAttendancePending } = usePendingCounts();
   const { editRequests, addEditRequest, updateRequestStatus } = useTimeEditRequests();
-  const [attendance, setAttendance] = useState<AttendanceRecord[]>(initialAttendance);
+  const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterEmployee, setFilterEmployee] = useState("all");
@@ -71,11 +60,38 @@ const Attendance = () => {
 
   // New request dialog
   const [requestOpen, setRequestOpen] = useState(false);
-  const [requestForm, setRequestForm] = useState({ employeeName: "", date: "20/02/2569", originalCheckIn: "", originalCheckOut: "", newCheckIn: "", newCheckOut: "", reason: "" });
+  const [requestForm, setRequestForm] = useState({ employeeName: "", employeeId: "", date: "", originalCheckIn: "", originalCheckOut: "", newCheckIn: "", newCheckOut: "", reason: "" });
 
   // Detail dialog
   const [detailOpen, setDetailOpen] = useState(false);
   const [detailReq, setDetailReq] = useState<TimeEditRequest | null>(null);
+
+  // Fetch attendance from DB
+  const fetchAttendance = useCallback(async () => {
+    const { data } = await supabase
+      .from("attendance_records")
+      .select("*, employees(first_name, last_name, dept)")
+      .order("date", { ascending: false });
+    if (data) {
+      setAttendance(data.map((r: any) => ({
+        id: r.id,
+        employeeId: r.employee_id,
+        name: r.employees ? `${r.employees.first_name} ${r.employees.last_name}` : "",
+        dept: r.employees?.dept || "",
+        date: r.date,
+        checkIn: r.check_in,
+        checkOut: r.check_out,
+        status: r.status,
+        late: r.late,
+        ot: Number(r.ot_hours) || 0,
+      })));
+    }
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    fetchAttendance();
+  }, [fetchAttendance]);
 
   const allNames = useMemo(() => {
     const names = new Set(attendance.map((a) => a.name));
@@ -87,7 +103,6 @@ const Attendance = () => {
     return allNames.filter((n) => n.includes(employeeSearch));
   }, [allNames, employeeSearch]);
 
-  // Close dropdown on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (employeeDropdownRef.current && !employeeDropdownRef.current.contains(e.target as Node)) {
@@ -98,7 +113,6 @@ const Attendance = () => {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  // Sync pending count to context
   useEffect(() => {
     setAttendancePending(editRequests.filter((r) => r.status === "pending").length);
   }, [editRequests, setAttendancePending]);
@@ -117,7 +131,6 @@ const Attendance = () => {
     leave: attendance.filter((a) => a.status === "leave").length,
   }), [attendance]);
 
-  // Edit handlers
   const openEdit = (row: AttendanceRecord) => {
     setEditingRow(row);
     setEditForm({ newCheckIn: row.checkIn === "-" ? "" : row.checkIn, newCheckOut: row.checkOut === "-" ? "" : row.checkOut, reason: "" });
@@ -135,6 +148,7 @@ const Attendance = () => {
     }
     addEditRequest({
       attendanceId: editingRow.id,
+      employeeId: editingRow.employeeId,
       employeeName: editingRow.name,
       date: editingRow.date,
       originalCheckIn: editingRow.checkIn,
@@ -147,21 +161,20 @@ const Attendance = () => {
     toast.success("ส่งคำขอแก้ไขเวลาเรียบร้อย");
   };
 
-  // New request handlers
   const openNewRequest = () => {
-    setRequestForm({ employeeName: "", date: "20/02/2569", originalCheckIn: "", originalCheckOut: "", newCheckIn: "", newCheckOut: "", reason: "" });
+    setRequestForm({ employeeName: "", employeeId: "", date: "", originalCheckIn: "", originalCheckOut: "", newCheckIn: "", newCheckOut: "", reason: "" });
     setRequestOpen(true);
   };
 
   const handleRequestSave = () => {
-    if (!requestForm.employeeName || !requestForm.newCheckIn || !requestForm.newCheckOut || !requestForm.reason.trim()) {
+    if (!requestForm.employeeId || !requestForm.newCheckIn || !requestForm.newCheckOut || !requestForm.reason.trim()) {
       toast.error("กรุณากรอกข้อมูลให้ครบถ้วน");
       return;
     }
     addEditRequest({
-      attendanceId: 0,
+      employeeId: requestForm.employeeId,
       employeeName: requestForm.employeeName,
-      date: requestForm.date,
+      date: requestForm.date || new Date().toISOString().slice(0, 10),
       originalCheckIn: requestForm.originalCheckIn || "-",
       originalCheckOut: requestForm.originalCheckOut || "-",
       newCheckIn: requestForm.newCheckIn,
@@ -172,25 +185,25 @@ const Attendance = () => {
     toast.success("ส่งคำขอแก้ไขเวลาเรียบร้อย");
   };
 
-  // Approve / Reject
-  const handleApprove = (reqId: number) => {
+  const handleApprove = async (reqId: string) => {
     const req = editRequests.find((r) => r.id === reqId);
-    if (req) {
-      setAttendance((att) => att.map((a) => {
-        if (a.id === req.attendanceId) {
-          const newCheckIn = req.newCheckIn;
-          const isLate = newCheckIn > "08:30";
-          return { ...a, checkIn: req.newCheckIn, checkOut: req.newCheckOut, late: isLate, status: newCheckIn === "-" ? "absent" : isLate ? "late" : "present" };
-        }
-        return a;
-      }));
+    if (req && req.attendanceId) {
+      const newCheckIn = req.newCheckIn;
+      const isLate = newCheckIn > "08:30";
+      await supabase.from("attendance_records").update({
+        check_in: req.newCheckIn,
+        check_out: req.newCheckOut,
+        late: isLate,
+        status: newCheckIn === "-" ? "absent" : isLate ? "late" : "present",
+      }).eq("id", req.attendanceId);
+      fetchAttendance();
     }
     updateRequestStatus(reqId, "approved");
     toast.success("อนุมัติคำขอแก้ไขเวลาเรียบร้อย");
     setDetailOpen(false);
   };
 
-  const handleReject = (reqId: number) => {
+  const handleReject = (reqId: string) => {
     updateRequestStatus(reqId, "rejected");
     toast.success("ปฏิเสธคำขอแก้ไขเวลาเรียบร้อย");
     setDetailOpen(false);
@@ -207,7 +220,7 @@ const Attendance = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-xl font-bold font-display">บันทึกเวลาเข้าออกงาน</h2>
-          <p className="text-sm text-muted-foreground mt-0.5">วันที่ 20 กุมภาพันธ์ 2569</p>
+          <p className="text-sm text-muted-foreground mt-0.5">ข้อมูลจากฐานข้อมูล</p>
         </div>
         <div className="flex items-center gap-2">
           <button className="flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-medium hover:bg-muted transition-colors">
@@ -289,8 +302,6 @@ const Attendance = () => {
           {/* Filters */}
           <div className="card-base p-4">
             <div className="flex flex-wrap items-center gap-2.5">
-
-              {/* Autocomplete Employee Filter */}
               <div className="relative flex-1 min-w-[140px]" ref={employeeDropdownRef}>
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none z-10" />
                 <input
@@ -375,8 +386,12 @@ const Attendance = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {filtered.map((row) => {
-                    const conf = statusConf[row.status];
+                  {loading ? (
+                    <tr><td colSpan={7} className="text-center py-10 text-sm text-muted-foreground">กำลังโหลด...</td></tr>
+                  ) : filtered.length === 0 ? (
+                    <tr><td colSpan={7} className="text-center py-10 text-sm text-muted-foreground">ไม่พบข้อมูล</td></tr>
+                  ) : filtered.map((row) => {
+                    const conf = statusConf[row.status] || statusConf.present;
                     const Icon = conf.icon;
                     return (
                       <tr key={row.id} className="border-b hover:bg-muted/30 transition-colors" style={{ borderColor: "hsl(var(--border))" }}>
@@ -418,9 +433,6 @@ const Attendance = () => {
                       </tr>
                     );
                   })}
-                  {filtered.length === 0 && (
-                    <tr><td colSpan={7} className="text-center py-10 text-sm text-muted-foreground">ไม่พบข้อมูล</td></tr>
-                  )}
                 </tbody>
               </table>
             </div>
@@ -471,7 +483,7 @@ const Attendance = () => {
         </div>
       )}
 
-      {/* ═══ Edit Time Dialog (per row) ═══ */}
+      {/* ═══ Edit Time Dialog ═══ */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -483,14 +495,8 @@ const Attendance = () => {
           {editingRow && (
             <div className="space-y-4 py-2">
               <div className="grid grid-cols-2 gap-3 p-3 rounded-xl bg-muted/40">
-                <div>
-                  <p className="text-xs text-muted-foreground mb-1">เวลาเข้าเดิม</p>
-                  <p className="text-sm font-semibold">{editingRow.checkIn}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground mb-1">เวลาออกเดิม</p>
-                  <p className="text-sm font-semibold">{editingRow.checkOut}</p>
-                </div>
+                <div><p className="text-xs text-muted-foreground mb-1">เวลาเข้าเดิม</p><p className="text-sm font-semibold">{editingRow.checkIn}</p></div>
+                <div><p className="text-xs text-muted-foreground mb-1">เวลาออกเดิม</p><p className="text-sm font-semibold">{editingRow.checkOut}</p></div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
@@ -531,11 +537,17 @@ const Attendance = () => {
           <div className="space-y-4 py-2">
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-muted-foreground">พนักงาน <span className="text-destructive">*</span></label>
-              <Select value={requestForm.employeeName} onValueChange={(val) => {
-                setRequestForm((f) => ({ ...f, employeeName: val }));
-                const match = attendance.find((a) => a.name === val);
-                if (match) {
-                  setRequestForm((f) => ({ ...f, employeeName: val, originalCheckIn: match.checkIn, originalCheckOut: match.checkOut }));
+              <Select value={requestForm.employeeId} onValueChange={(val) => {
+                const emp = employees.find(e => e.id === val);
+                if (emp) {
+                  const match = attendance.find((a) => a.employeeId === val);
+                  setRequestForm((f) => ({
+                    ...f,
+                    employeeId: val,
+                    employeeName: `${emp.firstName} ${emp.lastName}`,
+                    originalCheckIn: match?.checkIn || "",
+                    originalCheckOut: match?.checkOut || "",
+                  }));
                 }
               }}>
                 <SelectTrigger className="rounded-xl border bg-muted/30">
@@ -543,7 +555,7 @@ const Attendance = () => {
                 </SelectTrigger>
                 <SelectContent>
                   {employees.map((emp) => (
-                    <SelectItem key={emp.id} value={`${emp.prefix || ""}${emp.firstName} ${emp.lastName}`}>
+                    <SelectItem key={emp.id} value={emp.id}>
                       {emp.prefix || ""}{emp.firstName} {emp.lastName} — {emp.position}
                     </SelectItem>
                   ))}
@@ -552,14 +564,8 @@ const Attendance = () => {
             </div>
             {requestForm.originalCheckIn && (
               <div className="grid grid-cols-2 gap-3 p-3 rounded-xl bg-muted/40">
-                <div>
-                  <p className="text-xs text-muted-foreground mb-1">เวลาเข้าเดิม</p>
-                  <p className="text-sm font-semibold">{requestForm.originalCheckIn}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground mb-1">เวลาออกเดิม</p>
-                  <p className="text-sm font-semibold">{requestForm.originalCheckOut}</p>
-                </div>
+                <div><p className="text-xs text-muted-foreground mb-1">เวลาเข้าเดิม</p><p className="text-sm font-semibold">{requestForm.originalCheckIn}</p></div>
+                <div><p className="text-xs text-muted-foreground mb-1">เวลาออกเดิม</p><p className="text-sm font-semibold">{requestForm.originalCheckOut}</p></div>
               </div>
             )}
             <div className="grid grid-cols-2 gap-3">
@@ -604,35 +610,19 @@ const Attendance = () => {
                 <div><p className="text-xs text-muted-foreground">วันที่</p><p className="text-sm font-semibold mt-0.5">{detailReq.date}</p></div>
               </div>
               <div className="grid grid-cols-2 gap-3 p-3 rounded-xl bg-muted/40">
-                <div>
-                  <p className="text-xs text-muted-foreground mb-1">เวลาเข้าเดิม</p>
-                  <p className="text-sm font-semibold">{detailReq.originalCheckIn}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground mb-1">เวลาออกเดิม</p>
-                  <p className="text-sm font-semibold">{detailReq.originalCheckOut}</p>
-                </div>
+                <div><p className="text-xs text-muted-foreground mb-1">เวลาเข้าเดิม</p><p className="text-sm font-semibold">{detailReq.originalCheckIn}</p></div>
+                <div><p className="text-xs text-muted-foreground mb-1">เวลาออกเดิม</p><p className="text-sm font-semibold">{detailReq.originalCheckOut}</p></div>
               </div>
               <div className="grid grid-cols-2 gap-3 p-3 rounded-xl" style={{ background: "hsl(31 100% 96%)" }}>
-                <div>
-                  <p className="text-xs text-muted-foreground mb-1">เวลาเข้าใหม่</p>
-                  <p className="text-sm font-bold text-primary">{detailReq.newCheckIn}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground mb-1">เวลาออกใหม่</p>
-                  <p className="text-sm font-bold text-primary">{detailReq.newCheckOut}</p>
-                </div>
+                <div><p className="text-xs text-muted-foreground mb-1">เวลาเข้าใหม่</p><p className="text-sm font-bold text-primary">{detailReq.newCheckIn}</p></div>
+                <div><p className="text-xs text-muted-foreground mb-1">เวลาออกใหม่</p><p className="text-sm font-bold text-primary">{detailReq.newCheckOut}</p></div>
               </div>
-              <div>
-                <p className="text-xs text-muted-foreground mb-1">เหตุผล</p>
-                <p className="text-sm p-3 rounded-xl bg-muted/40">{detailReq.reason}</p>
-              </div>
+              <div><p className="text-xs text-muted-foreground mb-1">เหตุผล</p><p className="text-sm p-3 rounded-xl bg-muted/40">{detailReq.reason}</p></div>
               <div className="flex items-center gap-2">
                 <p className="text-xs text-muted-foreground">สถานะ:</p>
                 <span className="text-xs font-semibold px-2.5 py-1 rounded-full" style={{ background: reqStatusConf[detailReq.status].bg, color: reqStatusConf[detailReq.status].color }}>
                   {reqStatusConf[detailReq.status].label}
                 </span>
-                <span className="text-xs text-muted-foreground ml-auto">ส่งเมื่อ {detailReq.createdAt}</span>
               </div>
             </div>
           )}
