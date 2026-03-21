@@ -144,7 +144,10 @@ const INITIAL_AFFILIATIONS: Affiliation[] = [
     id: 1, name: "รถไฟฟ้าขสมช",
     positions: [
       { id: 1, name: "เจ้าหน้าที่วิจัย" },
-      { id: 2, name: "วิศวกรระบบราง" },
+      { id: 2, name: "วิศวกรระบบราง", children: [
+        { id: 21, name: "ช่างเทคนิคระบบราง" },
+        { id: 22, name: "ผู้ช่วยวิศวกร" },
+      ]},
       { id: 3, name: "พนักงานขับรถไฟฟ้า" },
     ],
   },
