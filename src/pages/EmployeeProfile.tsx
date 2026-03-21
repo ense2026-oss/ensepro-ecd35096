@@ -84,7 +84,21 @@ const EmployeeProfile = () => {
   const navigate = useNavigate();
   const { getEmployeeById, updateEmployee } = useEmployees();
   const { currentUser } = useAuth();
+  const { affiliations } = useOrg();
   const canEditRestricted = currentUser?.role === "Admin" || currentUser?.role === "HR";
+
+  // Flatten position tree to get all position names for a given affiliation
+  const flattenPositionNames = (positions: Position[]): string[] => {
+    const names: string[] = [];
+    const walk = (list: Position[]) => {
+      for (const p of list) {
+        names.push(p.name);
+        if (p.children?.length) walk(p.children);
+      }
+    };
+    walk(positions);
+    return names;
+  };
 
   const employee = getEmployeeById(id || "");
 
