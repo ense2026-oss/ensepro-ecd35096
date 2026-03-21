@@ -70,8 +70,16 @@ const AuthRedirect = () => {
 // Redirect away from login if already authenticated
 const LoginRoute = () => {
   const { user, loading } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!loading && user) {
+      navigate("/dashboard", { replace: true });
+    }
+  }, [user, loading, navigate]);
+
   if (loading) return null;
-  if (user) return <Navigate to="/dashboard" replace />;
+  if (user) return null; // navigating away
   return <Login />;
 };
 
