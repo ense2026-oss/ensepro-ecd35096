@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { Eye, EyeOff, Building2, Shield, UserPlus, LogIn } from "lucide-react";
-import { Eye, EyeOff, Building2, Shield, UserPlus, LogIn } from "lucide-react";
 import { useBranding } from "@/contexts/BrandingContext";
 import { useAuth } from "@/contexts/AuthContext";
 
