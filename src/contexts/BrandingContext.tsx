@@ -1,4 +1,5 @@
-import { createContext, useContext, useState, useEffect, type ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 interface BrandingState {
   programName: string;
@@ -16,8 +17,6 @@ interface BrandingContextType extends BrandingState {
   setDisplayMode: (mode: "logo-only" | "logo-and-name") => void;
 }
 
-const STORAGE_KEY = "hrpro-branding";
-
 const defaults: BrandingState = {
   programName: "HRPro",
   programSubtitle: "Enterprise",
@@ -25,14 +24,6 @@ const defaults: BrandingState = {
   logoOnlyUrl: null,
   displayMode: "logo-and-name",
 };
-
-function load(): BrandingState {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return { ...defaults, ...JSON.parse(raw) };
-  } catch {}
-  return defaults;
-}
 
 const BrandingContext = createContext<BrandingContextType | null>(null);
 
@@ -43,21 +34,55 @@ export const useBranding = () => {
 };
 
 export const BrandingProvider = ({ children }: { children: ReactNode }) => {
-  const [state, setState] = useState<BrandingState>(load);
+  const [state, setState] = useState<BrandingState>(defaults);
 
+  // Fetch from DB
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  }, [state]);
+    const fetch = async () => {
+      const { data } = await supabase
+        .from("company_settings")
+        .select("value")
+        .eq("key", "branding")
+        .maybeSingle();
+      if (data?.value) {
+        const v = data.value as any;
+        setState({
+          programName: v.programName ?? defaults.programName,
+          programSubtitle: v.programSubtitle ?? defaults.programSubtitle,
+          logoUrl: v.logoUrl ?? null,
+          logoOnlyUrl: v.logoOnlyUrl ?? null,
+          displayMode: v.displayMode ?? defaults.displayMode,
+        });
+      }
+    };
+    fetch();
+  }, []);
+
+  // Save to DB on change
+  const persist = useCallback(async (newState: BrandingState) => {
+    await supabase
+      .from("company_settings")
+      .update({ value: newState as any, updated_at: new Date().toISOString() })
+      .eq("key", "branding");
+  }, []);
+
+  const update = (partial: Partial<BrandingState>) => {
+    setState((s) => {
+      const next = { ...s, ...partial };
+      persist(next);
+      return next;
+    });
+  };
 
   return (
     <BrandingContext.Provider
       value={{
         ...state,
-        setProgramName: (programName) => setState((s) => ({ ...s, programName })),
-        setProgramSubtitle: (programSubtitle) => setState((s) => ({ ...s, programSubtitle })),
-        setLogoUrl: (logoUrl) => setState((s) => ({ ...s, logoUrl })),
-        setLogoOnlyUrl: (logoOnlyUrl) => setState((s) => ({ ...s, logoOnlyUrl })),
-        setDisplayMode: (displayMode) => setState((s) => ({ ...s, displayMode })),
+        setProgramName: (programName) => update({ programName }),
+        setProgramSubtitle: (programSubtitle) => update({ programSubtitle }),
+        setLogoUrl: (logoUrl) => update({ logoUrl }),
+        setLogoOnlyUrl: (logoOnlyUrl) => update({ logoOnlyUrl }),
+        setDisplayMode: (displayMode) => update({ displayMode }),
       }}
     >
       {children}
