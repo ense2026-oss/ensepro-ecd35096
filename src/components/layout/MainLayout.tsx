@@ -52,7 +52,7 @@ const MainLayout = () => {
 
   // Check role-based access for current path
   const currentPath = "/" + location.pathname.split("/")[1]; // e.g. /employees/123 → /employees
-  if (!canAccess(role, currentPath)) {
+  if (!canAccessRoute(role, currentPath)) {
     // Redirect to first accessible page
     const defaultPage = canAccess(role, "/dashboard") ? "/dashboard" : "/notifications";
     return <Navigate to={defaultPage} replace />;
