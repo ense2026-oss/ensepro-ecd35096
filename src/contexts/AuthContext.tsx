@@ -156,7 +156,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     id: user.id,
     firstName,
     lastName,
-    role: role.charAt(0).toUpperCase() + role.slice(1), // "Admin", "Hr", etc.
+    role: role === "hr" ? "HR" : role.charAt(0).toUpperCase() + role.slice(1), // "Admin", "HR", "Manager", etc.
     avatar: firstName.charAt(0) || "U",
     avatarColor: "hsl(30 70% 90%)",
     avatarTextColor: "hsl(30 70% 35%)",
