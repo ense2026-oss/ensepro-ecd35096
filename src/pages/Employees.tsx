@@ -56,12 +56,18 @@ const Employees = () => {
     }
   };
 
-  const handleDeleteConfirm = () => {
+  const handleDeleteConfirm = async () => {
     if (deletingEmployee) {
-      deleteEmployee(deletingEmployee.id);
-      toast.success("ลบพนักงานสำเร็จ");
-      setDeleteOpen(false);
-      setDeletingEmployee(null);
+      try {
+        await deleteEmployee(deletingEmployee.id);
+        toast.success("ลบพนักงานสำเร็จ");
+      } catch (err: any) {
+        console.error("Delete failed:", err);
+        toast.error("ลบพนักงานไม่สำเร็จ: " + (err?.message || "เกิดข้อผิดพลาด"));
+      } finally {
+        setDeleteOpen(false);
+        setDeletingEmployee(null);
+      }
     }
   };
 
