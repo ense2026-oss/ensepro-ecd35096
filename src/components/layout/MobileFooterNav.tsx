@@ -76,7 +76,10 @@ const MobileFooterNav = () => {
     "/overtime": overtimePending,
   };
 
-  const isActive = (path: string) => location.pathname === path || (path === "/employees" && location.pathname.startsWith("/employees/"));
+  const isActive = (path: string, isSelf: boolean) => {
+    if (isSelf) return path === "/employees" && location.pathname.startsWith("/employees/");
+    return location.pathname === path || (path === "/employees" && location.pathname.startsWith("/employees/"));
+  };
 
   const isCheckInEnabled = moduleSettings['check-in'] !== false && canAccessRoute(role, "/check-in");
 
