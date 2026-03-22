@@ -194,120 +194,7 @@ const Dashboard = () => {
   }, [today, monthStart, monthEnd, currentUser?.id, debouncedFetch]);
 
   // ═══════════════════════════════════════════════
-  // EMPLOYEE DASHBOARD
-  // ═══════════════════════════════════════════════
-  if (viewType === "employee" && currentUser) {
-    const myLeaves = leaveRequests;
-    const myOT = otRequests;
-    const myOtHoursMonth = myOT
-      .filter((o) => o.status === "approved" && o.date >= monthStart)
-      .reduce((s, o) => s + Number(o.hours || 0), 0);
-
-    // Build leave quota cards from actual leave_types
-    const leaveQuotaCards = leaveTypes
-      .sort((a, b) => a.sort_order - b.sort_order)
-      .slice(0, 3)
-      .map((lt) => {
-        const used = myLeaves
-          .filter((l) => l.leave_type_id === lt.id && l.status === "approved")
-          .reduce((s, l) => s + Number(l.days || 0), 0);
-        return { name: lt.name, quota: lt.quota, used, color: lt.color || DEFAULT_LEAVE_COLOR };
-      });
-
-    // Recent requests (combined)
-    const recentRequests = [
-      ...myLeaves.map((l) => ({ id: l.id, type: "leave" as const, label: l.leave_type_name, date: l.date_from, status: l.status, created: l.created_at })),
-      ...myOT.map((o) => ({ id: o.id, type: "ot" as const, label: `OT ${o.hours} ชม.`, date: o.date, status: o.status, created: o.created_at })),
-    ].sort((a, b) => b.created.localeCompare(a.created)).slice(0, 5);
-
-    return (
-      <div className="space-y-6">
-        {/* Greeting */}
-        <div className="card-base p-6">
-          <h2 className="text-xl font-bold font-display mb-1">
-            สวัสดี, {currentUser.firstName} {currentUser.lastName} 👋
-          </h2>
-          <p className="text-sm text-muted-foreground">ยินดีต้อนรับเข้าสู่ระบบ HR — มุมมองพนักงาน</p>
-        </div>
-
-        {/* Leave Quota Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {leaveQuotaCards.map((lq) => (
-            <StatCard
-              key={lq.name}
-              title={`${lq.name}คงเหลือ`}
-              value={loading ? "..." : Math.max(0, lq.quota - lq.used)}
-              subtitle={`ใช้ไป ${lq.used} / ${lq.quota} วัน`}
-              icon={Calendar}
-              color={lq.color}
-              bgColor={`${lq.color}20`}
-              loading={loading}
-            />
-          ))}
-          <StatCard title="OT เดือนนี้" value={loading ? "..." : myOtHoursMonth} subtitle="ชั่วโมง" icon={Clock} color="hsl(220 90% 50%)" bgColor="hsl(220 90% 93%)" loading={loading} />
-        </div>
-
-        {/* Check-in Status */}
-        <div className="card-base p-5">
-          <h3 className="font-bold font-display mb-3">สถานะวันนี้</h3>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="p-4 rounded-xl bg-muted/50">
-              <div className="flex items-center gap-2 mb-1">
-                <MapPin className="w-4 h-4 text-muted-foreground" />
-                <span className="text-xs text-muted-foreground">เวลาเข้างาน</span>
-              </div>
-              <p className="text-lg font-bold font-display">{checkInToday?.check_in || "-"}</p>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                {checkInToday ? (checkInToday.within_radius ? "✓ ตรงเวลา" : "⚠ นอกพื้นที่") : "ยังไม่ลงเวลา"}
-              </p>
-            </div>
-            <div className="p-4 rounded-xl bg-muted/50">
-              <div className="flex items-center gap-2 mb-1">
-                <Clock className="w-4 h-4 text-muted-foreground" />
-                <span className="text-xs text-muted-foreground">เวลาออกงาน</span>
-              </div>
-              <p className="text-lg font-bold font-display">{checkInToday?.check_out || "-"}</p>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                {checkInToday?.check_out ? "บันทึกแล้ว" : "ยังไม่ออกงาน"}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Recent Requests */}
-        <div className="card-base p-5">
-          <h3 className="font-bold font-display mb-4">คำขอล่าสุดของฉัน</h3>
-          <div className="space-y-3">
-            {loading ? (
-              Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-12 w-full rounded-xl" />)
-            ) : recentRequests.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-4">ยังไม่มีคำขอ</p>
-            ) : (
-              recentRequests.map((r) => (
-                <div key={r.id} className="flex items-center justify-between p-3 rounded-xl hover:bg-muted/50 transition-colors">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${r.type === "leave" ? "bg-orange-100 text-orange-600" : "bg-blue-100 text-blue-600"}`}>
-                      {r.type === "leave" ? <Calendar className="w-4 h-4" /> : <Clock className="w-4 h-4" />}
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium">{r.label}</p>
-                      <p className="text-xs text-muted-foreground">{r.date}</p>
-                    </div>
-                  </div>
-                  <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${r.status === "approved" ? "badge-present" : r.status === "pending" ? "badge-late" : "badge-absent"}`}>
-                    {r.status === "approved" ? "อนุมัติ" : r.status === "pending" ? "รออนุมัติ" : "ไม่อนุมัติ"}
-                  </span>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // ═══════════════════════════════════════════════
-  // ADMIN / HR / MANAGER DASHBOARD
+  // Derived stats (must be before any early return for hooks rules)
   // ═══════════════════════════════════════════════
   const totalEmployees = employees.length;
   const activeEmployees = employees.filter((e) => e.status === "active").length;
@@ -332,6 +219,100 @@ const Dashboard = () => {
   const newEmployeesThisMonth = employees.filter(
     (e) => e.start_date >= monthStart && e.start_date <= monthEnd
   ).length;
+
+  const presentPercent = totalEmployees > 0 ? ((presentToday / totalEmployees) * 100).toFixed(1) : "0";
+  const leavePercent = totalEmployees > 0 ? ((leaveToday / totalEmployees) * 100).toFixed(1) : "0";
+  const latePercent = totalEmployees > 0 ? ((lateToday / totalEmployees) * 100).toFixed(1) : "0";
+
+  // Leave pie data
+  const leavePieData = useMemo(() => {
+    const monthLeaves = leaveRequests.filter((l) => l.date_from >= monthStart && l.date_from <= monthEnd);
+    const grouped: Record<string, number> = {};
+    monthLeaves.forEach((l) => {
+      const name = l.leave_type_name || "อื่นๆ";
+      grouped[name] = (grouped[name] || 0) + Number(l.days || 1);
+    });
+    return Object.entries(grouped).map(([name, value]) => ({
+      name, value, color: LEAVE_COLORS[name] || DEFAULT_LEAVE_COLOR,
+    }));
+  }, [leaveRequests, monthStart, monthEnd]);
+
+  const totalLeaveDays = leavePieData.reduce((s, d) => s + d.value, 0);
+
+  // Department stats
+  const deptStats = useMemo(() => {
+    const depts: Record<string, { count: number; present: number }> = {};
+    employees.forEach((e) => {
+      const d = e.dept || "ไม่ระบุ";
+      if (!depts[d]) depts[d] = { count: 0, present: 0 };
+      depts[d].count++;
+    });
+    todayAttendance.forEach((a) => {
+      const emp = employees.find((e) => e.id === a.employee_id);
+      if (emp && (a.status === "present" || a.status === "late")) {
+        const d = emp.dept || "ไม่ระบุ";
+        if (depts[d]) depts[d].present++;
+      }
+    });
+    return Object.entries(depts)
+      .map(([dept, v]) => ({ dept, ...v }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+  }, [employees, todayAttendance]);
+
+  // Attendance chart
+  const attendanceChartData = useMemo(() => {
+    const byDate: Record<string, { present: number; late: number; absent: number }> = {};
+    monthlyAttendance.forEach((a) => {
+      if (!byDate[a.date]) byDate[a.date] = { present: 0, late: 0, absent: 0 };
+      if (a.status === "present" || a.status === "late") byDate[a.date].present++;
+      if (a.late) byDate[a.date].late++;
+      if (a.status === "absent") byDate[a.date].absent++;
+    });
+    return Object.entries(byDate)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .slice(-14)
+      .map(([date, v]) => ({
+        month: format(new Date(date), "d MMM", { locale: th }),
+        ...v,
+      }));
+  }, [monthlyAttendance]);
+
+  // Recent activity
+  const recentActivity = useMemo(() => {
+    const items: { id: string; name: string; action: string; time: string; type: string; status: string }[] = [];
+    leaveRequests.slice(0, 4).forEach((l) => {
+      const emp = (l as any).employees;
+      items.push({
+        id: l.id,
+        name: emp ? `${emp.first_name} ${emp.last_name}` : "พนักงาน",
+        action: `ยื่นคำขอ${l.leave_type_name}`,
+        time: format(new Date(l.created_at), "HH:mm น."),
+        type: "leave",
+        status: l.status === "approved" ? "success" : l.status === "pending" ? "pending" : "info",
+      });
+    });
+    otRequests.slice(0, 3).forEach((o) => {
+      const emp = (o as any).employees;
+      items.push({
+        id: o.id,
+        name: emp ? `${emp.first_name} ${emp.last_name}` : "พนักงาน",
+        action: `ขอ OT ${o.hours} ชม.`,
+        time: format(new Date(o.created_at), "HH:mm น."),
+        type: "ot",
+        status: o.status === "approved" ? "success" : o.status === "pending" ? "pending" : "info",
+      });
+    });
+    return items.sort((a, b) => b.time.localeCompare(a.time)).slice(0, 6);
+  }, [leaveRequests, otRequests]);
+
+  const scopeLabel = viewType === "manager" ? `แผนก${myEmployee?.dept || ""}` : "ทั้งองค์กร";
+
+  // ═══════════════════════════════════════════════
+  // EMPLOYEE DASHBOARD
+  // ═══════════════════════════════════════════════
+  if (viewType === "employee" && currentUser) {
+    const myLeaves = leaveRequests;
 
   const presentPercent = totalEmployees > 0 ? ((presentToday / totalEmployees) * 100).toFixed(1) : "0";
   const leavePercent = totalEmployees > 0 ? ((leaveToday / totalEmployees) * 100).toFixed(1) : "0";
