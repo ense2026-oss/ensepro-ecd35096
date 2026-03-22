@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo, useRef, useCallback, forwardRef } from "react";
 import {
   Users, UserCheck, UserX, Clock, TrendingUp, TrendingDown,
-  Calendar, Briefcase, AlertCircle, CheckCircle, MapPin, DollarSign, FileText,
+  Calendar, Briefcase, AlertCircle, CheckCircle, MapPin,
 } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
