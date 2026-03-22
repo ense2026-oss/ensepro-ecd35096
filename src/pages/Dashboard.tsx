@@ -1,29 +1,11 @@
 import { useEffect, useState, useMemo, useRef, useCallback, forwardRef } from "react";
 import {
-  Users,
-  UserCheck,
-  UserX,
-  Clock,
-  TrendingUp,
-  TrendingDown,
-  Calendar,
-  Briefcase,
-  AlertCircle,
-  CheckCircle,
-  ArrowUpRight,
-  MapPin,
+  Users, UserCheck, UserX, Clock, TrendingUp, TrendingDown,
+  Calendar, Briefcase, AlertCircle, CheckCircle, MapPin, DollarSign, FileText,
 } from "lucide-react";
 import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
+  ResponsiveContainer, PieChart, Pie, Cell,
 } from "recharts";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -31,6 +13,7 @@ import { format, startOfMonth, endOfMonth } from "date-fns";
 import { th } from "date-fns/locale";
 import { Skeleton } from "@/components/ui/skeleton";
 
+/* ─── StatCard ─── */
 interface StatCardProps {
   title: string;
   value: string | number;
@@ -42,43 +25,35 @@ interface StatCardProps {
   loading?: boolean;
 }
 
-const StatCard = forwardRef<HTMLDivElement, StatCardProps>(({ title, value, subtitle, icon: Icon, trend, color, bgColor, loading }, ref) => (
-  <div ref={ref} className="card-base p-3 sm:p-5 animate-fade-in">
-    <div className="flex items-start justify-between mb-2 sm:mb-4">
-      <div className="flex-1 min-w-0">
-        <p className="text-[11px] sm:text-sm text-muted-foreground font-medium leading-tight">{title}</p>
-        {loading ? (
-          <Skeleton className="h-8 w-16 mt-1" />
-        ) : (
-          <p className="text-xl sm:text-3xl font-bold font-display mt-0.5 sm:mt-1" style={{ color }}>
-            {value}
-          </p>
-        )}
-        <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1 leading-tight">{subtitle}</p>
+const StatCard = forwardRef<HTMLDivElement, StatCardProps>(
+  ({ title, value, subtitle, icon: Icon, trend, color, bgColor, loading }, ref) => (
+    <div ref={ref} className="card-base p-3 sm:p-5 animate-fade-in">
+      <div className="flex items-start justify-between mb-2 sm:mb-4">
+        <div className="flex-1 min-w-0">
+          <p className="text-[11px] sm:text-sm text-muted-foreground font-medium leading-tight">{title}</p>
+          {loading ? (
+            <Skeleton className="h-8 w-16 mt-1" />
+          ) : (
+            <p className="text-xl sm:text-3xl font-bold font-display mt-0.5 sm:mt-1" style={{ color }}>{value}</p>
+          )}
+          <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1 leading-tight">{subtitle}</p>
+        </div>
+        <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: bgColor }}>
+          <Icon className="w-4 h-4 sm:w-6 sm:h-6" style={{ color }} />
+        </div>
       </div>
-      <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: bgColor }}>
-        <Icon className="w-4 h-4 sm:w-6 sm:h-6" style={{ color }} />
-      </div>
+      {trend && (
+        <div className="flex items-center gap-1 sm:gap-1.5 flex-wrap">
+          {trend.positive ? <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4" style={{ color: "#87FF0F" }} /> : <TrendingDown className="w-3 h-3 sm:w-4 sm:h-4 text-destructive" />}
+          <span className="text-[10px] sm:text-xs font-semibold" style={{ color: trend.positive ? "hsl(90 100% 35%)" : "hsl(0 84% 50%)" }}>
+            {trend.positive ? "+" : ""}{trend.value}%
+          </span>
+          <span className="text-[10px] sm:text-xs text-muted-foreground">จากเดือนที่แล้ว</span>
+        </div>
+      )}
     </div>
-    {trend && (
-      <div className="flex items-center gap-1 sm:gap-1.5 flex-wrap">
-        {trend.positive ? (
-          <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4" style={{ color: "#87FF0F" }} />
-        ) : (
-          <TrendingDown className="w-3 h-3 sm:w-4 sm:h-4 text-destructive" />
-        )}
-        <span
-          className="text-[10px] sm:text-xs font-semibold"
-          style={{ color: trend.positive ? "hsl(90 100% 35%)" : "hsl(0 84% 50%)" }}
-        >
-          {trend.positive ? "+" : ""}
-          {trend.value}%
-        </span>
-        <span className="text-[10px] sm:text-xs text-muted-foreground">จากเดือนที่แล้ว</span>
-      </div>
-    )}
-  </div>
-));
+  )
+);
 StatCard.displayName = "StatCard";
 
 const LEAVE_COLORS: Record<string, string> = {
@@ -89,7 +64,7 @@ const LEAVE_COLORS: Record<string, string> = {
 const DEFAULT_LEAVE_COLOR = "#60a5fa";
 
 const Dashboard = () => {
-  const { currentUser, hasAdminAccess } = useAuth();
+  const { currentUser, role, isAdmin, isHR, isManager, isAccountant, hasAdminAccess } = useAuth();
   const [loading, setLoading] = useState(true);
 
   // Shared data
@@ -100,45 +75,90 @@ const Dashboard = () => {
   const [timeEditRequests, setTimeEditRequests] = useState<any[]>([]);
   const [monthlyAttendance, setMonthlyAttendance] = useState<any[]>([]);
   const [checkInToday, setCheckInToday] = useState<any | null>(null);
+  const [leaveTypes, setLeaveTypes] = useState<any[]>([]);
+  const [myEmployee, setMyEmployee] = useState<any | null>(null);
 
   const today = format(new Date(), "yyyy-MM-dd");
   const monthStart = format(startOfMonth(new Date()), "yyyy-MM-dd");
   const monthEnd = format(endOfMonth(new Date()), "yyyy-MM-dd");
 
+  // Determine view type based on role
+  const viewType: "admin" | "manager" | "employee" = (isAdmin || isHR) ? "admin" : isManager ? "manager" : "employee";
+
   const fetchAll = async (initial = false) => {
     if (initial) setLoading(true);
     try {
-      const [empRes, attRes, leaveRes, otRes, teRes, monthAttRes] = await Promise.all([
-        supabase.from("employees").select("id, first_name, last_name, dept, status, user_id, start_date"),
-        supabase.from("attendance_records").select("id, employee_id, date, status, late").eq("date", today),
-        supabase.from("leave_requests").select("id, employee_id, leave_type_name, date_from, date_to, days, status, created_at, employees(first_name, last_name)").gte("date_from", monthStart),
-        supabase.from("overtime_requests").select("id, employee_id, date, hours, status, ot_type, created_at, employees(first_name, last_name)").gte("date", monthStart),
-        supabase.from("time_edit_requests").select("id").eq("status", "pending"),
-        supabase.from("attendance_records").select("date, status, late").gte("date", monthStart).lte("date", monthEnd),
-      ]);
+      // Always fetch leave types for quotas
+      const ltRes = await supabase.from("leave_types").select("*");
+      if (ltRes.data) setLeaveTypes(ltRes.data);
 
-      if (empRes.data) setEmployees(empRes.data);
-      if (attRes.data) setTodayAttendance(attRes.data);
-      if (leaveRes.data) setLeaveRequests(leaveRes.data);
-      if (otRes.data) setOtRequests(otRes.data);
-      if (teRes.data) setTimeEditRequests(teRes.data);
-      if (monthAttRes.data) setMonthlyAttendance(monthAttRes.data);
-
-      if (currentUser?.id) {
-        const { data: emp } = await supabase
-          .from("employees")
-          .select("id")
-          .eq("user_id", currentUser.id)
-          .maybeSingle();
+      // Find my employee record
+      let empId: string | null = null;
+      if (currentUser?.employeeId) {
+        empId = currentUser.employeeId;
+      } else if (currentUser?.id) {
+        const { data: emp } = await supabase.from("employees").select("*").eq("user_id", currentUser.id).maybeSingle();
         if (emp) {
-          const { data: ci } = await supabase
-            .from("check_in_records")
-            .select("*")
-            .eq("employee_id", emp.id)
-            .eq("date", today)
-            .maybeSingle();
-          setCheckInToday(ci);
+          empId = emp.id;
+          setMyEmployee(emp);
         }
+      }
+
+      if (viewType === "employee") {
+        // Employee: only fetch own data
+        if (!empId) { setLoading(false); return; }
+        const [leaveRes, otRes, ciRes] = await Promise.all([
+          supabase.from("leave_requests").select("*").eq("employee_id", empId),
+          supabase.from("overtime_requests").select("*").eq("employee_id", empId),
+          supabase.from("check_in_records").select("*").eq("employee_id", empId).eq("date", today).maybeSingle(),
+        ]);
+        if (leaveRes.data) setLeaveRequests(leaveRes.data);
+        if (otRes.data) setOtRequests(otRes.data);
+        setCheckInToday(ciRes.data);
+      } else if (viewType === "manager") {
+        // Manager: fetch own dept employees + their data
+        const myEmpRes = myEmployee || (empId ? (await supabase.from("employees").select("*").eq("id", empId).maybeSingle()).data : null);
+        if (myEmpRes) setMyEmployee(myEmpRes);
+        const myDept = myEmpRes?.dept || "";
+
+        const [empRes, attRes, leaveRes, otRes, teRes, monthAttRes, ciRes] = await Promise.all([
+          supabase.from("employees").select("id, first_name, last_name, dept, status, user_id, start_date").eq("dept", myDept),
+          supabase.from("attendance_records").select("id, employee_id, date, status, late").eq("date", today),
+          supabase.from("leave_requests").select("id, employee_id, leave_type_name, date_from, date_to, days, status, created_at, employees(first_name, last_name)").gte("date_from", monthStart),
+          supabase.from("overtime_requests").select("id, employee_id, date, hours, status, ot_type, created_at, employees(first_name, last_name)").gte("date", monthStart),
+          supabase.from("time_edit_requests").select("id, employee_id").eq("status", "pending"),
+          supabase.from("attendance_records").select("date, status, late, employee_id").gte("date", monthStart).lte("date", monthEnd),
+          empId ? supabase.from("check_in_records").select("*").eq("employee_id", empId).eq("date", today).maybeSingle() : Promise.resolve({ data: null }),
+        ]);
+
+        const deptEmpIds = new Set((empRes.data || []).map((e: any) => e.id));
+        if (empRes.data) setEmployees(empRes.data);
+        // Filter attendance/leave/ot to dept employees only
+        if (attRes.data) setTodayAttendance(attRes.data.filter((a: any) => deptEmpIds.has(a.employee_id)));
+        if (leaveRes.data) setLeaveRequests(leaveRes.data.filter((l: any) => deptEmpIds.has(l.employee_id)));
+        if (otRes.data) setOtRequests(otRes.data.filter((o: any) => deptEmpIds.has(o.employee_id)));
+        if (teRes.data) setTimeEditRequests(teRes.data.filter((t: any) => deptEmpIds.has(t.employee_id)));
+        if (monthAttRes.data) setMonthlyAttendance(monthAttRes.data.filter((a: any) => deptEmpIds.has(a.employee_id)));
+        setCheckInToday(ciRes.data);
+      } else {
+        // Admin/HR: fetch everything
+        const [empRes, attRes, leaveRes, otRes, teRes, monthAttRes, ciRes] = await Promise.all([
+          supabase.from("employees").select("id, first_name, last_name, dept, status, user_id, start_date"),
+          supabase.from("attendance_records").select("id, employee_id, date, status, late").eq("date", today),
+          supabase.from("leave_requests").select("id, employee_id, leave_type_name, date_from, date_to, days, status, created_at, employees(first_name, last_name)").gte("date_from", monthStart),
+          supabase.from("overtime_requests").select("id, employee_id, date, hours, status, ot_type, created_at, employees(first_name, last_name)").gte("date", monthStart),
+          supabase.from("time_edit_requests").select("id").eq("status", "pending"),
+          supabase.from("attendance_records").select("date, status, late").gte("date", monthStart).lte("date", monthEnd),
+          empId ? supabase.from("check_in_records").select("*").eq("employee_id", empId).eq("date", today).maybeSingle() : Promise.resolve({ data: null }),
+        ]);
+
+        if (empRes.data) setEmployees(empRes.data);
+        if (attRes.data) setTodayAttendance(attRes.data);
+        if (leaveRes.data) setLeaveRequests(leaveRes.data);
+        if (otRes.data) setOtRequests(otRes.data);
+        if (teRes.data) setTimeEditRequests(teRes.data);
+        if (monthAttRes.data) setMonthlyAttendance(monthAttRes.data);
+        setCheckInToday(ciRes.data);
       }
     } catch (e) {
       console.error("Dashboard load error:", e);
@@ -151,11 +171,10 @@ const Dashboard = () => {
   const debouncedFetch = useCallback(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => fetchAll(), 500);
-  }, [today, monthStart, monthEnd, currentUser?.id]);
+  }, [today, monthStart, monthEnd, currentUser?.id, viewType]);
 
   useEffect(() => {
     if (!currentUser?.id) return;
-    
     fetchAll(true);
 
     const channel = supabase
@@ -174,13 +193,127 @@ const Dashboard = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [today, monthStart, monthEnd, currentUser?.id, debouncedFetch]);
 
-  // Derived stats
+  // ═══════════════════════════════════════════════
+  // EMPLOYEE DASHBOARD
+  // ═══════════════════════════════════════════════
+  if (viewType === "employee" && currentUser) {
+    const myLeaves = leaveRequests;
+    const myOT = otRequests;
+    const myOtHoursMonth = myOT
+      .filter((o) => o.status === "approved" && o.date >= monthStart)
+      .reduce((s, o) => s + Number(o.hours || 0), 0);
+
+    // Build leave quota cards from actual leave_types
+    const leaveQuotaCards = leaveTypes
+      .sort((a, b) => a.sort_order - b.sort_order)
+      .slice(0, 3)
+      .map((lt) => {
+        const used = myLeaves
+          .filter((l) => l.leave_type_id === lt.id && l.status === "approved")
+          .reduce((s, l) => s + Number(l.days || 0), 0);
+        return { name: lt.name, quota: lt.quota, used, color: lt.color || DEFAULT_LEAVE_COLOR };
+      });
+
+    // Recent requests (combined)
+    const recentRequests = [
+      ...myLeaves.map((l) => ({ id: l.id, type: "leave" as const, label: l.leave_type_name, date: l.date_from, status: l.status, created: l.created_at })),
+      ...myOT.map((o) => ({ id: o.id, type: "ot" as const, label: `OT ${o.hours} ชม.`, date: o.date, status: o.status, created: o.created_at })),
+    ].sort((a, b) => b.created.localeCompare(a.created)).slice(0, 5);
+
+    return (
+      <div className="space-y-6">
+        {/* Greeting */}
+        <div className="card-base p-6">
+          <h2 className="text-xl font-bold font-display mb-1">
+            สวัสดี, {currentUser.firstName} {currentUser.lastName} 👋
+          </h2>
+          <p className="text-sm text-muted-foreground">ยินดีต้อนรับเข้าสู่ระบบ HR — มุมมองพนักงาน</p>
+        </div>
+
+        {/* Leave Quota Cards */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {leaveQuotaCards.map((lq) => (
+            <StatCard
+              key={lq.name}
+              title={`${lq.name}คงเหลือ`}
+              value={loading ? "..." : Math.max(0, lq.quota - lq.used)}
+              subtitle={`ใช้ไป ${lq.used} / ${lq.quota} วัน`}
+              icon={Calendar}
+              color={lq.color}
+              bgColor={`${lq.color}20`}
+              loading={loading}
+            />
+          ))}
+          <StatCard title="OT เดือนนี้" value={loading ? "..." : myOtHoursMonth} subtitle="ชั่วโมง" icon={Clock} color="hsl(220 90% 50%)" bgColor="hsl(220 90% 93%)" loading={loading} />
+        </div>
+
+        {/* Check-in Status */}
+        <div className="card-base p-5">
+          <h3 className="font-bold font-display mb-3">สถานะวันนี้</h3>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="p-4 rounded-xl bg-muted/50">
+              <div className="flex items-center gap-2 mb-1">
+                <MapPin className="w-4 h-4 text-muted-foreground" />
+                <span className="text-xs text-muted-foreground">เวลาเข้างาน</span>
+              </div>
+              <p className="text-lg font-bold font-display">{checkInToday?.check_in || "-"}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {checkInToday ? (checkInToday.within_radius ? "✓ ตรงเวลา" : "⚠ นอกพื้นที่") : "ยังไม่ลงเวลา"}
+              </p>
+            </div>
+            <div className="p-4 rounded-xl bg-muted/50">
+              <div className="flex items-center gap-2 mb-1">
+                <Clock className="w-4 h-4 text-muted-foreground" />
+                <span className="text-xs text-muted-foreground">เวลาออกงาน</span>
+              </div>
+              <p className="text-lg font-bold font-display">{checkInToday?.check_out || "-"}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {checkInToday?.check_out ? "บันทึกแล้ว" : "ยังไม่ออกงาน"}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Recent Requests */}
+        <div className="card-base p-5">
+          <h3 className="font-bold font-display mb-4">คำขอล่าสุดของฉัน</h3>
+          <div className="space-y-3">
+            {loading ? (
+              Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-12 w-full rounded-xl" />)
+            ) : recentRequests.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-4">ยังไม่มีคำขอ</p>
+            ) : (
+              recentRequests.map((r) => (
+                <div key={r.id} className="flex items-center justify-between p-3 rounded-xl hover:bg-muted/50 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${r.type === "leave" ? "bg-orange-100 text-orange-600" : "bg-blue-100 text-blue-600"}`}>
+                      {r.type === "leave" ? <Calendar className="w-4 h-4" /> : <Clock className="w-4 h-4" />}
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium">{r.label}</p>
+                      <p className="text-xs text-muted-foreground">{r.date}</p>
+                    </div>
+                  </div>
+                  <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${r.status === "approved" ? "badge-present" : r.status === "pending" ? "badge-late" : "badge-absent"}`}>
+                    {r.status === "approved" ? "อนุมัติ" : r.status === "pending" ? "รออนุมัติ" : "ไม่อนุมัติ"}
+                  </span>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ═══════════════════════════════════════════════
+  // ADMIN / HR / MANAGER DASHBOARD
+  // ═══════════════════════════════════════════════
   const totalEmployees = employees.length;
   const activeEmployees = employees.filter((e) => e.status === "active").length;
   const presentToday = todayAttendance.filter((a) => a.status === "present" || a.status === "late").length;
   const lateToday = todayAttendance.filter((a) => a.late).length;
   const leaveToday = todayAttendance.filter((a) => a.status === "leave").length;
-  const absentToday = todayAttendance.filter((a) => a.status === "absent").length;
 
   const pendingLeaves = leaveRequests.filter((l) => l.status === "pending").length;
   const pendingOT = otRequests.filter((o) => o.status === "pending").length;
@@ -200,11 +333,13 @@ const Dashboard = () => {
     (e) => e.start_date >= monthStart && e.start_date <= monthEnd
   ).length;
 
+  const presentPercent = totalEmployees > 0 ? ((presentToday / totalEmployees) * 100).toFixed(1) : "0";
+  const leavePercent = totalEmployees > 0 ? ((leaveToday / totalEmployees) * 100).toFixed(1) : "0";
+  const latePercent = totalEmployees > 0 ? ((lateToday / totalEmployees) * 100).toFixed(1) : "0";
+
   // Leave pie data
   const leavePieData = useMemo(() => {
-    const monthLeaves = leaveRequests.filter(
-      (l) => l.date_from >= monthStart && l.date_from <= monthEnd
-    );
+    const monthLeaves = leaveRequests.filter((l) => l.date_from >= monthStart && l.date_from <= monthEnd);
     const grouped: Record<string, number> = {};
     monthLeaves.forEach((l) => {
       const name = l.leave_type_name || "อื่นๆ";
@@ -240,7 +375,7 @@ const Dashboard = () => {
       .slice(0, 5);
   }, [employees, todayAttendance]);
 
-  // Monthly attendance chart (last 12 months approximation from current month data)
+  // Attendance chart
   const attendanceChartData = useMemo(() => {
     const byDate: Record<string, { present: number; late: number; absent: number }> = {};
     monthlyAttendance.forEach((a) => {
@@ -258,10 +393,9 @@ const Dashboard = () => {
       }));
   }, [monthlyAttendance]);
 
-  // Recent activity from real data
+  // Recent activity
   const recentActivity = useMemo(() => {
     const items: { id: string; name: string; action: string; time: string; type: string; status: string }[] = [];
-
     leaveRequests.slice(0, 4).forEach((l) => {
       const emp = (l as any).employees;
       items.push({
@@ -273,7 +407,6 @@ const Dashboard = () => {
         status: l.status === "approved" ? "success" : l.status === "pending" ? "pending" : "info",
       });
     });
-
     otRequests.slice(0, 3).forEach((o) => {
       const emp = (o as any).employees;
       items.push({
@@ -285,81 +418,25 @@ const Dashboard = () => {
         status: o.status === "approved" ? "success" : o.status === "pending" ? "pending" : "info",
       });
     });
-
     return items.sort((a, b) => b.time.localeCompare(a.time)).slice(0, 6);
   }, [leaveRequests, otRequests]);
 
-  // ─── Employee Dashboard ───
-  if (!hasAdminAccess && currentUser) {
-    const myLeaves = leaveRequests.filter((l) => {
-      const emp = employees.find((e) => e.user_id === currentUser.id);
-      return emp && l.employee_id === emp.id;
-    });
-    const myOT = otRequests.filter((o) => {
-      const emp = employees.find((e) => e.user_id === currentUser.id);
-      return emp && o.employee_id === emp.id;
-    });
-    const myOtHoursMonth = myOT
-      .filter((o) => o.status === "approved" && o.date >= monthStart)
-      .reduce((s, o) => s + Number(o.hours || 0), 0);
-
-    const sickUsed = myLeaves.filter((l) => l.leave_type_name === "ลาป่วย" && l.status === "approved").reduce((s, l) => s + l.days, 0);
-    const vacUsed = myLeaves.filter((l) => l.leave_type_name === "ลาพักร้อน" && l.status === "approved").reduce((s, l) => s + l.days, 0);
-
-    return (
-      <div className="space-y-6">
-        <div className="card-base p-6">
-          <h2 className="text-xl font-bold font-display mb-1">
-            สวัสดี, {currentUser.firstName} {currentUser.lastName} 👋
-          </h2>
-          <p className="text-sm text-muted-foreground">ยินดีต้อนรับเข้าสู่ระบบ HR</p>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <StatCard title="วันลาป่วยคงเหลือ" value={loading ? "..." : 30 - sickUsed} subtitle={`ใช้ไป ${sickUsed} / 30 วัน`} icon={Calendar} color="#FF870F" bgColor="hsl(31 100% 93%)" loading={loading} />
-          <StatCard title="วันลาพักร้อนคงเหลือ" value={loading ? "..." : 10 - vacUsed} subtitle={`ใช้ไป ${vacUsed} / 10 วัน`} icon={Calendar} color="hsl(90 100% 35%)" bgColor="hsl(90 100% 92%)" loading={loading} />
-          <StatCard title="OT เดือนนี้" value={loading ? "..." : myOtHoursMonth} subtitle="ชั่วโมง" icon={Clock} color="hsl(220 90% 50%)" bgColor="hsl(220 90% 93%)" loading={loading} />
-          <StatCard title="เวลาเข้างานวันนี้" value={checkInToday?.check_in || "-"} subtitle={checkInToday ? (checkInToday.within_radius ? "ตรงเวลา ✓" : "นอกพื้นที่") : "ยังไม่ลงเวลา"} icon={MapPin} color="hsl(90 100% 35%)" bgColor="hsl(90 100% 92%)" loading={loading} />
-        </div>
-
-        <div className="card-base p-5">
-          <h3 className="font-bold font-display mb-4">คำขอล่าสุดของฉัน</h3>
-          <div className="space-y-3">
-            {loading ? (
-              Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-12 w-full rounded-xl" />)
-            ) : [...myLeaves, ...myOT].length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-4">ยังไม่มีคำขอ</p>
-            ) : (
-              [...myLeaves.slice(0, 3)].map((l) => (
-                <div key={l.id} className="flex items-center justify-between p-3 rounded-xl hover:bg-muted/50 transition-colors">
-                  <div>
-                    <p className="text-sm font-medium">{l.leave_type_name}</p>
-                    <p className="text-xs text-muted-foreground">{l.date_from} - {l.date_to}</p>
-                  </div>
-                  <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${l.status === "approved" ? "badge-present" : l.status === "pending" ? "badge-late" : "badge-absent"}`}>
-                    {l.status === "approved" ? "อนุมัติ" : l.status === "pending" ? "รออนุมัติ" : "ไม่อนุมัติ"}
-                  </span>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // ─── Admin Dashboard ───
-  const presentPercent = totalEmployees > 0 ? ((presentToday / totalEmployees) * 100).toFixed(1) : "0";
-  const leavePercent = totalEmployees > 0 ? ((leaveToday / totalEmployees) * 100).toFixed(1) : "0";
-  const latePercent = totalEmployees > 0 ? ((lateToday / totalEmployees) * 100).toFixed(1) : "0";
+  const scopeLabel = viewType === "manager" ? `แผนก${myEmployee?.dept || ""}` : "ทั้งองค์กร";
 
   return (
     <div className="space-y-6">
+      {/* Scope indicator for manager */}
+      {viewType === "manager" && (
+        <div className="card-base p-4 border-l-4 border-l-[#FF870F]">
+          <p className="text-sm font-medium">📊 แสดงข้อมูล{scopeLabel} — มุมมองหัวหน้างาน</p>
+        </div>
+      )}
+
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard title="พนักงานทั้งหมด" value={totalEmployees} subtitle={`ใช้งานอยู่ ${activeEmployees} คน`} icon={Users} color="#FF870F" bgColor="hsl(31 100% 93%)" loading={loading} />
-        <StatCard title="มาทำงานวันนี้" value={presentToday} subtitle={`${presentPercent}% ของพนักงานทั้งหมด`} icon={UserCheck} color="hsl(90 100% 35%)" bgColor="hsl(90 100% 92%)" loading={loading} />
-        <StatCard title="ลางานวันนี้" value={leaveToday} subtitle={`${leavePercent}% ของพนักงานทั้งหมด`} icon={Calendar} color="hsl(220 90% 50%)" bgColor="hsl(220 90% 93%)" loading={loading} />
-        <StatCard title="มาสายวันนี้" value={lateToday} subtitle={`${latePercent}% ของพนักงานทั้งหมด`} icon={Clock} color="hsl(0 84% 55%)" bgColor="hsl(0 84% 95%)" loading={loading} />
+        <StatCard title={`พนักงาน${viewType === "manager" ? "ในแผนก" : "ทั้งหมด"}`} value={totalEmployees} subtitle={`ใช้งานอยู่ ${activeEmployees} คน`} icon={Users} color="#FF870F" bgColor="hsl(31 100% 93%)" loading={loading} />
+        <StatCard title="มาทำงานวันนี้" value={presentToday} subtitle={`${presentPercent}% ของพนักงาน${viewType === "manager" ? "ในแผนก" : "ทั้งหมด"}`} icon={UserCheck} color="hsl(90 100% 35%)" bgColor="hsl(90 100% 92%)" loading={loading} />
+        <StatCard title="ลางานวันนี้" value={leaveToday} subtitle={`${leavePercent}%`} icon={Calendar} color="hsl(220 90% 50%)" bgColor="hsl(220 90% 93%)" loading={loading} />
+        <StatCard title="มาสายวันนี้" value={lateToday} subtitle={`${latePercent}%`} icon={Clock} color="hsl(0 84% 55%)" bgColor="hsl(0 84% 95%)" loading={loading} />
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -375,7 +452,7 @@ const Dashboard = () => {
           <div className="flex items-center justify-between mb-6">
             <div>
               <h3 className="font-bold font-display">สถิติการเข้างานเดือนนี้</h3>
-              <p className="text-xs text-muted-foreground mt-0.5">ข้อมูลจากฐานข้อมูลจริง</p>
+              <p className="text-xs text-muted-foreground mt-0.5">{scopeLabel}</p>
             </div>
           </div>
           {loading ? (
@@ -490,7 +567,7 @@ const Dashboard = () => {
         {/* Department Status */}
         <div className="card-base p-5">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="font-bold font-display">สถิติตามแผนก</h3>
+            <h3 className="font-bold font-display">{viewType === "manager" ? "สถิติแผนกของฉัน" : "สถิติตามแผนก"}</h3>
           </div>
           <div className="space-y-4">
             {loading ? (
@@ -522,7 +599,7 @@ const Dashboard = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-semibold">OT สะสมเดือนนี้</p>
-                <p className="text-xs text-muted-foreground mt-0.5">ข้อมูลจากฐานข้อมูลจริง</p>
+                <p className="text-xs text-muted-foreground mt-0.5">{scopeLabel}</p>
               </div>
               <div className="text-right">
                 {loading ? <Skeleton className="h-8 w-12" /> : (
