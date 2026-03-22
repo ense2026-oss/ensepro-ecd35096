@@ -117,17 +117,8 @@ const Sidebar = ({ collapsed, onToggle, onNavigate }: SidebarProps) => {
     }),
   })).filter((section) => section.items.length > 0);
 
-  // User display info
-  const userInitials = currentUser
-    ? (
-        ((currentUser.firstName?.[0] || "") + (currentUser.lastName?.[0] || "")).toUpperCase() ||
-        currentUser.name?.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase() ||
-        currentUser.email?.[0]?.toUpperCase() ||
-        "U"
-      )
-    : "U";
-
-  const userName = currentUser?.name || currentUser?.email || "ผู้ใช้";
+  const userInitials = currentUser ? currentUser.avatar : "AD";
+  const userName = currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : "Admin User";
 
   const userRole = role || "employee";
 
