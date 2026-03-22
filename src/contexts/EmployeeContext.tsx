@@ -293,6 +293,31 @@ export const EmployeeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         }))
       );
     }
+
+    // Create auth account for the new employee
+    if (emp.email) {
+      try {
+        const defaultPassword = "Test1234!";
+        const fullName = `${emp.firstName} ${emp.lastName}`.trim();
+        const { data: fnData, error: fnError } = await supabase.functions.invoke("create-employee-auth", {
+          body: {
+            email: emp.email,
+            password: defaultPassword,
+            fullName,
+            role: emp.role || "Employee",
+            employeeId: empId,
+          },
+        });
+        if (fnError) {
+          console.error("Failed to create auth account:", fnError);
+        } else {
+          console.log("Auth account created for", emp.email, "with default password");
+        }
+      } catch (authErr) {
+        console.error("Auth account creation failed:", authErr);
+      }
+    }
+
     await fetchEmployees();
   }, [fetchEmployees]);
 
