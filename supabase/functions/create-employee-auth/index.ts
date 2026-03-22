@@ -20,11 +20,14 @@ Deno.serve(async (req) => {
       });
     }
 
-    const supabaseAdmin = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-      { auth: { autoRefreshToken: false, persistSession: false } }
-    );
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    
+    console.log("Creating auth user for:", email, "with role:", role);
+
+    const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
 
     // Map role string to app_role enum value
     const roleMap: Record<string, string> = {
@@ -46,6 +49,7 @@ Deno.serve(async (req) => {
     });
 
     if (authError) {
+      console.error("Auth error:", JSON.stringify(authError));
       return new Response(JSON.stringify({ error: authError.message }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -53,6 +57,37 @@ Deno.serve(async (req) => {
     }
 
     const userId = authData.user.id;
+    console.log("Auth user created:", userId);
+
+    // Manually create profile if trigger doesn't exist
+    const { error: profileError } = await supabaseAdmin
+      .from("profiles")
+      .upsert({
+        id: userId,
+        full_name: fullName || email,
+        username: email.split("@")[0],
+      }, { onConflict: "id" });
+
+    if (profileError) {
+      console.error("Profile upsert error:", JSON.stringify(profileError));
+    }
+
+    // Manually create user_role if trigger doesn't exist
+    const { error: roleError } = await supabaseAdmin
+      .from("user_roles")
+      .upsert({
+        user_id: userId,
+        role: appRole,
+      }, { onConflict: "user_id,role" });
+
+    if (roleError) {
+      console.error("Role upsert error:", JSON.stringify(roleError));
+      // Try insert instead
+      await supabaseAdmin.from("user_roles").insert({
+        user_id: userId,
+        role: appRole,
+      });
+    }
 
     // Link employee record to auth user
     const { error: updateError } = await supabaseAdmin
@@ -61,15 +96,17 @@ Deno.serve(async (req) => {
       .eq("id", employeeId);
 
     if (updateError) {
-      console.error("Failed to link employee:", updateError);
+      console.error("Failed to link employee:", JSON.stringify(updateError));
     }
+
+    console.log("Employee linked successfully:", employeeId, "->", userId);
 
     return new Response(JSON.stringify({ userId }), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
-    console.error("Error:", err);
+    console.error("Unexpected error:", err.message, err.stack);
     return new Response(JSON.stringify({ error: err.message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
