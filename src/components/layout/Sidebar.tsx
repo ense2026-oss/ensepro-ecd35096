@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { NavLink, useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { usePendingCounts } from "@/contexts/PendingCountsContext";
 import { useBranding } from "@/contexts/BrandingContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -33,29 +33,34 @@ const allNavItems = [
   {
     section: "หลัก",
     items: [
-      { icon: LayoutDashboard, label: "หน้าหลัก", path: "/dashboard" },
-      { icon: Users, label: "ข้อมูลพนักงาน", path: "/employees" },
-      { icon: GitBranch, label: "โครงสร้างองค์กร", path: "/organization" },
-      { icon: FileSignature, label: "จัดการสัญญาจ้าง", path: "/contracts" },
+      { path: "/dashboard", label: "แดชบอร์ด", icon: LayoutDashboard },
+      { path: "/employees", label: "พนักงาน", icon: Users },
+      { path: "/organization", label: "โครงสร้างองค์กร", icon: GitBranch },
+      { path: "/contracts", label: "สัญญาจ้าง", icon: FileSignature },
     ],
   },
   {
-    section: "การจัดการ",
+    section: "การบริหารเวลา",
     items: [
-      { icon: Clock, label: "บันทึกเวลา", path: "/attendance" },
-      { icon: CalendarDays, label: "ระบบลางาน", path: "/leave" },
-      { icon: Clock, label: "ระบบโอที", path: "/overtime" },
-      { icon: MapPin, label: "ลงเวลาเข้า-ออกงาน", path: "/check-in" },
-      { icon: CalendarDays, label: "จัดการกะทำงาน", path: "/shift-management" },
-      { icon: Banknote, label: "จัดการเงินเดือน", path: "/payroll" },
+      { path: "/attendance", label: "บันทึกเวลา", icon: Clock },
+      { path: "/leave", label: "การลางาน", icon: CalendarDays },
+      { path: "/overtime", label: "ล่วงเวลา", icon: Clock },
+      { path: "/check-in", label: "เช็คอิน", icon: MapPin },
+      { path: "/shift-management", label: "จัดการกะ", icon: CalendarDays },
     ],
   },
   {
-    section: "ระบบ",
+    section: "การเงิน",
     items: [
-      { icon: FileText, label: "รายงาน", path: "/reports" },
-      { icon: Bell, label: "การแจ้งเตือน", path: "/notifications" },
-      { icon: Settings, label: "ตั้งค่า", path: "/settings" },
+      { path: "/payroll", label: "เงินเดือน", icon: Banknote },
+    ],
+  },
+  {
+    section: "รายงาน & ตั้งค่า",
+    items: [
+      { path: "/reports", label: "รายงาน", icon: FileText },
+      { path: "/notifications", label: "การแจ้งเตือน", icon: Bell },
+      { path: "/settings", label: "ตั้งค่า", icon: Settings },
     ],
   },
 ];
@@ -114,14 +119,14 @@ const Sidebar = ({ collapsed, onToggle, onNavigate }: SidebarProps) => {
 
   const userInitials = currentUser ? currentUser.avatar : "AD";
   const userName = currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : "Admin User";
-  const userRole = currentUser?.role || "Administrator";
+
+  const userRole = role || "employee";
+
   const roleLabel: Record<string, string> = {
-    Admin: "ผู้ดูแลระบบ",
-    Manager: "ผู้จัดการ",
-    HR: "ฝ่ายบุคคล",
-    Employee: "พนักงาน",
-    Accountant: "ฝ่ายบัญชี",
-    Executive: "ผู้บริหาร",
+    admin: "ผู้ดูแลระบบ",
+    hr: "ฝ่ายบุคคล",
+    manager: "ผู้จัดการ",
+    employee: "พนักงาน",
   };
 
   const dynamicBadges: Record<string, number> = {
@@ -232,10 +237,14 @@ const Sidebar = ({ collapsed, onToggle, onNavigate }: SidebarProps) => {
                   ? `/employees/${currentUser.employeeId || currentUser.id}`
                   : item.path;
                 const displayLabel = item.label;
-                const isActive = location.pathname === item.path || location.pathname === linkPath || (item.path === "/employees" && location.pathname.startsWith("/employees/"));
+                // Only the employees menu item should be active when on /employees/:id
+                // Other self-only items should NOT show active when redirected to /employees/:id
+                const isActive = selfOnly
+                  ? (item.path === "/employees" && location.pathname.startsWith("/employees/"))
+                  : (location.pathname === item.path || (item.path === "/employees" && location.pathname.startsWith("/employees/")));
                 const badgeCount: number = dynamicBadges[item.path] ?? 0;
                 return (
-                  <NavLink
+                  <Link
                     key={item.path}
                     to={linkPath}
                     className={`sidebar-item ${isActive ? "active" : ""} ${collapsed ? "justify-center" : ""}`}
@@ -256,7 +265,7 @@ const Sidebar = ({ collapsed, onToggle, onNavigate }: SidebarProps) => {
                         )}
                       </>
                     )}
-                  </NavLink>
+                  </Link>
                 );
               })}
             </div>

@@ -1,4 +1,4 @@
-import { NavLink, useLocation } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { useState, useEffect, useCallback } from "react";
 import { usePendingCounts } from "@/contexts/PendingCountsContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -76,7 +76,10 @@ const MobileFooterNav = () => {
     "/overtime": overtimePending,
   };
 
-  const isActive = (path: string) => location.pathname === path || (path === "/employees" && location.pathname.startsWith("/employees/"));
+  const checkActive = (path: string, isSelf: boolean) => {
+    if (isSelf) return path === "/employees" && location.pathname.startsWith("/employees/");
+    return location.pathname === path || (path === "/employees" && location.pathname.startsWith("/employees/"));
+  };
 
   const isCheckInEnabled = moduleSettings['check-in'] !== false && canAccessRoute(role, "/check-in");
 
@@ -89,10 +92,10 @@ const MobileFooterNav = () => {
     const linkPath = selfOnlyCheck && currentUser
       ? `/employees/${currentUser.employeeId || currentUser.id}`
       : item.path;
-    const active = isActive(item.path);
+    const active = checkActive(item.path, selfOnlyCheck);
     const badgeCount = dynamicBadges[item.path] ?? 0;
     return (
-      <NavLink
+      <Link
         key={item.path}
         to={linkPath}
         className="flex flex-col items-center justify-center py-1.5 relative flex-1 min-w-0"
@@ -127,9 +130,11 @@ const MobileFooterNav = () => {
             style={{ background: "hsl(var(--primary))" }}
           />
         )}
-      </NavLink>
+      </Link>
     );
   };
+
+  const checkInActive = location.pathname === "/check-in";
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 lg:hidden">
@@ -142,7 +147,7 @@ const MobileFooterNav = () => {
         }}
       >
         {isCheckInEnabled && (
-          <NavLink
+          <Link
             to="/check-in"
             className="absolute left-1/2 -translate-x-1/2 -top-5 z-10"
           >
@@ -150,7 +155,7 @@ const MobileFooterNav = () => {
               <div
                 className="absolute w-16 h-16 rounded-full animate-[wave-ping_1.8s_ease-out_infinite]"
                 style={{
-                  background: isActive("/check-in")
+                  background: checkInActive
                     ? "hsl(var(--primary) / 0.2)"
                     : "hsl(90 100% 40% / 0.2)",
                 }}
@@ -158,7 +163,7 @@ const MobileFooterNav = () => {
               <div
                 className="absolute w-14 h-14 rounded-full animate-[wave-ping_1.8s_ease-out_0.5s_infinite]"
                 style={{
-                  background: isActive("/check-in")
+                  background: checkInActive
                     ? "hsl(var(--primary) / 0.15)"
                     : "hsl(90 100% 40% / 0.15)",
                 }}
@@ -166,7 +171,7 @@ const MobileFooterNav = () => {
               <div
                 className="w-12 h-12 rounded-full flex flex-col items-center justify-center transition-all duration-200 relative z-10"
                 style={{
-                  background: isActive("/check-in")
+                  background: checkInActive
                     ? "linear-gradient(135deg, hsl(var(--primary)), hsl(31 100% 60%))"
                     : "linear-gradient(135deg, hsl(90 100% 40%), hsl(90 100% 30%))",
                   boxShadow: "0 3px 12px hsl(var(--primary) / 0.35)",
@@ -177,7 +182,7 @@ const MobileFooterNav = () => {
                 <span className="text-[7px] font-bold text-white leading-tight mt-0.5">ลงเวลา</span>
               </div>
             </div>
-          </NavLink>
+          </Link>
         )}
 
         <div className="flex items-end pt-2 pb-[env(safe-area-inset-bottom,8px)]">
