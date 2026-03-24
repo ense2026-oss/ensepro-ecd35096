@@ -37,7 +37,7 @@ const PositionNode = ({
   isDraggingId, dragOverId,
   onDragStart, onDragOver, onDragEnd, onDrop,
   parentId = null,
-  assignedEmployees,
+  employeeMap,
   isHead,
 }: {
   position: Position; index: number; total: number; level?: number;
@@ -52,12 +52,13 @@ const PositionNode = ({
   onDragEnd: () => void;
   onDrop: (e: React.DragEvent, posId: string, parentId: string | null, idx: number) => void;
   parentId?: string | null;
-  assignedEmployees: Employee[];
+  employeeMap: Map<string, Employee[]>;
   isHead: boolean;
 }) => {
   const isOver = dragOverId === position.id;
   const isDragging = isDraggingId === position.id;
   const children = position.children || [];
+  const assignedEmployees = employeeMap.get(position.id) || [];
 
   return (
     <div className="relative">
