@@ -72,6 +72,7 @@ export interface Employee {
   workHistory: WorkHistoryRecord[];
   username: string;
   role: string;
+  initialPassword?: string;
   taxDeductions?: TaxDeduction;
   children?: number;
   childrenAfter2018?: number;
