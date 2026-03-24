@@ -275,12 +275,7 @@ const Topbar = ({ onMenuToggle, pageTitle = "Dashboard", pageSubtitle = "ภา�
             onClick={() => { setShowProfile(!showProfile); setShowNotif(false); }}
             className="flex items-center gap-2 p-1.5 pr-3 rounded-xl hover:bg-muted transition-colors"
           >
-            <div
-              className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold"
-              style={{ background: currentUser ? currentUser.avatarColor : "linear-gradient(135deg, #FF870F, #FF9A3C)", color: currentUser?.avatarTextColor || "#fff" }}
-            >
-              {currentUser?.avatar || "AD"}
-            </div>
+            <EmployeeAvatar photoUrl={currentUser?.photoUrl} avatar={currentUser?.avatar} avatarColor={currentUser?.avatarColor} avatarTextColor={currentUser?.avatarTextColor} firstName={currentUser?.firstName} size="sm" rounded="lg" />
             <div className="hidden sm:block text-left max-w-[100px] lg:max-w-[140px]">
               <p className="text-xs font-semibold leading-tight truncate">{currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : "Admin User"}</p>
               <p className="text-[10px] text-muted-foreground leading-tight truncate">{currentUser?.role || "Administrator"}</p>

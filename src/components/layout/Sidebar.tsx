@@ -205,12 +205,7 @@ const Sidebar = ({ collapsed, onToggle, onNavigate }: SidebarProps) => {
 
       {collapsed && (
         <div className="flex justify-center mt-4">
-          <div
-            className="w-9 h-9 rounded-lg flex items-center justify-center text-sm font-bold"
-            style={{ background: currentUser?.avatarColor || "linear-gradient(135deg, #FF870F, #FF9A3C)", color: currentUser?.avatarTextColor || "#fff" }}
-          >
-            {userInitials}
-          </div>
+          <EmployeeAvatar photoUrl={currentUser?.photoUrl} avatar={currentUser?.avatar} avatarColor={currentUser?.avatarColor} avatarTextColor={currentUser?.avatarTextColor} firstName={currentUser?.firstName} size="md" rounded="lg" />
         </div>
       )}
 

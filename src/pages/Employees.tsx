@@ -186,8 +186,7 @@ const Employees = () => {
             return (
               <div key={emp.id} className="card-base p-5 flex flex-col gap-3 animate-fade-in">
                 <div className="flex items-start justify-between">
-                  <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-xl font-bold"
-                    style={{ background: emp.avatarColor, color: emp.avatarTextColor }}>{emp.avatar}</div>
+                  <EmployeeAvatar photoUrl={emp.photoUrl} avatar={emp.avatar} avatarColor={emp.avatarColor} avatarTextColor={emp.avatarTextColor} firstName={emp.firstName} size="xl" rounded="2xl" />
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <button className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground">
