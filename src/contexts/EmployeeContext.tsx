@@ -123,6 +123,7 @@ function dbToEmployee(row: any, education: any[], workHistory: any[], payrollIte
     emergencyPhone: row.emergency_phone || '',
     username: row.username || '',
     role: row.role || 'Employee',
+    initialPassword: row.initial_password || '',
     children: row.children || 0,
     childrenAfter2018: row.children_after_2018 || 0,
     pvdRate: row.pvd_rate ? Number(row.pvd_rate) : 0,
