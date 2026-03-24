@@ -106,9 +106,11 @@ const EmployeeProfile = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [data, setData] = useState(employee ? { ...employee } : null);
   const [showPassword, setShowPassword] = useState(false);
+  const [showInitialPassword, setShowInitialPassword] = useState(false);
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordError, setPasswordError] = useState("");
+  const [resetting, setResetting] = useState(false);
   const photoInputRef = useRef<HTMLInputElement>(null);
 
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
