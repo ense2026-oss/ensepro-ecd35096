@@ -132,7 +132,7 @@ const PositionNode = ({
               isDraggingId={isDraggingId} dragOverId={dragOverId}
               onDragStart={onDragStart} onDragOver={onDragOver} onDragEnd={onDragEnd} onDrop={onDrop}
               parentId={position.id}
-              assignedEmployees={assignedEmployees} // will be recalculated via props from parent
+              employeeMap={employeeMap}
               isHead={false}
             />
           ))}
