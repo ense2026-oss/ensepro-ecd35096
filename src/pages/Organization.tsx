@@ -326,7 +326,7 @@ const Organization = () => {
         onDragEnd={handleDragEnd}
         onDrop={(e, posId, pId, i) => handleDrop(affId, posId, pId, i)}
         parentId={parentId}
-        assignedEmployees={assigned}
+        employeeMap={positionEmployeeMap}
         isHead={isHead}
       />
     );
