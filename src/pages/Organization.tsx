@@ -1,6 +1,7 @@
-import { useState } from "react";
-import { Plus, Edit, Trash2, Save, Building2, Users, ChevronDown, ChevronRight, AlertCircle, GripVertical } from "lucide-react";
+import { useState, useMemo } from "react";
+import { Plus, Edit, Trash2, Building2, Users, ChevronDown, ChevronRight, GripVertical, UserPlus, X, Crown } from "lucide-react";
 import { useOrg, type Affiliation, type Position } from "@/contexts/OrgContext";
+import { useEmployees, type Employee } from "@/contexts/EmployeeContext";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose,
 } from "@/components/ui/dialog";
@@ -9,26 +10,41 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
+import LazyImage from "@/components/ui/lazy-image";
 
-/* ═══════════════════ Recursive Helpers ═══════════════════ */
+/* ═══════════════════ Helpers ═══════════════════ */
 const countAllPositions = (positions: Position[]): number =>
   positions.reduce((s, p) => s + 1 + countAllPositions(p.children || []), 0);
 
-const collectAllIds = (positions: Position[]): string[] =>
-  positions.flatMap((p) => [p.id, ...collectAllIds(p.children || [])]);
+/* ═══════════════════ Employee Avatar ═══════════════════ */
+const EmployeeAvatar = ({ emp, size = "sm" }: { emp: Employee; size?: "sm" | "md" }) => {
+  const dim = size === "sm" ? "w-7 h-7 text-[10px]" : "w-9 h-9 text-xs";
+  if (emp.photoUrl) {
+    return <LazyImage src={emp.photoUrl} alt={emp.firstName} className={`${dim} rounded-full object-cover border-2 border-background shadow-sm`} />;
+  }
+  return (
+    <div className={`${dim} rounded-full flex items-center justify-center font-bold border-2 border-background shadow-sm`}
+      style={{ backgroundColor: emp.avatarColor, color: emp.avatarTextColor }}>
+      {emp.avatar || emp.firstName?.charAt(0)}
+    </div>
+  );
+};
 
 /* ═══════════════════ Position Tree Node ═══════════════════ */
 const PositionNode = ({
   position, index, total, level = 0,
-  onEdit, onAddSub, onDelete,
+  onEdit, onAddSub, onDelete, onAssign,
   isDraggingId, dragOverId,
   onDragStart, onDragOver, onDragEnd, onDrop,
   parentId = null,
+  assignedEmployees,
+  isHead,
 }: {
   position: Position; index: number; total: number; level?: number;
   onEdit: (p: Position) => void;
   onAddSub: (parentPos: Position) => void;
   onDelete: (p: Position) => void;
+  onAssign: (p: Position) => void;
   isDraggingId: string | null;
   dragOverId: string | null;
   onDragStart: (posId: string, parentId: string | null, idx: number) => void;
@@ -36,6 +52,8 @@ const PositionNode = ({
   onDragEnd: () => void;
   onDrop: (e: React.DragEvent, posId: string, parentId: string | null, idx: number) => void;
   parentId?: string | null;
+  assignedEmployees: Employee[];
+  isHead: boolean;
 }) => {
   const isOver = dragOverId === position.id;
   const isDragging = isDraggingId === position.id;
@@ -59,15 +77,38 @@ const PositionNode = ({
           {(index < total - 1 || children.length > 0) && <div className="w-0.5 bg-border flex-1" />}
         </div>
 
-        <div className="flex items-center gap-3 py-2 flex-1 min-w-0">
-          <div className={`flex items-center gap-3 px-4 py-3 rounded-2xl bg-card border-2 shadow-sm min-w-[200px] max-w-xs transition-all hover:shadow-md cursor-grab active:cursor-grabbing ${isOver ? "border-primary ring-2 ring-primary/20" : "border-border"}`}>
+        <div className="flex items-center gap-3 py-2 flex-1 min-w-0 flex-wrap">
+          <div className={`flex items-center gap-3 px-4 py-3 rounded-2xl bg-card border-2 shadow-sm min-w-[200px] max-w-sm transition-all hover:shadow-md cursor-grab active:cursor-grabbing ${isOver ? "border-primary ring-2 ring-primary/20" : "border-border"}`}>
             <GripVertical className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-            <div className="flex flex-col min-w-0">
-              <span className="text-sm font-bold text-foreground truncate">{position.name}</span>
+            <div className="flex flex-col min-w-0 flex-1">
+              <div className="flex items-center gap-1.5">
+                {isHead && <Crown className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />}
+                <span className="text-sm font-bold text-foreground truncate">{position.name}</span>
+              </div>
+              {/* Assigned employees */}
+              {assignedEmployees.length > 0 ? (
+                <div className="flex items-center gap-1 mt-1.5 flex-wrap">
+                  <div className="flex -space-x-1.5">
+                    {assignedEmployees.slice(0, 4).map((emp) => (
+                      <EmployeeAvatar key={emp.id} emp={emp} size="sm" />
+                    ))}
+                  </div>
+                  <span className="text-xs text-muted-foreground ml-1.5 truncate">
+                    {assignedEmployees.length <= 2
+                      ? assignedEmployees.map(e => `${e.firstName} ${e.lastName?.charAt(0) || ""}.`).join(", ")
+                      : `${assignedEmployees[0].firstName} +${assignedEmployees.length - 1}`}
+                  </span>
+                </div>
+              ) : (
+                <span className="text-xs text-muted-foreground/60 mt-1">ยังไม่ระบุบุคคล</span>
+              )}
             </div>
           </div>
 
           <div className="flex items-center gap-1.5">
+            <button onClick={() => onAssign(position)} className="w-8 h-8 rounded-full flex items-center justify-center bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 transition-colors" title="กำหนดบุคคล">
+              <UserPlus className="w-4 h-4" />
+            </button>
             <button onClick={() => onAddSub(position)} className="w-8 h-8 rounded-full flex items-center justify-center bg-primary/10 text-primary hover:bg-primary/20 transition-colors" title="เพิ่มตำแหน่งย่อย">
               <Plus className="w-4 h-4" />
             </button>
@@ -86,10 +127,12 @@ const PositionNode = ({
           {children.map((child, idx) => (
             <PositionNode
               key={child.id} position={child} index={idx} total={children.length} level={level + 1}
-              onEdit={onEdit} onAddSub={onAddSub} onDelete={onDelete}
+              onEdit={onEdit} onAddSub={onAddSub} onDelete={onDelete} onAssign={onAssign}
               isDraggingId={isDraggingId} dragOverId={dragOverId}
               onDragStart={onDragStart} onDragOver={onDragOver} onDragEnd={onDragEnd} onDrop={onDrop}
               parentId={position.id}
+              assignedEmployees={assignedEmployees} // will be recalculated via props from parent
+              isHead={false}
             />
           ))}
         </div>
@@ -101,6 +144,20 @@ const PositionNode = ({
 /* ═══════════════════ Main Component ═══════════════════ */
 const Organization = () => {
   const { affiliations, addPosition, updatePosition, deletePosition, reorderPositions, loading } = useOrg();
+  const { employees, updateEmployee } = useEmployees();
+
+  // Build position → employees map
+  const positionEmployeeMap = useMemo(() => {
+    const map = new Map<string, Employee[]>();
+    employees.forEach((emp) => {
+      if (emp.positionId) {
+        const list = map.get(emp.positionId) || [];
+        list.push(emp);
+        map.set(emp.positionId, list);
+      }
+    });
+    return map;
+  }, [employees]);
 
   // Drag state
   const [dragInfo, setDragInfo] = useState<{ posId: string; parentId: string | null; idx: number; affId: string } | null>(null);
@@ -122,7 +179,6 @@ const Organization = () => {
     const fromIdx = dragInfo.idx;
     if (fromIdx === toIdx) { handleDragEnd(); return; }
 
-    // Find siblings
     const aff = affiliations.find((a) => a.id === affId);
     if (!aff) { handleDragEnd(); return; }
 
@@ -158,15 +214,19 @@ const Organization = () => {
   const [editOpen, setEditOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [assignOpen, setAssignOpen] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const [editingPos, setEditingPos] = useState<Position | null>(null);
   const [deletingPos, setDeletingPos] = useState<Position | null>(null);
+  const [assigningPos, setAssigningPos] = useState<Position | null>(null);
   const [addAffId, setAddAffId] = useState<string | null>(null);
   const [addParentPos, setAddParentPos] = useState<Position | null>(null);
   const [formName, setFormName] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
 
   const totalPositions = affiliations.reduce((s, a) => s + countAllPositions(a.positions), 0);
+  const totalAssigned = employees.filter(e => e.positionId).length;
 
   const handleAddRoot = (affId: string) => {
     setAddAffId(affId); setAddParentPos(null); setFormName(""); setAddOpen(true);
@@ -211,7 +271,65 @@ const Organization = () => {
     toast.success(`ลบตำแหน่ง "${deletingPos.name}" สำเร็จ`);
   };
 
+  // Assign employee dialog
+  const handleAssignClick = (pos: Position) => {
+    setAssigningPos(pos); setSearchTerm(""); setAssignOpen(true);
+  };
+
+  const assignedToThisPos = useMemo(() => {
+    if (!assigningPos) return [];
+    return positionEmployeeMap.get(assigningPos.id) || [];
+  }, [assigningPos, positionEmployeeMap]);
+
+  const availableEmployees = useMemo(() => {
+    const assigned = assignedToThisPos.map(e => e.id);
+    return employees
+      .filter(e => e.status === "active" && !assigned.includes(e.id))
+      .filter(e => {
+        if (!searchTerm) return true;
+        const term = searchTerm.toLowerCase();
+        return `${e.firstName} ${e.lastName}`.toLowerCase().includes(term) ||
+          e.nickname.toLowerCase().includes(term) ||
+          e.position.toLowerCase().includes(term);
+      });
+  }, [employees, assignedToThisPos, searchTerm]);
+
+  const handleAssignEmployee = async (empId: string) => {
+    if (!assigningPos) return;
+    await updateEmployee(empId, { positionId: assigningPos.id } as any);
+    toast.success("กำหนดบุคคลสำเร็จ");
+  };
+
+  const handleUnassignEmployee = async (empId: string) => {
+    await updateEmployee(empId, { positionId: undefined } as any);
+    toast.success("ยกเลิกการกำหนดบุคคลสำเร็จ");
+  };
+
   const childrenCount = deletingPos?.children?.length || 0;
+
+  // Recursive render helper to pass correct assignedEmployees
+  const renderPositionNode = (pos: Position, idx: number, total: number, affId: string, parentId: string | null) => {
+    const assigned = positionEmployeeMap.get(pos.id) || [];
+    const isHead = parentId === null && idx === 0;
+    return (
+      <PositionNode
+        key={pos.id} position={pos} index={idx} total={total} level={0}
+        onEdit={(p) => handleEdit(p, affId)}
+        onAddSub={(p) => handleAddSub(p, affId)}
+        onDelete={(p) => handleDeleteClick(p)}
+        onAssign={(p) => handleAssignClick(p)}
+        isDraggingId={dragInfo?.affId === affId ? dragInfo.posId : null}
+        dragOverId={dragInfo?.affId === affId ? dragOverPosId : null}
+        onDragStart={(posId, pId, i) => handleDragStart(affId, posId, pId, i)}
+        onDragOver={handleDragOver}
+        onDragEnd={handleDragEnd}
+        onDrop={(e, posId, pId, i) => handleDrop(affId, posId, pId, i)}
+        parentId={parentId}
+        assignedEmployees={assigned}
+        isHead={isHead}
+      />
+    );
+  };
 
   if (loading) {
     return (
@@ -226,7 +344,7 @@ const Organization = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-xl font-bold font-display">โครงสร้างตำแหน่ง</h2>
-          <p className="text-sm text-muted-foreground mt-0.5">จัดการโครงสร้างตำแหน่งงานตามสังกัด</p>
+          <p className="text-sm text-muted-foreground mt-0.5">จัดการโครงสร้างตำแหน่งงานตามสังกัด และกำหนดบุคคลในแต่ละตำแหน่ง</p>
         </div>
       </div>
 
@@ -248,6 +366,15 @@ const Organization = () => {
             <div>
               <p className="text-xs text-muted-foreground">ตำแหน่งทั้งหมด</p>
               <p className="text-sm font-bold">{totalPositions}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-blue-500/10">
+              <UserPlus className="w-4 h-4 text-blue-600" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">กำหนดบุคคลแล้ว</p>
+              <p className="text-sm font-bold">{totalAssigned} / {employees.length}</p>
             </div>
           </div>
         </div>
@@ -287,21 +414,7 @@ const Organization = () => {
                 </div>
 
                 <div className="ml-6">
-                  {aff.positions.map((pos, idx) => (
-                    <PositionNode
-                      key={pos.id} position={pos} index={idx} total={aff.positions.length} level={0}
-                      onEdit={(p) => handleEdit(p, aff.id)}
-                      onAddSub={(p) => handleAddSub(p, aff.id)}
-                      onDelete={(p) => handleDeleteClick(p)}
-                      isDraggingId={dragInfo?.affId === aff.id ? dragInfo.posId : null}
-                      dragOverId={dragInfo?.affId === aff.id ? dragOverPosId : null}
-                      onDragStart={(posId, parentId, i) => handleDragStart(aff.id, posId, parentId, i)}
-                      onDragOver={handleDragOver}
-                      onDragEnd={handleDragEnd}
-                      onDrop={(e, posId, parentId, i) => handleDrop(aff.id, posId, parentId, i)}
-                      parentId={null}
-                    />
-                  ))}
+                  {aff.positions.map((pos, idx) => renderPositionNode(pos, idx, aff.positions.length, aff.id, null))}
                   {aff.positions.length === 0 && (
                     <p className="text-sm text-muted-foreground py-4 pl-8">ยังไม่มีตำแหน่ง — กดปุ่ม + เพื่อเพิ่ม</p>
                   )}
@@ -372,9 +485,7 @@ const Organization = () => {
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">
-                ชื่อตำแหน่ง <span className="text-destructive">*</span>
-              </label>
+              <label className="text-xs font-medium text-muted-foreground">ชื่อตำแหน่ง <span className="text-destructive">*</span></label>
               <input value={formName} onChange={(e) => setFormName(e.target.value)}
                 className="w-full px-3 py-2 text-sm rounded-xl border border-border bg-muted/30 outline-none focus:ring-2 focus:ring-primary/30 transition-all" />
             </div>
@@ -385,37 +496,106 @@ const Organization = () => {
             </DialogClose>
             <button onClick={handleEditSave} disabled={saving}
               className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold text-primary-foreground bg-primary hover:bg-primary/90 transition-all disabled:opacity-50">
-              <Save className="w-4 h-4" /> บันทึก
+              <Edit className="w-4 h-4" /> บันทึก
             </button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Delete Dialog */}
+      {/* Delete Confirm */}
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
-              <AlertCircle className="w-5 h-5 text-destructive" /> ยืนยันการลบ
+              <Trash2 className="w-5 h-5 text-destructive" /> ยืนยันการลบ
             </AlertDialogTitle>
             <AlertDialogDescription>
               คุณต้องการลบตำแหน่ง <strong>"{deletingPos?.name}"</strong> หรือไม่?
               {childrenCount > 0 && (
-                <span className="block mt-1 text-destructive font-medium">
-                  ⚠️ ตำแหน่งนี้มีตำแหน่งย่อย {childrenCount} รายการ ซึ่งจะถูกลบทั้งหมด
+                <span className="block mt-2 text-destructive font-semibold">
+                  ⚠️ ตำแหน่งนี้มีตำแหน่งย่อย {childrenCount} ตำแหน่ง — จะถูกลบทั้งหมด
                 </span>
               )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>ยกเลิก</AlertDialogCancel>
+            <AlertDialogCancel className="rounded-xl">ยกเลิก</AlertDialogCancel>
             <AlertDialogAction onClick={handleDeleteConfirm} disabled={saving}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              className="rounded-xl bg-destructive text-destructive-foreground hover:bg-destructive/90">
               ลบ
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Assign Employee Dialog */}
+      <Dialog open={assignOpen} onOpenChange={setAssignOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <UserPlus className="w-5 h-5 text-blue-600" /> กำหนดบุคคลในตำแหน่ง
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="px-3 py-2 rounded-xl bg-primary/5 border border-primary/20">
+              <p className="text-xs text-muted-foreground">ตำแหน่ง</p>
+              <p className="text-sm font-bold text-foreground">{assigningPos?.name}</p>
+            </div>
+
+            {/* Currently assigned */}
+            {assignedToThisPos.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">บุคลากรในตำแหน่งนี้</p>
+                <div className="space-y-1.5">
+                  {assignedToThisPos.map((emp) => (
+                    <div key={emp.id} className="flex items-center gap-3 px-3 py-2 rounded-xl bg-card border border-border">
+                      <EmployeeAvatar emp={emp} size="md" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold truncate">{emp.prefix}{emp.firstName} {emp.lastName}</p>
+                        <p className="text-xs text-muted-foreground">{emp.dept} • {emp.position}</p>
+                      </div>
+                      <button onClick={() => handleUnassignEmployee(emp.id)}
+                        className="w-7 h-7 rounded-full flex items-center justify-center bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors"
+                        title="ยกเลิกการกำหนด">
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Search and add */}
+            <div className="space-y-2">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">เพิ่มบุคคล</p>
+              <input value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="ค้นหาชื่อพนักงาน..."
+                className="w-full px-3 py-2 text-sm rounded-xl border border-border bg-muted/30 outline-none focus:ring-2 focus:ring-primary/30 transition-all" />
+              <div className="max-h-48 overflow-y-auto space-y-1">
+                {availableEmployees.slice(0, 20).map((emp) => (
+                  <button key={emp.id} onClick={() => handleAssignEmployee(emp.id)}
+                    className="w-full flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-muted/50 transition-colors text-left">
+                    <EmployeeAvatar emp={emp} size="md" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold truncate">{emp.prefix}{emp.firstName} {emp.lastName}</p>
+                      <p className="text-xs text-muted-foreground">{emp.dept} • {emp.position}</p>
+                    </div>
+                    <Plus className="w-4 h-4 text-primary flex-shrink-0" />
+                  </button>
+                ))}
+                {availableEmployees.length === 0 && (
+                  <p className="text-sm text-muted-foreground text-center py-4">ไม่พบพนักงาน</p>
+                )}
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <DialogClose asChild>
+              <button className="px-4 py-2 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors">ปิด</button>
+            </DialogClose>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
