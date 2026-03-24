@@ -110,6 +110,7 @@ function dbToEmployee(row: any, education: any[], workHistory: any[], payrollIte
     shift: row.shift || '',
     faceScanId: row.face_scan_id || '',
     salary: row.salary || '0',
+    positionId: row.position_id || undefined,
     status: (row.status as "active" | "leave" | "inactive") || 'active',
     homeAddress: row.home_address || '',
     maritalStatus: row.marital_status || '',
