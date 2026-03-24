@@ -115,20 +115,40 @@ export const TimeEditProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [user]);
 
+  // Debounced realtime callbacks
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+  const debouncedFetchEdits = useCallback(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => fetchEditRequests(), 800);
+  }, [fetchEditRequests]);
+
+  const debounceNotifRef = useRef<ReturnType<typeof setTimeout>>();
+  const debouncedFetchNotifs = useCallback(() => {
+    if (debounceNotifRef.current) clearTimeout(debounceNotifRef.current);
+    debounceNotifRef.current = setTimeout(() => fetchNotifications(), 800);
+  }, [fetchNotifications]);
+
   useEffect(() => {
     if (!user) return;
     setLoading(true);
-    Promise.all([fetchEditRequests(), fetchNotifications()]).finally(() => setLoading(false));
+    // Defer initial fetch slightly to not block render
+    const initTimer = setTimeout(() => {
+      Promise.all([fetchEditRequests(), fetchNotifications()]).finally(() => setLoading(false));
+    }, 200);
 
-    // Realtime subscriptions
     const channel = supabase
       .channel("time-edit-context")
-      .on("postgres_changes", { event: "*", schema: "public", table: "time_edit_requests" }, () => fetchEditRequests())
-      .on("postgres_changes", { event: "*", schema: "public", table: "app_notifications" }, () => fetchNotifications())
+      .on("postgres_changes", { event: "*", schema: "public", table: "time_edit_requests" }, debouncedFetchEdits)
+      .on("postgres_changes", { event: "*", schema: "public", table: "app_notifications" }, debouncedFetchNotifs)
       .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
-  }, [user, fetchEditRequests, fetchNotifications]);
+    return () => {
+      clearTimeout(initTimer);
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      if (debounceNotifRef.current) clearTimeout(debounceNotifRef.current);
+      supabase.removeChannel(channel);
+    };
+  }, [user, fetchEditRequests, fetchNotifications, debouncedFetchEdits, debouncedFetchNotifs]);
 
   const addEditRequest = useCallback(async (req: Omit<TimeEditRequest, "id" | "status" | "createdAt">) => {
     await supabase.from("time_edit_requests").insert({

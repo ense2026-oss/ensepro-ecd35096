@@ -11,7 +11,7 @@ const floatingOrbs = [
   { size: 160, x: 25, y: 20, color: "#FF9A3C", opacity: 0.08, duration: 16, delay: 3 },
 ];
 
-const particles = Array.from({ length: 250 }, (_, i) => {
+const particles = Array.from({ length: 30 }, (_, i) => {
   const rand = Math.random();
   const y = 100 - rand * rand * 50;
   const heightFactor = (y - 50) / 50;

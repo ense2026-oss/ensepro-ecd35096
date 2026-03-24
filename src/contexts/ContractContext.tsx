@@ -215,7 +215,11 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
     setLoading(false);
   }, []);
 
-  useEffect(() => { fetchAll(); }, [fetchAll]);
+  // Lazy load: defer fetch to avoid blocking initial render
+  useEffect(() => {
+    const timer = setTimeout(() => fetchAll(), 500);
+    return () => clearTimeout(timer);
+  }, [fetchAll]);
 
   /* ─── Contract CRUD ─── */
   const addContract = useCallback(async (data: Omit<Contract, "id" | "createdAt" | "updatedAt">): Promise<Contract | null> => {
