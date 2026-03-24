@@ -531,6 +531,7 @@ export type Database = {
           phone: string
           photo_url: string | null
           position: string
+          position_id: string | null
           prefix: string
           pvd_rate: number | null
           religion: string
@@ -581,6 +582,7 @@ export type Database = {
           phone?: string
           photo_url?: string | null
           position?: string
+          position_id?: string | null
           prefix?: string
           pvd_rate?: number | null
           religion?: string
@@ -631,6 +633,7 @@ export type Database = {
           phone?: string
           photo_url?: string | null
           position?: string
+          position_id?: string | null
           prefix?: string
           pvd_rate?: number | null
           religion?: string
@@ -646,7 +649,15 @@ export type Database = {
           user_id?: string | null
           username?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "employees_position_id_fkey"
+            columns: ["position_id"]
+            isOneToOne: false
+            referencedRelation: "positions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       leave_requests: {
         Row: {
