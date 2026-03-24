@@ -210,7 +210,9 @@ export const OrgProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   useEffect(() => {
-    fetchAffiliations();
+    // Defer org data loading to not block initial render
+    const timer = setTimeout(() => fetchAffiliations(), 300);
+    return () => clearTimeout(timer);
   }, [fetchAffiliations]);
 
   /* ─── Affiliation CRUD ─── */

@@ -237,25 +237,36 @@ export const EmployeeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const fetchEmployees = useCallback(async () => {
     try {
       setLoading(true);
-      const [empRes, eduRes, whRes, piRes] = await Promise.all([
-        supabase.from("employees").select("*").order("created_at"),
+      // Fetch employees first (essential), then related data in parallel
+      const empRes = await supabase.from("employees").select("*").order("created_at");
+      if (empRes.error) throw empRes.error;
+
+      // Quick initial render with basic employee data (no education/work/payroll)
+      const quickMapped = (empRes.data || []).map((row: any) =>
+        dbToEmployee(row, [], [], [])
+      );
+      setEmployees(quickMapped);
+      setLoading(false);
+
+      // Then fetch related data in background
+      const [eduRes, whRes, piRes] = await Promise.all([
         supabase.from("employee_education").select("*"),
         supabase.from("employee_work_history").select("*"),
         supabase.from("employee_custom_payroll_items").select("*"),
       ]);
 
-      if (empRes.error) throw empRes.error;
       const eduData = eduRes.data || [];
       const whData = whRes.data || [];
       const piData = piRes.data || [];
 
-      const mapped = (empRes.data || []).map((row: any) =>
-        dbToEmployee(row, eduData, whData, piData)
-      );
-      setEmployees(mapped);
+      if (eduData.length || whData.length || piData.length) {
+        const fullMapped = (empRes.data || []).map((row: any) =>
+          dbToEmployee(row, eduData, whData, piData)
+        );
+        setEmployees(fullMapped);
+      }
     } catch (err) {
       console.error("Failed to fetch employees:", err);
-    } finally {
       setLoading(false);
     }
   }, []);

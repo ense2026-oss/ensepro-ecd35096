@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -69,22 +69,33 @@ export const PendingCountsProvider = ({ children }: { children: ReactNode }) => 
     if (otCount !== null) setOvertimePending(otCount);
   }, [user]);
 
+  // Debounced refresh to avoid rapid-fire DB calls from realtime
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+  const debouncedRefresh = useCallback(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => refreshCounts(), 800);
+  }, [refreshCounts]);
+
   useEffect(() => {
-    refreshCounts();
+    // Defer initial count fetch to not block login render
+    const initTimer = setTimeout(() => refreshCounts(), 300);
 
-    if (!user) return;
+    if (!user) return () => clearTimeout(initTimer);
 
-    // Realtime for notifications
     const channel = supabase
       .channel("pending-counts")
-      .on("postgres_changes", { event: "*", schema: "public", table: "app_notifications" }, () => refreshCounts())
-      .on("postgres_changes", { event: "*", schema: "public", table: "leave_requests" }, () => refreshCounts())
-      .on("postgres_changes", { event: "*", schema: "public", table: "time_edit_requests" }, () => refreshCounts())
-      .on("postgres_changes", { event: "*", schema: "public", table: "overtime_requests" }, () => refreshCounts())
+      .on("postgres_changes", { event: "*", schema: "public", table: "app_notifications" }, debouncedRefresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "leave_requests" }, debouncedRefresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "time_edit_requests" }, debouncedRefresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "overtime_requests" }, debouncedRefresh)
       .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
-  }, [user, refreshCounts]);
+    return () => {
+      clearTimeout(initTimer);
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      supabase.removeChannel(channel);
+    };
+  }, [user, refreshCounts, debouncedRefresh]);
 
   return (
     <PendingCountsContext.Provider value={{
