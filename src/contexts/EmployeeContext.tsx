@@ -56,6 +56,7 @@ export interface Employee {
   shift: string;
   faceScanId: string;
   salary: string;
+  positionId?: string;
   status: "active" | "leave" | "inactive";
   homeAddress: string;
   maritalStatus: string;
