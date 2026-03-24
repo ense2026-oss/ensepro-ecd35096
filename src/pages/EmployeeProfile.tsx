@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { TaxDeduction, DEFAULT_TAX_DEDUCTION, calculateTotalDeductions, calculateAnnualIncome, calculateExpenseDeduction, calculateProgressiveTax, formatCurrency } from "@/utils/taxCalculation";
 import { processFileUpload } from "@/utils/fileCompression";
 import LazyImage from "@/components/ui/lazy-image";
+import { supabase } from "@/integrations/supabase/client";
 
 const TAB_CONFIG = [
   { key: "personal",   label: "ข้อมูลส่วนตัว",   icon: User },
