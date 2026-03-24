@@ -187,8 +187,7 @@ const Dashboard = () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
       supabase.removeChannel(channel);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [today, monthStart, monthEnd, currentUser?.id, debouncedFetch]);
+  }, [fetchAll, debouncedFetch, currentUser?.id]);
 
   // ═══════════════════════════════════════════════
   // Derived stats (must be before any early return for hooks rules)
