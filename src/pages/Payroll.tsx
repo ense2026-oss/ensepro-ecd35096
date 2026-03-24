@@ -252,7 +252,7 @@ function PayslipDialog({ open, onClose, emp, payroll }: { open: boolean; onClose
 
         <div className="space-y-4 text-sm">
           <div className="flex items-center gap-3 p-3 rounded-xl" style={{ background: "hsl(var(--muted))" }}>
-            <div className="w-10 h-10 rounded-lg flex items-center justify-center text-sm font-bold" style={{ background: emp.avatarColor, color: emp.avatarTextColor }}>{emp.avatar}</div>
+            <EmployeeAvatar photoUrl={emp.photoUrl} avatar={emp.avatar} avatarColor={emp.avatarColor} avatarTextColor={emp.avatarTextColor} firstName={emp.firstName} size="lg" />
             <div>
               <p className="font-semibold">{emp.prefix}{emp.firstName} {emp.lastName}</p>
               <p className="text-xs text-muted-foreground">{emp.position} • {emp.dept}</p>
