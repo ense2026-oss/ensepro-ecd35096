@@ -192,6 +192,7 @@ function employeeToDb(emp: Partial<Employee>) {
   if (emp.shift !== undefined) mapped.shift = emp.shift;
   if (emp.faceScanId !== undefined) mapped.face_scan_id = emp.faceScanId;
   if (emp.salary !== undefined) mapped.salary = emp.salary;
+  if (emp.positionId !== undefined) mapped.position_id = emp.positionId || null;
   if (emp.status !== undefined) mapped.status = emp.status;
   if (emp.homeAddress !== undefined) mapped.home_address = emp.homeAddress;
   if (emp.maritalStatus !== undefined) mapped.marital_status = emp.maritalStatus;
