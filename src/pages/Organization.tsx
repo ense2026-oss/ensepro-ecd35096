@@ -310,7 +310,6 @@ const Organization = () => {
 
   // Recursive render helper to pass correct assignedEmployees
   const renderPositionNode = (pos: Position, idx: number, total: number, affId: string, parentId: string | null) => {
-    const assigned = positionEmployeeMap.get(pos.id) || [];
     const isHead = parentId === null && idx === 0;
     return (
       <PositionNode
