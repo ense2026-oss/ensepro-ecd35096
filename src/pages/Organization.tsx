@@ -414,8 +414,14 @@ const Organization = () => {
                   </button>
                 </div>
 
-                <div className="ml-6">
-                  {aff.positions.map((pos, idx) => renderPositionNode(pos, idx, aff.positions.length, aff.id, null))}
+                <div className="relative ml-6">
+                  {/* Vertical line from header to first position */}
+                  {aff.positions.length > 0 && (
+                    <div className="absolute left-[11px] top-0 h-4 w-0.5 bg-border" />
+                  )}
+                  <div className="pt-2">
+                    {aff.positions.map((pos, idx) => renderPositionNode(pos, idx, aff.positions.length, aff.id, null))}
+                  </div>
                   {aff.positions.length === 0 && (
                     <p className="text-sm text-muted-foreground py-4 pl-8">ยังไม่มีตำแหน่ง — กดปุ่ม + เพื่อเพิ่ม</p>
                   )}
