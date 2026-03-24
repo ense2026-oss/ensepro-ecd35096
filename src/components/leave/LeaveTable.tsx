@@ -2,7 +2,9 @@ import { CheckCircle, XCircle, FileText } from "lucide-react";
 
 export interface LeaveRecord {
   id: string;
+  employeeId?: string;
   name: string;
+  dept?: string;
   type: string;
   from: string;
   to: string;

@@ -7,21 +7,40 @@ import { useToast } from "@/hooks/use-toast";
 import { usePendingCounts } from "@/contexts/PendingCountsContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEmployees } from "@/contexts/EmployeeContext";
+import { usePermissions } from "@/contexts/PermissionsContext";
 import { supabase } from "@/integrations/supabase/client";
 
 const Leave = () => {
   const { toast } = useToast();
   const { setLeavePending } = usePendingCounts();
-  const { currentUser, hasAdminAccess } = useAuth();
+  const { currentUser, role } = useAuth();
   const { employees: allEmployees } = useEmployees();
+  const { canAction, getScope } = usePermissions();
+
+  const roleKey = role || "employee";
+  const canAdd = canAction(roleKey, "leave", "add");
+  const canApprove = canAction(roleKey, "leave", "approve");
+  const scope = getScope(roleKey, "leave");
+
+  // Get current employee's dept for department scope filtering
+  const currentEmployee = allEmployees.find((e) => e.id === currentUser?.employeeId);
+  const currentDept = currentEmployee?.dept || currentUser?.dept || "";
+
+  // Build employee names list based on scope
+  const scopedEmployees = React.useMemo(() => {
+    if (scope === "self") return allEmployees.filter((e) => e.id === currentUser?.employeeId);
+    if (scope === "department") return allEmployees.filter((e) => e.dept === currentDept);
+    return allEmployees; // "all"
+  }, [allEmployees, scope, currentUser?.employeeId, currentDept]);
+
   const currentUserName = currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : "";
   const employeeNames = React.useMemo(() => {
-    const names = allEmployees.map((e) => `${e.firstName} ${e.lastName}`);
-    if (currentUserName) {
+    const names = scopedEmployees.map((e) => `${e.firstName} ${e.lastName}`);
+    if (currentUserName && names.includes(currentUserName)) {
       return [currentUserName, ...names.filter((n) => n !== currentUserName)];
     }
-    return names;
-  }, [allEmployees, currentUserName]);
+    return names.length > 0 ? names : (currentUserName ? [currentUserName] : []);
+  }, [scopedEmployees, currentUserName]);
 
   const [leaveTypes, setLeaveTypes] = useState<LeaveType[]>([]);
   const [leaves, setLeaves] = useState<LeaveRecord[]>([]);
@@ -40,23 +59,25 @@ const Leave = () => {
         id: lt.id,
         name: lt.name,
         quota: lt.quota,
-        used: 0, // will be calculated from leave_requests
+        used: 0,
         color: lt.color,
         requireDoc: lt.require_doc,
       })));
     }
   }, []);
 
-  // Fetch leave requests
+  // Fetch leave requests (RLS handles row-level filtering)
   const fetchLeaves = useCallback(async () => {
     const { data } = await supabase
       .from("leave_requests")
-      .select("*, employees(first_name, last_name)")
+      .select("*, employees(first_name, last_name, dept)")
       .order("created_at", { ascending: false });
     if (data) {
       const records: LeaveRecord[] = data.map((r: any) => ({
         id: r.id,
+        employeeId: r.employee_id,
         name: r.employees ? `${r.employees.first_name} ${r.employees.last_name}` : "",
+        dept: r.employees?.dept || "",
         type: r.leave_type_name,
         from: r.date_from,
         to: r.date_to,
@@ -67,38 +88,46 @@ const Leave = () => {
       }));
       setLeaves(records);
 
-      // Calculate used quota per leave type
+      // Calculate used quota based on scope
+      const quotaRecords = scope === "self"
+        ? records.filter((r) => r.employeeId === currentUser?.employeeId)
+        : records;
+
       setLeaveTypes((prev) => prev.map((lt) => {
-        const used = records
+        const used = quotaRecords
           .filter((r) => r.type === lt.name && r.status !== "rejected")
           .reduce((sum, r) => sum + r.days, 0);
         return { ...lt, used };
       }));
     }
     setLoading(false);
-  }, []);
+  }, [scope, currentUser?.employeeId]);
 
   useEffect(() => {
     fetchLeaveTypes().then(() => fetchLeaves());
   }, [fetchLeaveTypes, fetchLeaves]);
 
-  // Filter leaves for employee role
-  const userLeaves = hasAdminAccess
-    ? leaves
-    : leaves.filter((l) => currentUser && l.name === `${currentUser.firstName} ${currentUser.lastName}`);
+  // Filter leaves by scope on the client side
+  const scopedLeaves = React.useMemo(() => {
+    if (scope === "self") {
+      return leaves.filter((l) => l.employeeId === currentUser?.employeeId);
+    }
+    if (scope === "department") {
+      return leaves.filter((l) => l.dept === currentDept);
+    }
+    return leaves; // "all"
+  }, [leaves, scope, currentUser?.employeeId, currentDept]);
 
   useEffect(() => {
-    setLeavePending(userLeaves.filter((l) => l.status === "pending").length);
-  }, [userLeaves, setLeavePending]);
+    setLeavePending(scopedLeaves.filter((l) => l.status === "pending").length);
+  }, [scopedLeaves, setLeavePending]);
 
-  const filtered = userLeaves.filter((l) => filterStatus === "all" || l.status === filterStatus);
+  const filtered = scopedLeaves.filter((l) => filterStatus === "all" || l.status === filterStatus);
 
   const handleSubmit = async (record: Omit<LeaveRecord, "id">) => {
-    // Find employee id
     const emp = allEmployees.find((e) => `${e.firstName} ${e.lastName}` === record.name);
     if (!emp) return;
 
-    // Find leave type id
     const lt = leaveTypes.find((t) => t.name === record.type);
     if (!lt) return;
 
@@ -142,14 +171,16 @@ const Leave = () => {
             <Download className="w-4 h-4" />
             Export
           </button>
-          <button
-            onClick={() => setDialogOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold"
-            style={{ background: "linear-gradient(135deg, hsl(var(--primary)), hsl(31 100% 60%))", color: "hsl(var(--primary-foreground))", boxShadow: "0 4px 12px hsl(var(--primary) / 0.3)" }}
-          >
-            <Plus className="w-4 h-4" />
-            ยื่นคำขอลา
-          </button>
+          {canAdd && (
+            <button
+              onClick={() => setDialogOpen(true)}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold"
+              style={{ background: "linear-gradient(135deg, hsl(var(--primary)), hsl(31 100% 60%))", color: "hsl(var(--primary-foreground))", boxShadow: "0 4px 12px hsl(var(--primary) / 0.3)" }}
+            >
+              <Plus className="w-4 h-4" />
+              ยื่นคำขอลา
+            </button>
+          )}
         </div>
       </div>
 
@@ -162,7 +193,7 @@ const Leave = () => {
           { key: "approved", label: "อนุมัติแล้ว" },
           { key: "rejected", label: "ไม่อนุมัติ" },
         ].map((f) => {
-          const count = f.key === "pending" ? userLeaves.filter((l) => l.status === "pending").length : 0;
+          const count = f.key === "pending" ? scopedLeaves.filter((l) => l.status === "pending").length : 0;
           return (
             <button
               key={f.key}
@@ -189,14 +220,19 @@ const Leave = () => {
         })}
       </div>
 
-      <LeaveTable records={filtered} onApprove={hasAdminAccess ? handleApprove : () => {}} onReject={hasAdminAccess ? handleReject : () => {}} hideActions={!hasAdminAccess} />
+      <LeaveTable
+        records={filtered}
+        onApprove={canApprove ? handleApprove : () => {}}
+        onReject={canApprove ? handleReject : () => {}}
+        hideActions={!canApprove}
+      />
 
       <LeaveRequestDialog
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         leaveTypes={leaveTypes}
         onSubmit={handleSubmit}
-        hasAdminAccess={hasAdminAccess}
+        canSelectEmployee={scope !== "self"}
         currentUserName={currentUserName}
         employeeNames={employeeNames}
       />

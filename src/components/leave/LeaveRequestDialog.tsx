@@ -10,14 +10,12 @@ interface LeaveRequestDialogProps {
   onOpenChange: (open: boolean) => void;
   leaveTypes: LeaveType[];
   onSubmit: (record: Omit<LeaveRecord, "id">) => void;
-  hasAdminAccess?: boolean;
+  canSelectEmployee?: boolean;
   currentUserName?: string;
   employeeNames?: string[];
 }
 
-const substituteEmployees = ["สมชาย ใจดี", "นิดา สุขใจ", "มานะ ขยัน", "กาญจนา ใสซื่อ", "ประสิทธิ์ ทำได้"];
-
-const LeaveRequestDialog = ({ open, onOpenChange, leaveTypes, onSubmit, hasAdminAccess, currentUserName, employeeNames = [] }: LeaveRequestDialogProps) => {
+const LeaveRequestDialog = ({ open, onOpenChange, leaveTypes, onSubmit, canSelectEmployee, currentUserName, employeeNames = [] }: LeaveRequestDialogProps) => {
   const [leaveType, setLeaveType] = useState(leaveTypes[0]?.name || "");
   const [selectedEmployee, setSelectedEmployee] = useState(currentUserName || "");
   const [startDate, setStartDate] = useState("");
@@ -29,6 +27,9 @@ const LeaveRequestDialog = ({ open, onOpenChange, leaveTypes, onSubmit, hasAdmin
 
   const selectedType = leaveTypes.find((lt) => lt.name === leaveType);
   const requireDoc = selectedType?.requireDoc ?? false;
+
+  // Build substitute list: all employees except selected employee
+  const substituteList = employeeNames.filter((n) => n !== (selectedEmployee || currentUserName));
 
   const resetForm = () => {
     setLeaveType(leaveTypes[0]?.name || "");
@@ -105,7 +106,7 @@ const LeaveRequestDialog = ({ open, onOpenChange, leaveTypes, onSubmit, hasAdmin
         </DialogHeader>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
-          {hasAdminAccess && employeeNames.length > 0 && (
+          {canSelectEmployee && employeeNames.length > 0 && (
             <div className="sm:col-span-2">
               <label className="block text-sm font-semibold mb-1.5">พนักงาน <span className="text-destructive">*</span></label>
               <select
@@ -135,7 +136,7 @@ const LeaveRequestDialog = ({ open, onOpenChange, leaveTypes, onSubmit, hasAdmin
               className="w-full px-3 py-2.5 text-sm rounded-xl border outline-none bg-muted/30 cursor-pointer"
             >
               <option value="">เลือกผู้ทดแทน</option>
-              {substituteEmployees.map((emp) => <option key={emp}>{emp}</option>)}
+              {substituteList.map((emp) => <option key={emp}>{emp}</option>)}
               <option>ไม่มีผู้ทดแทน (หักเงิน)</option>
             </select>
           </div>
