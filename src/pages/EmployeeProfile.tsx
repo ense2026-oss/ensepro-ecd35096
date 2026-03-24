@@ -582,16 +582,42 @@ const EmployeeProfile = () => {
                 <span className="text-xs font-bold px-2.5 py-1 rounded-lg bg-primary/10 text-primary">{emp.role}</span>
               </div>
               <div className="space-y-1">
-                <p className="text-xs text-muted-foreground">รหัสผ่านปัจจุบัน</p>
+                <p className="text-xs text-muted-foreground">รหัสผ่านเริ่มต้น</p>
                 <div className="flex items-center gap-2">
                   <Lock className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
-                  <p className="text-sm font-medium font-mono tracking-wider">••••••••</p>
+                  {canEditRestricted ? (
+                    <>
+                      <p className="text-sm font-medium font-mono tracking-wider">
+                        {showInitialPassword ? (emp.initialPassword || "—") : "••••••••"}
+                      </p>
+                      <button type="button" onClick={() => setShowInitialPassword(!showInitialPassword)} className="text-muted-foreground hover:text-foreground transition-colors">
+                        {showInitialPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </>
+                  ) : (
+                    <p className="text-sm font-medium font-mono tracking-wider">••••••••</p>
+                  )}
                 </div>
               </div>
             </>
           )}
         </div>
       </div>
+
+      {/* Reset password - admin/HR only */}
+      {canEditRestricted && (
+        <div>
+          <SectionLabel>รีเซ็ตรหัสผ่าน</SectionLabel>
+          <div className="card-base p-5 space-y-3">
+            <p className="text-xs text-muted-foreground">รีเซ็ตรหัสผ่านเป็นค่าเริ่มต้น (Test1234!) เพื่อให้พนักงานเข้าสู่ระบบได้ใหม่</p>
+            <button onClick={handleResetPassword} disabled={resetting}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-primary-foreground bg-destructive hover:bg-destructive/90 shadow-md transition-all disabled:opacity-50">
+              <RefreshCw className={`w-4 h-4 ${resetting ? "animate-spin" : ""}`} /> {resetting ? "กำลังรีเซ็ต..." : "รีเซ็ตรหัสผ่าน"}
+            </button>
+          </div>
+        </div>
+      )}
+
       <div>
         <SectionLabel>เปลี่ยนรหัสผ่าน</SectionLabel>
         <div className="card-base p-5 space-y-3">
