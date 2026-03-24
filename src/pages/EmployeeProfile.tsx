@@ -535,7 +535,13 @@ const EmployeeProfile = () => {
                 <p className="text-xs text-muted-foreground">Role</p>
                 <span className="text-xs font-bold px-2.5 py-1 rounded-lg bg-primary/10 text-primary">{emp.role}</span>
               </div>
-              <Field label="UUID" value={emp.id} />
+              <div className="space-y-1">
+                <p className="text-xs text-muted-foreground">รหัสผ่านปัจจุบัน</p>
+                <div className="flex items-center gap-2">
+                  <Lock className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+                  <p className="text-sm font-medium font-mono tracking-wider">••••••••</p>
+                </div>
+              </div>
             </>
           )}
         </div>
@@ -555,8 +561,13 @@ const EmployeeProfile = () => {
           </div>
           <div className="space-y-1.5">
             <label className="text-xs font-medium text-muted-foreground">ยืนยันรหัสผ่านใหม่</label>
-            <input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="กรอกรหัสผ่านอีกครั้ง"
-              className="w-full px-3 py-2 text-sm rounded-xl border border-border bg-muted/30 outline-none focus:ring-2 focus:ring-primary/30 transition-all" />
+            <div className="relative">
+              <input type={showPassword ? "text" : "password"} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="กรอกรหัสผ่านอีกครั้ง"
+                className="w-full px-3 py-2 pr-10 text-sm rounded-xl border border-border bg-muted/30 outline-none focus:ring-2 focus:ring-primary/30 transition-all" />
+              <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
           </div>
           {passwordError && (
             <div className="flex items-center gap-2 text-xs text-destructive"><AlertCircle className="w-3.5 h-3.5" />{passwordError}</div>
