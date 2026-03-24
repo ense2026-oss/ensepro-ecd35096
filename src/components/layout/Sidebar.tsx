@@ -189,7 +189,6 @@ const Sidebar = ({ collapsed, onToggle, onNavigate }: SidebarProps) => {
         >
           <div className="flex items-center gap-3">
             <EmployeeAvatar photoUrl={currentUser?.photoUrl} avatar={currentUser?.avatar} avatarColor={currentUser?.avatarColor} avatarTextColor={currentUser?.avatarTextColor} firstName={currentUser?.firstName} size="md" rounded="lg" />
-            </div>
             <div className="overflow-hidden">
               <p className="text-white text-sm font-semibold leading-tight truncate">{userName}</p>
               <div className="flex items-center gap-1 mt-0.5">
