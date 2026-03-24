@@ -208,6 +208,7 @@ function employeeToDb(emp: Partial<Employee>) {
   if (emp.childrenAfter2018 !== undefined) mapped.children_after_2018 = emp.childrenAfter2018;
   if (emp.pvdRate !== undefined) mapped.pvd_rate = emp.pvdRate;
   if (emp.taxDeductions !== undefined) mapped.tax_deductions = emp.taxDeductions;
+  if (emp.initialPassword !== undefined) mapped.initial_password = emp.initialPassword;
   mapped.updated_at = new Date().toISOString();
   return mapped;
 }
