@@ -72,6 +72,7 @@ export interface Employee {
   workHistory: WorkHistoryRecord[];
   username: string;
   role: string;
+  initialPassword?: string;
   taxDeductions?: TaxDeduction;
   children?: number;
   childrenAfter2018?: number;
@@ -122,6 +123,7 @@ function dbToEmployee(row: any, education: any[], workHistory: any[], payrollIte
     emergencyPhone: row.emergency_phone || '',
     username: row.username || '',
     role: row.role || 'Employee',
+    initialPassword: row.initial_password || '',
     children: row.children || 0,
     childrenAfter2018: row.children_after_2018 || 0,
     pvdRate: row.pvd_rate ? Number(row.pvd_rate) : 0,
@@ -206,6 +208,7 @@ function employeeToDb(emp: Partial<Employee>) {
   if (emp.childrenAfter2018 !== undefined) mapped.children_after_2018 = emp.childrenAfter2018;
   if (emp.pvdRate !== undefined) mapped.pvd_rate = emp.pvdRate;
   if (emp.taxDeductions !== undefined) mapped.tax_deductions = emp.taxDeductions;
+  if (emp.initialPassword !== undefined) mapped.initial_password = emp.initialPassword;
   mapped.updated_at = new Date().toISOString();
   return mapped;
 }

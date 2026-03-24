@@ -520,6 +520,7 @@ export type Database = {
           id: string
           id_expire_date: string
           id_issue_date: string
+          initial_password: string
           last_name: string
           marital_status: string
           mother_name: string
@@ -569,6 +570,7 @@ export type Database = {
           id?: string
           id_expire_date?: string
           id_issue_date?: string
+          initial_password?: string
           last_name?: string
           marital_status?: string
           mother_name?: string
@@ -618,6 +620,7 @@ export type Database = {
           id?: string
           id_expire_date?: string
           id_issue_date?: string
+          initial_password?: string
           last_name?: string
           marital_status?: string
           mother_name?: string

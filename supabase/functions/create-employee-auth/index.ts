@@ -89,10 +89,10 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Link employee record to auth user
+    // Link employee record to auth user and save initial password
     const { error: updateError } = await supabaseAdmin
       .from("employees")
-      .update({ user_id: userId })
+      .update({ user_id: userId, initial_password: password })
       .eq("id", employeeId);
 
     if (updateError) {
