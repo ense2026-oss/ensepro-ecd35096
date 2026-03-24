@@ -169,13 +169,55 @@ const EmployeeProfile = () => {
     setIsEditing(false);
   };
 
-  const handlePasswordChange = () => {
+  const handlePasswordChange = async () => {
     if (newPassword.length < 8) { setPasswordError("รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร"); return; }
     if (newPassword !== confirmPassword) { setPasswordError("รหัสผ่านไม่ตรงกัน"); return; }
     setPasswordError("");
+    
+    // If admin/HR is changing another user's password, use edge function
+    if (canEditRestricted && employee?.id) {
+      try {
+        const userId = (await supabase.from("employees").select("user_id").eq("id", employee.id).single()).data?.user_id;
+        if (userId) {
+          const { error } = await supabase.functions.invoke("reset-employee-password", {
+            body: { userId, newPassword },
+          });
+          if (error) throw error;
+          // Update initial_password in DB
+          await supabase.from("employees").update({ initial_password: newPassword } as any).eq("id", employee.id);
+          updateEmployee(employee.id, { initialPassword: newPassword } as any);
+        }
+      } catch (err: any) {
+        setPasswordError(err.message || "เกิดข้อผิดพลาด");
+        return;
+      }
+    }
+    
     setNewPassword("");
     setConfirmPassword("");
     toast.success("เปลี่ยนรหัสผ่านสำเร็จ");
+  };
+
+  const handleResetPassword = async () => {
+    if (!employee?.id) return;
+    setResetting(true);
+    const defaultPw = "Test1234!";
+    try {
+      const userId = (await supabase.from("employees").select("user_id").eq("id", employee.id).single()).data?.user_id;
+      if (userId) {
+        const { error } = await supabase.functions.invoke("reset-employee-password", {
+          body: { userId, newPassword: defaultPw },
+        });
+        if (error) throw error;
+        await supabase.from("employees").update({ initial_password: defaultPw } as any).eq("id", employee.id);
+        updateEmployee(employee.id, { initialPassword: defaultPw } as any);
+      }
+      toast.success(`รีเซ็ตรหัสผ่านเป็น ${defaultPw} สำเร็จ`);
+    } catch (err: any) {
+      toast.error(err.message || "เกิดข้อผิดพลาด");
+    } finally {
+      setResetting(false);
+    }
   };
 
   /* ─── TAB: Personal ─── */
