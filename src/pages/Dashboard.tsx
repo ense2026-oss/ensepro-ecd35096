@@ -167,8 +167,8 @@ const Dashboard = () => {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const debouncedFetch = useCallback(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => fetchAll(), 500);
-  }, [today, monthStart, monthEnd, currentUser?.id, viewType]);
+    debounceRef.current = setTimeout(() => fetchAll(), 800);
+  }, [fetchAll]);
 
   useEffect(() => {
     if (!currentUser?.id) return;
