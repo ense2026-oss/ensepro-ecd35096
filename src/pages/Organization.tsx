@@ -55,24 +55,30 @@ const PositionNode = ({
   const isDragging = isDraggingId === position.id;
   const children = position.children || [];
   const assignedEmployees = employeeMap.get(position.id) || [];
+  const isLast = index === total - 1;
 
   return (
     <div className="relative">
+      {/* Vertical line continuing down for non-last siblings */}
+      {!isLast && (
+        <div className="absolute left-[11px] top-0 bottom-0 w-0.5 bg-border" />
+      )}
+
       <div
-        className={`relative flex items-start transition-opacity ${isDragging ? "opacity-40" : ""}`}
+        className={`relative flex items-center transition-opacity ${isDragging ? "opacity-40" : ""}`}
         draggable
         onDragStart={(e) => { e.stopPropagation(); onDragStart(position.id, parentId, index); }}
         onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); onDragOver(e, position.id); }}
         onDragEnd={onDragEnd}
         onDrop={(e) => { e.stopPropagation(); onDrop(e, position.id, parentId, index); }}
       >
-        <div className="flex flex-col items-center" style={{ width: 24, minHeight: "100%" }}>
-          <div className="w-0.5 bg-border" style={{ height: 28 }} />
-          <div className="flex items-center" style={{ height: 0 }}>
-            <div className="h-0.5 bg-border" style={{ width: 20 }} />
-          </div>
-          {(index < total - 1 || children.length > 0) && <div className="w-0.5 bg-border flex-1" />}
-        </div>
+        {/* Vertical line segment (top half to branch point) */}
+        <div className="absolute left-[11px] top-0 h-1/2 w-0.5 bg-border" />
+        {/* Horizontal branch line */}
+        <div className="absolute left-[11px] top-1/2 w-[13px] h-0.5 bg-border" />
+
+        {/* Spacer for line area */}
+        <div style={{ width: 24, flexShrink: 0 }} />
 
         <div className="flex items-center gap-3 py-2 flex-1 min-w-0 flex-wrap">
           <div className={`flex items-center gap-3 px-4 py-3 rounded-2xl bg-card border-2 shadow-sm min-w-[200px] max-w-sm transition-all hover:shadow-md cursor-grab active:cursor-grabbing ${isOver ? "border-primary ring-2 ring-primary/20" : "border-border"}`}>
@@ -82,7 +88,6 @@ const PositionNode = ({
                 {isHead && <Crown className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />}
                 <span className="text-sm font-bold text-foreground truncate">{position.name}</span>
               </div>
-              {/* Assigned employees */}
               {assignedEmployees.length > 0 ? (
                 <div className="flex items-center gap-1 mt-1.5 flex-wrap">
                   <div className="flex -space-x-1.5">
@@ -120,7 +125,7 @@ const PositionNode = ({
       </div>
 
       {children.length > 0 && (
-        <div className="ml-10">
+        <div className="relative ml-[35px]">
           {children.map((child, idx) => (
             <PositionNode
               key={child.id} position={child} index={idx} total={children.length} level={level + 1}
