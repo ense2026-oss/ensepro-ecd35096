@@ -85,27 +85,28 @@ const Dashboard = () => {
   // Determine view type based on role
   const viewType: "admin" | "manager" | "employee" = (isAdmin || isHR) ? "admin" : isManager ? "manager" : "employee";
 
-  const fetchAll = async (initial = false) => {
+  const fetchAll = useCallback(async (initial = false) => {
     if (initial) setLoading(true);
     try {
-      // Always fetch leave types for quotas
-      const ltRes = await supabase.from("leave_types").select("*");
-      if (ltRes.data) setLeaveTypes(ltRes.data);
+      // Parallel: fetch leave_types + employee record simultaneously
+      const empIdDirect = currentUser?.employeeId;
+      const userId = currentUser?.id;
 
-      // Find my employee record
-      let empId: string | null = null;
-      if (currentUser?.employeeId) {
-        empId = currentUser.employeeId;
-      } else if (currentUser?.id) {
-        const { data: emp } = await supabase.from("employees").select("*").eq("user_id", currentUser.id).maybeSingle();
-        if (emp) {
-          empId = emp.id;
-          setMyEmployee(emp);
-        }
-      }
+      const [ltRes, empLookup] = await Promise.all([
+        supabase.from("leave_types").select("*"),
+        empIdDirect
+          ? supabase.from("employees").select("*").eq("id", empIdDirect).maybeSingle()
+          : userId
+            ? supabase.from("employees").select("*").eq("user_id", userId).maybeSingle()
+            : Promise.resolve({ data: null }),
+      ]);
+
+      if (ltRes.data) setLeaveTypes(ltRes.data);
+      const empRecord = empLookup.data;
+      if (empRecord) setMyEmployee(empRecord);
+      const empId = empRecord?.id || empIdDirect || null;
 
       if (viewType === "employee") {
-        // Employee: only fetch own data
         if (!empId) { setLoading(false); return; }
         const [leaveRes, otRes, ciRes] = await Promise.all([
           supabase.from("leave_requests").select("*").eq("employee_id", empId),
@@ -116,11 +117,7 @@ const Dashboard = () => {
         if (otRes.data) setOtRequests(otRes.data);
         setCheckInToday(ciRes.data);
       } else if (viewType === "manager") {
-        // Manager: fetch own dept employees + their data
-        const myEmpRes = myEmployee || (empId ? (await supabase.from("employees").select("*").eq("id", empId).maybeSingle()).data : null);
-        if (myEmpRes) setMyEmployee(myEmpRes);
-        const myDept = myEmpRes?.dept || "";
-
+        const myDept = empRecord?.dept || "";
         const [empRes, attRes, leaveRes, otRes, teRes, monthAttRes, ciRes] = await Promise.all([
           supabase.from("employees").select("id, first_name, last_name, dept, status, user_id, start_date").eq("dept", myDept),
           supabase.from("attendance_records").select("id, employee_id, date, status, late").eq("date", today),
@@ -133,7 +130,6 @@ const Dashboard = () => {
 
         const deptEmpIds = new Set((empRes.data || []).map((e: any) => e.id));
         if (empRes.data) setEmployees(empRes.data);
-        // Filter attendance/leave/ot to dept employees only
         if (attRes.data) setTodayAttendance(attRes.data.filter((a: any) => deptEmpIds.has(a.employee_id)));
         if (leaveRes.data) setLeaveRequests(leaveRes.data.filter((l: any) => deptEmpIds.has(l.employee_id)));
         if (otRes.data) setOtRequests(otRes.data.filter((o: any) => deptEmpIds.has(o.employee_id)));
@@ -141,7 +137,7 @@ const Dashboard = () => {
         if (monthAttRes.data) setMonthlyAttendance(monthAttRes.data.filter((a: any) => deptEmpIds.has(a.employee_id)));
         setCheckInToday(ciRes.data);
       } else {
-        // Admin/HR: fetch everything
+        // Admin/HR: fetch everything in one parallel batch
         const [empRes, attRes, leaveRes, otRes, teRes, monthAttRes, ciRes] = await Promise.all([
           supabase.from("employees").select("id, first_name, last_name, dept, status, user_id, start_date"),
           supabase.from("attendance_records").select("id, employee_id, date, status, late").eq("date", today),
@@ -165,13 +161,14 @@ const Dashboard = () => {
     } finally {
       if (initial) setLoading(false);
     }
-  };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [today, monthStart, monthEnd, currentUser?.id, currentUser?.employeeId, viewType]);
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const debouncedFetch = useCallback(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => fetchAll(), 500);
-  }, [today, monthStart, monthEnd, currentUser?.id, viewType]);
+    debounceRef.current = setTimeout(() => fetchAll(), 800);
+  }, [fetchAll]);
 
   useEffect(() => {
     if (!currentUser?.id) return;
@@ -190,8 +187,7 @@ const Dashboard = () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
       supabase.removeChannel(channel);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [today, monthStart, monthEnd, currentUser?.id, debouncedFetch]);
+  }, [fetchAll, debouncedFetch, currentUser?.id]);
 
   // ═══════════════════════════════════════════════
   // Derived stats (must be before any early return for hooks rules)

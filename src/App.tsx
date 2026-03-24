@@ -78,7 +78,7 @@ const LoginRoute = () => {
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
+    <TooltipProvider delayDuration={300} skipDelayDuration={0}>
       <Toaster />
       <Sonner />
       <BrowserRouter>
