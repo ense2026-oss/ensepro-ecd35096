@@ -8,6 +8,7 @@ import { useEmployees } from "@/contexts/EmployeeContext";
 import type { Employee } from "@/contexts/EmployeeContext";
 import EmployeeFormDialog from "@/components/employees/EmployeeFormDialog";
 import DeleteEmployeeDialog from "@/components/employees/DeleteEmployeeDialog";
+import EmployeeAvatar from "@/components/ui/employee-avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 
@@ -136,8 +137,7 @@ const Employees = () => {
                     <tr key={emp.id} className="border-b hover:bg-muted/30 transition-colors" style={{ borderColor: "hsl(var(--border))" }}>
                       <td className="px-4 py-3.5">
                         <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-xl flex items-center justify-center text-sm font-bold flex-shrink-0"
-                            style={{ background: emp.avatarColor, color: emp.avatarTextColor }}>{emp.avatar}</div>
+                          <EmployeeAvatar photoUrl={emp.photoUrl} avatar={emp.avatar} avatarColor={emp.avatarColor} avatarTextColor={emp.avatarTextColor} firstName={emp.firstName} size="md" />
                           <div>
                             <p className="text-sm font-semibold">{displayName}</p>
                             <p className="text-xs text-muted-foreground">({emp.nickname})</p>
@@ -187,8 +187,7 @@ const Employees = () => {
             return (
               <div key={emp.id} className="card-base p-5 flex flex-col gap-3 animate-fade-in">
                 <div className="flex items-start justify-between">
-                  <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-xl font-bold"
-                    style={{ background: emp.avatarColor, color: emp.avatarTextColor }}>{emp.avatar}</div>
+                  <EmployeeAvatar photoUrl={emp.photoUrl} avatar={emp.avatar} avatarColor={emp.avatarColor} avatarTextColor={emp.avatarTextColor} firstName={emp.firstName} size="xl" rounded="2xl" />
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <button className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground">

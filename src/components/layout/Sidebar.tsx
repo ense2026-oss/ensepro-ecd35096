@@ -4,6 +4,7 @@ import { usePendingCounts } from "@/contexts/PendingCountsContext";
 import { useBranding } from "@/contexts/BrandingContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/contexts/PermissionsContext";
+import EmployeeAvatar from "@/components/ui/employee-avatar";
 import {
   LayoutDashboard,
   Users,
@@ -188,12 +189,7 @@ const Sidebar = ({ collapsed, onToggle, onNavigate }: SidebarProps) => {
           style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)" }}
         >
           <div className="flex items-center gap-3">
-            <div
-              className="w-9 h-9 rounded-lg flex items-center justify-center text-sm font-bold flex-shrink-0"
-              style={{ background: "linear-gradient(135deg, #FF870F, #FF9A3C)", color: "#fff" }}
-            >
-              {userInitials}
-            </div>
+            <EmployeeAvatar photoUrl={currentUser?.photoUrl} avatar={currentUser?.avatar} avatarColor={currentUser?.avatarColor} avatarTextColor={currentUser?.avatarTextColor} firstName={currentUser?.firstName} size="md" rounded="lg" />
             <div className="overflow-hidden">
               <p className="text-white text-sm font-semibold leading-tight truncate">{userName}</p>
               <div className="flex items-center gap-1 mt-0.5">
@@ -209,12 +205,7 @@ const Sidebar = ({ collapsed, onToggle, onNavigate }: SidebarProps) => {
 
       {collapsed && (
         <div className="flex justify-center mt-4">
-          <div
-            className="w-9 h-9 rounded-lg flex items-center justify-center text-sm font-bold"
-            style={{ background: currentUser?.avatarColor || "linear-gradient(135deg, #FF870F, #FF9A3C)", color: currentUser?.avatarTextColor || "#fff" }}
-          >
-            {userInitials}
-          </div>
+          <EmployeeAvatar photoUrl={currentUser?.photoUrl} avatar={currentUser?.avatar} avatarColor={currentUser?.avatarColor} avatarTextColor={currentUser?.avatarTextColor} firstName={currentUser?.firstName} size="md" rounded="lg" />
         </div>
       )}
 

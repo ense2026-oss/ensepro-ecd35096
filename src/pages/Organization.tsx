@@ -10,22 +10,18 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import LazyImage from "@/components/ui/lazy-image";
+import EmployeeAvatarShared from "@/components/ui/employee-avatar";
 
 /* ═══════════════════ Helpers ═══════════════════ */
 const countAllPositions = (positions: Position[]): number =>
   positions.reduce((s, p) => s + 1 + countAllPositions(p.children || []), 0);
 
-/* ═══════════════════ Employee Avatar ═══════════════════ */
-const EmployeeAvatar = ({ emp, size = "sm" }: { emp: Employee; size?: "sm" | "md" }) => {
-  const dim = size === "sm" ? "w-7 h-7 text-[10px]" : "w-9 h-9 text-xs";
-  if (emp.photoUrl) {
-    return <LazyImage src={emp.photoUrl} alt={emp.firstName} className={`${dim} rounded-full object-cover border-2 border-background shadow-sm`} />;
-  }
+/* ═══════════════════ Employee Avatar (org-specific with border) ═══════════════════ */
+const OrgEmployeeAvatar = ({ emp, size = "sm" }: { emp: Employee; size?: "sm" | "md" }) => {
+  const dim = size === "sm" ? "w-7 h-7" : "w-9 h-9";
   return (
-    <div className={`${dim} rounded-full flex items-center justify-center font-bold border-2 border-background shadow-sm`}
-      style={{ backgroundColor: emp.avatarColor, color: emp.avatarTextColor }}>
-      {emp.avatar || emp.firstName?.charAt(0)}
+    <div className={`${dim} border-2 border-background shadow-sm rounded-full overflow-hidden flex-shrink-0`}>
+      <EmployeeAvatarShared photoUrl={emp.photoUrl} avatar={emp.avatar} avatarColor={emp.avatarColor} avatarTextColor={emp.avatarTextColor} firstName={emp.firstName} size={size === "sm" ? "xs" : "md"} rounded="full" className="w-full h-full" />
     </div>
   );
 };
@@ -91,7 +87,7 @@ const PositionNode = ({
                 <div className="flex items-center gap-1 mt-1.5 flex-wrap">
                   <div className="flex -space-x-1.5">
                     {assignedEmployees.slice(0, 4).map((emp) => (
-                      <EmployeeAvatar key={emp.id} emp={emp} size="sm" />
+                      <OrgEmployeeAvatar key={emp.id} emp={emp} size="sm" />
                     ))}
                   </div>
                   <span className="text-xs text-muted-foreground ml-1.5 truncate">
@@ -549,7 +545,7 @@ const Organization = () => {
                 <div className="space-y-1.5">
                   {assignedToThisPos.map((emp) => (
                     <div key={emp.id} className="flex items-center gap-3 px-3 py-2 rounded-xl bg-card border border-border">
-                      <EmployeeAvatar emp={emp} size="md" />
+                      <OrgEmployeeAvatar emp={emp} size="md" />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-semibold truncate">{emp.prefix}{emp.firstName} {emp.lastName}</p>
                         <p className="text-xs text-muted-foreground">{emp.dept} • {emp.position}</p>
@@ -575,7 +571,7 @@ const Organization = () => {
                 {availableEmployees.slice(0, 20).map((emp) => (
                   <button key={emp.id} onClick={() => handleAssignEmployee(emp.id)}
                     className="w-full flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-muted/50 transition-colors text-left">
-                    <EmployeeAvatar emp={emp} size="md" />
+                    <OrgEmployeeAvatar emp={emp} size="md" />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold truncate">{emp.prefix}{emp.firstName} {emp.lastName}</p>
                       <p className="text-xs text-muted-foreground">{emp.dept} • {emp.position}</p>

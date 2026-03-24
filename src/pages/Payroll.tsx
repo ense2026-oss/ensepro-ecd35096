@@ -5,6 +5,7 @@ import {
   Calculator, Receipt, Wallet, ShieldCheck, ChevronDown, ChevronUp, Settings2, Plus, Trash2,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import EmployeeAvatar from "@/components/ui/employee-avatar";
 import {
   calculateAnnualIncome, calculateExpenseDeduction, calculateTotalDeductions,
   calculateProgressiveTax, calculateMonthlyTax, formatCurrency,
@@ -252,7 +253,7 @@ function PayslipDialog({ open, onClose, emp, payroll }: { open: boolean; onClose
 
         <div className="space-y-4 text-sm">
           <div className="flex items-center gap-3 p-3 rounded-xl" style={{ background: "hsl(var(--muted))" }}>
-            <div className="w-10 h-10 rounded-lg flex items-center justify-center text-sm font-bold" style={{ background: emp.avatarColor, color: emp.avatarTextColor }}>{emp.avatar}</div>
+            <EmployeeAvatar photoUrl={emp.photoUrl} avatar={emp.avatar} avatarColor={emp.avatarColor} avatarTextColor={emp.avatarTextColor} firstName={emp.firstName} size="lg" />
             <div>
               <p className="font-semibold">{emp.prefix}{emp.firstName} {emp.lastName}</p>
               <p className="text-xs text-muted-foreground">{emp.position} • {emp.dept}</p>
@@ -512,7 +513,7 @@ const Payroll = () => {
                 <tr key={emp.id} className="border-t hover:bg-muted/30 transition-colors">
                   <td className="px-4 py-3 sticky left-0 z-10 bg-background">
                     <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0" style={{ background: emp.avatarColor, color: emp.avatarTextColor }}>{emp.avatar}</div>
+                      <EmployeeAvatar photoUrl={emp.photoUrl} avatar={emp.avatar} avatarColor={emp.avatarColor} avatarTextColor={emp.avatarTextColor} firstName={emp.firstName} size="sm" rounded="lg" />
                       <div>
                         <p className="font-medium leading-tight">{emp.firstName} {emp.lastName}</p>
                         <p className="text-xs text-muted-foreground">{emp.position}</p>
