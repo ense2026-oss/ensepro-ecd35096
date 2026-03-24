@@ -10,22 +10,18 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import LazyImage from "@/components/ui/lazy-image";
+import EmployeeAvatarShared from "@/components/ui/employee-avatar";
 
 /* ═══════════════════ Helpers ═══════════════════ */
 const countAllPositions = (positions: Position[]): number =>
   positions.reduce((s, p) => s + 1 + countAllPositions(p.children || []), 0);
 
-/* ═══════════════════ Employee Avatar ═══════════════════ */
-const EmployeeAvatar = ({ emp, size = "sm" }: { emp: Employee; size?: "sm" | "md" }) => {
-  const dim = size === "sm" ? "w-7 h-7 text-[10px]" : "w-9 h-9 text-xs";
-  if (emp.photoUrl) {
-    return <LazyImage src={emp.photoUrl} alt={emp.firstName} className={`${dim} rounded-full object-cover border-2 border-background shadow-sm`} />;
-  }
+/* ═══════════════════ Employee Avatar (org-specific with border) ═══════════════════ */
+const OrgEmployeeAvatar = ({ emp, size = "sm" }: { emp: Employee; size?: "sm" | "md" }) => {
+  const dim = size === "sm" ? "w-7 h-7" : "w-9 h-9";
   return (
-    <div className={`${dim} rounded-full flex items-center justify-center font-bold border-2 border-background shadow-sm`}
-      style={{ backgroundColor: emp.avatarColor, color: emp.avatarTextColor }}>
-      {emp.avatar || emp.firstName?.charAt(0)}
+    <div className={`${dim} border-2 border-background shadow-sm rounded-full overflow-hidden flex-shrink-0`}>
+      <EmployeeAvatarShared photoUrl={emp.photoUrl} avatar={emp.avatar} avatarColor={emp.avatarColor} avatarTextColor={emp.avatarTextColor} firstName={emp.firstName} size={size === "sm" ? "xs" : "md"} rounded="full" className="w-full h-full" />
     </div>
   );
 };
