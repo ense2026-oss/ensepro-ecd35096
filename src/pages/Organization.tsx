@@ -87,7 +87,7 @@ const PositionNode = ({
                 <div className="flex items-center gap-1 mt-1.5 flex-wrap">
                   <div className="flex -space-x-1.5">
                     {assignedEmployees.slice(0, 4).map((emp) => (
-                      <EmployeeAvatar key={emp.id} emp={emp} size="sm" />
+                      <OrgEmployeeAvatar key={emp.id} emp={emp} size="sm" />
                     ))}
                   </div>
                   <span className="text-xs text-muted-foreground ml-1.5 truncate">
@@ -545,7 +545,7 @@ const Organization = () => {
                 <div className="space-y-1.5">
                   {assignedToThisPos.map((emp) => (
                     <div key={emp.id} className="flex items-center gap-3 px-3 py-2 rounded-xl bg-card border border-border">
-                      <EmployeeAvatar emp={emp} size="md" />
+                      <OrgEmployeeAvatar emp={emp} size="md" />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-semibold truncate">{emp.prefix}{emp.firstName} {emp.lastName}</p>
                         <p className="text-xs text-muted-foreground">{emp.dept} • {emp.position}</p>
@@ -571,7 +571,7 @@ const Organization = () => {
                 {availableEmployees.slice(0, 20).map((emp) => (
                   <button key={emp.id} onClick={() => handleAssignEmployee(emp.id)}
                     className="w-full flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-muted/50 transition-colors text-left">
-                    <EmployeeAvatar emp={emp} size="md" />
+                    <OrgEmployeeAvatar emp={emp} size="md" />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold truncate">{emp.prefix}{emp.firstName} {emp.lastName}</p>
                       <p className="text-xs text-muted-foreground">{emp.dept} • {emp.position}</p>
