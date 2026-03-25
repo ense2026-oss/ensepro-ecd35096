@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useContracts, ContractStatus, STATUS_LABELS, Contract } from "@/contexts/ContractContext";
 import { useEmployees } from "@/contexts/EmployeeContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { usePermissions } from "@/contexts/PermissionsContext";
 import ContractStatusBadge from "@/components/contracts/ContractStatusBadge";
 import ContractFormDialog from "@/components/contracts/ContractFormDialog";
 import { useNavigate } from "react-router-dom";
