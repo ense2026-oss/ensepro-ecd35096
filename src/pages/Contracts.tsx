@@ -44,8 +44,8 @@ const Contracts = () => {
     return matchSearch && matchStatus;
   });
 
-  const pageTitle = hasAdminAccess ? "จัดการสัญญาจ้าง" : "สัญญาจ้างของฉัน";
-  const pageDesc = hasAdminAccess ? "สร้าง ติดตาม และลงนามสัญญาจ้างพนักงาน" : "ดูและลงนามสัญญาจ้างของคุณ";
+  const pageTitle = canAddContract ? "จัดการสัญญาจ้าง" : "สัญญาจ้างของฉัน";
+  const pageDesc = canAddContract ? "สร้าง ติดตาม และลงนามสัญญาจ้างพนักงาน" : "ดูและลงนามสัญญาจ้างของคุณ";
 
   return (
     <div className="space-y-5">
