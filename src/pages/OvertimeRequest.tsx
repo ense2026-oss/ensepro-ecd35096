@@ -50,9 +50,12 @@ const OTRequestDialog = ({ open, onClose, onSubmit }: {
   onSubmit: (req: Omit<OTRequest, "id" | "createdAt" | "status">) => void;
 }) => {
   const { employees } = useEmployees();
-  const { currentUser, hasAdminAccess } = useAuth();
+  const { currentUser, role } = useAuth();
+  const { canAction, getScope } = usePermissions();
+  const canAdd = canAction(role, 'ot', 'add');
+  const hasAdminAccess = canAdd || canAction(role, 'ot', 'approve');
   const [form, setForm] = useState({
-    employeeId: !hasAdminAccess && currentUser ? currentUser.id : "",
+    employeeId: !canAdd && currentUser ? currentUser.id : "",
     dateFrom: "",
     dateTo: "",
     startTime: "18:00",
