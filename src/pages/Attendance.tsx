@@ -71,32 +71,57 @@ const Attendance = () => {
   const [detailOpen, setDetailOpen] = useState(false);
   const [detailReq, setDetailReq] = useState<TimeEditRequest | null>(null);
 
+  const attendanceRealtimeRef = useRef<ReturnType<typeof setTimeout>>();
+
   // Fetch attendance from DB
   const fetchAttendance = useCallback(async () => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("attendance_records")
       .select("*, employees(first_name, last_name, dept)")
-      .order("date", { ascending: false });
-    if (data) {
-      setAttendance(data.map((r: any) => ({
-        id: r.id,
-        employeeId: r.employee_id,
-        name: r.employees ? `${r.employees.first_name} ${r.employees.last_name}` : "",
-        dept: r.employees?.dept || "",
-        date: r.date,
-        checkIn: r.check_in,
-        checkOut: r.check_out,
-        status: r.status,
-        late: r.late,
-        ot: Number(r.ot_hours) || 0,
-      })));
+      .order("date", { ascending: false })
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      toast.error("โหลดข้อมูลบันทึกเวลาไม่สำเร็จ");
+      setLoading(false);
+      return;
     }
+
+    setAttendance((data ?? []).map((r: any) => ({
+      id: r.id,
+      employeeId: r.employee_id,
+      name: r.employees ? `${r.employees.first_name} ${r.employees.last_name}` : "",
+      dept: r.employees?.dept || "",
+      date: r.date,
+      checkIn: r.check_in,
+      checkOut: r.check_out,
+      status: r.status,
+      late: r.late,
+      ot: Number(r.ot_hours) || 0,
+    })));
     setLoading(false);
   }, []);
+
+  const debouncedFetchAttendance = useCallback(() => {
+    if (attendanceRealtimeRef.current) clearTimeout(attendanceRealtimeRef.current);
+    attendanceRealtimeRef.current = setTimeout(() => fetchAttendance(), 300);
+  }, [fetchAttendance]);
 
   useEffect(() => {
     fetchAttendance();
   }, [fetchAttendance]);
+
+  useEffect(() => {
+    const channel = supabase
+      .channel("attendance-page-realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "attendance_records" }, debouncedFetchAttendance)
+      .subscribe();
+
+    return () => {
+      if (attendanceRealtimeRef.current) clearTimeout(attendanceRealtimeRef.current);
+      supabase.removeChannel(channel);
+    };
+  }, [debouncedFetchAttendance]);
 
   const allNames = useMemo(() => {
     const names = new Set(attendance.map((a) => a.name));
