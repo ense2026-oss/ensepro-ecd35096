@@ -10,6 +10,8 @@ import { toast } from "sonner";
 import TimeInput24 from "@/components/ui/time-input-24";
 import { useTimeEditRequests, type TimeEditRequest } from "@/contexts/TimeEditContext";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { usePermissions } from "@/contexts/PermissionsContext";
 
 interface AttendanceRecord {
   id: string;
@@ -39,6 +41,9 @@ const reqStatusConf: Record<string, { label: string; color: string; bg: string }
 
 const Attendance = () => {
   const { employees } = useEmployees();
+  const { role } = useAuth();
+  const { canAction } = usePermissions();
+  const canApproveTime = canAction(role, 'attendance', 'approve');
   const { setAttendancePending } = usePendingCounts();
   const { editRequests, addEditRequest, updateRequestStatus } = useTimeEditRequests();
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
@@ -627,7 +632,7 @@ const Attendance = () => {
             </div>
           )}
           <DialogFooter className="gap-2">
-            {detailReq?.status === "pending" ? (
+            {detailReq?.status === "pending" && canApproveTime ? (
               <>
                 <button onClick={() => detailReq && handleReject(detailReq.id)} className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold text-white" style={{ background: "hsl(0 84% 50%)" }}>
                   <X className="w-4 h-4" /> ไม่อนุมัติ

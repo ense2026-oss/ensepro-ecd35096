@@ -7,6 +7,7 @@ import { useEmployees } from "@/contexts/EmployeeContext";
 import { usePendingCounts } from "@/contexts/PendingCountsContext";
 import { ThaiDatePicker } from "@/components/ui/thai-date-picker";
 import { useAuth } from "@/contexts/AuthContext";
+import { usePermissions } from "@/contexts/PermissionsContext";
 import TimeInput24 from "@/components/ui/time-input-24";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -49,9 +50,12 @@ const OTRequestDialog = ({ open, onClose, onSubmit }: {
   onSubmit: (req: Omit<OTRequest, "id" | "createdAt" | "status">) => void;
 }) => {
   const { employees } = useEmployees();
-  const { currentUser, hasAdminAccess } = useAuth();
+  const { currentUser, role } = useAuth();
+  const { canAction, getScope } = usePermissions();
+  const canAdd = canAction(role, 'ot', 'add');
+  const hasAdminAccess = canAdd || canAction(role, 'ot', 'approve');
   const [form, setForm] = useState({
-    employeeId: !hasAdminAccess && currentUser ? currentUser.id : "",
+    employeeId: !canAdd && currentUser ? currentUser.id : "",
     dateFrom: "",
     dateTo: "",
     startTime: "18:00",
@@ -206,7 +210,11 @@ const OvertimeRequest = () => {
   const [statusFilter, setStatusFilter] = useState<OTStatus | "all">("all");
   const [typeFilter, setTypeFilter] = useState<OTType | "all">("all");
   const { setOvertimePending } = usePendingCounts();
-  const { currentUser, hasAdminAccess } = useAuth();
+  const { currentUser, role } = useAuth();
+  const { canAction, getScope } = usePermissions();
+  const canApprove = canAction(role, 'ot', 'approve');
+  const canAdd = canAction(role, 'ot', 'add');
+  const otScope = getScope(role, 'ot');
   const [loading, setLoading] = useState(true);
 
   const fetchRequests = useCallback(async () => {
@@ -238,10 +246,15 @@ const OvertimeRequest = () => {
     fetchRequests();
   }, [fetchRequests]);
 
-  // Filter for employee role
-  const userRequests = hasAdminAccess
+  // Filter based on scope
+  const userRequests = otScope === "all"
     ? requests
-    : requests.filter((r) => currentUser && r.employeeName === `${currentUser.firstName} ${currentUser.lastName}`);
+    : otScope === "department"
+      ? requests.filter((r) => {
+          const myDept = currentUser?.dept || "";
+          return r.department === myDept;
+        })
+      : requests.filter((r) => currentUser && r.employeeId === (currentUser.employeeId || currentUser.id));
   const pendingCount = userRequests.filter((r) => r.status === "pending").length;
   const approvedCount = userRequests.filter((r) => r.status === "approved").length;
 
@@ -416,7 +429,7 @@ const OvertimeRequest = () => {
                 <th className="text-center px-4 py-3 font-semibold text-muted-foreground">ชม.</th>
                 <th className="text-center px-4 py-3 font-semibold text-muted-foreground hidden sm:table-cell">ประเภท</th>
                 <th className="text-center px-4 py-3 font-semibold text-muted-foreground">สถานะ</th>
-                {hasAdminAccess && pendingCount > 0 && <th className="text-center px-4 py-3 font-semibold text-muted-foreground">จัดการ</th>}
+                {canApprove && pendingCount > 0 && <th className="text-center px-4 py-3 font-semibold text-muted-foreground">จัดการ</th>}
               </tr>
             </thead>
             <tbody>
@@ -448,7 +461,7 @@ const OvertimeRequest = () => {
                         <StatusIcon className="w-3 h-3" /> {statusCfg.label}
                       </span>
                     </td>
-                    {hasAdminAccess && pendingCount > 0 && (
+                    {canApprove && pendingCount > 0 && (
                       <td className="px-4 py-3 text-center">
                         {req.status === "pending" ? (
                           <div className="flex items-center justify-center gap-1">

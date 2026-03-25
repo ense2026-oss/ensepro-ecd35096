@@ -8,6 +8,7 @@ import {
   ResponsiveContainer, PieChart, Pie, Cell,
 } from "recharts";
 import { useAuth } from "@/contexts/AuthContext";
+import { usePermissions } from "@/contexts/PermissionsContext";
 import { supabase } from "@/integrations/supabase/client";
 import { format, startOfMonth, endOfMonth } from "date-fns";
 import { th } from "date-fns/locale";
@@ -64,7 +65,8 @@ const LEAVE_COLORS: Record<string, string> = {
 const DEFAULT_LEAVE_COLOR = "#60a5fa";
 
 const Dashboard = () => {
-  const { currentUser, role, isAdmin, isHR, isManager, isAccountant, hasAdminAccess } = useAuth();
+  const { currentUser, role } = useAuth();
+  const { getScope } = usePermissions();
   const [loading, setLoading] = useState(true);
 
   // Shared data
@@ -82,8 +84,9 @@ const Dashboard = () => {
   const monthStart = format(startOfMonth(new Date()), "yyyy-MM-dd");
   const monthEnd = format(endOfMonth(new Date()), "yyyy-MM-dd");
 
-  // Determine view type based on role
-  const viewType: "admin" | "manager" | "employee" = (isAdmin || isHR) ? "admin" : isManager ? "manager" : "employee";
+  // Determine view type based on dynamic permissions scope
+  const employeeScope = getScope(role, 'employee');
+  const viewType: "admin" | "manager" | "employee" = employeeScope === "all" ? "admin" : employeeScope === "department" ? "manager" : "employee";
 
   const fetchAll = useCallback(async (initial = false) => {
     if (initial) setLoading(true);

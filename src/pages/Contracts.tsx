@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useContracts, ContractStatus, STATUS_LABELS, Contract } from "@/contexts/ContractContext";
 import { useEmployees } from "@/contexts/EmployeeContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { usePermissions } from "@/contexts/PermissionsContext";
 import ContractStatusBadge from "@/components/contracts/ContractStatusBadge";
 import ContractFormDialog from "@/components/contracts/ContractFormDialog";
 import { useNavigate } from "react-router-dom";
@@ -16,7 +17,11 @@ const ALL_STATUSES: ContractStatus[] = ["draft", "pending_employee", "pending_hr
 const Contracts = () => {
   const { contracts } = useContracts();
   const { employees } = useEmployees();
-  const { currentUser, hasAdminAccess } = useAuth();
+  const { currentUser, role } = useAuth();
+  const { canAction, getScope } = usePermissions();
+  const canAddContract = canAction(role, 'contracts', 'add');
+  const canEditContract = canAction(role, 'contracts', 'edit');
+  const contractScope = getScope(role, 'contracts');
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -28,8 +33,8 @@ const Contracts = () => {
     return e ? `${e.firstName} ${e.lastName}` : id;
   };
 
-  // Employee sees only their own contracts
-  const visibleContracts = hasAdminAccess
+  // Filter based on scope
+  const visibleContracts = contractScope === "all"
     ? contracts
     : contracts.filter((c) => c.employeeId === currentUser?.id);
 
@@ -39,8 +44,8 @@ const Contracts = () => {
     return matchSearch && matchStatus;
   });
 
-  const pageTitle = hasAdminAccess ? "จัดการสัญญาจ้าง" : "สัญญาจ้างของฉัน";
-  const pageDesc = hasAdminAccess ? "สร้าง ติดตาม และลงนามสัญญาจ้างพนักงาน" : "ดูและลงนามสัญญาจ้างของคุณ";
+  const pageTitle = canAddContract ? "จัดการสัญญาจ้าง" : "สัญญาจ้างของฉัน";
+  const pageDesc = canAddContract ? "สร้าง ติดตาม และลงนามสัญญาจ้างพนักงาน" : "ดูและลงนามสัญญาจ้างของคุณ";
 
   return (
     <div className="space-y-5">
@@ -49,7 +54,7 @@ const Contracts = () => {
           <h2 className="text-xl font-bold font-display">{pageTitle}</h2>
           <p className="text-sm text-muted-foreground mt-0.5">{pageDesc}</p>
         </div>
-        {hasAdminAccess && (
+        {canAddContract && (
           <Button onClick={() => { setEditContract(null); setFormOpen(true); }} className="gap-1.5">
             <Plus className="w-4 h-4" />สร้างสัญญาใหม่
           </Button>
@@ -119,7 +124,7 @@ const Contracts = () => {
                     <TableCell className="text-xs">{c.startDate} — {c.endDate}</TableCell>
                     <TableCell><ContractStatusBadge status={c.status} /></TableCell>
                     <TableCell className="text-right">
-                      {hasAdminAccess && c.status === "draft" && (
+                      {canEditContract && c.status === "draft" && (
                         <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setEditContract(c); setFormOpen(true); }}>แก้ไข</Button>
                       )}
                     </TableCell>
