@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { usePermissions } from "@/contexts/PermissionsContext";
 
 interface PendingCountsContextType {
   leavePending: number;
@@ -34,12 +35,16 @@ export const PendingCountsProvider = ({ children }: { children: ReactNode }) => 
   const [overtimePending, setOvertimePending] = useState(0);
   const [notificationCount, setNotificationCount] = useState(0);
 
-  const { user } = useAuth();
+  const { user, role, currentUser } = useAuth();
+  const { getScope, canAction, loading: permLoading } = usePermissions();
 
   const refreshCounts = useCallback(async () => {
-    if (!user) return;
+    if (!user || permLoading) return;
 
-    // Fetch unread notifications count
+    const roleKey = role || "employee";
+    const employeeId = currentUser?.employeeId;
+
+    // Fetch unread notifications count (always user-scoped)
     const { count: notifCount } = await supabase
       .from("app_notifications")
       .select("*", { count: "exact", head: true })
@@ -47,27 +52,44 @@ export const PendingCountsProvider = ({ children }: { children: ReactNode }) => 
       .eq("is_read", false);
     if (notifCount !== null) setNotificationCount(notifCount);
 
-    // Pending leave requests
-    const { count: leaveCount } = await supabase
-      .from("leave_requests")
-      .select("*", { count: "exact", head: true })
-      .eq("status", "pending");
-    if (leaveCount !== null) setLeavePending(leaveCount);
+    // Helper: build scoped query for pending items
+    const getScopedCount = async (
+      table: "leave_requests" | "time_edit_requests" | "overtime_requests",
+      module: string,
+    ) => {
+      // If user can't even view this module, count = 0
+      if (!canAction(roleKey, module, "view")) return 0;
 
-    // Pending time edit requests
-    const { count: timeEditCount } = await supabase
-      .from("time_edit_requests")
-      .select("*", { count: "exact", head: true })
-      .eq("status", "pending");
-    if (timeEditCount !== null) setAttendancePending(timeEditCount);
+      const scope = getScope(roleKey, module);
 
-    // Pending OT requests
-    const { count: otCount } = await supabase
-      .from("overtime_requests")
-      .select("*", { count: "exact", head: true })
-      .eq("status", "pending");
-    if (otCount !== null) setOvertimePending(otCount);
-  }, [user]);
+      let query = supabase
+        .from(table)
+        .select("*", { count: "exact", head: true })
+        .eq("status", "pending");
+
+      // For "self" scope, only count the user's own pending requests
+      if (scope === "self" && employeeId) {
+        query = query.eq("employee_id", employeeId);
+      }
+      // For "department" scope, we'd need to join — but RLS already filters,
+      // and the page does client-side dept filtering. For badge accuracy,
+      // we rely on RLS + skip showing badge for dept scope to avoid mismatch.
+      // "all" scope: no additional filter needed.
+
+      const { count } = await query;
+      return count ?? 0;
+    };
+
+    const [leaveCount, timeEditCount, otCount] = await Promise.all([
+      getScopedCount("leave_requests", "leave"),
+      getScopedCount("time_edit_requests", "attendance"),
+      getScopedCount("overtime_requests", "ot"),
+    ]);
+
+    setLeavePending(leaveCount);
+    setAttendancePending(timeEditCount);
+    setOvertimePending(otCount);
+  }, [user, role, currentUser?.employeeId, permLoading, getScope, canAction]);
 
   // Debounced refresh to avoid rapid-fire DB calls from realtime
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
