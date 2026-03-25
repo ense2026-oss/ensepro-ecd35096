@@ -237,7 +237,7 @@ const RolesSettings = () => {
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <p className="text-sm text-muted-foreground">{roles.length} Role | {totalUsers} ผู้ใช้ทั้งหมด</p>
+        <p className="text-sm text-muted-foreground">{roles.length} Role | {totalUsers} พนักงานที่ผูกบัญชีแล้ว</p>
         <div className="flex items-center gap-2">
           <span className="text-xs text-muted-foreground">จัดการเฉพาะ Role ที่รองรับในระบบ</span>
         </div>
