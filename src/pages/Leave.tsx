@@ -9,11 +9,21 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useEmployees } from "@/contexts/EmployeeContext";
 import { usePermissions } from "@/contexts/PermissionsContext";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const Leave = () => {
   const { toast } = useToast();
   const { setLeavePending } = usePendingCounts();
-  const { currentUser, role } = useAuth();
+  const { currentUser, role, user } = useAuth();
   const { employees: allEmployees } = useEmployees();
   const { canAction, getScope } = usePermissions();
 
@@ -22,15 +32,13 @@ const Leave = () => {
   const canApprove = canAction(roleKey, "leave", "approve");
   const scope = getScope(roleKey, "leave");
 
-  // Get current employee's dept for department scope filtering
   const currentEmployee = allEmployees.find((e) => e.id === currentUser?.employeeId);
   const currentDept = currentEmployee?.dept || currentUser?.dept || "";
 
-  // Build employee names list based on scope
   const scopedEmployees = React.useMemo(() => {
     if (scope === "self") return allEmployees.filter((e) => e.id === currentUser?.employeeId);
     if (scope === "department") return allEmployees.filter((e) => e.dept === currentDept);
-    return allEmployees; // "all"
+    return allEmployees;
   }, [allEmployees, scope, currentUser?.employeeId, currentDept]);
 
   const currentUserName = currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : "";
@@ -47,8 +55,9 @@ const Leave = () => {
   const [filterStatus, setFilterStatus] = useState("all");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [editingRecord, setEditingRecord] = useState<LeaveRecord | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
 
-  // Fetch leave types
   const fetchLeaveTypes = useCallback(async () => {
     const { data } = await supabase
       .from("leave_types")
@@ -66,7 +75,6 @@ const Leave = () => {
     }
   }, []);
 
-  // Fetch leave requests (RLS handles row-level filtering)
   const fetchLeaves = useCallback(async () => {
     const { data } = await supabase
       .from("leave_requests")
@@ -85,10 +93,10 @@ const Leave = () => {
         reason: r.reason,
         status: r.status,
         file: r.has_file,
+        fileUrl: r.file_url || undefined,
       }));
       setLeaves(records);
 
-      // Calculate used quota based on scope
       const quotaRecords = scope === "self"
         ? records.filter((r) => r.employeeId === currentUser?.employeeId)
         : records;
@@ -107,15 +115,10 @@ const Leave = () => {
     fetchLeaveTypes().then(() => fetchLeaves());
   }, [fetchLeaveTypes, fetchLeaves]);
 
-  // Filter leaves by scope on the client side
   const scopedLeaves = React.useMemo(() => {
-    if (scope === "self") {
-      return leaves.filter((l) => l.employeeId === currentUser?.employeeId);
-    }
-    if (scope === "department") {
-      return leaves.filter((l) => l.dept === currentDept);
-    }
-    return leaves; // "all"
+    if (scope === "self") return leaves.filter((l) => l.employeeId === currentUser?.employeeId);
+    if (scope === "department") return leaves.filter((l) => l.dept === currentDept);
+    return leaves;
   }, [leaves, scope, currentUser?.employeeId, currentDept]);
 
   useEffect(() => {
@@ -124,27 +127,92 @@ const Leave = () => {
 
   const filtered = scopedLeaves.filter((l) => filterStatus === "all" || l.status === filterStatus);
 
-  const handleSubmit = async (record: Omit<LeaveRecord, "id">) => {
+  // Upload file to storage
+  const uploadFile = async (file: File, leaveId: string): Promise<string | null> => {
+    const userId = user?.id;
+    if (!userId) return null;
+    const ext = file.name.split(".").pop();
+    const path = `${userId}/${leaveId}.${ext}`;
+    const { error } = await supabase.storage.from("leave-attachments").upload(path, file, { upsert: true });
+    if (error) {
+      console.error("Upload error:", error);
+      return null;
+    }
+    return path;
+  };
+
+  const handleSubmit = async (record: Omit<LeaveRecord, "id">, file?: File) => {
     const emp = allEmployees.find((e) => `${e.firstName} ${e.lastName}` === record.name);
     if (!emp) return;
-
     const lt = leaveTypes.find((t) => t.name === record.type);
     if (!lt) return;
 
-    await supabase.from("leave_requests").insert([{
-      employee_id: emp.id,
-      leave_type_id: lt.id,
-      leave_type_name: record.type,
-      date_from: record.from,
-      date_to: record.to,
-      days: record.days,
-      reason: record.reason,
-      status: "pending",
-      has_file: record.file,
-    }]);
+    if (editingRecord) {
+      // Update existing
+      const updateData: any = {
+        leave_type_id: lt.id,
+        leave_type_name: record.type,
+        date_from: record.from,
+        date_to: record.to,
+        days: record.days,
+        reason: record.reason,
+        has_file: record.file,
+      };
 
+      if (file) {
+        const fileUrl = await uploadFile(file, editingRecord.id);
+        if (fileUrl) {
+          updateData.file_url = fileUrl;
+          updateData.has_file = true;
+        }
+      }
+
+      await supabase.from("leave_requests").update(updateData).eq("id", editingRecord.id);
+      setEditingRecord(null);
+      fetchLeaves();
+      toast({ title: "สำเร็จ", description: "แก้ไขคำขอลาเรียบร้อยแล้ว" });
+    } else {
+      // Insert new
+      const { data: inserted } = await supabase.from("leave_requests").insert([{
+        employee_id: emp.id,
+        leave_type_id: lt.id,
+        leave_type_name: record.type,
+        date_from: record.from,
+        date_to: record.to,
+        days: record.days,
+        reason: record.reason,
+        status: "pending",
+        has_file: record.file,
+      }]).select("id").single();
+
+      if (inserted && file) {
+        const fileUrl = await uploadFile(file, inserted.id);
+        if (fileUrl) {
+          await supabase.from("leave_requests").update({ file_url: fileUrl, has_file: true }).eq("id", inserted.id);
+        }
+      }
+
+      fetchLeaves();
+      toast({ title: "สำเร็จ", description: "ยื่นคำขอลาเรียบร้อยแล้ว" });
+    }
+  };
+
+  const handleEdit = (record: LeaveRecord) => {
+    setEditingRecord(record);
+    setDialogOpen(true);
+  };
+
+  const handleDelete = async () => {
+    if (!deleteId) return;
+    // Delete attached file if exists
+    const record = leaves.find((l) => l.id === deleteId);
+    if (record?.fileUrl) {
+      await supabase.storage.from("leave-attachments").remove([record.fileUrl]);
+    }
+    await supabase.from("leave_requests").delete().eq("id", deleteId);
+    setDeleteId(null);
     fetchLeaves();
-    toast({ title: "สำเร็จ", description: "ยื่นคำขอลาเรียบร้อยแล้ว" });
+    toast({ title: "สำเร็จ", description: "ลบคำขอลาเรียบร้อยแล้ว" });
   };
 
   const handleApprove = async (id: string) => {
@@ -175,7 +243,7 @@ const Leave = () => {
           )}
           {canAdd && (
             <button
-              onClick={() => setDialogOpen(true)}
+              onClick={() => { setEditingRecord(null); setDialogOpen(true); }}
               className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold"
               style={{ background: "linear-gradient(135deg, hsl(var(--primary)), hsl(31 100% 60%))", color: "hsl(var(--primary-foreground))", boxShadow: "0 4px 12px hsl(var(--primary) / 0.3)" }}
             >
@@ -227,17 +295,39 @@ const Leave = () => {
         onApprove={canApprove ? handleApprove : () => {}}
         onReject={canApprove ? handleReject : () => {}}
         hideActions={!canApprove}
+        currentEmployeeId={currentUser?.employeeId}
+        onEdit={handleEdit}
+        onDelete={(id) => setDeleteId(id)}
       />
 
       <LeaveRequestDialog
         open={dialogOpen}
-        onOpenChange={setDialogOpen}
+        onOpenChange={(v) => { setDialogOpen(v); if (!v) setEditingRecord(null); }}
         leaveTypes={leaveTypes}
         onSubmit={handleSubmit}
         canSelectEmployee={scope !== "self"}
         currentUserName={currentUserName}
         employeeNames={employeeNames}
+        editingRecord={editingRecord}
       />
+
+      {/* Delete confirmation dialog */}
+      <AlertDialog open={!!deleteId} onOpenChange={(v) => { if (!v) setDeleteId(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>ยืนยันการลบ</AlertDialogTitle>
+            <AlertDialogDescription>
+              คุณต้องการลบคำขอลานี้หรือไม่? การดำเนินการนี้ไม่สามารถย้อนกลับได้
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>ยกเลิก</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              ลบ
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
