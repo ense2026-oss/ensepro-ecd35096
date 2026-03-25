@@ -1,4 +1,5 @@
-import { CheckCircle, XCircle, FileText } from "lucide-react";
+import { CheckCircle, XCircle, FileText, Pencil, Trash2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 export interface LeaveRecord {
   id: string;
@@ -12,6 +13,7 @@ export interface LeaveRecord {
   reason: string;
   status: string;
   file: boolean;
+  fileUrl?: string;
 }
 
 const statusConf: Record<string, { label: string; color: string; bg: string }> = {
@@ -25,10 +27,24 @@ interface LeaveTableProps {
   onApprove: (id: string) => void;
   onReject: (id: string) => void;
   hideActions?: boolean;
+  currentEmployeeId?: string;
+  onEdit?: (record: LeaveRecord) => void;
+  onDelete?: (id: string) => void;
 }
 
-const LeaveTable = ({ records, onApprove, onReject, hideActions = false }: LeaveTableProps) => {
+const LeaveTable = ({ records, onApprove, onReject, hideActions = false, currentEmployeeId, onEdit, onDelete }: LeaveTableProps) => {
   const hasPending = !hideActions && records.some((r) => r.status === "pending");
+  const hasOwnActions = !!currentEmployeeId && (!!onEdit || !!onDelete);
+
+  const handleViewFile = async (fileUrl: string) => {
+    if (!fileUrl) return;
+    const { data } = await supabase.storage.from("leave-attachments").createSignedUrl(fileUrl, 300);
+    if (data?.signedUrl) {
+      window.open(data.signedUrl, "_blank");
+    }
+  };
+
+  const showActionsCol = hasPending || hasOwnActions;
 
   return (
     <div className="card-base overflow-hidden">
@@ -36,7 +52,7 @@ const LeaveTable = ({ records, onApprove, onReject, hideActions = false }: Leave
         <table className="w-full">
           <thead>
             <tr className="border-b" style={{ borderColor: "hsl(var(--border))" }}>
-              {["พนักงาน", "ประเภท", "วันที่", "จำนวนวัน", "เหตุผล", "เอกสาร", "สถานะ", ...(hasPending ? ["จัดการ"] : [])].map((h) => (
+              {["พนักงาน", "ประเภท", "วันที่", "จำนวนวัน", "เหตุผล", "เอกสาร", "สถานะ", ...(showActionsCol ? ["จัดการ"] : [])].map((h) => (
                 <th key={h} className="text-left px-4 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">
                   {h}
                 </th>
@@ -51,6 +67,7 @@ const LeaveTable = ({ records, onApprove, onReject, hideActions = false }: Leave
             )}
             {records.map((row) => {
               const conf = statusConf[row.status] || statusConf.pending;
+              const isOwnPending = row.employeeId === currentEmployeeId && row.status === "pending";
               return (
                 <tr key={row.id} className="border-b hover:bg-muted/30 transition-colors" style={{ borderColor: "hsl(var(--border))" }}>
                   <td className="px-4 py-3.5">
@@ -69,11 +86,20 @@ const LeaveTable = ({ records, onApprove, onReject, hideActions = false }: Leave
                   </td>
                   <td className="px-4 py-3.5 text-sm text-muted-foreground max-w-32 truncate">{row.reason}</td>
                   <td className="px-4 py-3.5">
-                    {row.file ? (
-                      <button className="flex items-center gap-1 text-xs font-medium" style={{ color: "#FF870F" }}>
+                    {row.file && row.fileUrl ? (
+                      <button
+                        onClick={() => handleViewFile(row.fileUrl!)}
+                        className="flex items-center gap-1 text-xs font-medium hover:underline"
+                        style={{ color: "#FF870F" }}
+                      >
                         <FileText className="w-3.5 h-3.5" />
                         ดูไฟล์
                       </button>
+                    ) : row.file ? (
+                      <span className="flex items-center gap-1 text-xs font-medium text-muted-foreground">
+                        <FileText className="w-3.5 h-3.5" />
+                        มีไฟล์
+                      </span>
                     ) : (
                       <span className="text-xs text-muted-foreground">-</span>
                     )}
@@ -83,18 +109,32 @@ const LeaveTable = ({ records, onApprove, onReject, hideActions = false }: Leave
                       {conf.label}
                     </span>
                   </td>
-                  {hasPending && (
+                  {showActionsCol && (
                     <td className="px-4 py-3.5">
-                      {row.status === "pending" && (
-                        <div className="flex gap-1">
-                          <button onClick={() => onApprove(row.id)} className="p-1.5 rounded-lg hover:bg-muted transition-colors" style={{ color: "hsl(90 100% 30%)" }}>
-                            <CheckCircle className="w-4 h-4" />
+                      <div className="flex gap-1">
+                        {/* Approve/Reject for managers */}
+                        {hasPending && row.status === "pending" && !hideActions && (
+                          <>
+                            <button onClick={() => onApprove(row.id)} className="p-1.5 rounded-lg hover:bg-muted transition-colors" style={{ color: "hsl(90 100% 30%)" }}>
+                              <CheckCircle className="w-4 h-4" />
+                            </button>
+                            <button onClick={() => onReject(row.id)} className="p-1.5 rounded-lg hover:bg-muted transition-colors text-destructive">
+                              <XCircle className="w-4 h-4" />
+                            </button>
+                          </>
+                        )}
+                        {/* Edit/Delete for own pending */}
+                        {isOwnPending && onEdit && (
+                          <button onClick={() => onEdit(row)} className="p-1.5 rounded-lg hover:bg-muted transition-colors text-primary" title="แก้ไข">
+                            <Pencil className="w-4 h-4" />
                           </button>
-                          <button onClick={() => onReject(row.id)} className="p-1.5 rounded-lg hover:bg-muted transition-colors text-destructive">
-                            <XCircle className="w-4 h-4" />
+                        )}
+                        {isOwnPending && onDelete && (
+                          <button onClick={() => onDelete(row.id)} className="p-1.5 rounded-lg hover:bg-muted transition-colors text-destructive" title="ลบ">
+                            <Trash2 className="w-4 h-4" />
                           </button>
-                        </div>
-                      )}
+                        )}
+                      </div>
                     </td>
                   )}
                 </tr>
