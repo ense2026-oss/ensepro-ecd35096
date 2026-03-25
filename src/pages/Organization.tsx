@@ -5,7 +5,7 @@ import { useEmployees, type Employee } from "@/contexts/EmployeeContext";
 import { usePermissions } from "@/contexts/PermissionsContext";
 import { useAuth } from "@/contexts/AuthContext";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose,
 } from "@/components/ui/dialog";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
