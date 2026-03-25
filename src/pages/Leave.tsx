@@ -142,14 +142,13 @@ const Leave = () => {
     return path;
   };
 
-  const handleSubmit = async (record: Omit<LeaveRecord, "id">, file?: File) => {
+  const handleSubmit = async (record: Omit<LeaveRecord, "id">, file?: File, removeExistingFile?: boolean) => {
     const emp = allEmployees.find((e) => `${e.firstName} ${e.lastName}` === record.name);
     if (!emp) return;
     const lt = leaveTypes.find((t) => t.name === record.type);
     if (!lt) return;
 
     if (editingRecord) {
-      // Update existing
       const updateData: any = {
         leave_type_id: lt.id,
         leave_type_name: record.type,
@@ -159,6 +158,13 @@ const Leave = () => {
         reason: record.reason,
         has_file: record.file,
       };
+
+      // Remove existing file from storage if requested
+      if (removeExistingFile && editingRecord.fileUrl) {
+        await supabase.storage.from("leave-attachments").remove([editingRecord.fileUrl]);
+        updateData.file_url = null;
+        updateData.has_file = false;
+      }
 
       if (file) {
         const fileUrl = await uploadFile(file, editingRecord.id);
