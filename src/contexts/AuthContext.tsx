@@ -69,6 +69,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (profileRes.data) setProfile(profileRes.data as Profile);
       if (roleRes.data) setRole(roleRes.data.role as AppRole);
       setEmployeeId(empRes.data?.id ?? null);
+      setEmployeeData(empRes.data ?? null);
     } catch (err) {
       console.error("Error fetching profile/role:", err);
     } finally {
