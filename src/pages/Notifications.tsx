@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { usePendingCounts } from "@/contexts/PendingCountsContext";
 import { useTimeEditRequests, type AppNotification } from "@/contexts/TimeEditContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { usePermissions } from "@/contexts/PermissionsContext";
 import {
   Bell,
   CheckCheck,
