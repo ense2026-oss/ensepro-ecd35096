@@ -54,8 +54,9 @@ const OTRequestDialog = ({ open, onClose, onSubmit }: {
   const { canAction, getScope } = usePermissions();
   const canAdd = canAction(role, 'ot', 'add');
   const hasAdminAccess = canAdd || canAction(role, 'ot', 'approve');
+  const isEmployee = role === "employee";
   const [form, setForm] = useState({
-    employeeId: !canAdd && currentUser ? currentUser.id : "",
+    employeeId: (isEmployee || (!hasAdminAccess)) && currentUser ? currentUser.id : "",
     dateFrom: "",
     dateTo: "",
     startTime: "18:00",
@@ -313,10 +314,12 @@ const OvertimeRequest = () => {
           <p className="text-sm text-muted-foreground mt-0.5">ยื่นคำขอ ติดตาม และอนุมัติการทำงานล่วงเวลา</p>
         </div>
         <div className="flex items-center gap-2">
-          <button className="flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-medium hover:bg-muted transition-colors">
-            <Download className="w-4 h-4" />
-            Export
-          </button>
+          {role !== "employee" && (
+            <button className="flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-medium hover:bg-muted transition-colors">
+              <Download className="w-4 h-4" />
+              Export
+            </button>
+          )}
           <button
             onClick={() => setShowForm(true)}
             className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold"
