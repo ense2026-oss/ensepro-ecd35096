@@ -210,7 +210,11 @@ const OvertimeRequest = () => {
   const [statusFilter, setStatusFilter] = useState<OTStatus | "all">("all");
   const [typeFilter, setTypeFilter] = useState<OTType | "all">("all");
   const { setOvertimePending } = usePendingCounts();
-  const { currentUser, hasAdminAccess } = useAuth();
+  const { currentUser, role } = useAuth();
+  const { canAction, getScope } = usePermissions();
+  const canApprove = canAction(role, 'ot', 'approve');
+  const canAdd = canAction(role, 'ot', 'add');
+  const otScope = getScope(role, 'ot');
   const [loading, setLoading] = useState(true);
 
   const fetchRequests = useCallback(async () => {
