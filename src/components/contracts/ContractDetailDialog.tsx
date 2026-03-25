@@ -97,6 +97,7 @@ const ContractDetailDialog = ({ open, onOpenChange, contract }: Props) => {
               {contract.title}
               <ContractStatusBadge status={contract.status} />
             </DialogTitle>
+            <DialogDescription className="sr-only">รายละเอียดสัญญาจ้าง</DialogDescription>
           </DialogHeader>
 
           {/* Info */}

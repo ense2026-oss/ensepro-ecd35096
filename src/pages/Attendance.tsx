@@ -654,6 +654,7 @@ const Attendance = () => {
               <FileText className="w-5 h-5 text-primary" />
               รายละเอียดคำขอแก้ไขเวลา
             </DialogTitle>
+            <DialogDescription className="sr-only">รายละเอียดคำขอแก้ไขเวลา</DialogDescription>
           </DialogHeader>
           {detailReq && (
             <div className="space-y-4 py-2">

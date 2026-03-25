@@ -130,6 +130,7 @@ const ContractFormDialog = ({ open, onOpenChange, editContract }: Props) => {
       <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{editContract ? "แก้ไขสัญญาจ้าง" : "สร้างสัญญาจ้างใหม่"}</DialogTitle>
+          <DialogDescription className="sr-only">กรอกข้อมูลสัญญาจ้าง</DialogDescription>
         </DialogHeader>
 
         <div className="grid gap-4 py-2">

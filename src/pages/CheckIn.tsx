@@ -529,6 +529,7 @@ const CheckIn = () => {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="font-display">ขอแก้ไขเวลา</DialogTitle>
+            <DialogDescription className="sr-only">ฟอร์มขอแก้ไขเวลาเข้า-ออกงาน</DialogDescription>
           </DialogHeader>
           {editingRecord && (
             <div className="space-y-4">

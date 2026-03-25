@@ -118,6 +118,7 @@ const LeaveTypesSettings = () => {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>{editingId !== null ? "แก้ไขประเภทการลา" : "เพิ่มประเภทการลา"}</DialogTitle>
+            <DialogDescription className="sr-only">กรอกข้อมูลประเภทการลา</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div>

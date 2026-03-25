@@ -111,6 +111,7 @@ const SignatureDialog = ({ open, onOpenChange, onSign, signerName }: Props) => {
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>ลงนาม — {signerName}</DialogTitle>
+          <DialogDescription className="sr-only">ลงนามในสัญญา</DialogDescription>
         </DialogHeader>
 
         <Tabs value={tab} onValueChange={(v) => setTab(v as "draw" | "upload")}>

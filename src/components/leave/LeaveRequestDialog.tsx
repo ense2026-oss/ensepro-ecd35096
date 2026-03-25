@@ -152,6 +152,7 @@ const LeaveRequestDialog = ({ open, onOpenChange, leaveTypes, onSubmit, canSelec
             </span>
             {isEditing ? "แก้ไขคำขอลา" : "ยื่นคำขอลา"}
           </DialogTitle>
+          <DialogDescription className="sr-only">กรอกข้อมูลคำขอลางาน</DialogDescription>
         </DialogHeader>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">

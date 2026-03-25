@@ -206,6 +206,8 @@ const MobileFooterNav = React.forwardRef<HTMLDivElement>((_, ref) => {
       </div>
     </div>
   );
-};
+});
+
+MobileFooterNav.displayName = "MobileFooterNav";
 
 export default MobileFooterNav;

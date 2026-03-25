@@ -98,6 +98,7 @@ const ShiftsSettings = () => {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>{editingId !== null ? "แก้ไขกะการทำงาน" : "เพิ่มกะการทำงาน"}</DialogTitle>
+            <DialogDescription className="sr-only">กรอกข้อมูลกะการทำงาน</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div>

@@ -559,6 +559,7 @@ const Organization = () => {
             <DialogTitle className="flex items-center gap-2">
               <UserPlus className="w-5 h-5 text-blue-600" /> กำหนดบุคคลในตำแหน่ง
             </DialogTitle>
+            <DialogDescription className="sr-only">เลือกพนักงานเพื่อกำหนดในตำแหน่ง</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="px-3 py-2 rounded-xl bg-primary/5 border border-primary/20">
