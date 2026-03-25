@@ -141,6 +141,7 @@ const PositionNode = ({
               parentId={position.id}
               employeeMap={employeeMap}
               isHead={false}
+              canManage={canManage}
             />
           ))}
         </div>
