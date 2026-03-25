@@ -228,6 +228,15 @@ const Leave = () => {
     await supabase.from("leave_requests").update({ status: "approved" }).eq("id", id);
     setLeaves((prev) => prev.map((l) => l.id === id ? { ...l, status: "approved" } : l));
     toast({ title: "อนุมัติแล้ว", description: "อนุมัติคำขอลาเรียบร้อยแล้ว" });
+    const record = leaves.find((l) => l.id === id);
+    if (record) {
+      notifyRequester(record.employeeId, {
+        type: "approval",
+        title: "คำขอลาได้รับการอนุมัติ",
+        description: `คำขอลา ${record.type} ${record.days} วัน (${record.from} - ${record.to}) ได้รับการอนุมัติแล้ว`,
+        targetEmployee: record.name,
+      });
+    }
   };
 
   const handleReject = async (id: string) => {
