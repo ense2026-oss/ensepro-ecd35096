@@ -82,8 +82,9 @@ const Dashboard = () => {
   const monthStart = format(startOfMonth(new Date()), "yyyy-MM-dd");
   const monthEnd = format(endOfMonth(new Date()), "yyyy-MM-dd");
 
-  // Determine view type based on role
-  const viewType: "admin" | "manager" | "employee" = (isAdmin || isHR) ? "admin" : isManager ? "manager" : "employee";
+  // Determine view type based on dynamic permissions scope
+  const employeeScope = getScope(role, 'employee');
+  const viewType: "admin" | "manager" | "employee" = employeeScope === "all" ? "admin" : employeeScope === "department" ? "manager" : "employee";
 
   const fetchAll = useCallback(async (initial = false) => {
     if (initial) setLoading(true);
