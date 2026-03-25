@@ -7,6 +7,7 @@ import { useEmployees } from "@/contexts/EmployeeContext";
 import { usePendingCounts } from "@/contexts/PendingCountsContext";
 import { ThaiDatePicker } from "@/components/ui/thai-date-picker";
 import { useAuth } from "@/contexts/AuthContext";
+import { usePermissions } from "@/contexts/PermissionsContext";
 import TimeInput24 from "@/components/ui/time-input-24";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
