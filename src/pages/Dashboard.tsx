@@ -65,7 +65,8 @@ const LEAVE_COLORS: Record<string, string> = {
 const DEFAULT_LEAVE_COLOR = "#60a5fa";
 
 const Dashboard = () => {
-  const { currentUser, role, isAdmin, isHR, isManager, isAccountant, hasAdminAccess } = useAuth();
+  const { currentUser, role } = useAuth();
+  const { getScope } = usePermissions();
   const [loading, setLoading] = useState(true);
 
   // Shared data
