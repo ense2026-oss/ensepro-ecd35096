@@ -632,7 +632,7 @@ const Attendance = () => {
             </div>
           )}
           <DialogFooter className="gap-2">
-            {detailReq?.status === "pending" ? (
+            {detailReq?.status === "pending" && canApproveTime ? (
               <>
                 <button onClick={() => detailReq && handleReject(detailReq.id)} className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold text-white" style={{ background: "hsl(0 84% 50%)" }}>
                   <X className="w-4 h-4" /> ไม่อนุมัติ
