@@ -246,10 +246,15 @@ const OvertimeRequest = () => {
     fetchRequests();
   }, [fetchRequests]);
 
-  // Filter for employee role
-  const userRequests = hasAdminAccess
+  // Filter based on scope
+  const userRequests = otScope === "all"
     ? requests
-    : requests.filter((r) => currentUser && r.employeeName === `${currentUser.firstName} ${currentUser.lastName}`);
+    : otScope === "department"
+      ? requests.filter((r) => {
+          const myDept = currentUser?.dept || "";
+          return r.department === myDept;
+        })
+      : requests.filter((r) => currentUser && r.employeeId === (currentUser.employeeId || currentUser.id));
   const pendingCount = userRequests.filter((r) => r.status === "pending").length;
   const approvedCount = userRequests.filter((r) => r.status === "approved").length;
 
