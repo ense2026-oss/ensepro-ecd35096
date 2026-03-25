@@ -138,7 +138,7 @@ const MobileFooterNav = React.forwardRef<HTMLDivElement>((_, ref) => {
   const checkInActive = location.pathname === "/check-in";
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 lg:hidden">
+    <div ref={ref} className="fixed bottom-0 left-0 right-0 z-50 lg:hidden">
       <div
         className="relative border-t"
         style={{
