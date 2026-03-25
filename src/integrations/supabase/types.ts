@@ -666,6 +666,7 @@ export type Database = {
           date_to: string
           days: number
           employee_id: string
+          file_url: string | null
           has_file: boolean
           id: string
           leave_type_id: string
@@ -680,6 +681,7 @@ export type Database = {
           date_to?: string
           days?: number
           employee_id: string
+          file_url?: string | null
           has_file?: boolean
           id?: string
           leave_type_id: string
@@ -694,6 +696,7 @@ export type Database = {
           date_to?: string
           days?: number
           employee_id?: string
+          file_url?: string | null
           has_file?: boolean
           id?: string
           leave_type_id?: string
