@@ -70,11 +70,11 @@ const PositionNode = ({
 
       <div
         className={`relative flex items-center transition-opacity ${isDragging ? "opacity-40" : ""}`}
-        draggable
-        onDragStart={(e) => { e.stopPropagation(); onDragStart(position.id, parentId, index); }}
-        onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); onDragOver(e, position.id); }}
-        onDragEnd={onDragEnd}
-        onDrop={(e) => { e.stopPropagation(); onDrop(e, position.id, parentId, index); }}
+        draggable={canManage}
+        onDragStart={canManage ? (e) => { e.stopPropagation(); onDragStart(position.id, parentId, index); } : undefined}
+        onDragOver={canManage ? (e) => { e.preventDefault(); e.stopPropagation(); onDragOver(e, position.id); } : undefined}
+        onDragEnd={canManage ? onDragEnd : undefined}
+        onDrop={canManage ? (e) => { e.stopPropagation(); onDrop(e, position.id, parentId, index); } : undefined}
       >
         {/* Vertical line segment (top half to branch point) */}
         <div className="absolute left-[11px] top-0 h-1/2 w-0.5 bg-border" />
