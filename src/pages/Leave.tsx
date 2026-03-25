@@ -195,6 +195,14 @@ const Leave = () => {
 
       fetchLeaves();
       toast({ title: "สำเร็จ", description: "ยื่นคำขอลาเรียบร้อยแล้ว" });
+
+      // Notify approvers
+      notifyApprovers({
+        type: "leave",
+        title: "คำขอลางานใหม่",
+        description: `${record.name} ยื่นขอลา ${record.type} ${record.days} วัน (${record.from} - ${record.to})`,
+        targetEmployee: record.name,
+      });
     }
   };
 
