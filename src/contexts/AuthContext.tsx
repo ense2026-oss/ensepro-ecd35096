@@ -62,7 +62,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const [profileRes, roleRes, empRes] = await Promise.all([
         supabase.from("profiles").select("*").eq("id", userId).maybeSingle(),
         supabase.from("user_roles").select("role").eq("user_id", userId).maybeSingle(),
-        supabase.from("employees").select("id").eq("user_id", userId).maybeSingle(),
+        supabase.from("employees").select("id, photo_url, dept, position, first_name, last_name, avatar, avatar_color, avatar_text_color").eq("user_id", userId).maybeSingle(),
       ]);
 
       if (profileRes.data) setProfile(profileRes.data as Profile);
