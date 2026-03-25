@@ -9,6 +9,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useEmployees } from "@/contexts/EmployeeContext";
 import { usePermissions } from "@/contexts/PermissionsContext";
 import { supabase } from "@/integrations/supabase/client";
+import { notifyApprovers, notifyRequester } from "@/utils/notifications";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -194,6 +195,14 @@ const Leave = () => {
 
       fetchLeaves();
       toast({ title: "สำเร็จ", description: "ยื่นคำขอลาเรียบร้อยแล้ว" });
+
+      // Notify approvers
+      notifyApprovers({
+        type: "leave",
+        title: "คำขอลางานใหม่",
+        description: `${record.name} ยื่นขอลา ${record.type} ${record.days} วัน (${record.from} - ${record.to})`,
+        targetEmployee: record.name,
+      });
     }
   };
 
@@ -219,12 +228,30 @@ const Leave = () => {
     await supabase.from("leave_requests").update({ status: "approved" }).eq("id", id);
     setLeaves((prev) => prev.map((l) => l.id === id ? { ...l, status: "approved" } : l));
     toast({ title: "อนุมัติแล้ว", description: "อนุมัติคำขอลาเรียบร้อยแล้ว" });
+    const record = leaves.find((l) => l.id === id);
+    if (record) {
+      notifyRequester(record.employeeId, {
+        type: "approval",
+        title: "คำขอลาได้รับการอนุมัติ",
+        description: `คำขอลา ${record.type} ${record.days} วัน (${record.from} - ${record.to}) ได้รับการอนุมัติแล้ว`,
+        targetEmployee: record.name,
+      });
+    }
   };
 
   const handleReject = async (id: string) => {
     await supabase.from("leave_requests").update({ status: "rejected" }).eq("id", id);
     setLeaves((prev) => prev.map((l) => l.id === id ? { ...l, status: "rejected" } : l));
     toast({ title: "ไม่อนุมัติ", description: "ปฏิเสธคำขอลาเรียบร้อยแล้ว", variant: "destructive" });
+    const record = leaves.find((l) => l.id === id);
+    if (record) {
+      notifyRequester(record.employeeId, {
+        type: "approval",
+        title: "คำขอลาไม่ได้รับการอนุมัติ",
+        description: `คำขอลา ${record.type} ${record.days} วัน (${record.from} - ${record.to}) ไม่ได้รับการอนุมัติ`,
+        targetEmployee: record.name,
+      });
+    }
   };
 
   return (

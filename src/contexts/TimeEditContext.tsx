@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useCallback, useEffect, useRef, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { notifyApprovers } from "@/utils/notifications";
 
 export interface TimeEditRequest {
   id: string;
@@ -161,18 +162,14 @@ export const TimeEditProvider = ({ children }: { children: ReactNode }) => {
       new_check_out: req.newCheckOut,
       reason: req.reason,
     });
-    // Auto-add notification for admins (simplified: notify self for now)
-    if (user) {
-      await supabase.from("app_notifications").insert({
-        user_id: user.id,
-        title: "คำขอแก้ไขเวลา",
-        description: `${req.employeeName} ขอแก้ไขเวลา ${req.date} → เข้า ${req.newCheckIn} / ออก ${req.newCheckOut}`,
-        type: "attendance",
-        action_label: "ตรวจสอบ",
-        target_employee: req.employeeName,
-      });
-    }
-  }, [user]);
+    // Notify all admin/hr approvers
+    notifyApprovers({
+      type: "attendance",
+      title: "คำขอแก้ไขเวลาใหม่",
+      description: `${req.employeeName} ขอแก้ไขเวลา ${req.date} → เข้า ${req.newCheckIn} / ออก ${req.newCheckOut}`,
+      targetEmployee: req.employeeName,
+    });
+  }, []);
 
   const updateRequestStatus = useCallback(async (id: string, status: "approved" | "rejected") => {
     await supabase.from("time_edit_requests").update({ status }).eq("id", id);

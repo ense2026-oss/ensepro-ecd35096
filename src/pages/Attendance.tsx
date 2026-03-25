@@ -12,6 +12,7 @@ import { useTimeEditRequests, type TimeEditRequest } from "@/contexts/TimeEditCo
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/contexts/PermissionsContext";
+import { notifyRequester } from "@/utils/notifications";
 
 interface AttendanceRecord {
   id: string;
@@ -231,12 +232,29 @@ const Attendance = () => {
     updateRequestStatus(reqId, "approved");
     toast.success("อนุมัติคำขอแก้ไขเวลาเรียบร้อย");
     setDetailOpen(false);
+    if (req) {
+      notifyRequester(req.employeeId, {
+        type: "approval",
+        title: "คำขอแก้ไขเวลาได้รับการอนุมัติ",
+        description: `คำขอแก้ไขเวลา ${req.date} (เข้า ${req.newCheckIn} / ออก ${req.newCheckOut}) ได้รับการอนุมัติแล้ว`,
+        targetEmployee: req.employeeName,
+      });
+    }
   };
 
   const handleReject = (reqId: string) => {
+    const req = editRequests.find((r) => r.id === reqId);
     updateRequestStatus(reqId, "rejected");
     toast.success("ปฏิเสธคำขอแก้ไขเวลาเรียบร้อย");
     setDetailOpen(false);
+    if (req) {
+      notifyRequester(req.employeeId, {
+        type: "approval",
+        title: "คำขอแก้ไขเวลาไม่ได้รับการอนุมัติ",
+        description: `คำขอแก้ไขเวลา ${req.date} (เข้า ${req.newCheckIn} / ออก ${req.newCheckOut}) ไม่ได้รับการอนุมัติ`,
+        targetEmployee: req.employeeName,
+      });
+    }
   };
 
   const openDetail = (req: TimeEditRequest) => {
