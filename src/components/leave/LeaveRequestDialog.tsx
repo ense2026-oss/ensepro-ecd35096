@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Upload } from "lucide-react";
+import { Upload, X, FileText } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { ThaiDatePicker } from "@/components/ui/thai-date-picker";
 import type { LeaveType } from "./LeaveQuotaCards";
@@ -9,7 +9,7 @@ interface LeaveRequestDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   leaveTypes: LeaveType[];
-  onSubmit: (record: Omit<LeaveRecord, "id">, file?: File) => void;
+  onSubmit: (record: Omit<LeaveRecord, "id">, file?: File, removeExistingFile?: boolean) => void;
   canSelectEmployee?: boolean;
   currentUserName?: string;
   employeeNames?: string[];
@@ -25,21 +25,23 @@ const LeaveRequestDialog = ({ open, onOpenChange, leaveTypes, onSubmit, canSelec
   const [substitute, setSubstitute] = useState("");
   const [fileName, setFileName] = useState("");
   const [file, setFile] = useState<File | null>(null);
+  const [existingFileUrl, setExistingFileUrl] = useState<string | null>(null);
+  const [removeExisting, setRemoveExisting] = useState(false);
   const [errors, setErrors] = useState<Record<string, boolean>>({});
 
   const selectedType = leaveTypes.find((lt) => lt.name === leaveType);
   const requireDoc = selectedType?.requireDoc ?? false;
-
   const substituteList = employeeNames.filter((n) => n !== (selectedEmployee || currentUserName));
 
-  // Populate form when editing
   useEffect(() => {
     if (editingRecord && open) {
       setLeaveType(editingRecord.type);
       setSelectedEmployee(editingRecord.name);
       setReason(editingRecord.reason);
-      setFileName(editingRecord.file ? "ไฟล์แนบเดิม" : "");
-      // Parse Thai date back to ISO for date pickers
+      setExistingFileUrl(editingRecord.fileUrl || null);
+      setRemoveExisting(false);
+      setFileName("");
+      setFile(null);
       setStartDate(parseThaiDate(editingRecord.from));
       setEndDate(parseThaiDate(editingRecord.to));
     } else if (!editingRecord && open) {
@@ -65,6 +67,8 @@ const LeaveRequestDialog = ({ open, onOpenChange, leaveTypes, onSubmit, canSelec
     setSubstitute("");
     setFileName("");
     setFile(null);
+    setExistingFileUrl(null);
+    setRemoveExisting(false);
     setErrors({});
   };
 
@@ -72,7 +76,18 @@ const LeaveRequestDialog = ({ open, onOpenChange, leaveTypes, onSubmit, canSelec
     if (e.target.files?.[0]) {
       setFile(e.target.files[0]);
       setFileName(e.target.files[0].name);
+      setRemoveExisting(true);
     }
+  };
+
+  const handleRemoveExistingFile = () => {
+    setExistingFileUrl(null);
+    setRemoveExisting(true);
+  };
+
+  const handleRemoveNewFile = () => {
+    setFile(null);
+    setFileName("");
   };
 
   const calculateDays = (from: string, to: string): number => {
@@ -92,13 +107,15 @@ const LeaveRequestDialog = ({ open, onOpenChange, leaveTypes, onSubmit, canSelec
     return `${day}/${month}/${year}`;
   };
 
+  const hasFile = !!fileName || (!!existingFileUrl && !removeExisting);
+
   const handleSubmit = () => {
     const newErrors: Record<string, boolean> = {};
     if (!leaveType) newErrors.leaveType = true;
     if (!startDate) newErrors.startDate = true;
     if (!endDate) newErrors.endDate = true;
     if (!reason.trim()) newErrors.reason = true;
-    if (requireDoc && !fileName) newErrors.file = true;
+    if (requireDoc && !hasFile) newErrors.file = true;
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
@@ -115,14 +132,15 @@ const LeaveRequestDialog = ({ open, onOpenChange, leaveTypes, onSubmit, canSelec
       days,
       reason,
       status: "pending",
-      file: !!fileName,
-    }, file || undefined);
+      file: hasFile,
+    }, file || undefined, removeExisting);
 
     resetForm();
     onOpenChange(false);
   };
 
   const isEditing = !!editingRecord;
+  const showExistingFile = isEditing && existingFileUrl && !removeExisting && !file;
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) resetForm(); onOpenChange(v); }}>
@@ -140,32 +158,20 @@ const LeaveRequestDialog = ({ open, onOpenChange, leaveTypes, onSubmit, canSelec
           {canSelectEmployee && employeeNames.length > 0 && !isEditing && (
             <div className="sm:col-span-2">
               <label className="block text-sm font-semibold mb-1.5">พนักงาน <span className="text-destructive">*</span></label>
-              <select
-                value={selectedEmployee}
-                onChange={(e) => setSelectedEmployee(e.target.value)}
-                className="w-full px-3 py-2.5 text-sm rounded-xl border outline-none bg-muted/30 cursor-pointer"
-              >
+              <select value={selectedEmployee} onChange={(e) => setSelectedEmployee(e.target.value)} className="w-full px-3 py-2.5 text-sm rounded-xl border outline-none bg-muted/30 cursor-pointer">
                 {employeeNames.map((name) => <option key={name} value={name}>{name}</option>)}
               </select>
             </div>
           )}
           <div>
             <label className="block text-sm font-semibold mb-1.5">ประเภทการลา <span className="text-destructive">*</span></label>
-            <select
-              value={leaveType}
-              onChange={(e) => setLeaveType(e.target.value)}
-              className={`w-full px-3 py-2.5 text-sm rounded-xl border outline-none bg-muted/30 cursor-pointer ${errors.leaveType ? "border-destructive" : ""}`}
-            >
+            <select value={leaveType} onChange={(e) => setLeaveType(e.target.value)} className={`w-full px-3 py-2.5 text-sm rounded-xl border outline-none bg-muted/30 cursor-pointer ${errors.leaveType ? "border-destructive" : ""}`}>
               {leaveTypes.map((lt) => <option key={lt.id}>{lt.name}</option>)}
             </select>
           </div>
           <div>
             <label className="block text-sm font-semibold mb-1.5">ผู้ทดแทน</label>
-            <select
-              value={substitute}
-              onChange={(e) => setSubstitute(e.target.value)}
-              className="w-full px-3 py-2.5 text-sm rounded-xl border outline-none bg-muted/30 cursor-pointer"
-            >
+            <select value={substitute} onChange={(e) => setSubstitute(e.target.value)} className="w-full px-3 py-2.5 text-sm rounded-xl border outline-none bg-muted/30 cursor-pointer">
               <option value="">เลือกผู้ทดแทน</option>
               {substituteList.map((emp) => <option key={emp}>{emp}</option>)}
               <option>ไม่มีผู้ทดแทน (หักเงิน)</option>
@@ -181,33 +187,41 @@ const LeaveRequestDialog = ({ open, onOpenChange, leaveTypes, onSubmit, canSelec
           </div>
           <div className="sm:col-span-2">
             <label className="block text-sm font-semibold mb-1.5">เหตุผล <span className="text-destructive">*</span></label>
-            <textarea
-              rows={2}
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              className={`w-full px-3 py-2.5 text-sm rounded-xl border outline-none bg-muted/30 resize-none ${errors.reason ? "border-destructive" : ""}`}
-              placeholder="ระบุเหตุผลการลา..."
-            />
+            <textarea rows={2} value={reason} onChange={(e) => setReason(e.target.value)} className={`w-full px-3 py-2.5 text-sm rounded-xl border outline-none bg-muted/30 resize-none ${errors.reason ? "border-destructive" : ""}`} placeholder="ระบุเหตุผลการลา..." />
           </div>
           <div className="sm:col-span-2">
             <label className="block text-sm font-semibold mb-1.5">
               เอกสารแนบ {requireDoc && <span className="text-destructive">* (บังคับสำหรับ{leaveType})</span>}
             </label>
-            <label
-              className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer hover:bg-muted/50 transition-colors block ${errors.file ? "border-destructive" : ""}`}
-              style={{ borderColor: errors.file ? undefined : "hsl(var(--primary))" }}
-            >
-              <input type="file" className="hidden" accept=".jpg,.jpeg,.png,.pdf,.docx" onChange={handleFileChange} />
-              <Upload className="w-8 h-8 mx-auto mb-2 text-primary" />
-              {fileName ? (
-                <p className="text-sm font-medium text-primary">{fileName}</p>
-              ) : (
-                <>
-                  <p className="text-sm font-medium">คลิกเพื่ออัปโหลดไฟล์</p>
-                  <p className="text-xs text-muted-foreground mt-1">รองรับ JPEG, JPG, PNG, PDF, DOCX (สูงสุด 10MB)</p>
-                </>
-              )}
-            </label>
+
+            {showExistingFile && (
+              <div className="flex items-center gap-3 p-3 rounded-xl border bg-muted/30 mb-3">
+                <FileText className="w-5 h-5 text-primary shrink-0" />
+                <span className="text-sm font-medium text-foreground flex-1 truncate">ไฟล์แนบเดิม</span>
+                <button type="button" onClick={handleRemoveExistingFile} className="p-1 rounded-full hover:bg-destructive/10 text-destructive transition-colors" title="ลบไฟล์แนบ">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+
+            {file && fileName && (
+              <div className="flex items-center gap-3 p-3 rounded-xl border bg-muted/30 mb-3">
+                <FileText className="w-5 h-5 text-primary shrink-0" />
+                <span className="text-sm font-medium text-primary flex-1 truncate">{fileName}</span>
+                <button type="button" onClick={handleRemoveNewFile} className="p-1 rounded-full hover:bg-destructive/10 text-destructive transition-colors" title="ลบไฟล์">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+
+            {!showExistingFile && !file && (
+              <label className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer hover:bg-muted/50 transition-colors block ${errors.file ? "border-destructive" : ""}`} style={{ borderColor: errors.file ? undefined : "hsl(var(--primary))" }}>
+                <input type="file" className="hidden" accept=".jpg,.jpeg,.png,.pdf,.docx" onChange={handleFileChange} />
+                <Upload className="w-8 h-8 mx-auto mb-2 text-primary" />
+                <p className="text-sm font-medium">คลิกเพื่ออัปโหลดไฟล์</p>
+                <p className="text-xs text-muted-foreground mt-1">รองรับ JPEG, JPG, PNG, PDF, DOCX (สูงสุด 10MB)</p>
+              </label>
+            )}
           </div>
         </div>
 
@@ -216,19 +230,10 @@ const LeaveRequestDialog = ({ open, onOpenChange, leaveTypes, onSubmit, canSelec
         )}
 
         <DialogFooter className="mt-4">
-          <button
-            type="button"
-            onClick={() => { resetForm(); onOpenChange(false); }}
-            className="px-5 py-2.5 rounded-xl border text-sm font-semibold hover:bg-muted transition-colors"
-          >
+          <button type="button" onClick={() => { resetForm(); onOpenChange(false); }} className="px-5 py-2.5 rounded-xl border text-sm font-semibold hover:bg-muted transition-colors">
             ยกเลิก
           </button>
-          <button
-            type="button"
-            onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleSubmit(); }}
-            className="px-5 py-2.5 rounded-xl text-sm font-bold text-primary-foreground"
-            style={{ background: "linear-gradient(135deg, hsl(var(--primary)), hsl(31 100% 60%))", boxShadow: "0 4px 12px hsl(var(--primary) / 0.3)" }}
-          >
+          <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleSubmit(); }} className="px-5 py-2.5 rounded-xl text-sm font-bold text-primary-foreground" style={{ background: "linear-gradient(135deg, hsl(var(--primary)), hsl(31 100% 60%))", boxShadow: "0 4px 12px hsl(var(--primary) / 0.3)" }}>
             {isEditing ? "บันทึกการแก้ไข" : "ส่งคำขอ"}
           </button>
         </DialogFooter>
