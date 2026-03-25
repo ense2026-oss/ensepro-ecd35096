@@ -420,11 +420,13 @@ const Organization = () => {
                       <span className="text-xs text-muted-foreground">{aff.name}</span>
                     </div>
                   </div>
-                  <button onClick={() => handleAddRoot(aff.id)}
-                    className="w-8 h-8 rounded-full flex items-center justify-center bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
-                    title="เพิ่มตำแหน่งหลัก">
-                    <Plus className="w-4 h-4" />
-                  </button>
+                  {canAdd && (
+                    <button onClick={() => handleAddRoot(aff.id)}
+                      className="w-8 h-8 rounded-full flex items-center justify-center bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                      title="เพิ่มตำแหน่งหลัก">
+                      <Plus className="w-4 h-4" />
+                    </button>
+                  )}
                 </div>
 
                 <div className="relative ml-6">
