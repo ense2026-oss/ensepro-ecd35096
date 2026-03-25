@@ -340,6 +340,7 @@ const Organization = () => {
         parentId={parentId}
         employeeMap={positionEmployeeMap}
         isHead={isHead}
+        canManage={canManage}
       />
     );
   };
