@@ -141,12 +141,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
-  const isAdmin = role === "admin";
-  const isManager = role === "manager";
-  const isHR = role === "hr";
-  const isEmployee = role === "employee";
-  const isAccountant = role === "accountant";
-  const hasAdminAccess = isAdmin || isManager || isHR || isAccountant;
 
   // Build currentUser: available as soon as user exists (with fallback if profile not loaded yet)
   let currentUser: CurrentUser | null = null;
