@@ -33,8 +33,8 @@ const Contracts = () => {
     return e ? `${e.firstName} ${e.lastName}` : id;
   };
 
-  // Employee sees only their own contracts
-  const visibleContracts = hasAdminAccess
+  // Filter based on scope
+  const visibleContracts = contractScope === "all"
     ? contracts
     : contracts.filter((c) => c.employeeId === currentUser?.id);
 
