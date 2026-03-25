@@ -152,6 +152,8 @@ const PositionNode = ({
 
 /* ═══════════════════ Main Component ═══════════════════ */
 const Organization = () => {
+  const { affiliations, addPosition, updatePosition, deletePosition, reorderPositions, loading } = useOrg();
+  const { employees, updateEmployee } = useEmployees();
   const { canAction } = usePermissions();
   const { role } = useAuth();
   const canManage = canAction(role, "organization", "edit");
