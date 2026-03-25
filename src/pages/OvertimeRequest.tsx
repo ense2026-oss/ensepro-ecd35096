@@ -461,7 +461,7 @@ const OvertimeRequest = () => {
                         <StatusIcon className="w-3 h-3" /> {statusCfg.label}
                       </span>
                     </td>
-                    {hasAdminAccess && pendingCount > 0 && (
+                    {canApprove && pendingCount > 0 && (
                       <td className="px-4 py-3 text-center">
                         {req.status === "pending" ? (
                           <div className="flex items-center justify-center gap-1">

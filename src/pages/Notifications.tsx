@@ -49,7 +49,9 @@ const adminOnlyFilters: NotifFilter[] = ["employee", "ot", "system"];
 const Notifications = () => {
   const { notifications, markNotifRead, markAllNotifsRead, deleteNotif, toggleNotifRead } = useTimeEditRequests();
   const { setNotificationCount } = usePendingCounts();
-  const { hasAdminAccess, currentUser } = useAuth();
+  const { currentUser, role } = useAuth();
+  const { canAction } = usePermissions();
+  const hasApprovalAccess = canAction(role, 'leave', 'approve') || canAction(role, 'ot', 'approve');
 
   const [activeFilter, setActiveFilter] = useState<NotifFilter>("all");
 
