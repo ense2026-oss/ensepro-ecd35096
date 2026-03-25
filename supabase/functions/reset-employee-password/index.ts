@@ -11,24 +11,37 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const authHeader = req.headers.get("authorization");
-    if (!authHeader) {
+    const authHeader = req.headers.get("authorization") ?? req.headers.get("Authorization");
+    const accessToken = authHeader?.replace(/^Bearer\s+/i, "").trim();
+
+    if (!accessToken) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
 
-    // Verify caller is admin or HR
+    if (!supabaseUrl || !serviceRoleKey || !anonKey) {
+      return new Response(JSON.stringify({ error: "Server configuration error" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Verify caller from the bearer token explicitly (Edge Functions have no persisted session)
     const callerClient = createClient(supabaseUrl, anonKey, {
-      global: { headers: { Authorization: authHeader } },
+      auth: { autoRefreshToken: false, persistSession: false },
     });
-    const { data: { user: caller } } = await callerClient.auth.getUser();
-    if (!caller) {
+    const {
+      data: { user: caller },
+      error: callerError,
+    } = await callerClient.auth.getUser(accessToken);
+
+    if (callerError || !caller) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -40,13 +53,15 @@ Deno.serve(async (req) => {
     });
 
     // Check caller role
-    const { data: roleData } = await supabaseAdmin
+    const { data: roleData, error: roleError } = await supabaseAdmin
       .from("user_roles")
       .select("role")
       .eq("user_id", caller.id)
-      .single();
+      .in("role", ["admin", "hr"])
+      .limit(1)
+      .maybeSingle();
 
-    if (!roleData || !["admin", "hr"].includes(roleData.role)) {
+    if (roleError || !roleData) {
       return new Response(JSON.stringify({ error: "Permission denied" }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -61,7 +76,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { error } = await supabaseAdmin.auth.admin.updateUser(userId, {
+    const { error } = await supabaseAdmin.auth.admin.updateUserById(userId, {
       password: newPassword,
     });
 
