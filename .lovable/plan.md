@@ -1,61 +1,62 @@
 
 
-## ตรวจสอบและแก้ไขระบบลางาน ให้ทุก Role ใช้งานได้จริงตามสิทธิ์
+## แก้ไขการแสดงหน้าตามสิทธิ์ "สิทธิ์ผู้ใช้งาน" (role_permissions)
 
 ### ปัญหาที่พบ
 
-1. **ใช้ `hasAdminAccess` แบบ hardcode** — ไม่ได้ใช้ PermissionsContext ที่สร้างไว้แล้ว ทำให้ executive ไม่สามารถอนุมัติได้แม้ตั้งค่าสิทธิ์ไว้
-2. **ไม่กรองข้อมูลตาม scope** — manager ที่ตั้ง scope เป็น "department" ยังเห็นข้อมูลทุกคน, employee เห็นข้อมูลตัวเองแต่ใช้วิธี filter ด้วยชื่อ (เปราะบาง)
-3. **โควต้าลาแสดงรวมทุกคน** — employee ควรเห็นโควต้าเฉพาะตัวเอง
-4. **RLS ไม่ครอบคลุม executive/accountant** — role เหล่านี้ไม่ได้อยู่ใน policy `Admin/HR/Manager full access` จึง query/update ไม่ได้
-5. **ปุ่มอนุมัติ/ไม่อนุมัติ** ใช้ `hasAdminAccess` แทน `canAction(role, 'leave', 'approve')`
-6. **รายชื่อผู้ทดแทน hardcode** ใน LeaveRequestDialog
+หลายหน้ายังใช้ `hasAdminAccess` (hardcoded: admin/hr/manager) จาก AuthContext แทนที่จะใช้ `usePermissions` ที่ดึงสิทธิ์จริงจากตาราง `role_permissions` ทำให้:
+- **executive** ที่มีสิทธิ์เต็ม ไม่สามารถอนุมัติ/จัดการข้อมูลได้
+- **accountant** ที่มีสิทธิ์ payroll เต็ม กลับถูกบล็อก
+- Dashboard แสดง viewType ผิด (executive เห็นแค่มุมมอง employee)
+
+### สิทธิ์ปัจจุบันในฐานข้อมูล (สรุป)
+
+| Role | สิทธิ์เด่น | Scope |
+|------|-----------|-------|
+| **admin** | ทุกอย่างเต็ม + settings | all |
+| **executive** | ทุกอย่างเต็ม (ยกเว้น settings) | all |
+| **hr** | ทุกอย่างเต็ม (ยกเว้น settings) | all |
+| **manager** | ทุกอย่างเต็ม (ยกเว้น settings, payroll) | department |
+| **accountant** | payroll เต็ม, ที่เหลือดูอย่างเดียว | payroll=all, อื่น=self |
+| **employee** | ดู+ยื่นลา/OT ของตัวเอง, ไม่เห็น payroll/reports/settings/shifts | self |
 
 ### แผนแก้ไข
 
-#### 1) แก้ RLS policy ของ `leave_requests` ให้ครอบคลุมทุก role ที่มีสิทธิ์
-- เพิ่ม `executive` และ `accountant` ใน policy ตามที่ตั้งค่าไว้ใน role_permissions
-- ใช้ approach: สร้าง DB function `can_access_leave()` ที่ตรวจจาก `role_permissions` table ว่า role นั้นมี `can_view = true` สำหรับ module "leave" หรือไม่
-- หรือ approach ที่ง่ายกว่า: เพิ่ม executive/accountant เข้า policy (เนื่องจาก role เหล่านี้มีจำกัด)
+#### 1) Dashboard — ใช้ usePermissions แทน hardcoded role check
+- แทน `viewType` ที่ใช้ `isAdmin/isHR/isManager` ด้วยการตรวจ `getScope(role, 'employee')`:
+  - scope = "all" → admin view (admin, executive, hr)
+  - scope = "department" → manager view
+  - scope = "self" → employee view
+- import `usePermissions` และลบการพึ่งพา `isAdmin, isHR, isManager, isAccountant, hasAdminAccess`
 
-#### 2) อัปเดต `Leave.tsx` ให้ใช้ `usePermissions`
+#### 2) OvertimeRequest — ใช้ usePermissions
 - แทน `hasAdminAccess` ด้วย:
-  - `canAction(role, 'leave', 'approve')` → แสดงปุ่มอนุมัติ
-  - `canAction(role, 'leave', 'add')` → แสดงปุ่มยื่นคำขอ
-  - `getScope(role, 'leave')` → กรองข้อมูลตาม scope
-- กรอง `leaves` ตาม scope:
-  - **self**: แสดงเฉพาะของตัวเอง
-  - **department**: แสดงเฉพาะพนักงานในแผนกเดียวกัน
-  - **all**: แสดงทั้งหมด
+  - `canAction(role, 'ot', 'approve')` → แสดงปุ่มอนุมัติ
+  - `canAction(role, 'ot', 'add')` → แสดงฟอร์มยื่นคำขอ
+  - `getScope(role, 'ot')` → กรองข้อมูลตาม scope
+- กรองข้อมูลด้วย employee_id แทนการเทียบชื่อ (เปราะบาง)
 
-#### 3) แก้โควต้าลาให้แสดงตาม scope
-- **self**: คำนวณ used จาก leave_requests ของ employee ปัจจุบันเท่านั้น
-- **department/all**: แสดงภาพรวมหรือซ่อน quota cards (เพราะเป็นข้อมูลรวม)
+#### 3) Contracts — ใช้ usePermissions
+- แทน `hasAdminAccess` ด้วย:
+  - `canAction(role, 'contracts', 'add')` → แสดงปุ่มสร้างสัญญา
+  - `canAction(role, 'contracts', 'edit')` → แสดงปุ่มแก้ไข
+  - `getScope(role, 'contracts')` → กรองสัญญาที่เห็น
 
-#### 4) อัปเดต `LeaveRequestDialog`
-- ใช้ `canAction(role, 'leave', 'add')` ควบคุมการแสดง dialog
-- เมื่อ scope = "self": ล็อกชื่อพนักงานเป็นตัวเอง ไม่ให้เลือกคนอื่น
-- เมื่อ scope = "department"/"all": แสดง dropdown เลือกพนักงาน (กรองตาม scope)
-- แทนรายชื่อผู้ทดแทน hardcode ด้วยรายชื่อจริงจาก EmployeeContext
+#### 4) Notifications — ใช้ usePermissions
+- แทน `hasAdminAccess` ด้วย:
+  - `canAction(role, 'leave', 'approve') || canAction(role, 'ot', 'approve')` → แสดงส่วนอนุมัติ
+  - ปรับ filter/stat cards ตามสิทธิ์จริง
 
-#### 5) อัปเดต `LeaveTable`
-- ส่ง `canApprove` prop แทน `hideActions` — ตรวจจาก `canAction(role, 'leave', 'approve')`
+#### 5) Attendance — ตรวจสอบและเพิ่ม permission check
+- เพิ่ม `usePermissions` สำหรับ action controls (edit, approve time edits)
 
 ### ไฟล์ที่จะแก้ไข
-1. **Migration** — เพิ่ม RLS policy ให้ `leave_requests` ครอบคลุม executive/accountant (ผ่าน DB function ที่ตรวจ `role_permissions`)
-2. **`src/pages/Leave.tsx`** — ใช้ usePermissions, กรองตาม scope, โควต้าตาม role
-3. **`src/components/leave/LeaveRequestDialog.tsx`** — กรองรายชื่อตาม scope, แทนผู้ทดแทน hardcode
-4. **`src/components/leave/LeaveTable.tsx`** — ปรับ prop ให้รองรับ canApprove จาก permissions
-5. **`src/components/leave/LeaveQuotaCards.tsx`** — (ไม่ต้องแก้ รับ data จาก parent)
+1. `src/pages/Dashboard.tsx` — ใช้ usePermissions กำหนด viewType
+2. `src/pages/OvertimeRequest.tsx` — แทน hasAdminAccess ด้วย permissions
+3. `src/pages/Contracts.tsx` — แทน hasAdminAccess ด้วย permissions
+4. `src/pages/Notifications.tsx` — แทน hasAdminAccess ด้วย permissions
+5. `src/pages/Attendance.tsx` — เพิ่ม permission-based action controls
 
-### สรุปผลลัพธ์ที่คาดหวัง
-
-| Role | เห็นข้อมูล | ยื่นลา | อนุมัติ | แก้ไข/ลบ |
-|------|-----------|--------|---------|----------|
-| employee | ของตัวเอง | ✓ (ตัวเอง) | ✗ | ✗ |
-| manager | แผนกตัวเอง | ✓ (ลูกน้อง+ตัวเอง) | ✓ | ตามสิทธิ์ |
-| hr | ทั้งหมด | ✓ (ทุกคน) | ✓ | ตามสิทธิ์ |
-| admin | ทั้งหมด | ✓ (ทุกคน) | ✓ | ✓ |
-| executive | ทั้งหมด | ✓ (ตัวเอง) | ✓ | ตามสิทธิ์ |
-| accountant | ทั้งหมด (ดูอย่างเดียว) | ✗ | ✗ | ✗ |
+### ผลลัพธ์
+ทุกหน้าจะแสดงผลและควบคุมสิทธิ์ตามที่ตั้งค่าไว้ในหน้า "สิทธิ์ผู้ใช้งาน" (role_permissions) โดยไม่ hardcode role ใดๆ — เมื่อแอดมินเปลี่ยนสิทธิ์ ระบบจะปรับการแสดงผลทันที
 
