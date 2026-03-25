@@ -210,9 +210,10 @@ const CheckIn = () => {
   const filteredHistory = history.filter((r) => {
     const parts = r.date.split("-");
     if (parts.length < 2) return false;
-    const y = parseInt(parts[0], 10);
+    const ceYear = parseInt(parts[0], 10);
+    const buddhistYear = ceYear + 543;
     const m = parseInt(parts[1], 10) - 1;
-    return y === filterYear && m === filterMonth;
+    return buddhistYear === filterYear && m === filterMonth;
   });
 
   const currentBuddhistYear = new Date().getFullYear() + 543;
