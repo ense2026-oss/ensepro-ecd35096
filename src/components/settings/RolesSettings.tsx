@@ -91,7 +91,7 @@ const RolesSettings = () => {
   const [editingRole, setEditingRole] = useState<string | null>(null);
   const [form, setForm] = useState({ name: "", desc: "", permissions: emptyPermissions() });
 
-  // Load roles from permissions context + count users
+  // Load roles from permissions context + count linked employees per role
   useEffect(() => {
     const loadData = async () => {
       setDbLoading(true);
@@ -104,12 +104,17 @@ const RolesSettings = () => {
         roleMap.get(p.role_name)!.perms.push(p);
       });
 
-      // Count users per role
-      const { data: userRoles } = await supabase.from("user_roles").select("role");
+      // Count employees per role from employees table (source of truth)
+      const { data: empData } = await supabase
+        .from("employees")
+        .select("role")
+        .not("user_id", "is", null);
+      
       const counts: Record<string, number> = {};
-      (userRoles || []).forEach((ur: any) => {
-        const r = ur.role?.toLowerCase() || "";
-        counts[r] = (counts[r] || 0) + 1;
+      (empData || []).forEach((e: any) => {
+        // employees.role uses Title Case (e.g. "Admin"), normalize to lowercase
+        const roleKey = (e.role || "employee").toLowerCase();
+        counts[roleKey] = (counts[roleKey] || 0) + 1;
       });
       setUserCounts(counts);
 
