@@ -4,7 +4,7 @@ import {
   Banknote, Users, TrendingUp, FileText, Search, Download, Eye, X,
   Calculator, Receipt, Wallet, ShieldCheck, ChevronDown, ChevronUp, Settings2, Plus, Trash2,
 } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import EmployeeAvatar from "@/components/ui/employee-avatar";
 import {
   calculateAnnualIncome, calculateExpenseDeduction, calculateTotalDeductions,
