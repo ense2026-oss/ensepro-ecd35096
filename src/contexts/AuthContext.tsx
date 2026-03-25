@@ -37,12 +37,6 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<{ error: string | null }>;
   signup: (email: string, password: string, fullName: string, role?: AppRole) => Promise<{ error: string | null }>;
   logout: () => Promise<void>;
-  isAdmin: boolean;
-  isManager: boolean;
-  isHR: boolean;
-  isEmployee: boolean;
-  isAccountant: boolean;
-  hasAdminAccess: boolean;
   currentUser: CurrentUser | null;
 }
 
