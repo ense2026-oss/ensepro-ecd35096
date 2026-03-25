@@ -2,6 +2,8 @@ import { useState, useMemo } from "react";
 import { Plus, Edit, Trash2, Building2, Users, ChevronDown, ChevronRight, GripVertical, UserPlus, X, Crown } from "lucide-react";
 import { useOrg, type Affiliation, type Position } from "@/contexts/OrgContext";
 import { useEmployees, type Employee } from "@/contexts/EmployeeContext";
+import { usePermissions } from "@/contexts/PermissionsContext";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose,
 } from "@/components/ui/dialog";
