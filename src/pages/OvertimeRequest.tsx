@@ -202,7 +202,7 @@ const OTRequestDialog = ({ open, onClose, onSubmit }: {
   );
 };
 
-// --- Main Page ---
+// Main OT Page
 const OvertimeRequest = () => {
   const [requests, setRequests] = useState<OTRequest[]>([]);
   const [showForm, setShowForm] = useState(false);
