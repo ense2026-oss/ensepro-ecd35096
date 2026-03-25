@@ -85,8 +85,8 @@ const PositionNode = ({
         <div style={{ width: 24, flexShrink: 0 }} />
 
         <div className="flex items-center gap-3 py-2 flex-1 min-w-0 flex-wrap">
-          <div className={`flex items-center gap-3 px-4 py-3 rounded-2xl bg-card border-2 shadow-sm min-w-[200px] max-w-sm transition-all hover:shadow-md cursor-grab active:cursor-grabbing ${isOver ? "border-primary ring-2 ring-primary/20" : "border-border"}`}>
-            <GripVertical className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+          <div className={`flex items-center gap-3 px-4 py-3 rounded-2xl bg-card border-2 shadow-sm min-w-[200px] max-w-sm transition-all hover:shadow-md ${canManage ? "cursor-grab active:cursor-grabbing" : ""} ${isOver ? "border-primary ring-2 ring-primary/20" : "border-border"}`}>
+            {canManage && <GripVertical className="w-4 h-4 text-muted-foreground flex-shrink-0" />}
             <div className="flex flex-col min-w-0 flex-1">
               <div className="flex items-center gap-1.5">
                 {isHead && <Crown className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />}
