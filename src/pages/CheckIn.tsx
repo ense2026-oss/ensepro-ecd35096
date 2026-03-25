@@ -226,7 +226,9 @@ const CheckIn = () => {
   const handleCheckIn = async () => {
     if (!canCheckIn || !nearest || !employeeId) return;
     const time = nowTime();
-    await supabase.from("check_in_records").insert({
+    const isLate = time > "08:30";
+    // Save to check_in_records
+    const { error: checkInError } = await supabase.from("check_in_records").insert({
       employee_id: employeeId,
       date: todayStr,
       check_in: time,
@@ -234,14 +236,34 @@ const CheckIn = () => {
       within_radius: true,
       source: "gps",
     });
+    if (checkInError) {
+      toast({ title: "เกิดข้อผิดพลาด", description: checkInError.message, variant: "destructive" });
+      return;
+    }
+    // Also upsert to attendance_records so it appears on the Attendance page
+    await supabase.from("attendance_records").upsert({
+      employee_id: employeeId,
+      date: todayStr,
+      check_in: time,
+      check_out: "-",
+      status: isLate ? "late" : "present",
+      late: isLate,
+      ot_hours: 0,
+    }, { onConflict: "employee_id,date" });
     fetchHistory();
     toast({ title: "ลงเวลาเข้างานสำเร็จ", description: `เวลา ${time} ณ ${nearest.location.name}` });
   };
 
   const handleCheckOut = async () => {
-    if (!canCheckIn || !nearest || !todayRecord) return;
+    if (!canCheckIn || !nearest || !todayRecord || !employeeId) return;
     const time = nowTime();
+    // Update check_in_records
     await supabase.from("check_in_records").update({ check_out: time }).eq("id", todayRecord.id);
+    // Also update attendance_records
+    await supabase.from("attendance_records")
+      .update({ check_out: time })
+      .eq("employee_id", employeeId)
+      .eq("date", todayStr);
     fetchHistory();
     toast({ title: "ลงเวลาออกงานสำเร็จ", description: `เวลา ${time} ณ ${nearest.location.name}` });
   };
