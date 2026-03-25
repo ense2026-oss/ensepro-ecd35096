@@ -482,6 +482,7 @@ const ShiftManagement = () => {
         <DialogContent className="sm:max-w-xl">
           <DialogHeader>
             <DialogTitle>{editAssignId !== null ? "แก้ไขการกำหนดกะ" : "กำหนดกะการทำงานล่วงหน้า"}</DialogTitle>
+            <DialogDescription className="sr-only">กำหนดกะการทำงานให้พนักงาน</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="grid grid-cols-3 gap-3">
