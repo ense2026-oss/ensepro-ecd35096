@@ -243,6 +243,15 @@ const Leave = () => {
     await supabase.from("leave_requests").update({ status: "rejected" }).eq("id", id);
     setLeaves((prev) => prev.map((l) => l.id === id ? { ...l, status: "rejected" } : l));
     toast({ title: "ไม่อนุมัติ", description: "ปฏิเสธคำขอลาเรียบร้อยแล้ว", variant: "destructive" });
+    const record = leaves.find((l) => l.id === id);
+    if (record) {
+      notifyRequester(record.employeeId, {
+        type: "approval",
+        title: "คำขอลาไม่ได้รับการอนุมัติ",
+        description: `คำขอลา ${record.type} ${record.days} วัน (${record.from} - ${record.to}) ไม่ได้รับการอนุมัติ`,
+        targetEmployee: record.name,
+      });
+    }
   };
 
   return (

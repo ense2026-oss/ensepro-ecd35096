@@ -305,12 +305,30 @@ const OvertimeRequest = () => {
     await supabase.from("overtime_requests").update({ status: "approved", approved_by: currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : "Admin" }).eq("id", id);
     setRequests((prev) => prev.map((r) => r.id === id ? { ...r, status: "approved" as OTStatus } : r));
     toast.success("อนุมัติ OT เรียบร้อย");
+    const req = requests.find((r) => r.id === id);
+    if (req) {
+      notifyRequester(req.employeeId, {
+        type: "approval",
+        title: "คำขอ OT ได้รับการอนุมัติ",
+        description: `คำขอ OT ${req.date} (${req.startTime}-${req.endTime}) ${req.hours} ชม. ได้รับการอนุมัติแล้ว`,
+        targetEmployee: req.employeeName,
+      });
+    }
   };
 
   const handleReject = async (id: string) => {
     await supabase.from("overtime_requests").update({ status: "rejected" }).eq("id", id);
     setRequests((prev) => prev.map((r) => r.id === id ? { ...r, status: "rejected" as OTStatus } : r));
     toast.success("ปฏิเสธ OT เรียบร้อย");
+    const req = requests.find((r) => r.id === id);
+    if (req) {
+      notifyRequester(req.employeeId, {
+        type: "approval",
+        title: "คำขอ OT ไม่ได้รับการอนุมัติ",
+        description: `คำขอ OT ${req.date} (${req.startTime}-${req.endTime}) ${req.hours} ชม. ไม่ได้รับการอนุมัติ`,
+        targetEmployee: req.employeeName,
+      });
+    }
   };
 
   return (
