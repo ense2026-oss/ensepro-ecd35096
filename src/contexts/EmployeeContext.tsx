@@ -343,6 +343,17 @@ export const EmployeeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const { error } = await supabase.from("employees").update(dbData).eq("id", id);
     if (error) { console.error("Update employee error:", error); throw error; }
 
+    // Sync role to user_roles if role changed
+    if (data.role !== undefined) {
+      try {
+        await supabase.functions.invoke("sync-employee-role", {
+          body: { action: "sync_role", employeeId: id, newRole: data.role },
+        });
+      } catch (syncErr) {
+        console.error("Role sync failed:", syncErr);
+      }
+    }
+
     // Re-sync education if provided
     if (data.education !== undefined) {
       await supabase.from("employee_education").delete().eq("employee_id", id);
