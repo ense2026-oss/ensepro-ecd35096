@@ -178,6 +178,7 @@ function CustomItemsDialog({
             <Settings2 className="w-5 h-5" style={{ color: "hsl(var(--primary))" }} />
             แก้ไขรายการ - {emp.firstName} {emp.lastName}
           </DialogTitle>
+          <DialogDescription className="sr-only">แก้ไขรายการเงินเดือน</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-5">
