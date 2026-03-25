@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Upload } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { ThaiDatePicker } from "@/components/ui/thai-date-picker";
@@ -9,13 +9,14 @@ interface LeaveRequestDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   leaveTypes: LeaveType[];
-  onSubmit: (record: Omit<LeaveRecord, "id">) => void;
+  onSubmit: (record: Omit<LeaveRecord, "id">, file?: File) => void;
   canSelectEmployee?: boolean;
   currentUserName?: string;
   employeeNames?: string[];
+  editingRecord?: LeaveRecord | null;
 }
 
-const LeaveRequestDialog = ({ open, onOpenChange, leaveTypes, onSubmit, canSelectEmployee, currentUserName, employeeNames = [] }: LeaveRequestDialogProps) => {
+const LeaveRequestDialog = ({ open, onOpenChange, leaveTypes, onSubmit, canSelectEmployee, currentUserName, employeeNames = [], editingRecord }: LeaveRequestDialogProps) => {
   const [leaveType, setLeaveType] = useState(leaveTypes[0]?.name || "");
   const [selectedEmployee, setSelectedEmployee] = useState(currentUserName || "");
   const [startDate, setStartDate] = useState("");
@@ -23,13 +24,37 @@ const LeaveRequestDialog = ({ open, onOpenChange, leaveTypes, onSubmit, canSelec
   const [reason, setReason] = useState("");
   const [substitute, setSubstitute] = useState("");
   const [fileName, setFileName] = useState("");
+  const [file, setFile] = useState<File | null>(null);
   const [errors, setErrors] = useState<Record<string, boolean>>({});
 
   const selectedType = leaveTypes.find((lt) => lt.name === leaveType);
   const requireDoc = selectedType?.requireDoc ?? false;
 
-  // Build substitute list: all employees except selected employee
   const substituteList = employeeNames.filter((n) => n !== (selectedEmployee || currentUserName));
+
+  // Populate form when editing
+  useEffect(() => {
+    if (editingRecord && open) {
+      setLeaveType(editingRecord.type);
+      setSelectedEmployee(editingRecord.name);
+      setReason(editingRecord.reason);
+      setFileName(editingRecord.file ? "ไฟล์แนบเดิม" : "");
+      // Parse Thai date back to ISO for date pickers
+      setStartDate(parseThaiDate(editingRecord.from));
+      setEndDate(parseThaiDate(editingRecord.to));
+    } else if (!editingRecord && open) {
+      resetForm();
+    }
+  }, [editingRecord, open]);
+
+  const parseThaiDate = (thaiDate: string): string => {
+    if (!thaiDate) return "";
+    const parts = thaiDate.split("/");
+    if (parts.length !== 3) return "";
+    const [day, month, yearBE] = parts;
+    const yearCE = parseInt(yearBE) - 543;
+    return `${yearCE}-${month}-${day}`;
+  };
 
   const resetForm = () => {
     setLeaveType(leaveTypes[0]?.name || "");
@@ -39,11 +64,13 @@ const LeaveRequestDialog = ({ open, onOpenChange, leaveTypes, onSubmit, canSelec
     setReason("");
     setSubstitute("");
     setFileName("");
+    setFile(null);
     setErrors({});
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files?.[0]) {
+      setFile(e.target.files[0]);
       setFileName(e.target.files[0].name);
     }
   };
@@ -89,24 +116,28 @@ const LeaveRequestDialog = ({ open, onOpenChange, leaveTypes, onSubmit, canSelec
       reason,
       status: "pending",
       file: !!fileName,
-    });
+    }, file || undefined);
 
     resetForm();
     onOpenChange(false);
   };
+
+  const isEditing = !!editingRecord;
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) resetForm(); onOpenChange(v); }}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 font-display">
-            <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-primary-foreground" style={{ background: "hsl(var(--primary))" }}>+</span>
-            ยื่นคำขอลา
+            <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-primary-foreground" style={{ background: "hsl(var(--primary))" }}>
+              {isEditing ? "✎" : "+"}
+            </span>
+            {isEditing ? "แก้ไขคำขอลา" : "ยื่นคำขอลา"}
           </DialogTitle>
         </DialogHeader>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
-          {canSelectEmployee && employeeNames.length > 0 && (
+          {canSelectEmployee && employeeNames.length > 0 && !isEditing && (
             <div className="sm:col-span-2">
               <label className="block text-sm font-semibold mb-1.5">พนักงาน <span className="text-destructive">*</span></label>
               <select
@@ -158,28 +189,26 @@ const LeaveRequestDialog = ({ open, onOpenChange, leaveTypes, onSubmit, canSelec
               placeholder="ระบุเหตุผลการลา..."
             />
           </div>
-          {requireDoc && (
-            <div className="sm:col-span-2">
-              <label className="block text-sm font-semibold mb-1.5">
-                ใบรับรองแพทย์ <span className="text-destructive">* (บังคับสำหรับ{leaveType})</span>
-              </label>
-              <label
-                className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer hover:bg-muted/50 transition-colors block ${errors.file ? "border-destructive" : ""}`}
-                style={{ borderColor: errors.file ? undefined : "hsl(var(--primary))" }}
-              >
-                <input type="file" className="hidden" accept=".jpg,.jpeg,.png,.pdf,.docx" onChange={handleFileChange} />
-                <Upload className="w-8 h-8 mx-auto mb-2 text-primary" />
-                {fileName ? (
-                  <p className="text-sm font-medium text-primary">{fileName}</p>
-                ) : (
-                  <>
-                    <p className="text-sm font-medium">คลิกเพื่ออัปโหลดไฟล์</p>
-                    <p className="text-xs text-muted-foreground mt-1">รองรับ JPEG, JPG, PNG, PDF, DOCX (สูงสุด 10MB)</p>
-                  </>
-                )}
-              </label>
-            </div>
-          )}
+          <div className="sm:col-span-2">
+            <label className="block text-sm font-semibold mb-1.5">
+              เอกสารแนบ {requireDoc && <span className="text-destructive">* (บังคับสำหรับ{leaveType})</span>}
+            </label>
+            <label
+              className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer hover:bg-muted/50 transition-colors block ${errors.file ? "border-destructive" : ""}`}
+              style={{ borderColor: errors.file ? undefined : "hsl(var(--primary))" }}
+            >
+              <input type="file" className="hidden" accept=".jpg,.jpeg,.png,.pdf,.docx" onChange={handleFileChange} />
+              <Upload className="w-8 h-8 mx-auto mb-2 text-primary" />
+              {fileName ? (
+                <p className="text-sm font-medium text-primary">{fileName}</p>
+              ) : (
+                <>
+                  <p className="text-sm font-medium">คลิกเพื่ออัปโหลดไฟล์</p>
+                  <p className="text-xs text-muted-foreground mt-1">รองรับ JPEG, JPG, PNG, PDF, DOCX (สูงสุด 10MB)</p>
+                </>
+              )}
+            </label>
+          </div>
         </div>
 
         {Object.keys(errors).length > 0 && (
@@ -200,7 +229,7 @@ const LeaveRequestDialog = ({ open, onOpenChange, leaveTypes, onSubmit, canSelec
             className="px-5 py-2.5 rounded-xl text-sm font-bold text-primary-foreground"
             style={{ background: "linear-gradient(135deg, hsl(var(--primary)), hsl(31 100% 60%))", boxShadow: "0 4px 12px hsl(var(--primary) / 0.3)" }}
           >
-            ส่งคำขอ
+            {isEditing ? "บันทึกการแก้ไข" : "ส่งคำขอ"}
           </button>
         </DialogFooter>
       </DialogContent>
