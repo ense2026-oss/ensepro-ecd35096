@@ -111,20 +111,22 @@ const PositionNode = ({
             </div>
           </div>
 
-          <div className="flex items-center gap-1.5">
-            <button onClick={() => onAssign(position)} className="w-8 h-8 rounded-full flex items-center justify-center bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 transition-colors" title="กำหนดบุคคล">
-              <UserPlus className="w-4 h-4" />
-            </button>
-            <button onClick={() => onAddSub(position)} className="w-8 h-8 rounded-full flex items-center justify-center bg-primary/10 text-primary hover:bg-primary/20 transition-colors" title="เพิ่มตำแหน่งย่อย">
-              <Plus className="w-4 h-4" />
-            </button>
-            <button onClick={() => onEdit(position)} className="w-8 h-8 rounded-full flex items-center justify-center bg-accent text-accent-foreground hover:bg-accent/80 transition-colors" title="แก้ไข">
-              <Edit className="w-4 h-4" />
-            </button>
-            <button onClick={() => onDelete(position)} className="w-8 h-8 rounded-full flex items-center justify-center bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors" title="ลบ">
-              <Trash2 className="w-4 h-4" />
-            </button>
-          </div>
+          {canManage && (
+            <div className="flex items-center gap-1.5">
+              <button onClick={() => onAssign(position)} className="w-8 h-8 rounded-full flex items-center justify-center bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 transition-colors" title="กำหนดบุคคล">
+                <UserPlus className="w-4 h-4" />
+              </button>
+              <button onClick={() => onAddSub(position)} className="w-8 h-8 rounded-full flex items-center justify-center bg-primary/10 text-primary hover:bg-primary/20 transition-colors" title="เพิ่มตำแหน่งย่อย">
+                <Plus className="w-4 h-4" />
+              </button>
+              <button onClick={() => onEdit(position)} className="w-8 h-8 rounded-full flex items-center justify-center bg-accent text-accent-foreground hover:bg-accent/80 transition-colors" title="แก้ไข">
+                <Edit className="w-4 h-4" />
+              </button>
+              <button onClick={() => onDelete(position)} className="w-8 h-8 rounded-full flex items-center justify-center bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors" title="ลบ">
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
