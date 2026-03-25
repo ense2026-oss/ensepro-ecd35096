@@ -57,7 +57,7 @@ const Notifications = () => {
 
   // Filter notifications by role and ownership
   const currentUserFullName = currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : "";
-  const roleNotifications = hasAdminAccess
+  const roleNotifications = hasApprovalAccess
     ? notifications
     : notifications.filter((n) => {
         // Hide admin-only types
@@ -83,7 +83,7 @@ const Notifications = () => {
   });
 
   // Filter options by role
-  const filterOptions = hasAdminAccess
+  const filterOptions = hasApprovalAccess
     ? allFilterOptions
     : allFilterOptions.filter((f) => !adminOnlyFilters.includes(f.key));
 
@@ -91,21 +91,21 @@ const Notifications = () => {
   const statCards = [
     { title: "ทั้งหมด", value: totalCount, color: "#FF870F", bg: "hsl(31 100% 93%)", icon: Bell },
     { title: "ยังไม่อ่าน", value: unreadCount, color: "hsl(0 84% 55%)", bg: "hsl(0 84% 95%)", icon: Mail },
-    ...(hasAdminAccess
+    ...(hasApprovalAccess
       ? [{ title: "รออนุมัติ", value: roleNotifications.filter((n) => n.actionLabel && !n.read).length, color: "hsl(220 90% 50%)", bg: "hsl(220 90% 93%)", icon: FileText }]
       : []),
     { title: "อ่านแล้ว", value: totalCount - unreadCount, color: "hsl(90 100% 35%)", bg: "hsl(90 100% 92%)", icon: MailOpen },
   ];
 
   // Type breakdown – filter by role
-  const visibleTypes = hasAdminAccess
+  const visibleTypes = hasApprovalAccess
     ? Object.entries(typeConfig)
     : Object.entries(typeConfig).filter(([key]) => !adminOnlyTypes.includes(key as NotifType));
 
   return (
     <div className="space-y-6 w-full overflow-hidden">
       {/* Stat cards */}
-      <div className={`grid grid-cols-2 ${hasAdminAccess ? "lg:grid-cols-4" : "lg:grid-cols-3"} gap-4`}>
+      <div className={`grid grid-cols-2 ${hasApprovalAccess ? "lg:grid-cols-4" : "lg:grid-cols-3"} gap-4`}>
         {statCards.map((s) => (
           <div key={s.title} className="card-base p-5 animate-fade-in">
             <div className="flex items-start justify-between mb-2">
@@ -122,8 +122,8 @@ const Notifications = () => {
       </div>
 
       {/* Main content */}
-      <div className={`grid grid-cols-1 ${hasAdminAccess ? "lg:grid-cols-3" : ""} gap-6`}>
-        <div className={`${hasAdminAccess ? "lg:col-span-2" : ""} card-base p-3 sm:p-5 overflow-hidden`}>
+      <div className={`grid grid-cols-1 ${hasApprovalAccess ? "lg:grid-cols-3" : ""} gap-6`}>
+        <div className={`${hasApprovalAccess ? "lg:col-span-2" : ""} card-base p-3 sm:p-5 overflow-hidden`}>
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-bold font-display">รายการแจ้งเตือน</h3>
             <div className="flex items-center gap-2">
@@ -191,7 +191,7 @@ const Notifications = () => {
                     </div>
                     <span className="text-[11px] text-muted-foreground whitespace-nowrap flex-shrink-0">{n.time}</span>
                     <div className="flex items-center gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                      {hasAdminAccess && n.actionLabel && !n.read && (
+                      {hasApprovalAccess && n.actionLabel && !n.read && (
                         <button onClick={() => markNotifRead(n.id)} className="text-[11px] font-semibold px-2 py-1 rounded-lg" style={{ background: "#FF870F", color: "#fff" }}>
                           {n.actionLabel}
                         </button>
@@ -211,7 +211,7 @@ const Notifications = () => {
         </div>
 
         {/* Right sidebar – admin only */}
-        {hasAdminAccess && (
+        {hasApprovalAccess && (
           <div className="space-y-6">
             <div className="card-base p-5">
               <div className="flex items-center justify-between mb-4">
