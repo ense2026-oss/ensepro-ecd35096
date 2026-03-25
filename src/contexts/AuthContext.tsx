@@ -54,6 +54,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [profile, setProfile] = useState<Profile | null>(null);
   const [role, setRole] = useState<AppRole>("employee");
   const [employeeId, setEmployeeId] = useState<string | null>(null);
+  const [employeeData, setEmployeeData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [profileReady, setProfileReady] = useState(false);
 
@@ -62,12 +63,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const [profileRes, roleRes, empRes] = await Promise.all([
         supabase.from("profiles").select("*").eq("id", userId).maybeSingle(),
         supabase.from("user_roles").select("role").eq("user_id", userId).maybeSingle(),
-        supabase.from("employees").select("id").eq("user_id", userId).maybeSingle(),
+        supabase.from("employees").select("id, photo_url, dept, position, first_name, last_name, avatar, avatar_color, avatar_text_color").eq("user_id", userId).maybeSingle(),
       ]);
 
       if (profileRes.data) setProfile(profileRes.data as Profile);
       if (roleRes.data) setRole(roleRes.data.role as AppRole);
       setEmployeeId(empRes.data?.id ?? null);
+      setEmployeeData(empRes.data ?? null);
     } catch (err) {
       console.error("Error fetching profile/role:", err);
     } finally {
@@ -153,22 +155,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Build currentUser: available as soon as user exists (with fallback if profile not loaded yet)
   let currentUser: CurrentUser | null = null;
   if (user) {
+    const empFirstName = employeeData?.first_name || "";
+    const empLastName = employeeData?.last_name || "";
     const nameParts = (profile?.full_name || user.user_metadata?.full_name || user.email || "").split(" ");
-    const firstName = nameParts[0] || "";
-    const lastName = nameParts.slice(1).join(" ") || "";
+    const firstName = empFirstName || nameParts[0] || "";
+    const lastName = empLastName || nameParts.slice(1).join(" ") || "";
     currentUser = {
       id: user.id,
       firstName,
       lastName,
       role: role === "hr" ? "HR" : role.charAt(0).toUpperCase() + role.slice(1),
-      avatar: firstName.charAt(0) || "U",
-      avatarColor: "hsl(30 70% 90%)",
-      avatarTextColor: "hsl(30 70% 35%)",
-      photoUrl: profile?.avatar_url || undefined,
+      avatar: employeeData?.avatar || firstName.charAt(0) || "U",
+      avatarColor: employeeData?.avatar_color || "hsl(30 70% 90%)",
+      avatarTextColor: employeeData?.avatar_text_color || "hsl(30 70% 35%)",
+      photoUrl: employeeData?.photo_url || profile?.avatar_url || undefined,
       username: profile?.username || user.email || "",
       email: user.email || "",
-      dept: "",
-      position: "",
+      dept: employeeData?.dept || "",
+      position: employeeData?.position || "",
       employeeId,
     };
   }

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { Search, Bell, ChevronDown, Settings, User, LogOut, Menu, MapPin, Clock, CalendarDays, Users, FileText, LayoutDashboard, GitBranch } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { usePermissions } from "@/contexts/PermissionsContext";
 import EmployeeAvatar from "@/components/ui/employee-avatar";
 import { usePendingCounts } from "@/contexts/PendingCountsContext";
 import { useTimeEditRequests } from "@/contexts/TimeEditContext";
@@ -14,7 +15,9 @@ interface TopbarProps {
 
 const Topbar = ({ onMenuToggle, pageTitle = "Dashboard", pageSubtitle = "ภาพรวมระบบ HR" }: TopbarProps) => {
   const navigate = useNavigate();
-  const { currentUser, hasAdminAccess, logout } = useAuth();
+  const { currentUser, role, logout } = useAuth();
+  const { canAction } = usePermissions();
+  const canAccessSettings = canAction(role, 'settings', 'view');
   const { setNotificationCount } = usePendingCounts();
   const [showProfile, setShowProfile] = useState(false);
   const [showNotif, setShowNotif] = useState(false);
@@ -300,7 +303,7 @@ const Topbar = ({ onMenuToggle, pageTitle = "Dashboard", pageSubtitle = "ภา�
               <div className="p-2">
                 {[
                   { icon: User, label: "โปรไฟล์", path: currentUser?.employeeId ? `/employees/${currentUser.employeeId}` : "/profile", show: true },
-                  { icon: Settings, label: "ตั้งค่า", path: "/settings", show: hasAdminAccess },
+                  { icon: Settings, label: "ตั้งค่า", path: "/settings", show: canAccessSettings },
                 ].filter((item) => item.show).map((item) => (
                   <button
                     key={item.label}
