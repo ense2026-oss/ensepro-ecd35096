@@ -227,8 +227,7 @@ const CheckIn = () => {
   const handleCheckIn = async () => {
     if (!canCheckIn || !nearest || !employeeId) return;
     const time = nowTime();
-    const isLate = time > "08:30";
-    // Save to check_in_records
+    // Save to check_in_records — DB trigger auto-syncs to attendance_records
     const { error: checkInError } = await supabase.from("check_in_records").insert({
       employee_id: employeeId,
       date: todayStr,
@@ -241,16 +240,6 @@ const CheckIn = () => {
       toast({ title: "เกิดข้อผิดพลาด", description: checkInError.message, variant: "destructive" });
       return;
     }
-    // Also upsert to attendance_records so it appears on the Attendance page
-    await supabase.from("attendance_records").upsert({
-      employee_id: employeeId,
-      date: todayStr,
-      check_in: time,
-      check_out: "-",
-      status: isLate ? "late" : "present",
-      late: isLate,
-      ot_hours: 0,
-    }, { onConflict: "employee_id,date" });
     fetchHistory();
     toast({ title: "ลงเวลาเข้างานสำเร็จ", description: `เวลา ${time} ณ ${nearest.location.name}` });
   };
@@ -258,13 +247,12 @@ const CheckIn = () => {
   const handleCheckOut = async () => {
     if (!canCheckIn || !nearest || !todayRecord || !employeeId) return;
     const time = nowTime();
-    // Update check_in_records
-    await supabase.from("check_in_records").update({ check_out: time }).eq("id", todayRecord.id);
-    // Also update attendance_records
-    await supabase.from("attendance_records")
-      .update({ check_out: time })
-      .eq("employee_id", employeeId)
-      .eq("date", todayStr);
+    // Update check_in_records — DB trigger auto-syncs to attendance_records
+    const { error: checkOutError } = await supabase.from("check_in_records").update({ check_out: time }).eq("id", todayRecord.id);
+    if (checkOutError) {
+      toast({ title: "เกิดข้อผิดพลาด", description: checkOutError.message, variant: "destructive" });
+      return;
+    }
     fetchHistory();
     toast({ title: "ลงเวลาออกงานสำเร็จ", description: `เวลา ${time} ณ ${nearest.location.name}` });
   };
