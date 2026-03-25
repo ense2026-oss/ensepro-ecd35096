@@ -54,7 +54,7 @@ const Contracts = () => {
           <h2 className="text-xl font-bold font-display">{pageTitle}</h2>
           <p className="text-sm text-muted-foreground mt-0.5">{pageDesc}</p>
         </div>
-        {hasAdminAccess && (
+        {canAddContract && (
           <Button onClick={() => { setEditContract(null); setFormOpen(true); }} className="gap-1.5">
             <Plus className="w-4 h-4" />สร้างสัญญาใหม่
           </Button>
