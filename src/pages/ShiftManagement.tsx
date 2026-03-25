@@ -589,6 +589,7 @@ const ShiftManagement = () => {
               <div className="text-sm font-normal text-muted-foreground">จัดการพนักงานชื่อ : {calendarEmployee?.name}</div>
               <div className="text-lg font-bold font-display">{THAI_MONTHS_FULL[calendarMonth]} {calendarYear + 543}</div>
             </DialogTitle>
+            <DialogDescription className="sr-only">ปฏิทินกะการทำงานรายบุคคล</DialogDescription>
           </DialogHeader>
 
           {/* Month Navigation */}
