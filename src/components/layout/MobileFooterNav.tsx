@@ -40,7 +40,7 @@ const pathToModuleMap: Record<string, string> = {
   "/check-in": "check-in",
 };
 
-const MobileFooterNav = () => {
+const MobileFooterNav = React.forwardRef<HTMLDivElement>((_, ref) => {
   const location = useLocation();
   const { leavePending, attendancePending, overtimePending } = usePendingCounts();
   const { currentUser, role } = useAuth();
