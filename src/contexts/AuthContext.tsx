@@ -37,12 +37,6 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<{ error: string | null }>;
   signup: (email: string, password: string, fullName: string, role?: AppRole) => Promise<{ error: string | null }>;
   logout: () => Promise<void>;
-  isAdmin: boolean;
-  isManager: boolean;
-  isHR: boolean;
-  isEmployee: boolean;
-  isAccountant: boolean;
-  hasAdminAccess: boolean;
   currentUser: CurrentUser | null;
 }
 
@@ -147,12 +141,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
-  const isAdmin = role === "admin";
-  const isManager = role === "manager";
-  const isHR = role === "hr";
-  const isEmployee = role === "employee";
-  const isAccountant = role === "accountant";
-  const hasAdminAccess = isAdmin || isManager || isHR || isAccountant;
 
   // Build currentUser: available as soon as user exists (with fallback if profile not loaded yet)
   let currentUser: CurrentUser | null = null;
@@ -184,7 +172,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       value={{
         user, profile, role, session, loading, profileReady,
         login, signup, logout,
-        isAdmin, isManager, isHR, isEmployee, isAccountant, hasAdminAccess,
         currentUser,
       }}
     >
