@@ -584,6 +584,7 @@ const Attendance = () => {
               <AlertCircle className="w-5 h-5 text-primary" />
               ขอแก้ไขเวลา (คำขอใหม่)
             </DialogTitle>
+            <DialogDescription className="sr-only">ฟอร์มขอแก้ไขเวลาใหม่</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-1.5">
