@@ -314,10 +314,12 @@ const OvertimeRequest = () => {
           <p className="text-sm text-muted-foreground mt-0.5">ยื่นคำขอ ติดตาม และอนุมัติการทำงานล่วงเวลา</p>
         </div>
         <div className="flex items-center gap-2">
-          <button className="flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-medium hover:bg-muted transition-colors">
-            <Download className="w-4 h-4" />
-            Export
-          </button>
+          {role !== "employee" && (
+            <button className="flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-medium hover:bg-muted transition-colors">
+              <Download className="w-4 h-4" />
+              Export
+            </button>
+          )}
           <button
             onClick={() => setShowForm(true)}
             className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold"
