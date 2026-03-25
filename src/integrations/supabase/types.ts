@@ -994,6 +994,10 @@ export type Database = {
     }
     Functions: {
       can_access_leave: { Args: { _user_id: string }; Returns: boolean }
+      can_access_module: {
+        Args: { _action?: string; _module: string; _user_id: string }
+        Returns: boolean
+      }
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
