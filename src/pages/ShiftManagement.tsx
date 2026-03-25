@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { Plus, Edit, Trash2, Search, CalendarDays, Clock, Users, X, Check, Calendar as CalendarIcon2, ChevronLeft, ChevronRight, List, LayoutGrid } from "lucide-react";
 import ShiftCalendarView from "@/components/shifts/ShiftCalendarView";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { ThaiDatePicker } from "@/components/ui/thai-date-picker";
