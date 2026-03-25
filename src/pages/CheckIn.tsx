@@ -8,7 +8,7 @@ import { toast } from "@/hooks/use-toast";
 import TimeInput24 from "@/components/ui/time-input-24";
 import { useTimeEditRequests } from "@/contexts/TimeEditContext";
 import { useAuth } from "@/contexts/AuthContext";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { useGeolocation, findNearestLocation, type OfficeLocation, type NearestResult } from "@/utils/geo";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -529,6 +529,7 @@ const CheckIn = () => {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="font-display">ขอแก้ไขเวลา</DialogTitle>
+            <DialogDescription className="sr-only">ฟอร์มขอแก้ไขเวลาเข้า-ออกงาน</DialogDescription>
           </DialogHeader>
           {editingRecord && (
             <div className="space-y-4">

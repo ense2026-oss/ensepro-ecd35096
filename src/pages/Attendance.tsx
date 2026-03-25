@@ -4,7 +4,7 @@ import { Search, Download, CheckCircle, XCircle, Clock, AlertCircle, Calendar as
 import { ThaiDatePicker } from "@/components/ui/thai-date-picker";
 import { format } from "date-fns";
 import { useEmployees } from "@/contexts/EmployeeContext";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import TimeInput24 from "@/components/ui/time-input-24";
@@ -541,6 +541,7 @@ const Attendance = () => {
               <RotateCcw className="w-5 h-5 text-primary" />
               ขอแก้ไขเวลา — {editingRow?.name}
             </DialogTitle>
+            <DialogDescription className="sr-only">ฟอร์มขอแก้ไขเวลาเข้า-ออกงาน</DialogDescription>
           </DialogHeader>
           {editingRow && (
             <div className="space-y-4 py-2">
@@ -583,6 +584,7 @@ const Attendance = () => {
               <AlertCircle className="w-5 h-5 text-primary" />
               ขอแก้ไขเวลา (คำขอใหม่)
             </DialogTitle>
+            <DialogDescription className="sr-only">ฟอร์มขอแก้ไขเวลาใหม่</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-1.5">
@@ -652,6 +654,7 @@ const Attendance = () => {
               <FileText className="w-5 h-5 text-primary" />
               รายละเอียดคำขอแก้ไขเวลา
             </DialogTitle>
+            <DialogDescription className="sr-only">รายละเอียดคำขอแก้ไขเวลา</DialogDescription>
           </DialogHeader>
           {detailReq && (
             <div className="space-y-4 py-2">

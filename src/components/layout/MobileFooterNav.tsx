@@ -1,5 +1,5 @@
+import React, { useState, useEffect, useCallback } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { useState, useEffect, useCallback } from "react";
 import { usePendingCounts } from "@/contexts/PendingCountsContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -40,7 +40,7 @@ const pathToModuleMap: Record<string, string> = {
   "/check-in": "check-in",
 };
 
-const MobileFooterNav = () => {
+const MobileFooterNav = React.forwardRef<HTMLDivElement>((_, ref) => {
   const location = useLocation();
   const { leavePending, attendancePending, overtimePending } = usePendingCounts();
   const { currentUser, role } = useAuth();
@@ -138,7 +138,7 @@ const MobileFooterNav = () => {
   const checkInActive = location.pathname === "/check-in";
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 lg:hidden">
+    <div ref={ref} className="fixed bottom-0 left-0 right-0 z-50 lg:hidden">
       <div
         className="relative border-t"
         style={{
@@ -206,6 +206,8 @@ const MobileFooterNav = () => {
       </div>
     </div>
   );
-};
+});
+
+MobileFooterNav.displayName = "MobileFooterNav";
 
 export default MobileFooterNav;

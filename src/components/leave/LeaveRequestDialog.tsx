@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Upload, X, FileText } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { ThaiDatePicker } from "@/components/ui/thai-date-picker";
 import type { LeaveType } from "./LeaveQuotaCards";
 import type { LeaveRecord } from "./LeaveTable";
@@ -152,6 +152,7 @@ const LeaveRequestDialog = ({ open, onOpenChange, leaveTypes, onSubmit, canSelec
             </span>
             {isEditing ? "แก้ไขคำขอลา" : "ยื่นคำขอลา"}
           </DialogTitle>
+          <DialogDescription className="sr-only">กรอกข้อมูลคำขอลางาน</DialogDescription>
         </DialogHeader>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">

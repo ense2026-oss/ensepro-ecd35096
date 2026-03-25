@@ -4,7 +4,7 @@ import {
   Banknote, Users, TrendingUp, FileText, Search, Download, Eye, X,
   Calculator, Receipt, Wallet, ShieldCheck, ChevronDown, ChevronUp, Settings2, Plus, Trash2,
 } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import EmployeeAvatar from "@/components/ui/employee-avatar";
 import {
   calculateAnnualIncome, calculateExpenseDeduction, calculateTotalDeductions,
@@ -178,6 +178,7 @@ function CustomItemsDialog({
             <Settings2 className="w-5 h-5" style={{ color: "hsl(var(--primary))" }} />
             แก้ไขรายการ - {emp.firstName} {emp.lastName}
           </DialogTitle>
+          <DialogDescription className="sr-only">แก้ไขรายการเงินเดือน</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-5">
@@ -249,6 +250,7 @@ function PayslipDialog({ open, onClose, emp, payroll }: { open: boolean; onClose
             <Receipt className="w-5 h-5" style={{ color: "hsl(var(--primary))" }} />
             สลิปเงินเดือน - {emp.firstName} {emp.lastName}
           </DialogTitle>
+          <DialogDescription className="sr-only">รายละเอียดสลิปเงินเดือน</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 text-sm">

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Plus, Edit, Trash2 } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 
@@ -118,6 +118,7 @@ const LeaveTypesSettings = () => {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>{editingId !== null ? "แก้ไขประเภทการลา" : "เพิ่มประเภทการลา"}</DialogTitle>
+            <DialogDescription className="sr-only">กรอกข้อมูลประเภทการลา</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div>

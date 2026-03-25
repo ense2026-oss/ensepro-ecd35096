@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { Plus, Edit, Trash2, Search, CalendarDays, Clock, Users, X, Check, Calendar as CalendarIcon2, ChevronLeft, ChevronRight, List, LayoutGrid } from "lucide-react";
 import ShiftCalendarView from "@/components/shifts/ShiftCalendarView";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { ThaiDatePicker } from "@/components/ui/thai-date-picker";
@@ -482,6 +482,7 @@ const ShiftManagement = () => {
         <DialogContent className="sm:max-w-xl">
           <DialogHeader>
             <DialogTitle>{editAssignId !== null ? "แก้ไขการกำหนดกะ" : "กำหนดกะการทำงานล่วงหน้า"}</DialogTitle>
+            <DialogDescription className="sr-only">กำหนดกะการทำงานให้พนักงาน</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="grid grid-cols-3 gap-3">
@@ -588,6 +589,7 @@ const ShiftManagement = () => {
               <div className="text-sm font-normal text-muted-foreground">จัดการพนักงานชื่อ : {calendarEmployee?.name}</div>
               <div className="text-lg font-bold font-display">{THAI_MONTHS_FULL[calendarMonth]} {calendarYear + 543}</div>
             </DialogTitle>
+            <DialogDescription className="sr-only">ปฏิทินกะการทำงานรายบุคคล</DialogDescription>
           </DialogHeader>
 
           {/* Month Navigation */}

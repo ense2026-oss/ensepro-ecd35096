@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -130,6 +130,7 @@ const ContractFormDialog = ({ open, onOpenChange, editContract }: Props) => {
       <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{editContract ? "แก้ไขสัญญาจ้าง" : "สร้างสัญญาจ้างใหม่"}</DialogTitle>
+          <DialogDescription className="sr-only">กรอกข้อมูลสัญญาจ้าง</DialogDescription>
         </DialogHeader>
 
         <div className="grid gap-4 py-2">

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { useContracts, Contract, ContractStatus } from "@/contexts/ContractContext";
@@ -97,6 +97,7 @@ const ContractDetailDialog = ({ open, onOpenChange, contract }: Props) => {
               {contract.title}
               <ContractStatusBadge status={contract.status} />
             </DialogTitle>
+            <DialogDescription className="sr-only">รายละเอียดสัญญาจ้าง</DialogDescription>
           </DialogHeader>
 
           {/* Info */}

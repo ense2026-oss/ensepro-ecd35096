@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Pencil, Upload } from "lucide-react";
@@ -111,6 +111,7 @@ const SignatureDialog = ({ open, onOpenChange, onSign, signerName }: Props) => {
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>ลงนาม — {signerName}</DialogTitle>
+          <DialogDescription className="sr-only">ลงนามในสัญญา</DialogDescription>
         </DialogHeader>
 
         <Tabs value={tab} onValueChange={(v) => setTab(v as "draw" | "upload")}>

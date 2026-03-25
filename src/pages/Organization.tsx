@@ -5,7 +5,7 @@ import { useEmployees, type Employee } from "@/contexts/EmployeeContext";
 import { usePermissions } from "@/contexts/PermissionsContext";
 import { useAuth } from "@/contexts/AuthContext";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose,
 } from "@/components/ui/dialog";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -462,6 +462,7 @@ const Organization = () => {
               <Plus className="w-5 h-5 text-primary" />
               {addParentPos ? "เพิ่มตำแหน่งย่อย" : "เพิ่มตำแหน่งใหม่"}
             </DialogTitle>
+            <DialogDescription className="sr-only">กรอกข้อมูลตำแหน่งใหม่</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-1.5">
@@ -504,6 +505,7 @@ const Organization = () => {
             <DialogTitle className="flex items-center gap-2">
               <Edit className="w-5 h-5 text-primary" /> แก้ไขตำแหน่ง
             </DialogTitle>
+            <DialogDescription className="sr-only">แก้ไขข้อมูลตำแหน่ง</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-1.5">
@@ -557,6 +559,7 @@ const Organization = () => {
             <DialogTitle className="flex items-center gap-2">
               <UserPlus className="w-5 h-5 text-blue-600" /> กำหนดบุคคลในตำแหน่ง
             </DialogTitle>
+            <DialogDescription className="sr-only">เลือกพนักงานเพื่อกำหนดในตำแหน่ง</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="px-3 py-2 rounded-xl bg-primary/5 border border-primary/20">
