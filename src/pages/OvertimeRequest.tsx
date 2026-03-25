@@ -11,6 +11,7 @@ import { usePermissions } from "@/contexts/PermissionsContext";
 import TimeInput24 from "@/components/ui/time-input-24";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { notifyApprovers, notifyRequester } from "@/utils/notifications";
 
 type OTStatus = "pending" | "approved" | "rejected";
 type OTType = "workday" | "holiday" | "special";

@@ -12,6 +12,7 @@ import { useTimeEditRequests, type TimeEditRequest } from "@/contexts/TimeEditCo
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/contexts/PermissionsContext";
+import { notifyRequester } from "@/utils/notifications";
 
 interface AttendanceRecord {
   id: string;
