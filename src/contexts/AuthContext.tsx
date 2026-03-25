@@ -178,7 +178,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       value={{
         user, profile, role, session, loading, profileReady,
         login, signup, logout,
-        isAdmin, isManager, isHR, isEmployee, isAccountant, hasAdminAccess,
         currentUser,
       }}
     >
