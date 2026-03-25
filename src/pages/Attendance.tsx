@@ -10,6 +10,8 @@ import { toast } from "sonner";
 import TimeInput24 from "@/components/ui/time-input-24";
 import { useTimeEditRequests, type TimeEditRequest } from "@/contexts/TimeEditContext";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { usePermissions } from "@/contexts/PermissionsContext";
 
 interface AttendanceRecord {
   id: string;
