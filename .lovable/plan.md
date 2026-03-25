@@ -1,41 +1,41 @@
 
 
-## Plan: Notification System for All Request Types
+## Plan: Fix Console Warnings
 
-### Problem
-Currently, submitting leave/OT/time-edit requests does not notify approvers (Admin/HR). Approving or rejecting does not notify the requester. The time-edit notification only notifies the current user (self), which is incorrect.
+### Problems Identified
+1. **Missing `DialogDescription`** — ~15+ Dialog components across the project use `DialogContent` without `DialogDescription`, triggering Radix UI warnings. Per existing accessibility standards (memory), these should use `VisuallyHidden` when no visible description is needed.
+2. **MobileFooterNav ref warning** — React warns that function components cannot receive refs. This is likely from React Router or the parent layout attempting to pass a ref.
+
+*Note: WebSocket failures, 404s, and refresh token errors in the screenshot are dev-server/session artifacts — not code bugs.*
 
 ### Approach
-Create a shared utility function `sendRequestNotification` that handles all notification scenarios. This function will:
-1. On **new request**: notify all Admin/HR users
-2. On **approve/reject**: notify the requesting employee
 
-### Technical Details
+**1. Add hidden `DialogDescription` to all Dialogs missing it**
 
-**1. New file: `src/utils/notifications.ts`**
-- `notifyApprovers(params)` — queries `user_roles` for admin/hr users, then inserts `app_notifications` for each
-- `notifyRequester(params)` — looks up the employee's `user_id` from `employees` table, inserts notification
-- Both functions accept: `type` (leave/ot/attendance), `title`, `description`, `targetEmployee`, optional `actionLabel`
+Import `DialogDescription` and add a `VisuallyHidden`-wrapped description to every `DialogContent` that lacks one. Files to update:
 
-**2. Modify `src/pages/Leave.tsx`**
-- After inserting a new leave request: call `notifyApprovers` with type "leave"
-- In `handleApprove` / `handleReject`: call `notifyRequester` to notify the employee who submitted
+- `src/pages/Attendance.tsx` (3 dialogs)
+- `src/pages/CheckIn.tsx` (1 dialog)
+- `src/pages/Payroll.tsx` (2 dialogs)
+- `src/pages/Organization.tsx` (2 dialogs)
+- `src/pages/ShiftManagement.tsx` (1 dialog)
+- `src/components/leave/LeaveRequestDialog.tsx`
+- `src/components/contracts/ContractFormDialog.tsx`
+- `src/components/contracts/ContractDetailDialog.tsx`
+- `src/components/contracts/SignatureDialog.tsx`
+- `src/components/settings/ShiftsSettings.tsx`
+- `src/components/settings/RolesSettings.tsx`
+- `src/components/settings/LeaveTypesSettings.tsx`
+- `src/components/settings/LocationsSettings.tsx`
 
-**3. Modify `src/pages/OvertimeRequest.tsx`**
-- After inserting a new OT request: call `notifyApprovers` with type "ot"
-- In `handleApprove` / `handleReject`: call `notifyRequester`
+Pattern: Add `<DialogDescription className="sr-only">...</DialogDescription>` after each `DialogTitle`.
 
-**4. Modify `src/contexts/TimeEditContext.tsx`**
-- In `addEditRequest`: replace self-notification with `notifyApprovers` with type "attendance"
+**2. Fix MobileFooterNav ref warning**
 
-**5. Modify `src/pages/Attendance.tsx`**
-- In `handleApprove` / `handleReject`: call `notifyRequester` for the time-edit requester
+Wrap `MobileFooterNav` with `React.forwardRef` so React doesn't warn when the parent layout renders it.
 
-**6. Notification content examples**
-- New request: `"[ชื่อพนักงาน] ยื่นขอลา ลาป่วย 2 วัน"` → sent to Admin/HR
-- Approved: `"คำขอลาของคุณได้รับการอนุมัติแล้ว"` → sent to requester
-- Rejected: `"คำขอ OT ของคุณไม่ได้รับการอนุมัติ"` → sent to requester
-
-### No database changes needed
-The `app_notifications` table and its RLS policies already support this — we just need to insert rows with the correct `user_id` for each recipient. The existing RLS allows admin/hr/manager/executive to insert notifications for any user.
+### Impact
+- Eliminates all `Missing Description` console warnings
+- Eliminates the `forwardRef` warning
+- No visual changes to the UI
 
