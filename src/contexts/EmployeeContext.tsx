@@ -394,6 +394,15 @@ export const EmployeeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   }, [fetchEmployees]);
 
   const deleteEmployee = useCallback(async (id: string) => {
+    // Cleanup auth account before deleting employee record
+    try {
+      await supabase.functions.invoke("sync-employee-role", {
+        body: { action: "cleanup_employee", employeeId: id },
+      });
+    } catch (cleanupErr) {
+      console.error("Auth cleanup failed:", cleanupErr);
+    }
+
     const { error } = await supabase.from("employees").delete().eq("id", id);
     if (error) { console.error("Delete employee error:", error); throw error; }
     await fetchEmployees();
