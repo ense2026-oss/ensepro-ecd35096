@@ -54,6 +54,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [profile, setProfile] = useState<Profile | null>(null);
   const [role, setRole] = useState<AppRole>("employee");
   const [employeeId, setEmployeeId] = useState<string | null>(null);
+  const [employeeData, setEmployeeData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [profileReady, setProfileReady] = useState(false);
 
