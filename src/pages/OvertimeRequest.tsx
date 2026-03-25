@@ -293,6 +293,12 @@ const OvertimeRequest = () => {
     });
     fetchRequests();
     toast.success("ยื่นคำขอ OT เรียบร้อย");
+    notifyApprovers({
+      type: "ot",
+      title: "คำขอ OT ใหม่",
+      description: `${req.employeeName} ยื่นขอ OT ${req.date} (${req.startTime}-${req.endTime}) ${req.hours} ชม.`,
+      targetEmployee: req.employeeName,
+    });
   };
 
   const handleApprove = async (id: string) => {
