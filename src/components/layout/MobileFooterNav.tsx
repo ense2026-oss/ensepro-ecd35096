@@ -88,7 +88,8 @@ const MobileFooterNav = () => {
   const rightItems = menuItems.slice(midIndex);
 
   const renderItem = (item: typeof menuItems[0]) => {
-    const selfOnlyCheck = isSelfOnly(role, item.path);
+    // Only redirect to own profile for the /employees menu item
+    const selfOnlyCheck = item.path === "/employees" && isSelfOnly(role, item.path);
     const linkPath = selfOnlyCheck && currentUser
       ? `/employees/${currentUser.employeeId || currentUser.id}`
       : item.path;

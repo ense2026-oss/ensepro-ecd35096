@@ -223,7 +223,8 @@ const Sidebar = ({ collapsed, onToggle, onNavigate }: SidebarProps) => {
             )}
             <div className="space-y-1">
               {section.items.map((item) => {
-                const selfOnly = permSelfOnly(role, item.path);
+                // Only redirect to own profile for the /employees menu item
+                const selfOnly = item.path === "/employees" && permSelfOnly(role, item.path);
                 const linkPath = selfOnly && currentUser
                   ? `/employees/${currentUser.employeeId || currentUser.id}`
                   : item.path;
