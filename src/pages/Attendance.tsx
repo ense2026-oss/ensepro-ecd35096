@@ -541,6 +541,7 @@ const Attendance = () => {
               <RotateCcw className="w-5 h-5 text-primary" />
               ขอแก้ไขเวลา — {editingRow?.name}
             </DialogTitle>
+            <DialogDescription className="sr-only">ฟอร์มขอแก้ไขเวลาเข้า-ออกงาน</DialogDescription>
           </DialogHeader>
           {editingRow && (
             <div className="space-y-4 py-2">
