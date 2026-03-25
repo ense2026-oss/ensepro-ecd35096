@@ -17,7 +17,11 @@ const ALL_STATUSES: ContractStatus[] = ["draft", "pending_employee", "pending_hr
 const Contracts = () => {
   const { contracts } = useContracts();
   const { employees } = useEmployees();
-  const { currentUser, hasAdminAccess } = useAuth();
+  const { currentUser, role } = useAuth();
+  const { canAction, getScope } = usePermissions();
+  const canAddContract = canAction(role, 'contracts', 'add');
+  const canEditContract = canAction(role, 'contracts', 'edit');
+  const contractScope = getScope(role, 'contracts');
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
