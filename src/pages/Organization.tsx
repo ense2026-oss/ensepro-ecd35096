@@ -505,6 +505,7 @@ const Organization = () => {
             <DialogTitle className="flex items-center gap-2">
               <Edit className="w-5 h-5 text-primary" /> แก้ไขตำแหน่ง
             </DialogTitle>
+            <DialogDescription className="sr-only">แก้ไขข้อมูลตำแหน่ง</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-1.5">
