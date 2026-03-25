@@ -129,6 +129,9 @@ const RolesSettings = () => {
     else setDbLoading(false);
   }, [allPermissions]);
 
+  // Known app_role enum values that can actually be assigned to users
+  const knownRoles = ["admin", "hr", "manager", "employee", "accountant", "executive"];
+
   const openAdd = () => {
     setEditingRole(null);
     setForm({ name: "", desc: "", permissions: emptyPermissions() });
