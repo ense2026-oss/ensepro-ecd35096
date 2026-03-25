@@ -37,6 +37,7 @@ const PositionNode = ({
   parentId = null,
   employeeMap,
   isHead,
+  canManage = false,
 }: {
   position: Position; index: number; total: number; level?: number;
   onEdit: (p: Position) => void;
@@ -52,6 +53,7 @@ const PositionNode = ({
   parentId?: string | null;
   employeeMap: Map<string, Employee[]>;
   isHead: boolean;
+  canManage?: boolean;
 }) => {
   const isOver = dragOverId === position.id;
   const isDragging = isDraggingId === position.id;
