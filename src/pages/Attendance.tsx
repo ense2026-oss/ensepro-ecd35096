@@ -41,6 +41,9 @@ const reqStatusConf: Record<string, { label: string; color: string; bg: string }
 
 const Attendance = () => {
   const { employees } = useEmployees();
+  const { role } = useAuth();
+  const { canAction } = usePermissions();
+  const canApproveTime = canAction(role, 'attendance', 'approve');
   const { setAttendancePending } = usePendingCounts();
   const { editRequests, addEditRequest, updateRequestStatus } = useTimeEditRequests();
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
