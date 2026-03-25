@@ -2,6 +2,8 @@ import { useState, useMemo } from "react";
 import { Plus, Edit, Trash2, Building2, Users, ChevronDown, ChevronRight, GripVertical, UserPlus, X, Crown } from "lucide-react";
 import { useOrg, type Affiliation, type Position } from "@/contexts/OrgContext";
 import { useEmployees, type Employee } from "@/contexts/EmployeeContext";
+import { usePermissions } from "@/contexts/PermissionsContext";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose,
 } from "@/components/ui/dialog";
@@ -35,6 +37,7 @@ const PositionNode = ({
   parentId = null,
   employeeMap,
   isHead,
+  canManage = false,
 }: {
   position: Position; index: number; total: number; level?: number;
   onEdit: (p: Position) => void;
@@ -50,6 +53,7 @@ const PositionNode = ({
   parentId?: string | null;
   employeeMap: Map<string, Employee[]>;
   isHead: boolean;
+  canManage?: boolean;
 }) => {
   const isOver = dragOverId === position.id;
   const isDragging = isDraggingId === position.id;
@@ -66,11 +70,11 @@ const PositionNode = ({
 
       <div
         className={`relative flex items-center transition-opacity ${isDragging ? "opacity-40" : ""}`}
-        draggable
-        onDragStart={(e) => { e.stopPropagation(); onDragStart(position.id, parentId, index); }}
-        onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); onDragOver(e, position.id); }}
-        onDragEnd={onDragEnd}
-        onDrop={(e) => { e.stopPropagation(); onDrop(e, position.id, parentId, index); }}
+        draggable={canManage}
+        onDragStart={canManage ? (e) => { e.stopPropagation(); onDragStart(position.id, parentId, index); } : undefined}
+        onDragOver={canManage ? (e) => { e.preventDefault(); e.stopPropagation(); onDragOver(e, position.id); } : undefined}
+        onDragEnd={canManage ? onDragEnd : undefined}
+        onDrop={canManage ? (e) => { e.stopPropagation(); onDrop(e, position.id, parentId, index); } : undefined}
       >
         {/* Vertical line segment (top half to branch point) */}
         <div className="absolute left-[11px] top-0 h-1/2 w-0.5 bg-border" />
@@ -81,8 +85,8 @@ const PositionNode = ({
         <div style={{ width: 24, flexShrink: 0 }} />
 
         <div className="flex items-center gap-3 py-2 flex-1 min-w-0 flex-wrap">
-          <div className={`flex items-center gap-3 px-4 py-3 rounded-2xl bg-card border-2 shadow-sm min-w-[200px] max-w-sm transition-all hover:shadow-md cursor-grab active:cursor-grabbing ${isOver ? "border-primary ring-2 ring-primary/20" : "border-border"}`}>
-            <GripVertical className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+          <div className={`flex items-center gap-3 px-4 py-3 rounded-2xl bg-card border-2 shadow-sm min-w-[200px] max-w-sm transition-all hover:shadow-md ${canManage ? "cursor-grab active:cursor-grabbing" : ""} ${isOver ? "border-primary ring-2 ring-primary/20" : "border-border"}`}>
+            {canManage && <GripVertical className="w-4 h-4 text-muted-foreground flex-shrink-0" />}
             <div className="flex flex-col min-w-0 flex-1">
               <div className="flex items-center gap-1.5">
                 {isHead && <Crown className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />}
@@ -107,20 +111,22 @@ const PositionNode = ({
             </div>
           </div>
 
-          <div className="flex items-center gap-1.5">
-            <button onClick={() => onAssign(position)} className="w-8 h-8 rounded-full flex items-center justify-center bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 transition-colors" title="กำหนดบุคคล">
-              <UserPlus className="w-4 h-4" />
-            </button>
-            <button onClick={() => onAddSub(position)} className="w-8 h-8 rounded-full flex items-center justify-center bg-primary/10 text-primary hover:bg-primary/20 transition-colors" title="เพิ่มตำแหน่งย่อย">
-              <Plus className="w-4 h-4" />
-            </button>
-            <button onClick={() => onEdit(position)} className="w-8 h-8 rounded-full flex items-center justify-center bg-accent text-accent-foreground hover:bg-accent/80 transition-colors" title="แก้ไข">
-              <Edit className="w-4 h-4" />
-            </button>
-            <button onClick={() => onDelete(position)} className="w-8 h-8 rounded-full flex items-center justify-center bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors" title="ลบ">
-              <Trash2 className="w-4 h-4" />
-            </button>
-          </div>
+          {canManage && (
+            <div className="flex items-center gap-1.5">
+              <button onClick={() => onAssign(position)} className="w-8 h-8 rounded-full flex items-center justify-center bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 transition-colors" title="กำหนดบุคคล">
+                <UserPlus className="w-4 h-4" />
+              </button>
+              <button onClick={() => onAddSub(position)} className="w-8 h-8 rounded-full flex items-center justify-center bg-primary/10 text-primary hover:bg-primary/20 transition-colors" title="เพิ่มตำแหน่งย่อย">
+                <Plus className="w-4 h-4" />
+              </button>
+              <button onClick={() => onEdit(position)} className="w-8 h-8 rounded-full flex items-center justify-center bg-accent text-accent-foreground hover:bg-accent/80 transition-colors" title="แก้ไข">
+                <Edit className="w-4 h-4" />
+              </button>
+              <button onClick={() => onDelete(position)} className="w-8 h-8 rounded-full flex items-center justify-center bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors" title="ลบ">
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -135,6 +141,7 @@ const PositionNode = ({
               parentId={position.id}
               employeeMap={employeeMap}
               isHead={false}
+              canManage={canManage}
             />
           ))}
         </div>
@@ -147,6 +154,11 @@ const PositionNode = ({
 const Organization = () => {
   const { affiliations, addPosition, updatePosition, deletePosition, reorderPositions, loading } = useOrg();
   const { employees, updateEmployee } = useEmployees();
+  const { canAction } = usePermissions();
+  const { role } = useAuth();
+  const canManage = canAction(role, "organization", "edit");
+  const canAdd = canAction(role, "organization", "add");
+  const canDelete = canAction(role, "organization", "delete");
 
   // Build position → employees map
   const positionEmployeeMap = useMemo(() => {
@@ -328,6 +340,7 @@ const Organization = () => {
         parentId={parentId}
         employeeMap={positionEmployeeMap}
         isHead={isHead}
+        canManage={canManage}
       />
     );
   };
@@ -407,11 +420,13 @@ const Organization = () => {
                       <span className="text-xs text-muted-foreground">{aff.name}</span>
                     </div>
                   </div>
-                  <button onClick={() => handleAddRoot(aff.id)}
-                    className="w-8 h-8 rounded-full flex items-center justify-center bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
-                    title="เพิ่มตำแหน่งหลัก">
-                    <Plus className="w-4 h-4" />
-                  </button>
+                  {canAdd && (
+                    <button onClick={() => handleAddRoot(aff.id)}
+                      className="w-8 h-8 rounded-full flex items-center justify-center bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                      title="เพิ่มตำแหน่งหลัก">
+                      <Plus className="w-4 h-4" />
+                    </button>
+                  )}
                 </div>
 
                 <div className="relative ml-6">
