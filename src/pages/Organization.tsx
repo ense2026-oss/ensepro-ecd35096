@@ -462,6 +462,7 @@ const Organization = () => {
               <Plus className="w-5 h-5 text-primary" />
               {addParentPos ? "เพิ่มตำแหน่งย่อย" : "เพิ่มตำแหน่งใหม่"}
             </DialogTitle>
+            <DialogDescription className="sr-only">กรอกข้อมูลตำแหน่งใหม่</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-1.5">
