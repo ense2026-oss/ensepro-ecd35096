@@ -1,5 +1,6 @@
-import { useState, useMemo } from "react"; // unified org tree
+import { useState, useMemo, useEffect, useCallback } from "react"; // unified org tree
 import { Plus, Edit, Trash2, Building2, Users, ChevronDown, ChevronRight, GripVertical, UserPlus, X, Crown, Network } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import { useOrg, type Affiliation, type Position, type OrgLevel } from "@/contexts/OrgContext";
 import { useEmployees, type Employee } from "@/contexts/EmployeeContext";
 import { usePermissions } from "@/contexts/PermissionsContext";
@@ -147,8 +148,9 @@ const PositionNode = ({
 /* ═══════════════════ OrgLevel Tree Node ═══════════════════ */
 const OrgLevelNode = ({
   node, index, total, affiliations, canManage, canAdd,
-  onEdit, onDelete, onAddChild,
+  onEdit, onDelete, onAddChild, onAssign,
   renderAffiliation,
+  orgLevelEmployeeMap, employees: allEmployees,
 }: {
   node: OrgLevel; index: number; total: number;
   affiliations: Affiliation[];
@@ -156,12 +158,15 @@ const OrgLevelNode = ({
   onEdit: (o: OrgLevel) => void;
   onDelete: (o: OrgLevel) => void;
   onAddChild: (parentId: string) => void;
+  onAssign: (o: OrgLevel) => void;
   renderAffiliation: (aff: Affiliation) => React.ReactNode;
+  orgLevelEmployeeMap: Map<string, Employee[]>;
+  employees: Employee[];
 }) => {
   const children = node.children || [];
   const isLast = index === total - 1;
-  // Find affiliations attached to this org_level
   const attachedAffs = affiliations.filter(a => a.parent_org_level_id === node.id);
+  const assignedEmployees = orgLevelEmployeeMap.get(node.id) || [];
 
   return (
     <div className="relative">
@@ -176,11 +181,29 @@ const OrgLevelNode = ({
             <Network className="w-5 h-5 text-primary flex-shrink-0" />
             <div className="flex flex-col min-w-0 flex-1">
               <span className="text-sm font-bold text-foreground truncate">{node.name}</span>
-              <span className="text-xs text-muted-foreground">ระดับองค์กร</span>
+              {assignedEmployees.length > 0 ? (
+                <div className="flex items-center gap-1 mt-1 flex-wrap">
+                  <div className="flex -space-x-1.5">
+                    {assignedEmployees.slice(0, 4).map((emp) => (
+                      <OrgEmployeeAvatar key={emp.id} emp={emp} size="sm" />
+                    ))}
+                  </div>
+                  <span className="text-xs text-muted-foreground ml-1.5 truncate">
+                    {assignedEmployees.length <= 2
+                      ? assignedEmployees.map(e => `${e.firstName} ${e.lastName?.charAt(0) || ""}.`).join(", ")
+                      : `${assignedEmployees[0].firstName} +${assignedEmployees.length - 1}`}
+                  </span>
+                </div>
+              ) : (
+                <span className="text-xs text-muted-foreground/60 mt-0.5">ระดับองค์กร</span>
+              )}
             </div>
           </div>
           {canManage && (
             <div className="flex items-center gap-1.5">
+              <button onClick={() => onAssign(node)} className="w-8 h-8 rounded-full flex items-center justify-center bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 transition-colors" title="กำหนดบุคคล">
+                <UserPlus className="w-4 h-4" />
+              </button>
               <button onClick={() => onAddChild(node.id)} className="w-8 h-8 rounded-full flex items-center justify-center bg-primary/10 text-primary hover:bg-primary/20 transition-colors" title="เพิ่มระดับย่อย">
                 <Plus className="w-4 h-4" />
               </button>
@@ -195,15 +218,15 @@ const OrgLevelNode = ({
         </div>
       </div>
 
-      {/* Children: sub org levels + attached affiliations */}
       {(children.length > 0 || attachedAffs.length > 0) && (
         <div className="relative ml-[35px]">
           {children.map((child, idx) => (
             <OrgLevelNode
               key={child.id} node={child} index={idx} total={children.length + attachedAffs.length}
               affiliations={affiliations} canManage={canManage} canAdd={canAdd}
-              onEdit={onEdit} onDelete={onDelete} onAddChild={onAddChild}
+              onEdit={onEdit} onDelete={onDelete} onAddChild={onAddChild} onAssign={onAssign}
               renderAffiliation={renderAffiliation}
+              orgLevelEmployeeMap={orgLevelEmployeeMap} employees={allEmployees}
             />
           ))}
           {attachedAffs.map((aff, idx) => (
@@ -236,6 +259,27 @@ const Organization = () => {
   const canManage = canAction(role, "organization", "edit");
   const canAdd = canAction(role, "organization", "add");
   const canDelete = canAction(role, "organization", "delete");
+
+  // ─── Org Level Employees ───
+  const [orgLevelEmpRows, setOrgLevelEmpRows] = useState<{ org_level_id: string; employee_id: string }[]>([]);
+  const fetchOrgLevelEmployees = useCallback(async () => {
+    const { data } = await supabase.from("org_level_employees").select("org_level_id, employee_id").order("sort_order");
+    setOrgLevelEmpRows(data || []);
+  }, []);
+  useEffect(() => { fetchOrgLevelEmployees(); }, [fetchOrgLevelEmployees]);
+
+  const orgLevelEmployeeMap = useMemo(() => {
+    const map = new Map<string, Employee[]>();
+    orgLevelEmpRows.forEach((row) => {
+      const emp = employees.find(e => e.id === row.employee_id);
+      if (emp) {
+        const list = map.get(row.org_level_id) || [];
+        list.push(emp);
+        map.set(row.org_level_id, list);
+      }
+    });
+    return map;
+  }, [orgLevelEmpRows, employees]);
 
   // Build position → employees map
   const positionEmployeeMap = useMemo(() => {
@@ -312,6 +356,11 @@ const Organization = () => {
   const [orgLevelFormName, setOrgLevelFormName] = useState("");
   const [orgLevelParentId, setOrgLevelParentId] = useState<string | null>(null);
 
+  // OrgLevel Assign Dialog
+  const [orgLevelAssignOpen, setOrgLevelAssignOpen] = useState(false);
+  const [assigningOrgLevel, setAssigningOrgLevel] = useState<OrgLevel | null>(null);
+  const [orgLevelSearchTerm, setOrgLevelSearchTerm] = useState("");
+
   // Company rename dialog
   const [renameOpen, setRenameOpen] = useState(false);
   const [renameValue, setRenameValue] = useState("");
@@ -372,7 +421,35 @@ const Organization = () => {
     toast.success("ยกเลิกการกำหนดบุคคลสำเร็จ");
   };
 
-  // OrgLevel handlers
+  // OrgLevel Assign handlers
+  const handleOrgLevelAssignClick = (o: OrgLevel) => { setAssigningOrgLevel(o); setOrgLevelSearchTerm(""); setOrgLevelAssignOpen(true); };
+  const assignedToThisOrgLevel = useMemo(() => {
+    if (!assigningOrgLevel) return [];
+    return orgLevelEmployeeMap.get(assigningOrgLevel.id) || [];
+  }, [assigningOrgLevel, orgLevelEmployeeMap]);
+  const availableOrgLevelEmployees = useMemo(() => {
+    const assigned = assignedToThisOrgLevel.map(e => e.id);
+    return employees
+      .filter(e => e.status === "active" && !assigned.includes(e.id))
+      .filter(e => {
+        if (!orgLevelSearchTerm) return true;
+        const term = orgLevelSearchTerm.toLowerCase();
+        return `${e.firstName} ${e.lastName}`.toLowerCase().includes(term) || e.nickname.toLowerCase().includes(term);
+      });
+  }, [employees, assignedToThisOrgLevel, orgLevelSearchTerm]);
+  const handleOrgLevelAssignEmployee = async (empId: string) => {
+    if (!assigningOrgLevel) return;
+    await supabase.from("org_level_employees").insert({ org_level_id: assigningOrgLevel.id, employee_id: empId });
+    await fetchOrgLevelEmployees();
+    toast.success("กำหนดบุคคลสำเร็จ");
+  };
+  const handleOrgLevelUnassignEmployee = async (empId: string) => {
+    if (!assigningOrgLevel) return;
+    await supabase.from("org_level_employees").delete().eq("org_level_id", assigningOrgLevel.id).eq("employee_id", empId);
+    await fetchOrgLevelEmployees();
+    toast.success("ยกเลิกการกำหนดบุคคลสำเร็จ");
+  };
+
   const openAddOrgLevel = (parentId: string | null) => {
     setEditingOrgLevel(null); setOrgLevelFormName(""); setOrgLevelParentId(parentId); setOrgLevelDialogOpen(true);
   };
@@ -576,7 +653,10 @@ const Organization = () => {
                 onEdit={openEditOrgLevel}
                 onDelete={(o) => { setDeletingOrgLevel(o); setOrgLevelDeleteOpen(true); }}
                 onAddChild={(parentId) => openAddOrgLevel(parentId)}
+                onAssign={handleOrgLevelAssignClick}
                 renderAffiliation={renderAffiliation}
+                orgLevelEmployeeMap={orgLevelEmployeeMap}
+                employees={employees}
               />
             ))}
             {/* Root-level affiliations (no parent org_level) */}
@@ -825,6 +905,66 @@ const Organization = () => {
               className="px-4 py-2 rounded-xl text-sm font-bold text-primary-foreground bg-primary hover:bg-primary/90 transition-colors disabled:opacity-50">
               บันทึก
             </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* OrgLevel Assign Employee Dialog */}
+      <Dialog open={orgLevelAssignOpen} onOpenChange={setOrgLevelAssignOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><UserPlus className="w-5 h-5 text-blue-600" /> กำหนดบุคคลในระดับองค์กร</DialogTitle>
+            <DialogDescription className="sr-only">เลือกพนักงานเพื่อกำหนดในระดับองค์กร</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="px-3 py-2 rounded-xl bg-primary/5 border border-primary/20">
+              <p className="text-xs text-muted-foreground">ระดับองค์กร</p>
+              <p className="text-sm font-bold text-foreground">{assigningOrgLevel?.name}</p>
+            </div>
+            {assignedToThisOrgLevel.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">บุคลากรในระดับนี้</p>
+                <div className="space-y-1.5">
+                  {assignedToThisOrgLevel.map((emp) => (
+                    <div key={emp.id} className="flex items-center gap-3 px-3 py-2 rounded-xl bg-card border border-border">
+                      <OrgEmployeeAvatar emp={emp} size="md" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold truncate">{emp.prefix}{emp.firstName} {emp.lastName}</p>
+                        <p className="text-xs text-muted-foreground">{emp.dept} • {emp.position}</p>
+                      </div>
+                      <button onClick={() => handleOrgLevelUnassignEmployee(emp.id)}
+                        className="w-7 h-7 rounded-full flex items-center justify-center bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors" title="ยกเลิก">
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            <div className="space-y-2">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">เพิ่มบุคคล</p>
+              <input value={orgLevelSearchTerm} onChange={(e) => setOrgLevelSearchTerm(e.target.value)}
+                placeholder="ค้นหาชื่อพนักงาน..."
+                className="w-full px-3 py-2 text-sm rounded-xl border border-border bg-muted/30 outline-none focus:ring-2 focus:ring-primary/30 transition-all" />
+              <div className="max-h-48 overflow-y-auto space-y-1">
+                {availableOrgLevelEmployees.slice(0, 20).map((emp) => (
+                  <button key={emp.id} onClick={() => handleOrgLevelAssignEmployee(emp.id)}
+                    className="w-full flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-muted/50 transition-colors text-left">
+                    <OrgEmployeeAvatar emp={emp} size="md" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold truncate">{emp.prefix}{emp.firstName} {emp.lastName}</p>
+                      <p className="text-xs text-muted-foreground">{emp.dept} • {emp.position}</p>
+                    </div>
+                    <Plus className="w-4 h-4 text-primary flex-shrink-0" />
+                  </button>
+                ))}
+                {availableOrgLevelEmployees.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">ไม่พบพนักงาน</p>}
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <DialogClose asChild>
+              <button className="px-4 py-2 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors">ปิด</button>
+            </DialogClose>
           </DialogFooter>
         </DialogContent>
       </Dialog>
