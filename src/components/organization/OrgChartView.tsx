@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Building2, Network, Users } from "lucide-react";
+import { Building2, Network, Users, Plus, Edit, Trash2, UserPlus } from "lucide-react";
 import { type Affiliation, type Position, type OrgLevel } from "@/contexts/OrgContext";
 import { type Employee } from "@/contexts/EmployeeContext";
 import EmployeeAvatarShared from "@/components/ui/employee-avatar";
@@ -12,6 +12,18 @@ interface OrgChartViewProps {
   positionEmployeeMap: Map<string, Employee[]>;
   orgLevelEmployeeMap: Map<string, Employee[]>;
   employees: Employee[];
+  canManage?: boolean;
+  canAdd?: boolean;
+  // CRUD callbacks
+  onRenameCompany?: () => void;
+  onAddOrgLevel?: (parentId: string | null) => void;
+  onEditOrgLevel?: (o: OrgLevel) => void;
+  onDeleteOrgLevel?: (o: OrgLevel) => void;
+  onAssignOrgLevel?: (o: OrgLevel) => void;
+  onAddPosition?: (affId: string, parentPos: Position | null) => void;
+  onEditPosition?: (p: Position) => void;
+  onDeletePosition?: (p: Position) => void;
+  onAssignPosition?: (p: Position) => void;
 }
 
 /* ═══════ Mini Avatar ═══════ */
@@ -49,15 +61,28 @@ const EmployeeCluster = ({ emps }: { emps: Employee[] }) => {
   );
 };
 
+/* ═══════ Action Buttons ═══════ */
+const NodeActions = ({ actions }: { actions: { icon: React.ElementType; title: string; onClick: () => void; color: string }[] }) => (
+  <div className="flex items-center gap-1 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+    {actions.map((a, i) => (
+      <button key={i} onClick={(e) => { e.stopPropagation(); a.onClick(); }}
+        className={`w-6 h-6 rounded-full flex items-center justify-center transition-colors ${a.color}`} title={a.title}>
+        <a.icon className="w-3 h-3" />
+      </button>
+    ))}
+  </div>
+);
+
 /* ═══════ Chart Node ═══════ */
 const ChartNode = ({
-  label, sublabel, variant = "default", employees: emps = [], icon: Icon,
+  label, sublabel, variant = "default", employees: emps = [], icon: Icon, actions,
 }: {
   label: string;
   sublabel?: string;
   variant?: "root" | "orgLevel" | "affiliation" | "position" | "default";
   employees?: Employee[];
   icon?: React.ElementType;
+  actions?: { icon: React.ElementType; title: string; onClick: () => void; color: string }[];
 }) => {
   const styles = {
     root: "bg-primary text-primary-foreground border-primary shadow-lg shadow-primary/20 min-w-[200px]",
@@ -68,7 +93,7 @@ const ChartNode = ({
   };
 
   return (
-    <div className={`relative inline-flex flex-col items-center px-4 py-3 rounded-2xl border-2 transition-all hover:scale-[1.02] ${styles[variant]}`}>
+    <div className={`group relative inline-flex flex-col items-center px-4 py-3 rounded-2xl border-2 transition-all hover:scale-[1.02] ${styles[variant]}`}>
       <div className="flex items-center gap-2">
         {Icon && <Icon className={`w-4 h-4 flex-shrink-0 ${variant === "root" ? "text-primary-foreground" : "text-primary"}`} />}
         <span className={`text-sm font-bold truncate max-w-[160px] ${variant === "root" ? "text-primary-foreground" : "text-foreground"}`}>{label}</span>
@@ -77,6 +102,7 @@ const ChartNode = ({
         <span className={`text-[10px] mt-0.5 ${variant === "root" ? "text-primary-foreground/70" : "text-muted-foreground"}`}>{sublabel}</span>
       )}
       <EmployeeCluster emps={emps} />
+      {actions && actions.length > 0 && <NodeActions actions={actions} />}
     </div>
   );
 };
@@ -103,12 +129,9 @@ const BranchContainer = ({ children }: { children: React.ReactNode[] }) => {
   return (
     <div className="flex flex-col items-center">
       <VLine />
-      {/* Horizontal connector line */}
       <div className="relative w-full">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 h-0.5 bg-border"
-          style={{
-            width: `calc(100% - ${100 / children.length}%)`,
-          }}
+          style={{ width: `calc(100% - ${100 / children.length}%)` }}
         />
       </div>
       <div className="flex items-start justify-center gap-4 pt-0">
@@ -125,21 +148,34 @@ const BranchContainer = ({ children }: { children: React.ReactNode[] }) => {
 
 /* ═══════ Position Sub-Tree ═══════ */
 const PositionBranch = ({
-  position, employeeMap,
+  position, employeeMap, canManage,
+  onEdit, onDelete, onAssign, onAddSub,
 }: {
   position: Position;
   employeeMap: Map<string, Employee[]>;
+  canManage?: boolean;
+  onEdit?: (p: Position) => void;
+  onDelete?: (p: Position) => void;
+  onAssign?: (p: Position) => void;
+  onAddSub?: (p: Position) => void;
 }) => {
   const emps = employeeMap.get(position.id) || [];
   const children = position.children || [];
+  const actions = canManage ? [
+    { icon: UserPlus, title: "กำหนดบุคคล", onClick: () => onAssign?.(position), color: "bg-blue-500/10 text-blue-600 hover:bg-blue-500/20" },
+    { icon: Plus, title: "เพิ่มตำแหน่งย่อย", onClick: () => onAddSub?.(position), color: "bg-primary/10 text-primary hover:bg-primary/20" },
+    { icon: Edit, title: "แก้ไข", onClick: () => onEdit?.(position), color: "bg-accent text-accent-foreground hover:bg-accent/80" },
+    { icon: Trash2, title: "ลบ", onClick: () => onDelete?.(position), color: "bg-destructive/10 text-destructive hover:bg-destructive/20" },
+  ] : undefined;
 
   return (
     <div className="flex flex-col items-center">
-      <ChartNode label={position.name} variant="position" employees={emps} icon={Users} />
+      <ChartNode label={position.name} variant="position" employees={emps} icon={Users} actions={actions} />
       {children.length > 0 && (
         <BranchContainer>
           {children.map((child) => (
-            <PositionBranch key={child.id} position={child} employeeMap={employeeMap} />
+            <PositionBranch key={child.id} position={child} employeeMap={employeeMap}
+              canManage={canManage} onEdit={onEdit} onDelete={onDelete} onAssign={onAssign} onAddSub={onAddSub} />
           ))}
         </BranchContainer>
       )}
@@ -149,18 +185,30 @@ const PositionBranch = ({
 
 /* ═══════ Affiliation Branch ═══════ */
 const AffiliationBranch = ({
-  aff, employeeMap,
+  aff, employeeMap, canManage,
+  onAddPosition, onEditPosition, onDeletePosition, onAssignPosition,
 }: {
   aff: Affiliation;
   employeeMap: Map<string, Employee[]>;
+  canManage?: boolean;
+  onAddPosition?: (affId: string, parentPos: Position | null) => void;
+  onEditPosition?: (p: Position) => void;
+  onDeletePosition?: (p: Position) => void;
+  onAssignPosition?: (p: Position) => void;
 }) => {
+  const actions = canManage ? [
+    { icon: Plus, title: "เพิ่มตำแหน่ง", onClick: () => onAddPosition?.(aff.id, null), color: "bg-primary/10 text-primary hover:bg-primary/20" },
+  ] : undefined;
+
   return (
     <div className="flex flex-col items-center">
-      <ChartNode label={aff.name} sublabel={`${aff.positions.length} ตำแหน่ง`} variant="affiliation" icon={Building2} />
+      <ChartNode label={aff.name} sublabel={`${aff.positions.length} ตำแหน่ง`} variant="affiliation" icon={Building2} actions={actions} />
       {aff.positions.length > 0 && (
         <BranchContainer>
           {aff.positions.map((pos) => (
-            <PositionBranch key={pos.id} position={pos} employeeMap={employeeMap} />
+            <PositionBranch key={pos.id} position={pos} employeeMap={employeeMap}
+              canManage={canManage} onEdit={onEditPosition} onDelete={onDeletePosition} onAssign={onAssignPosition}
+              onAddSub={(p) => onAddPosition?.(aff.id, p)} />
           ))}
         </BranchContainer>
       )}
@@ -170,37 +218,61 @@ const AffiliationBranch = ({
 
 /* ═══════ OrgLevel Branch ═══════ */
 const OrgLevelBranch = ({
-  node, affiliations, employeeMap, orgLevelEmployeeMap,
+  node, affiliations, employeeMap, orgLevelEmployeeMap, canManage,
+  onEditOrgLevel, onDeleteOrgLevel, onAddOrgLevelChild, onAssignOrgLevel,
+  onAddPosition, onEditPosition, onDeletePosition, onAssignPosition,
 }: {
   node: OrgLevel;
   affiliations: Affiliation[];
   employeeMap: Map<string, Employee[]>;
   orgLevelEmployeeMap: Map<string, Employee[]>;
+  canManage?: boolean;
+  onEditOrgLevel?: (o: OrgLevel) => void;
+  onDeleteOrgLevel?: (o: OrgLevel) => void;
+  onAddOrgLevelChild?: (parentId: string) => void;
+  onAssignOrgLevel?: (o: OrgLevel) => void;
+  onAddPosition?: (affId: string, parentPos: Position | null) => void;
+  onEditPosition?: (p: Position) => void;
+  onDeletePosition?: (p: Position) => void;
+  onAssignPosition?: (p: Position) => void;
 }) => {
   const children = node.children || [];
   const attachedAffs = affiliations.filter((a) => a.parent_org_level_id === node.id);
   const emps = orgLevelEmployeeMap.get(node.id) || [];
   const allBranches: React.ReactNode[] = [];
 
+  const actions = canManage ? [
+    { icon: UserPlus, title: "กำหนดบุคคล", onClick: () => onAssignOrgLevel?.(node), color: "bg-blue-500/10 text-blue-600 hover:bg-blue-500/20" },
+    { icon: Plus, title: "เพิ่มระดับย่อย", onClick: () => onAddOrgLevelChild?.(node.id), color: "bg-primary/10 text-primary hover:bg-primary/20" },
+    { icon: Edit, title: "แก้ไข", onClick: () => onEditOrgLevel?.(node), color: "bg-accent text-accent-foreground hover:bg-accent/80" },
+    { icon: Trash2, title: "ลบ", onClick: () => onDeleteOrgLevel?.(node), color: "bg-destructive/10 text-destructive hover:bg-destructive/20" },
+  ] : undefined;
+
   children.forEach((child) => {
     allBranches.push(
       <OrgLevelBranch
         key={child.id} node={child}
         affiliations={affiliations} employeeMap={employeeMap}
-        orgLevelEmployeeMap={orgLevelEmployeeMap}
+        orgLevelEmployeeMap={orgLevelEmployeeMap} canManage={canManage}
+        onEditOrgLevel={onEditOrgLevel} onDeleteOrgLevel={onDeleteOrgLevel}
+        onAddOrgLevelChild={onAddOrgLevelChild} onAssignOrgLevel={onAssignOrgLevel}
+        onAddPosition={onAddPosition} onEditPosition={onEditPosition}
+        onDeletePosition={onDeletePosition} onAssignPosition={onAssignPosition}
       />
     );
   });
 
   attachedAffs.forEach((aff) => {
     allBranches.push(
-      <AffiliationBranch key={aff.id} aff={aff} employeeMap={employeeMap} />
+      <AffiliationBranch key={aff.id} aff={aff} employeeMap={employeeMap}
+        canManage={canManage} onAddPosition={onAddPosition} onEditPosition={onEditPosition}
+        onDeletePosition={onDeletePosition} onAssignPosition={onAssignPosition} />
     );
   });
 
   return (
     <div className="flex flex-col items-center">
-      <ChartNode label={node.name} variant="orgLevel" employees={emps} icon={Network} />
+      <ChartNode label={node.name} variant="orgLevel" employees={emps} icon={Network} actions={actions} />
       {allBranches.length > 0 && (
         <BranchContainer>{allBranches}</BranchContainer>
       )}
@@ -212,39 +284,51 @@ const OrgLevelBranch = ({
 const OrgChartView = ({
   programName, orgLevels, affiliations,
   positionEmployeeMap, orgLevelEmployeeMap,
+  canManage, onRenameCompany, onAddOrgLevel,
+  onEditOrgLevel, onDeleteOrgLevel, onAssignOrgLevel,
+  onAddPosition, onEditPosition, onDeletePosition, onAssignPosition,
 }: OrgChartViewProps) => {
   const rootAffiliations = useMemo(
     () => affiliations.filter((a) => !a.parent_org_level_id),
     [affiliations]
   );
 
-  // Build all root-level branches
+  const rootActions = canManage ? [
+    { icon: Edit, title: "แก้ไขชื่อ", onClick: () => onRenameCompany?.(), color: "bg-primary-foreground/20 text-primary-foreground hover:bg-primary-foreground/30" },
+    { icon: Plus, title: "เพิ่มระดับองค์กร", onClick: () => onAddOrgLevel?.(null), color: "bg-primary-foreground/20 text-primary-foreground hover:bg-primary-foreground/30" },
+  ] : undefined;
+
   const rootBranches: React.ReactNode[] = [];
   orgLevels.forEach((ol) => {
     rootBranches.push(
       <OrgLevelBranch
         key={ol.id} node={ol}
-        affiliations={affiliations}
-        employeeMap={positionEmployeeMap}
-        orgLevelEmployeeMap={orgLevelEmployeeMap}
+        affiliations={affiliations} employeeMap={positionEmployeeMap}
+        orgLevelEmployeeMap={orgLevelEmployeeMap} canManage={canManage}
+        onEditOrgLevel={onEditOrgLevel} onDeleteOrgLevel={onDeleteOrgLevel}
+        onAddOrgLevelChild={(parentId) => onAddOrgLevel?.(parentId)} onAssignOrgLevel={onAssignOrgLevel}
+        onAddPosition={onAddPosition} onEditPosition={onEditPosition}
+        onDeletePosition={onDeletePosition} onAssignPosition={onAssignPosition}
       />
     );
   });
   rootAffiliations.forEach((aff) => {
     rootBranches.push(
-      <AffiliationBranch key={aff.id} aff={aff} employeeMap={positionEmployeeMap} />
+      <AffiliationBranch key={aff.id} aff={aff} employeeMap={positionEmployeeMap}
+        canManage={canManage} onAddPosition={onAddPosition} onEditPosition={onEditPosition}
+        onDeletePosition={onDeletePosition} onAssignPosition={onAssignPosition} />
     );
   });
 
   return (
     <div className="card-base overflow-x-auto p-6">
       <div className="flex flex-col items-center min-w-max pb-8">
-        {/* Root Company Node */}
         <ChartNode
           label={programName || "บริษัท"}
           sublabel="บริษัท / องค์กร"
           variant="root"
           icon={Building2}
+          actions={rootActions}
         />
 
         {rootBranches.length > 0 ? (

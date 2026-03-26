@@ -639,6 +639,20 @@ const Organization = () => {
           positionEmployeeMap={positionEmployeeMap}
           orgLevelEmployeeMap={orgLevelEmployeeMap}
           employees={employees}
+          canManage={canManage}
+          canAdd={canAdd}
+          onRenameCompany={() => { setRenameValue(programName || ""); setRenameOpen(true); }}
+          onAddOrgLevel={(parentId) => openAddOrgLevel(parentId)}
+          onEditOrgLevel={openEditOrgLevel}
+          onDeleteOrgLevel={(o) => { setDeletingOrgLevel(o); setOrgLevelDeleteOpen(true); }}
+          onAssignOrgLevel={handleOrgLevelAssignClick}
+          onAddPosition={(affId, parentPos) => {
+            if (parentPos) { handleAddSub(parentPos, affId); }
+            else { handleAddRoot(affId); }
+          }}
+          onEditPosition={handleEdit}
+          onDeletePosition={handleDeleteClick}
+          onAssignPosition={handleAssignClick}
         />
       )}
 
