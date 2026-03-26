@@ -1,34 +1,29 @@
 
 
-## Plan: Edit Company Name in Org Page + Add Org-Level Positions at Root
+## แผนการแก้ไข: สร้างบัญชี Auth ให้พนักงานที่ยังไม่มี
 
-### What changes
+### สรุปปัญหา
+พนักงาน 25 คนมีข้อมูลในตาราง employees แต่ไม่มีบัญชี Auth (user_id = null) จึงล็อกอินไม่ได้ และบางคนมีอีเมลรูปแบบผิด
 
-1. **Editable company name on Organization page** — clicking the company root node opens an inline edit or dialog to rename `programName`, saving to `company_settings` via `BrandingContext`.
+### ขั้นตอนการแก้ไข
 
-2. **Add org-level positions directly under company root** — add a "+" button next to the company root node that calls `openAddOrgLevel(null)` to create root-level org positions (e.g. ผู้อำนวยการ, หัวหน้า) that are not tied to any affiliation.
+**1. แก้ไขอีเมลที่รูปแบบไม่ถูกต้อง**
+- SQL migration เพื่อ fix 4 อีเมลที่มีปัญหา:
+  - `sutee1410@ gmail.com` → `sutee1410@gmail.com`
+  - `Yodyachai 885@gmail.com` → `yodyachai885@gmail.com`
+  - `Watson01415@.gmail.com` → `watson01415@gmail.com`
+  - `tiger_009@hotmail` → `tiger_009@hotmail.com`
 
-### Files to modify
+**2. สร้างบัญชี Auth ให้พนักงาน 25 คน**
+- เรียก Edge Function `create-employee-auth` ที่มีอยู่แล้วเพื่อสร้างบัญชี Auth สำหรับแต่ละคน
+- ใช้อีเมลจากตาราง employees และรหัสผ่านเริ่มต้น `Password123!`
+- Function จะสร้าง auth user, profile, user_role และเชื่อม user_id กลับมาที่ employees อัตโนมัติ
 
-| File | Change |
-|------|--------|
-| `src/pages/Organization.tsx` | (1) Add edit icon + click handler on company root node to open a rename dialog. (2) Add "+" button next to company root for adding root org levels. (3) Add a small rename dialog for company name that calls `updateProgramName`. |
-| `src/contexts/BrandingContext.tsx` | Add `updateProgramName(name: string)` function that saves to `company_settings` in DB and updates context state + localStorage cache. Expose it in context. |
+**3. อัปเดต initial_password**
+- ตั้ง `initial_password = 'Password123!'` ให้กับ 25 คนที่เพิ่งสร้างบัญชี
 
-### Detail
-
-**Company root node (lines 540-548)** — currently static display. Will add:
-- An Edit button that opens a dialog to change the company/org name
-- The save action calls a new `updateProgramName()` from BrandingContext which updates `company_settings` row with key `program_name`
-- A "+" button (same as the existing top-right button) to add root org levels directly from the tree
-
-**BrandingContext** — add `updateProgramName` that does:
-```typescript
-await supabase.from("company_settings").upsert({ key: "program_name", value: newName });
-```
-Then updates local state + cache.
-
-### Impact
-- Users can rename the organization directly from the org chart page
-- Users can add company-wide positions (ผู้อำนวยการ, หัวหน้า) directly from the tree root, not just from the top-right button
+### รายละเอียดทางเทคนิค
+- ใช้ `create-employee-auth` Edge Function ที่มี service role key สร้าง auth user แบบ email_confirm: true
+- Function ทำ sanitize email อยู่แล้ว (ลบ whitespace)
+- แต่อีเมลที่มี `@.` หรือขาด TLD ต้องแก้ในฐานข้อมูลก่อน เพราะ function จะ reject
 
