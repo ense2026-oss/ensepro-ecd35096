@@ -91,11 +91,11 @@ export const PendingCountsProvider = ({ children }: { children: ReactNode }) => 
     setOvertimePending(otCount);
   }, [user, role, currentUser?.employeeId, permLoading, getScope, canAction]);
 
-  // Debounced refresh to avoid rapid-fire DB calls from realtime
+  // Debounced refresh - notifications are instant, others slightly delayed
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
   const debouncedRefresh = useCallback(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => refreshCounts(), 800);
+    debounceRef.current = setTimeout(() => refreshCounts(), 300);
   }, [refreshCounts]);
 
   useEffect(() => {

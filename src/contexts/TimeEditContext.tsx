@@ -123,10 +123,9 @@ export const TimeEditProvider = ({ children }: { children: ReactNode }) => {
     debounceRef.current = setTimeout(() => fetchEditRequests(), 800);
   }, [fetchEditRequests]);
 
-  const debounceNotifRef = useRef<ReturnType<typeof setTimeout>>();
   const debouncedFetchNotifs = useCallback(() => {
-    if (debounceNotifRef.current) clearTimeout(debounceNotifRef.current);
-    debounceNotifRef.current = setTimeout(() => fetchNotifications(), 800);
+    // Fetch notifications immediately for real-time feel
+    fetchNotifications();
   }, [fetchNotifications]);
 
   useEffect(() => {
@@ -146,8 +145,6 @@ export const TimeEditProvider = ({ children }: { children: ReactNode }) => {
     return () => {
       clearTimeout(initTimer);
       if (debounceRef.current) clearTimeout(debounceRef.current);
-      if (debounceNotifRef.current) clearTimeout(debounceNotifRef.current);
-      supabase.removeChannel(channel);
     };
   }, [user, fetchEditRequests, fetchNotifications, debouncedFetchEdits, debouncedFetchNotifs]);
 
