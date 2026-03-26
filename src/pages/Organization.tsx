@@ -549,6 +549,18 @@ const Organization = () => {
               <span className="text-xs text-muted-foreground">บริษัท / องค์กร</span>
             </div>
           </div>
+          {canManage && (
+            <div className="flex items-center gap-1.5">
+              <button onClick={() => { setRenameValue(programName || ""); setRenameOpen(true); }}
+                className="w-8 h-8 rounded-full flex items-center justify-center bg-accent text-accent-foreground hover:bg-accent/80 transition-colors" title="แก้ไขชื่อองค์กร">
+                <Edit className="w-4 h-4" />
+              </button>
+              <button onClick={() => openAddOrgLevel(null)}
+                className="w-8 h-8 rounded-full flex items-center justify-center bg-primary/10 text-primary hover:bg-primary/20 transition-colors" title="เพิ่มระดับองค์กร">
+                <Plus className="w-4 h-4" />
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Org Levels tree */}
