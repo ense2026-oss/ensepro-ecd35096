@@ -328,12 +328,16 @@ export const EmployeeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           },
         });
         if (fnError) {
-          console.error("Failed to create auth account:", fnError);
+          console.warn("Auth account skipped:", fnError);
+        } else if (fnData?.skipped) {
+          console.warn("Auth account skipped (invalid email):", fnData.error);
+        } else if (fnData?.error) {
+          console.warn("Auth account error:", fnData.error);
         } else {
-          console.log("Auth account created for", emp.email, "with default password");
+          console.log("Auth account created for", emp.email);
         }
       } catch (authErr) {
-        console.error("Auth account creation failed:", authErr);
+        console.warn("Auth account creation skipped:", authErr);
       }
     }
 
