@@ -579,7 +579,7 @@ const EmployeeProfile = () => {
                   {canEditRestricted ? (
                     <>
                       <p className="text-sm font-medium font-mono tracking-wider">
-                        {showInitialPassword ? (emp.initialPassword || "—") : "••••••••"}
+                        {showInitialPassword ? (emp.initialPassword || "Password123!") : "••••••••"}
                       </p>
                       <button type="button" onClick={() => setShowInitialPassword(!showInitialPassword)} className="text-muted-foreground hover:text-foreground transition-colors">
                         {showInitialPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
