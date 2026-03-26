@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   ArrowLeft, Camera, Edit, Save, X, Plus, Trash2,
@@ -86,8 +86,27 @@ const EmployeeProfile = () => {
   const navigate = useNavigate();
   const { getEmployeeById, updateEmployee } = useEmployees();
   const { currentUser } = useAuth();
-  const { affiliations } = useOrg();
+  const { affiliations, orgLevelsFlat } = useOrg();
   const canEditRestricted = currentUser?.role === "Admin" || currentUser?.role === "HR";
+
+  // Fetch org levels assigned to this employee
+  const [employeeOrgLevels, setEmployeeOrgLevels] = useState<string[]>([]);
+  useEffect(() => {
+    if (!id) return;
+    const fetchOrgLevels = async () => {
+      const { data } = await supabase.from("org_level_employees").select("org_level_id").eq("employee_id", id);
+      if (data && data.length > 0) {
+        const names = data.map(row => {
+          const ol = orgLevelsFlat.find(o => o.id === row.org_level_id);
+          return ol?.name || "";
+        }).filter(Boolean);
+        setEmployeeOrgLevels(names);
+      } else {
+        setEmployeeOrgLevels([]);
+      }
+    };
+    fetchOrgLevels();
+  }, [id, orgLevelsFlat]);
 
   // Flatten position tree to get all position names for a given affiliation
   const flattenPositionNames = (positions: Position[]): string[] => {
@@ -265,6 +284,9 @@ const EmployeeProfile = () => {
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-4">
+          {employeeOrgLevels.length > 0 && (
+            <Field label="ระดับองค์กร" value={employeeOrgLevels.join(", ")} icon={Building} />
+          )}
           <Field label="แผนก" value={emp.dept} icon={Building} />
           <Field label="ตำแหน่ง" value={emp.position} icon={Star} />
           <Field label="ประเภทพนักงาน" value={emp.employeeType} />
