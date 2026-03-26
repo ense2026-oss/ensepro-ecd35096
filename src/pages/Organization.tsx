@@ -312,6 +312,10 @@ const Organization = () => {
   const [orgLevelFormName, setOrgLevelFormName] = useState("");
   const [orgLevelParentId, setOrgLevelParentId] = useState<string | null>(null);
 
+  // Company rename dialog
+  const [renameOpen, setRenameOpen] = useState(false);
+  const [renameValue, setRenameValue] = useState("");
+
   const totalPositions = affiliations.reduce((s, a) => s + countAllPositions(a.positions), 0);
   const totalAssigned = employees.filter(e => e.positionId).length;
 
