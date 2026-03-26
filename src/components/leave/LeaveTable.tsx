@@ -1,10 +1,12 @@
 import { CheckCircle, XCircle, FileText, Pencil, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import EmployeeAvatar from "@/components/ui/employee-avatar";
 
 export interface LeaveRecord {
   id: string;
   employeeId?: string;
   name: string;
+  photoUrl?: string;
   dept?: string;
   type: string;
   from: string;
