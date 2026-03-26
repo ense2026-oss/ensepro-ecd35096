@@ -1,13 +1,14 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  Search, Plus, Filter, Download, MoreHorizontal, Eye, Edit, Trash2,
+  Search, Plus, Filter, Download, Upload, MoreHorizontal, Eye, Edit, Trash2,
   ChevronLeft, ChevronRight, Phone, Mail, MapPin,
 } from "lucide-react";
 import { useEmployees } from "@/contexts/EmployeeContext";
 import type { Employee } from "@/contexts/EmployeeContext";
 import EmployeeFormDialog from "@/components/employees/EmployeeFormDialog";
 import DeleteEmployeeDialog from "@/components/employees/DeleteEmployeeDialog";
+import ImportEmployeesDialog from "@/components/employees/ImportEmployeesDialog";
 import EmployeeAvatar from "@/components/ui/employee-avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
@@ -30,6 +31,7 @@ const Employees = () => {
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deletingEmployee, setDeletingEmployee] = useState<Employee | null>(null);
+  const [importOpen, setImportOpen] = useState(false);
 
   const depts = ["all", ...Array.from(new Set(employees.map((e) => e.dept)))];
 
@@ -81,6 +83,12 @@ const Employees = () => {
           <p className="text-sm text-muted-foreground mt-0.5">พนักงานทั้งหมด {employees.length} คน</p>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => setImportOpen(true)}
+            className="flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-medium hover:bg-muted transition-colors"
+          >
+            <Upload className="w-4 h-4" /> นำเข้า
+          </button>
           <button className="flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-medium hover:bg-muted transition-colors">
             <Download className="w-4 h-4" /> Export
           </button>
@@ -241,6 +249,7 @@ const Employees = () => {
         employeeName={deletingEmployee ? `${deletingEmployee.prefix}${deletingEmployee.firstName} ${deletingEmployee.lastName}` : ""}
         onConfirm={handleDeleteConfirm}
       />
+      <ImportEmployeesDialog open={importOpen} onOpenChange={setImportOpen} />
     </div>
   );
 };
