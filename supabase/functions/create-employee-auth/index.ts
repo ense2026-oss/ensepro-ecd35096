@@ -12,11 +12,22 @@ Deno.serve(async (req) => {
 
   try {
     const body = await req.json();
-    const email = (body.email || "").replace(/\s+/g, "").trim();
+    // Sanitize email: remove all whitespace
+    const email = (body.email || "").replace(/\s+/g, "").trim().toLowerCase();
     const { password, fullName, role, employeeId } = body;
 
     if (!email || !password || !employeeId) {
       return new Response(JSON.stringify({ error: "email, password, and employeeId are required" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Validate email format before attempting to create user
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email) || email.includes("@.") || email.includes(".@")) {
+      console.error("Invalid email format:", email);
+      return new Response(JSON.stringify({ error: `อีเมล "${email}" มีรูปแบบไม่ถูกต้อง`, skipped: true }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
