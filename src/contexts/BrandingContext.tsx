@@ -68,10 +68,23 @@ export const BrandingProvider = ({ children }: { children: ReactNode }) => {
 
   // Save to DB on change
   const persist = useCallback(async (newState: BrandingState) => {
-    await supabase
+    const jsonValue = JSON.parse(JSON.stringify(newState));
+    const { data: existing } = await supabase
       .from("company_settings")
-      .update({ value: newState as any, updated_at: new Date().toISOString() })
-      .eq("key", "branding");
+      .select("id")
+      .eq("key", "branding")
+      .maybeSingle();
+
+    if (existing) {
+      await supabase
+        .from("company_settings")
+        .update({ value: jsonValue, updated_at: new Date().toISOString() })
+        .eq("key", "branding");
+    } else {
+      await supabase
+        .from("company_settings")
+        .insert([{ key: "branding", value: jsonValue }]);
+    }
   }, []);
 
   const update = (partial: Partial<BrandingState>) => {
