@@ -215,6 +215,19 @@ const AffiliationSettings = () => {
           </DialogHeader>
           <div className="space-y-4 pt-2">
             <div>
+              <label className="block text-sm font-semibold mb-1.5">สังกัด</label>
+              <select
+                value={posForm.affiliationId}
+                onChange={(e) => setPosForm((f) => ({ ...f, affiliationId: e.target.value }))}
+                className="w-full px-3 py-2.5 text-sm rounded-xl border outline-none bg-muted/30 focus:ring-2 focus:ring-primary/30 transition-shadow"
+                disabled={!!editingPosId}
+              >
+                {affiliations.map((aff) => (
+                  <option key={aff.id} value={aff.id}>{aff.name}</option>
+                ))}
+              </select>
+            </div>
+            <div>
               <label className="block text-sm font-semibold mb-1.5">ชื่อตำแหน่ง</label>
               <input value={posForm.name} onChange={(e) => setPosForm((f) => ({ ...f, name: e.target.value }))} placeholder="เช่น เจ้าหน้าที่วิจัย"
                 className="w-full px-3 py-2.5 text-sm rounded-xl border outline-none bg-muted/30 focus:ring-2 focus:ring-primary/30 transition-shadow" />
