@@ -19,7 +19,7 @@ import {
 const allMenuItems = [
   { icon: LayoutDashboard, label: "หน้าหลัก", path: "/dashboard", hideOnMobile: false },
   { icon: Users, label: "พนักงาน", path: "/employees", hideOnMobile: false },
-  { icon: GitBranch, label: "องค์กร", path: "/organization", hideOnMobile: false },
+  { icon: GitBranch, label: "องค์กร", path: "/organization", hideOnMobile: true },
   { icon: Clock, label: "เวลา", path: "/attendance", hideOnMobile: false },
   { icon: CalendarDays, label: "ลางาน", path: "/leave", hideOnMobile: false },
   { icon: Clock, label: "โอที", path: "/overtime", hideOnMobile: false },
