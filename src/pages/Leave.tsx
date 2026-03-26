@@ -194,7 +194,9 @@ const Leave = () => {
       fetchLeaves();
       toast({ title: "สำเร็จ", description: "แก้ไขคำขอลาเรียบร้อยแล้ว" });
     } else {
-      // Insert new
+      // Get total tiers from approval config
+      const totalTiers = await getApprovalTiers("leave");
+
       const { data: inserted } = await supabase.from("leave_requests").insert([{
         employee_id: emp.id,
         leave_type_id: lt.id,
@@ -205,6 +207,9 @@ const Leave = () => {
         reason: record.reason,
         status: "pending",
         has_file: record.file,
+        current_tier: 1,
+        approved_tiers: 0,
+        total_tiers: totalTiers,
       }]).select("id").single();
 
       if (inserted && file) {
@@ -217,8 +222,8 @@ const Leave = () => {
       fetchLeaves();
       toast({ title: "สำเร็จ", description: "ยื่นคำขอลาเรียบร้อยแล้ว" });
 
-      // Notify approvers
-      notifyApprovers({
+      // Notify tier 1 approver only
+      notifyTierApprover("leave", 0, {
         type: "leave",
         title: "คำขอลางานใหม่",
         description: `${record.name} ยื่นขอลา ${record.type} ${record.days} วัน (${record.from} - ${record.to})`,
