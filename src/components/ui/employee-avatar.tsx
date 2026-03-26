@@ -1,4 +1,5 @@
 import LazyImage from "@/components/ui/lazy-image";
+import defaultAvatarImg from "@/assets/default-avatar.png";
 
 interface EmployeeAvatarProps {
   photoUrl?: string;
@@ -44,12 +45,11 @@ const EmployeeAvatar = ({
   }
 
   return (
-    <div
-      className={`${dim} ${roundedClass} flex items-center justify-center font-bold flex-shrink-0 ${className}`}
-      style={{ background: avatarColor, color: avatarTextColor }}
-    >
-      {initials}
-    </div>
+    <LazyImage
+      src={defaultAvatarImg}
+      alt={firstName || "Default"}
+      className={`${dim} ${roundedClass} object-cover flex-shrink-0 ${className}`}
+    />
   );
 };
 
