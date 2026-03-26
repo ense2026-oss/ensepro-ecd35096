@@ -1,62 +1,34 @@
 
 
-## Plan: Restructure Organization to Unified Tree
+## Plan: Edit Company Name in Org Page + Add Org-Level Positions at Root
 
-### What the user wants
+### What changes
 
-Currently, each affiliation (สังกัด) has its own separate position tree. The user wants a **single unified org tree** where:
+1. **Editable company name on Organization page** — clicking the company root node opens an inline edit or dialog to rename `programName`, saving to `company_settings` via `BrandingContext`.
 
-```text
-บริษัทพลังงานนครพิงค์ จำกัด  (company name from settings)
-  └─ ผู้อำนวยการ              (company-level position)
-      └─ หัวหน้า              (company-level position)
-          ├─ รถไฟฟ้า ขสมช      (affiliation → its positions)
-          └─ เตาเผาขยะสวนดอก   (affiliation → its positions)
-```
-
-### Approach
-
-**1. New database table: `org_levels`** — stores company-level positions that sit above affiliations in the hierarchy.
-
-| Column | Type | Description |
-|--------|------|-------------|
-| id | uuid | PK |
-| name | text | e.g. ผู้อำนวยการ, หัวหน้า |
-| parent_id | uuid nullable | self-referencing for hierarchy |
-| sort_order | int | ordering |
-
-RLS: Same pattern as affiliations (Admin/HR/Manager manage, authenticated read).
-
-**2. Update `affiliations` table** — add `parent_org_level_id` column (uuid, nullable, references org_levels) to specify which company-level node each affiliation branches from. If null, affiliations appear directly under the company root.
-
-**3. Update `OrgContext.tsx`**
-- Add CRUD for `org_levels` (fetch, add, update, delete, reorder)
-- Fetch `affiliations` with their `parent_org_level_id`
-- Expose the full org hierarchy data
-
-**4. Rewrite `Organization.tsx` UI**
-- Render a single unified tree starting from the company name (pulled from `company_settings`)
-- Below the company root, render `org_levels` as tree nodes (recursive, supporting hierarchy)
-- At the appropriate org_level node (or at root if no org_levels), render affiliations as branch nodes
-- Under each affiliation, render its positions tree (same as current)
-- Support add/edit/delete for org_level nodes
-- Support assigning employees to org_level nodes (add `position_id` compatibility or a new `org_level_id` on employees)
-
-**5. Update `AffiliationSettings.tsx`**
-- Add a dropdown to select which `org_level` each affiliation belongs under
+2. **Add org-level positions directly under company root** — add a "+" button next to the company root node that calls `openAddOrgLevel(null)` to create root-level org positions (e.g. ผู้อำนวยการ, หัวหน้า) that are not tied to any affiliation.
 
 ### Files to modify
 
 | File | Change |
 |------|--------|
-| Migration SQL | Create `org_levels` table, add `parent_org_level_id` to `affiliations` |
-| `src/contexts/OrgContext.tsx` | Add org_levels CRUD, fetch org_levels, expose hierarchy |
-| `src/pages/Organization.tsx` | Rewrite to render unified tree: company → org_levels → affiliations → positions |
-| `src/components/settings/AffiliationSettings.tsx` | Add parent org_level selector when adding/editing affiliations |
+| `src/pages/Organization.tsx` | (1) Add edit icon + click handler on company root node to open a rename dialog. (2) Add "+" button next to company root for adding root org levels. (3) Add a small rename dialog for company name that calls `updateProgramName`. |
+| `src/contexts/BrandingContext.tsx` | Add `updateProgramName(name: string)` function that saves to `company_settings` in DB and updates context state + localStorage cache. Expose it in context. |
+
+### Detail
+
+**Company root node (lines 540-548)** — currently static display. Will add:
+- An Edit button that opens a dialog to change the company/org name
+- The save action calls a new `updateProgramName()` from BrandingContext which updates `company_settings` row with key `program_name`
+- A "+" button (same as the existing top-right button) to add root org levels directly from the tree
+
+**BrandingContext** — add `updateProgramName` that does:
+```typescript
+await supabase.from("company_settings").upsert({ key: "program_name", value: newName });
+```
+Then updates local state + cache.
 
 ### Impact
-- Organization page shows one cohesive tree instead of separate sections per affiliation
-- Existing position data and employee assignments remain intact
-- Company-level roles (ผู้อำนวยการ, หัวหน้า) can have employees assigned to them
-- No breaking changes to other pages that reference affiliations/positions
+- Users can rename the organization directly from the org chart page
+- Users can add company-wide positions (ผู้อำนวยการ, หัวหน้า) directly from the tree root, not just from the top-right button
 
