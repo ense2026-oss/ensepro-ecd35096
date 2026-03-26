@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Building2, MapPin, Shield, Clock, Calendar, Workflow, ScanFace, Palette, Banknote, FileSignature, ToggleRight, ChevronRight, Network } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -15,10 +15,10 @@ import ContractSettings from "@/components/settings/ContractSettings";
 import ModuleSettings from "@/components/settings/ModuleSettings";
 import AffiliationSettings from "@/components/settings/AffiliationSettings";
 
-const tabs = [
+const ALL_TABS = [
   { id: "company", label: "ข้อมูลบริษัท", icon: Building2 },
   { id: "affiliations", label: "จัดการสังกัด", icon: Network },
-  { id: "locations", label: "พื้นที่เข้างาน", icon: MapPin },
+  { id: "locations", label: "พื้นที่เข้างาน", icon: MapPin, requireModule: "check-in" },
   { id: "roles", label: "สิทธิ์ผู้ใช้งาน", icon: Shield },
   { id: "shifts", label: "กะการทำงาน", icon: Clock },
   { id: "payroll", label: "ตั้งค่าเงินเดือน", icon: Banknote },
@@ -37,6 +37,39 @@ const tabs = [
 const Settings = () => {
   const [activeTab, setActiveTab] = useState("company");
   const isMobile = useIsMobile();
+
+  // Read module settings from localStorage and listen for changes
+  const getModuleSettings = (): Record<string, boolean> => {
+    try {
+      const saved = localStorage.getItem("module-settings");
+      return saved ? JSON.parse(saved) : {};
+    } catch { return {}; }
+  };
+
+  const [moduleSettings, setModuleSettings] = useState<Record<string, boolean>>(getModuleSettings);
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail as Record<string, boolean>;
+      setModuleSettings(detail);
+    };
+    window.addEventListener("module-settings-changed", handler);
+    return () => window.removeEventListener("module-settings-changed", handler);
+  }, []);
+
+  const tabs = ALL_TABS.filter((tab) => {
+    if ('requireModule' in tab && tab.requireModule) {
+      return moduleSettings[tab.requireModule] !== false;
+    }
+    return true;
+  });
+
+  // If active tab got hidden, switch to first available
+  useEffect(() => {
+    if (!tabs.find(t => t.id === activeTab)) {
+      setActiveTab(tabs[0]?.id || "company");
+    }
+  }, [tabs, activeTab]);
 
   const renderContent = () => {
     switch (activeTab) {
