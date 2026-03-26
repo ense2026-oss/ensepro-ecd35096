@@ -653,7 +653,10 @@ const Organization = () => {
                 onEdit={openEditOrgLevel}
                 onDelete={(o) => { setDeletingOrgLevel(o); setOrgLevelDeleteOpen(true); }}
                 onAddChild={(parentId) => openAddOrgLevel(parentId)}
+                onAssign={handleOrgLevelAssignClick}
                 renderAffiliation={renderAffiliation}
+                orgLevelEmployeeMap={orgLevelEmployeeMap}
+                employees={employees}
               />
             ))}
             {/* Root-level affiliations (no parent org_level) */}
