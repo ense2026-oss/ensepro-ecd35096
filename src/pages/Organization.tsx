@@ -421,7 +421,35 @@ const Organization = () => {
     toast.success("ยกเลิกการกำหนดบุคคลสำเร็จ");
   };
 
-  // OrgLevel handlers
+  // OrgLevel Assign handlers
+  const handleOrgLevelAssignClick = (o: OrgLevel) => { setAssigningOrgLevel(o); setOrgLevelSearchTerm(""); setOrgLevelAssignOpen(true); };
+  const assignedToThisOrgLevel = useMemo(() => {
+    if (!assigningOrgLevel) return [];
+    return orgLevelEmployeeMap.get(assigningOrgLevel.id) || [];
+  }, [assigningOrgLevel, orgLevelEmployeeMap]);
+  const availableOrgLevelEmployees = useMemo(() => {
+    const assigned = assignedToThisOrgLevel.map(e => e.id);
+    return employees
+      .filter(e => e.status === "active" && !assigned.includes(e.id))
+      .filter(e => {
+        if (!orgLevelSearchTerm) return true;
+        const term = orgLevelSearchTerm.toLowerCase();
+        return `${e.firstName} ${e.lastName}`.toLowerCase().includes(term) || e.nickname.toLowerCase().includes(term);
+      });
+  }, [employees, assignedToThisOrgLevel, orgLevelSearchTerm]);
+  const handleOrgLevelAssignEmployee = async (empId: string) => {
+    if (!assigningOrgLevel) return;
+    await supabase.from("org_level_employees").insert({ org_level_id: assigningOrgLevel.id, employee_id: empId });
+    await fetchOrgLevelEmployees();
+    toast.success("กำหนดบุคคลสำเร็จ");
+  };
+  const handleOrgLevelUnassignEmployee = async (empId: string) => {
+    if (!assigningOrgLevel) return;
+    await supabase.from("org_level_employees").delete().eq("org_level_id", assigningOrgLevel.id).eq("employee_id", empId);
+    await fetchOrgLevelEmployees();
+    toast.success("ยกเลิกการกำหนดบุคคลสำเร็จ");
+  };
+
   const openAddOrgLevel = (parentId: string | null) => {
     setEditingOrgLevel(null); setOrgLevelFormName(""); setOrgLevelParentId(parentId); setOrgLevelDialogOpen(true);
   };
