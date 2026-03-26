@@ -260,6 +260,27 @@ const Organization = () => {
   const canAdd = canAction(role, "organization", "add");
   const canDelete = canAction(role, "organization", "delete");
 
+  // ─── Org Level Employees ───
+  const [orgLevelEmpRows, setOrgLevelEmpRows] = useState<{ org_level_id: string; employee_id: string }[]>([]);
+  const fetchOrgLevelEmployees = useCallback(async () => {
+    const { data } = await supabase.from("org_level_employees").select("org_level_id, employee_id").order("sort_order");
+    setOrgLevelEmpRows(data || []);
+  }, []);
+  useEffect(() => { fetchOrgLevelEmployees(); }, [fetchOrgLevelEmployees]);
+
+  const orgLevelEmployeeMap = useMemo(() => {
+    const map = new Map<string, Employee[]>();
+    orgLevelEmpRows.forEach((row) => {
+      const emp = employees.find(e => e.id === row.employee_id);
+      if (emp) {
+        const list = map.get(row.org_level_id) || [];
+        list.push(emp);
+        map.set(row.org_level_id, list);
+      }
+    });
+    return map;
+  }, [orgLevelEmpRows, employees]);
+
   // Build position → employees map
   const positionEmployeeMap = useMemo(() => {
     const map = new Map<string, Employee[]>();
