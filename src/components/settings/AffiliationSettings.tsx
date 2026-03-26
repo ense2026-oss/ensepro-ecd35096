@@ -54,8 +54,9 @@ const AffiliationSettings = () => {
 
   // Position CRUD
   const openAddPos = (affId: string) => { setEditingPosId(null); setPosForm({ name: "", affiliationId: affId }); setPosDialogOpen(true); };
-  const openEditPos = (posId: string, name: string) => {
-    setEditingPosId(posId); setPosForm((f) => ({ ...f, name })); setPosDialogOpen(true);
+  const openAddPosGlobal = () => { setEditingPosId(null); setPosForm({ name: "", affiliationId: affiliations[0]?.id || "" }); setPosDialogOpen(true); };
+  const openEditPos = (posId: string, name: string, affId: string) => {
+    setEditingPosId(posId); setPosForm({ name, affiliationId: affId }); setPosDialogOpen(true);
   };
 
   const handleSavePos = async () => {
@@ -85,11 +86,17 @@ const AffiliationSettings = () => {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <p className="text-sm text-muted-foreground">{affiliations.length} สังกัด, {totalPositions} ตำแหน่ง</p>
-        <button onClick={openAddAff}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold text-primary-foreground"
-          style={{ background: "linear-gradient(135deg, hsl(var(--primary)), hsl(31 100% 60%))", boxShadow: "0 4px 12px hsl(var(--primary) / 0.3)" }}>
-          <Plus className="w-4 h-4" /> เพิ่มสังกัด
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={openAddPosGlobal}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold border-2 border-primary text-primary hover:bg-primary/10 transition-colors">
+            <Briefcase className="w-4 h-4" /> เพิ่มตำแหน่งงาน
+          </button>
+          <button onClick={openAddAff}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold text-primary-foreground"
+            style={{ background: "linear-gradient(135deg, hsl(var(--primary)), hsl(31 100% 60%))", boxShadow: "0 4px 12px hsl(var(--primary) / 0.3)" }}>
+            <Plus className="w-4 h-4" /> เพิ่มสังกัด
+          </button>
+        </div>
       </div>
 
       <div className="space-y-3">
@@ -132,7 +139,7 @@ const AffiliationSettings = () => {
                       <div key={pos.id} className="flex items-center gap-3 py-2 px-3 rounded-xl bg-muted/40">
                         <Briefcase className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                         <span className="text-sm flex-1 truncate">{pos.name}</span>
-                        <button onClick={() => openEditPos(pos.id, pos.name)} className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground">
+                        <button onClick={() => openEditPos(pos.id, pos.name, aff.id)} className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground">
                           <Edit className="w-3.5 h-3.5" />
                         </button>
                         <button onClick={() => setDeletePosId(pos.id)} className="p-1.5 rounded-lg hover:bg-destructive/10 transition-colors text-destructive">
@@ -207,6 +214,19 @@ const AffiliationSettings = () => {
             <DialogDescription>กรอกชื่อตำแหน่งงาน</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 pt-2">
+            <div>
+              <label className="block text-sm font-semibold mb-1.5">สังกัด</label>
+              <select
+                value={posForm.affiliationId}
+                onChange={(e) => setPosForm((f) => ({ ...f, affiliationId: e.target.value }))}
+                className="w-full px-3 py-2.5 text-sm rounded-xl border outline-none bg-muted/30 focus:ring-2 focus:ring-primary/30 transition-shadow"
+                disabled={!!editingPosId}
+              >
+                {affiliations.map((aff) => (
+                  <option key={aff.id} value={aff.id}>{aff.name}</option>
+                ))}
+              </select>
+            </div>
             <div>
               <label className="block text-sm font-semibold mb-1.5">ชื่อตำแหน่ง</label>
               <input value={posForm.name} onChange={(e) => setPosForm((f) => ({ ...f, name: e.target.value }))} placeholder="เช่น เจ้าหน้าที่วิจัย"
