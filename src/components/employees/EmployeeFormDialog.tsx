@@ -65,10 +65,18 @@ const EmployeeFormDialog = ({ open, onOpenChange, employee, onSave }: EmployeeFo
   const [errors, setErrors] = useState<string[]>([]);
   const photoInputRef = useRef<HTMLInputElement>(null);
 
-  // Filter positions based on selected affiliation
+  // Filter positions based on selected affiliation (recursive)
   const filteredPositions = useMemo(() => {
+    const collectNames = (positions: { name: string; children?: any[] }[]): string[] => {
+      const names: string[] = [];
+      positions.forEach((p) => {
+        names.push(p.name);
+        if (p.children?.length) names.push(...collectNames(p.children));
+      });
+      return names;
+    };
     const aff = affiliations.find((a) => a.name === form.dept);
-    if (aff) return aff.positions.map((p) => p.name);
+    if (aff) return collectNames(aff.positions);
     return allPositions;
   }, [form.dept, affiliations, allPositions]);
 
