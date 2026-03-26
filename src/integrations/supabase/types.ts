@@ -672,7 +672,9 @@ export type Database = {
       }
       leave_requests: {
         Row: {
+          approved_tiers: number
           created_at: string
+          current_tier: number
           date_from: string
           date_to: string
           days: number
@@ -684,10 +686,13 @@ export type Database = {
           leave_type_name: string
           reason: string
           status: string
+          total_tiers: number
           updated_at: string
         }
         Insert: {
+          approved_tiers?: number
           created_at?: string
+          current_tier?: number
           date_from?: string
           date_to?: string
           days?: number
@@ -699,10 +704,13 @@ export type Database = {
           leave_type_name?: string
           reason?: string
           status?: string
+          total_tiers?: number
           updated_at?: string
         }
         Update: {
+          approved_tiers?: number
           created_at?: string
+          current_tier?: number
           date_from?: string
           date_to?: string
           days?: number
@@ -714,6 +722,7 @@ export type Database = {
           leave_type_name?: string
           reason?: string
           status?: string
+          total_tiers?: number
           updated_at?: string
         }
         Relationships: [
@@ -837,7 +846,9 @@ export type Database = {
       overtime_requests: {
         Row: {
           approved_by: string | null
+          approved_tiers: number
           created_at: string
+          current_tier: number
           date: string
           employee_id: string
           end_time: string
@@ -847,10 +858,13 @@ export type Database = {
           reason: string
           start_time: string
           status: string
+          total_tiers: number
         }
         Insert: {
           approved_by?: string | null
+          approved_tiers?: number
           created_at?: string
+          current_tier?: number
           date?: string
           employee_id: string
           end_time?: string
@@ -860,10 +874,13 @@ export type Database = {
           reason?: string
           start_time?: string
           status?: string
+          total_tiers?: number
         }
         Update: {
           approved_by?: string | null
+          approved_tiers?: number
           created_at?: string
+          current_tier?: number
           date?: string
           employee_id?: string
           end_time?: string
@@ -873,6 +890,7 @@ export type Database = {
           reason?: string
           start_time?: string
           status?: string
+          total_tiers?: number
         }
         Relationships: [
           {
@@ -1000,8 +1018,10 @@ export type Database = {
       }
       time_edit_requests: {
         Row: {
+          approved_tiers: number
           attendance_id: string | null
           created_at: string
+          current_tier: number
           date: string
           employee_id: string
           id: string
@@ -1011,10 +1031,13 @@ export type Database = {
           original_check_out: string
           reason: string
           status: string
+          total_tiers: number
         }
         Insert: {
+          approved_tiers?: number
           attendance_id?: string | null
           created_at?: string
+          current_tier?: number
           date?: string
           employee_id: string
           id?: string
@@ -1024,10 +1047,13 @@ export type Database = {
           original_check_out?: string
           reason?: string
           status?: string
+          total_tiers?: number
         }
         Update: {
+          approved_tiers?: number
           attendance_id?: string | null
           created_at?: string
+          current_tier?: number
           date?: string
           employee_id?: string
           id?: string
@@ -1037,6 +1063,7 @@ export type Database = {
           original_check_out?: string
           reason?: string
           status?: string
+          total_tiers?: number
         }
         Relationships: [
           {
@@ -1106,6 +1133,28 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      notify_approvers: {
+        Args: {
+          p_action_label?: string
+          p_description: string
+          p_module_key: string
+          p_target_employee?: string
+          p_title: string
+          p_type?: string
+        }
+        Returns: undefined
+      }
+      notify_requester: {
+        Args: {
+          p_action_label?: string
+          p_description: string
+          p_employee_id: string
+          p_target_employee?: string
+          p_title: string
+          p_type?: string
+        }
+        Returns: undefined
       }
     }
     Enums: {

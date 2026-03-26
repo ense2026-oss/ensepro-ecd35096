@@ -14,6 +14,9 @@ export interface LeaveRecord {
   status: string;
   file: boolean;
   fileUrl?: string;
+  currentTier?: number;
+  approvedTiers?: number;
+  totalTiers?: number;
 }
 
 const statusConf: Record<string, { label: string; color: string; bg: string }> = {
@@ -108,6 +111,11 @@ const LeaveTable = ({ records, onApprove, onReject, hideActions = false, current
                     <span className="text-xs font-semibold px-2.5 py-1 rounded-full" style={{ background: conf.bg, color: conf.color }}>
                       {conf.label}
                     </span>
+                    {row.status === "pending" && (row.totalTiers || 1) > 1 && (
+                      <span className="ml-1.5 text-xs text-muted-foreground">
+                        ({row.approvedTiers || 0}/{row.totalTiers})
+                      </span>
+                    )}
                   </td>
                   {showActionsCol && (
                     <td className="px-4 py-3.5">

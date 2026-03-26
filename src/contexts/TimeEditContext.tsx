@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useCallback, useEffect, useRef, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { notifyApprovers } from "@/utils/notifications";
+import { notifyTierApprover, getApprovalTiers } from "@/utils/notifications";
 
 export interface TimeEditRequest {
   id: string;
@@ -160,6 +160,7 @@ export const TimeEditProvider = ({ children }: { children: ReactNode }) => {
   }, [user, fetchEditRequests, fetchNotifications, debouncedFetchEdits, debouncedFetchNotifs]);
 
   const addEditRequest = useCallback(async (req: Omit<TimeEditRequest, "id" | "status" | "createdAt">) => {
+    const totalTiers = await getApprovalTiers("time_edit");
     await supabase.from("time_edit_requests").insert({
       employee_id: req.employeeId,
       attendance_id: req.attendanceId || null,
@@ -169,9 +170,12 @@ export const TimeEditProvider = ({ children }: { children: ReactNode }) => {
       new_check_in: req.newCheckIn,
       new_check_out: req.newCheckOut,
       reason: req.reason,
+      current_tier: 1,
+      approved_tiers: 0,
+      total_tiers: totalTiers,
     });
-    // Notify all admin/hr approvers
-    notifyApprovers({
+    // Notify tier 1 approver
+    notifyTierApprover("time_edit", 0, {
       type: "attendance",
       title: "คำขอแก้ไขเวลาใหม่",
       description: `${req.employeeName} ขอแก้ไขเวลา ${req.date} → เข้า ${req.newCheckIn} / ออก ${req.newCheckOut}`,

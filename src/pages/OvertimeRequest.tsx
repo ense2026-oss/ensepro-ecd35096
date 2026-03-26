@@ -11,7 +11,7 @@ import { usePermissions } from "@/contexts/PermissionsContext";
 import TimeInput24 from "@/components/ui/time-input-24";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { notifyApprovers, notifyRequester } from "@/utils/notifications";
+import { notifyApprovers, notifyRequester, getApprovalTiers, notifyTierApprover } from "@/utils/notifications";
 import SearchableSelect from "@/components/ui/searchable-select";
 
 type OTStatus = "pending" | "approved" | "rejected";
@@ -31,6 +31,9 @@ interface OTRequest {
   status: OTStatus;
   createdAt: string;
   approvedBy?: string;
+  currentTier?: number;
+  approvedTiers?: number;
+  totalTiers?: number;
 }
 
 const otTypeLabels: Record<OTType, { label: string; className: string }> = {
@@ -240,6 +243,9 @@ const OvertimeRequest = () => {
         status: r.status as OTStatus,
         createdAt: r.created_at,
         approvedBy: r.approved_by,
+        currentTier: r.current_tier || 1,
+        approvedTiers: r.approved_tiers || 0,
+        totalTiers: r.total_tiers || 1,
       })));
     }
     setLoading(false);
@@ -283,6 +289,7 @@ const OvertimeRequest = () => {
   };
 
   const handleAdd = async (req: Omit<OTRequest, "id" | "createdAt" | "status">) => {
+    const totalTiers = await getApprovalTiers("ot");
     await supabase.from("overtime_requests").insert({
       employee_id: req.employeeId,
       date: req.date,
@@ -291,10 +298,13 @@ const OvertimeRequest = () => {
       hours: req.hours,
       ot_type: req.type,
       reason: req.reason,
+      current_tier: 1,
+      approved_tiers: 0,
+      total_tiers: totalTiers,
     });
     fetchRequests();
     toast.success("ยื่นคำขอ OT เรียบร้อย");
-    notifyApprovers({
+    notifyTierApprover("ot", 0, {
       type: "ot",
       title: "คำขอ OT ใหม่",
       description: `${req.employeeName} ยื่นขอ OT ${req.date} (${req.startTime}-${req.endTime}) ${req.hours} ชม.`,
@@ -303,15 +313,40 @@ const OvertimeRequest = () => {
   };
 
   const handleApprove = async (id: string) => {
-    await supabase.from("overtime_requests").update({ status: "approved", approved_by: currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : "Admin" }).eq("id", id);
-    setRequests((prev) => prev.map((r) => r.id === id ? { ...r, status: "approved" as OTStatus } : r));
-    toast.success("อนุมัติ OT เรียบร้อย");
     const req = requests.find((r) => r.id === id);
-    if (req) {
+    if (!req) return;
+
+    const nextTier = (req.approvedTiers || 0) + 1;
+    const totalTiers = req.totalTiers || 1;
+
+    if (nextTier >= totalTiers) {
+      await supabase.from("overtime_requests").update({
+        status: "approved",
+        approved_by: currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : "Admin",
+        approved_tiers: nextTier,
+        current_tier: nextTier,
+      }).eq("id", id);
+      setRequests((prev) => prev.map((r) => r.id === id ? { ...r, status: "approved" as OTStatus, approvedTiers: nextTier } : r));
+      toast.success("อนุมัติ OT เรียบร้อย (ครบทุกระดับ)");
+
       notifyRequester(req.employeeId, {
         type: "approval",
         title: "คำขอ OT ได้รับการอนุมัติ",
         description: `คำขอ OT ${req.date} (${req.startTime}-${req.endTime}) ${req.hours} ชม. ได้รับการอนุมัติแล้ว`,
+        targetEmployee: req.employeeName,
+      });
+    } else {
+      await supabase.from("overtime_requests").update({
+        approved_tiers: nextTier,
+        current_tier: nextTier + 1,
+      }).eq("id", id);
+      setRequests((prev) => prev.map((r) => r.id === id ? { ...r, approvedTiers: nextTier, currentTier: nextTier + 1 } : r));
+      toast.success(`อนุมัติระดับ ${nextTier}/${totalTiers} — รอระดับถัดไป`);
+
+      notifyTierApprover("ot", nextTier, {
+        type: "ot",
+        title: `คำขอ OT รอการอนุมัติ (ระดับ ${nextTier + 1}/${totalTiers})`,
+        description: `${req.employeeName} ยื่นขอ OT ${req.date} (${req.startTime}-${req.endTime}) ${req.hours} ชม. — ผ่านระดับ ${nextTier} แล้ว`,
         targetEmployee: req.employeeName,
       });
     }
