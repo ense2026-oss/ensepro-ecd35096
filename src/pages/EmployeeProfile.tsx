@@ -6,7 +6,7 @@ import {
   Phone, Mail, MapPin, Calendar, CreditCard, Droplets,
   Building, Star, Lock, Eye, EyeOff, AlertCircle
 } from "lucide-react";
-import { RefreshCw } from "lucide-react";
+
 import { ThaiDatePicker } from "@/components/ui/thai-date-picker";
 import { useEmployees } from "@/contexts/EmployeeContext";
 import { useOrg, type Position } from "@/contexts/OrgContext";
