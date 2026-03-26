@@ -284,6 +284,9 @@ const EmployeeProfile = () => {
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-4">
+          {employeeOrgLevels.length > 0 && (
+            <Field label="ระดับองค์กร" value={employeeOrgLevels.join(", ")} icon={Building} />
+          )}
           <Field label="แผนก" value={emp.dept} icon={Building} />
           <Field label="ตำแหน่ง" value={emp.position} icon={Star} />
           <Field label="ประเภทพนักงาน" value={emp.employeeType} />
