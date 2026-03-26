@@ -34,10 +34,10 @@ const AffiliationSettings = () => {
     if (!affForm.name.trim()) { toast({ title: "กรุณากรอกชื่อสังกัด", variant: "destructive" }); return; }
     setSaving(true);
     if (editingAffId) {
-      await updateAffiliation(editingAffId, affForm.name);
+      await updateAffiliation(editingAffId, affForm.name, affForm.parentOrgLevelId || null);
       toast({ title: "แก้ไขสังกัดสำเร็จ", description: affForm.name });
     } else {
-      await addAffiliation(affForm.name);
+      await addAffiliation(affForm.name, affForm.parentOrgLevelId || null);
       toast({ title: "เพิ่มสังกัดสำเร็จ", description: affForm.name });
     }
     setSaving(false);
