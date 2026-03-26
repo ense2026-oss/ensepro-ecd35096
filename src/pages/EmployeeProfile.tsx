@@ -86,8 +86,27 @@ const EmployeeProfile = () => {
   const navigate = useNavigate();
   const { getEmployeeById, updateEmployee } = useEmployees();
   const { currentUser } = useAuth();
-  const { affiliations } = useOrg();
+  const { affiliations, orgLevelsFlat } = useOrg();
   const canEditRestricted = currentUser?.role === "Admin" || currentUser?.role === "HR";
+
+  // Fetch org levels assigned to this employee
+  const [employeeOrgLevels, setEmployeeOrgLevels] = useState<string[]>([]);
+  useEffect(() => {
+    if (!id) return;
+    const fetchOrgLevels = async () => {
+      const { data } = await supabase.from("org_level_employees").select("org_level_id").eq("employee_id", id);
+      if (data && data.length > 0) {
+        const names = data.map(row => {
+          const ol = orgLevelsFlat.find(o => o.id === row.org_level_id);
+          return ol?.name || "";
+        }).filter(Boolean);
+        setEmployeeOrgLevels(names);
+      } else {
+        setEmployeeOrgLevels([]);
+      }
+    };
+    fetchOrgLevels();
+  }, [id, orgLevelsFlat]);
 
   // Flatten position tree to get all position names for a given affiliation
   const flattenPositionNames = (positions: Position[]): string[] => {
