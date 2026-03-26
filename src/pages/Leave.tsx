@@ -107,6 +107,9 @@ const Leave = () => {
         status: r.status,
         file: r.has_file,
         fileUrl: r.file_url || undefined,
+        currentTier: r.current_tier || 1,
+        approvedTiers: r.approved_tiers || 0,
+        totalTiers: r.total_tiers || 1,
       }));
       setLeaves(records);
 
