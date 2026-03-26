@@ -13,10 +13,11 @@ interface LeaveRequestDialogProps {
   canSelectEmployee?: boolean;
   currentUserName?: string;
   employeeNames?: string[];
+  allEmployeeNames?: string[];
   editingRecord?: LeaveRecord | null;
 }
 
-const LeaveRequestDialog = ({ open, onOpenChange, leaveTypes, onSubmit, canSelectEmployee, currentUserName, employeeNames = [], editingRecord }: LeaveRequestDialogProps) => {
+const LeaveRequestDialog = ({ open, onOpenChange, leaveTypes, onSubmit, canSelectEmployee, currentUserName, employeeNames = [], allEmployeeNames = [], editingRecord }: LeaveRequestDialogProps) => {
   const [leaveType, setLeaveType] = useState(leaveTypes[0]?.name || "");
   const [selectedEmployee, setSelectedEmployee] = useState(currentUserName || "");
   const [startDate, setStartDate] = useState("");
@@ -31,7 +32,7 @@ const LeaveRequestDialog = ({ open, onOpenChange, leaveTypes, onSubmit, canSelec
 
   const selectedType = leaveTypes.find((lt) => lt.name === leaveType);
   const requireDoc = selectedType?.requireDoc ?? false;
-  const substituteList = employeeNames.filter((n) => n !== (selectedEmployee || currentUserName));
+  const substituteList = (allEmployeeNames.length > 0 ? allEmployeeNames : employeeNames).filter((n) => n !== (selectedEmployee || currentUserName));
 
   useEffect(() => {
     if (editingRecord && open) {
@@ -175,7 +176,7 @@ const LeaveRequestDialog = ({ open, onOpenChange, leaveTypes, onSubmit, canSelec
             <select value={substitute} onChange={(e) => setSubstitute(e.target.value)} className="w-full px-3 py-2.5 text-sm rounded-xl border outline-none bg-muted/30 cursor-pointer">
               <option value="">เลือกผู้ทดแทน</option>
               {substituteList.map((emp) => <option key={emp}>{emp}</option>)}
-              <option>ไม่มีผู้ทดแทน (หักเงิน)</option>
+              <option value="no_substitute">ไม่มีผู้ทดแทน</option>
             </select>
           </div>
           <div>
