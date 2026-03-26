@@ -161,9 +161,12 @@ const LeaveRequestDialog = ({ open, onOpenChange, leaveTypes, onSubmit, canSelec
           {canSelectEmployee && employeeNames.length > 0 && !isEditing && (
             <div className="sm:col-span-2">
               <label className="block text-sm font-semibold mb-1.5">พนักงาน <span className="text-destructive">*</span></label>
-              <select value={selectedEmployee} onChange={(e) => setSelectedEmployee(e.target.value)} className="w-full px-3 py-2.5 text-sm rounded-xl border outline-none bg-muted/30 cursor-pointer">
-                {employeeNames.map((name) => <option key={name} value={name}>{name}</option>)}
-              </select>
+              <SearchableSelect
+                value={selectedEmployee}
+                onChange={setSelectedEmployee}
+                options={employeeNames.map((name) => ({ value: name, label: name }))}
+                placeholder="เลือกพนักงาน"
+              />
             </div>
           )}
           <div>
