@@ -54,8 +54,9 @@ const AffiliationSettings = () => {
 
   // Position CRUD
   const openAddPos = (affId: string) => { setEditingPosId(null); setPosForm({ name: "", affiliationId: affId }); setPosDialogOpen(true); };
-  const openEditPos = (posId: string, name: string) => {
-    setEditingPosId(posId); setPosForm((f) => ({ ...f, name })); setPosDialogOpen(true);
+  const openAddPosGlobal = () => { setEditingPosId(null); setPosForm({ name: "", affiliationId: affiliations[0]?.id || "" }); setPosDialogOpen(true); };
+  const openEditPos = (posId: string, name: string, affId: string) => {
+    setEditingPosId(posId); setPosForm({ name, affiliationId: affId }); setPosDialogOpen(true);
   };
 
   const handleSavePos = async () => {
