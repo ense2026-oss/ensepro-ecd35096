@@ -28,6 +28,7 @@ const Employees = () => {
   const { employees, addEmployee, updateEmployee, deleteEmployee } = useEmployees();
   const [search, setSearch] = useState("");
   const [selectedDept, setSelectedDept] = useState("all");
+  const [selectedPosition, setSelectedPosition] = useState("all");
   const [viewMode, setViewMode] = useState<"table" | "card">("table");
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -39,8 +40,11 @@ const Employees = () => {
   const [deletingEmployee, setDeletingEmployee] = useState<Employee | null>(null);
   const [importOpen, setImportOpen] = useState(false);
 
-  const depts = ["all", ...Array.from(new Set(employees.map((e) => e.dept)))];
-
+  const depts = ["all", ...Array.from(new Set(employees.map((e) => e.dept).filter(Boolean)))];
+  const positions = useMemo(() => {
+    const src = selectedDept === "all" ? employees : employees.filter((e) => e.dept === selectedDept);
+    return ["all", ...Array.from(new Set(src.map((e) => e.position).filter(Boolean)))];
+  }, [employees, selectedDept]);
   const filtered = useMemo(() => employees.filter((e) => {
     const name = `${e.prefix}${e.firstName} ${e.lastName}`;
     const matchSearch =
@@ -48,8 +52,9 @@ const Employees = () => {
       e.position.includes(search) ||
       e.email.includes(search);
     const matchDept = selectedDept === "all" || e.dept === selectedDept;
-    return matchSearch && matchDept;
-  }), [employees, search, selectedDept]);
+    const matchPos = selectedPosition === "all" || e.position === selectedPosition;
+    return matchSearch && matchDept && matchPos;
+  }), [employees, search, selectedDept, selectedPosition]);
 
   // Stats
   const stats = useMemo(() => ({
@@ -67,7 +72,8 @@ const Employees = () => {
 
   // Reset page on filter change
   const handleSearch = (val: string) => { setSearch(val); setCurrentPage(1); };
-  const handleDeptChange = (val: string) => { setSelectedDept(val); setCurrentPage(1); };
+  const handleDeptChange = (val: string) => { setSelectedDept(val); setSelectedPosition("all"); setCurrentPage(1); };
+  const handlePositionChange = (val: string) => { setSelectedPosition(val); setCurrentPage(1); };
   const handlePageSizeChange = (val: string) => { setPageSize(Number(val)); setCurrentPage(1); };
 
   const handleAdd = () => { setEditingEmployee(null); setFormOpen(true); };
@@ -148,6 +154,10 @@ const Employees = () => {
           <select value={selectedDept} onChange={(e) => handleDeptChange(e.target.value)}
             className="px-3 py-2.5 text-sm rounded-xl border bg-muted/30 outline-none cursor-pointer">
             {depts.map((d) => <option key={d} value={d}>{d === "all" ? "ทุกแผนก" : d}</option>)}
+          </select>
+          <select value={selectedPosition} onChange={(e) => handlePositionChange(e.target.value)}
+            className="px-3 py-2.5 text-sm rounded-xl border bg-muted/30 outline-none cursor-pointer">
+            {positions.map((p) => <option key={p} value={p}>{p === "all" ? "ทุกตำแหน่ง" : p}</option>)}
           </select>
           <div className="flex items-center gap-1 border rounded-xl p-1">
             <button onClick={() => setViewMode("table")}
