@@ -15,6 +15,7 @@ interface BrandingContextType extends BrandingState {
   setLogoUrl: (url: string | null) => void;
   setLogoOnlyUrl: (url: string | null) => void;
   setDisplayMode: (mode: "logo-only" | "logo-and-name") => void;
+  updateProgramName: (name: string) => Promise<void>;
 }
 
 const BRANDING_CACHE_KEY = "hrpro_branding_cache";
@@ -117,6 +118,10 @@ export const BrandingProvider = ({ children }: { children: ReactNode }) => {
     });
   };
 
+  const updateProgramName = useCallback(async (name: string) => {
+    update({ programName: name });
+  }, []);
+
   return (
     <BrandingContext.Provider
       value={{
@@ -126,6 +131,7 @@ export const BrandingProvider = ({ children }: { children: ReactNode }) => {
         setLogoUrl: (logoUrl) => update({ logoUrl }),
         setLogoOnlyUrl: (logoOnlyUrl) => update({ logoOnlyUrl }),
         setDisplayMode: (displayMode) => update({ displayMode }),
+        updateProgramName,
       }}
     >
       {children}
