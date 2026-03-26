@@ -169,9 +169,24 @@ const AffiliationSettings = () => {
           <div className="space-y-4 pt-2">
             <div>
               <label className="block text-sm font-semibold mb-1.5">ชื่อสังกัด</label>
-              <input value={affForm.name} onChange={(e) => setAffForm({ name: e.target.value })} placeholder="เช่น รถไฟฟ้าขสมช"
+              <input value={affForm.name} onChange={(e) => setAffForm((f) => ({ ...f, name: e.target.value }))} placeholder="เช่น รถไฟฟ้าขสมช"
                 className="w-full px-3 py-2.5 text-sm rounded-xl border outline-none bg-muted/30 focus:ring-2 focus:ring-primary/30 transition-shadow" />
             </div>
+            {orgLevelsFlat.length > 0 && (
+              <div>
+                <label className="block text-sm font-semibold mb-1.5">อยู่ภายใต้ระดับองค์กร</label>
+                <select
+                  value={affForm.parentOrgLevelId}
+                  onChange={(e) => setAffForm((f) => ({ ...f, parentOrgLevelId: e.target.value }))}
+                  className="w-full px-3 py-2.5 text-sm rounded-xl border outline-none bg-muted/30 focus:ring-2 focus:ring-primary/30 transition-shadow"
+                >
+                  <option value="">— ไม่ระบุ (แสดงที่ระดับบนสุด) —</option>
+                  {orgLevelsFlat.map((ol) => (
+                    <option key={ol.id} value={ol.id}>{ol.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
             <div className="flex justify-end gap-2 pt-2">
               <button onClick={() => setAffDialogOpen(false)} className="px-4 py-2 rounded-xl text-sm font-medium text-muted-foreground hover:bg-muted transition-colors">ยกเลิก</button>
               <button onClick={handleSaveAff} disabled={saving}
