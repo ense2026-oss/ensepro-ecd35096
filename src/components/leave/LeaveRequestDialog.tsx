@@ -176,7 +176,7 @@ const LeaveRequestDialog = ({ open, onOpenChange, leaveTypes, onSubmit, canSelec
             <select value={substitute} onChange={(e) => setSubstitute(e.target.value)} className="w-full px-3 py-2.5 text-sm rounded-xl border outline-none bg-muted/30 cursor-pointer">
               <option value="">เลือกผู้ทดแทน</option>
               {substituteList.map((emp) => <option key={emp}>{emp}</option>)}
-              <option>ไม่มีผู้ทดแทน (หักเงิน)</option>
+              <option value="no_substitute">ไม่มีผู้ทดแทน</option>
             </select>
           </div>
           <div>
