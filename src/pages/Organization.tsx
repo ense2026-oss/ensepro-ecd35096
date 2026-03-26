@@ -908,6 +908,66 @@ const Organization = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {/* OrgLevel Assign Employee Dialog */}
+      <Dialog open={orgLevelAssignOpen} onOpenChange={setOrgLevelAssignOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><UserPlus className="w-5 h-5 text-blue-600" /> กำหนดบุคคลในระดับองค์กร</DialogTitle>
+            <DialogDescription className="sr-only">เลือกพนักงานเพื่อกำหนดในระดับองค์กร</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="px-3 py-2 rounded-xl bg-primary/5 border border-primary/20">
+              <p className="text-xs text-muted-foreground">ระดับองค์กร</p>
+              <p className="text-sm font-bold text-foreground">{assigningOrgLevel?.name}</p>
+            </div>
+            {assignedToThisOrgLevel.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">บุคลากรในระดับนี้</p>
+                <div className="space-y-1.5">
+                  {assignedToThisOrgLevel.map((emp) => (
+                    <div key={emp.id} className="flex items-center gap-3 px-3 py-2 rounded-xl bg-card border border-border">
+                      <OrgEmployeeAvatar emp={emp} size="md" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold truncate">{emp.prefix}{emp.firstName} {emp.lastName}</p>
+                        <p className="text-xs text-muted-foreground">{emp.dept} • {emp.position}</p>
+                      </div>
+                      <button onClick={() => handleOrgLevelUnassignEmployee(emp.id)}
+                        className="w-7 h-7 rounded-full flex items-center justify-center bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors" title="ยกเลิก">
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            <div className="space-y-2">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">เพิ่มบุคคล</p>
+              <input value={orgLevelSearchTerm} onChange={(e) => setOrgLevelSearchTerm(e.target.value)}
+                placeholder="ค้นหาชื่อพนักงาน..."
+                className="w-full px-3 py-2 text-sm rounded-xl border border-border bg-muted/30 outline-none focus:ring-2 focus:ring-primary/30 transition-all" />
+              <div className="max-h-48 overflow-y-auto space-y-1">
+                {availableOrgLevelEmployees.slice(0, 20).map((emp) => (
+                  <button key={emp.id} onClick={() => handleOrgLevelAssignEmployee(emp.id)}
+                    className="w-full flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-muted/50 transition-colors text-left">
+                    <OrgEmployeeAvatar emp={emp} size="md" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold truncate">{emp.prefix}{emp.firstName} {emp.lastName}</p>
+                      <p className="text-xs text-muted-foreground">{emp.dept} • {emp.position}</p>
+                    </div>
+                    <Plus className="w-4 h-4 text-primary flex-shrink-0" />
+                  </button>
+                ))}
+                {availableOrgLevelEmployees.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">ไม่พบพนักงาน</p>}
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <DialogClose asChild>
+              <button className="px-4 py-2 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors">ปิด</button>
+            </DialogClose>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
