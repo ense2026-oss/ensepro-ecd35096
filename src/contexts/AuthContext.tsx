@@ -72,6 +72,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const initialized = useRef(false);
+  const lastFetchedUserId = useRef<string | null>(null);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -82,9 +83,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(newSession?.user ?? null);
 
         if (newSession?.user) {
-          // Don't reset profileReady here — let fetch complete
+          // Skip re-fetch if we already have data for this user
+          if (lastFetchedUserId.current === newSession.user.id) {
+            setLoading(false);
+            return;
+          }
+          lastFetchedUserId.current = newSession.user.id;
           await fetchProfileAndRole(newSession.user.id);
         } else {
+          lastFetchedUserId.current = null;
           setProfile(null);
           setRole("employee");
           setEmployeeId(null);
@@ -99,6 +106,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setSession(initialSession);
       setUser(initialSession?.user ?? null);
       if (initialSession?.user) {
+        lastFetchedUserId.current = initialSession.user.id;
         await fetchProfileAndRole(initialSession.user.id);
       } else {
         setProfileReady(true);

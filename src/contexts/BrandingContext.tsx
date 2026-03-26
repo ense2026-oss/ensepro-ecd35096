@@ -17,12 +17,31 @@ interface BrandingContextType extends BrandingState {
   setDisplayMode: (mode: "logo-only" | "logo-and-name") => void;
 }
 
+const BRANDING_CACHE_KEY = "hrpro_branding_cache";
+
 const defaults: BrandingState = {
   programName: "HRPro",
   programSubtitle: "Enterprise",
   logoUrl: null,
   logoOnlyUrl: null,
   displayMode: "logo-and-name",
+};
+
+const loadCachedBranding = (): BrandingState => {
+  try {
+    const cached = localStorage.getItem(BRANDING_CACHE_KEY);
+    if (cached) {
+      const v = JSON.parse(cached);
+      return {
+        programName: v.programName ?? defaults.programName,
+        programSubtitle: v.programSubtitle ?? defaults.programSubtitle,
+        logoUrl: v.logoUrl ?? null,
+        logoOnlyUrl: v.logoOnlyUrl ?? null,
+        displayMode: v.displayMode ?? defaults.displayMode,
+      };
+    }
+  } catch { /* ignore */ }
+  return defaults;
 };
 
 const BrandingContext = createContext<BrandingContextType | null>(null);
@@ -34,9 +53,9 @@ export const useBranding = () => {
 };
 
 export const BrandingProvider = ({ children }: { children: ReactNode }) => {
-  const [state, setState] = useState<BrandingState>(defaults);
+  const [state, setState] = useState<BrandingState>(loadCachedBranding);
 
-  // Fetch from DB
+  // Fetch from DB in background, update cache
   useEffect(() => {
     const fetchBranding = async () => {
       try {
@@ -51,16 +70,18 @@ export const BrandingProvider = ({ children }: { children: ReactNode }) => {
         }
         if (data?.value) {
           const v = data.value as any;
-          setState({
+          const newState = {
             programName: v.programName ?? defaults.programName,
             programSubtitle: v.programSubtitle ?? defaults.programSubtitle,
             logoUrl: v.logoUrl ?? null,
             logoOnlyUrl: v.logoOnlyUrl ?? null,
             displayMode: v.displayMode ?? defaults.displayMode,
-          });
+          };
+          setState(newState);
+          localStorage.setItem(BRANDING_CACHE_KEY, JSON.stringify(newState));
         }
       } catch {
-        // Use defaults silently
+        // Use cached/defaults silently
       }
     };
     fetchBranding();
@@ -90,6 +111,7 @@ export const BrandingProvider = ({ children }: { children: ReactNode }) => {
   const update = (partial: Partial<BrandingState>) => {
     setState((s) => {
       const next = { ...s, ...partial };
+      localStorage.setItem(BRANDING_CACHE_KEY, JSON.stringify(next));
       persist(next);
       return next;
     });
