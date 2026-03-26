@@ -103,15 +103,16 @@ const CompanySettings = () => {
         .eq("key", COMPANY_KEY)
         .maybeSingle();
 
+      const jsonValue = JSON.parse(JSON.stringify(form));
       if (existing) {
         await supabase
           .from("company_settings")
-          .update({ value: form as unknown as Record<string, unknown>, updated_at: new Date().toISOString() })
+          .update({ value: jsonValue, updated_at: new Date().toISOString() })
           .eq("key", COMPANY_KEY);
       } else {
         await supabase
           .from("company_settings")
-          .insert({ key: COMPANY_KEY, value: form as unknown as Record<string, unknown> });
+          .insert([{ key: COMPANY_KEY, value: jsonValue }]);
       }
 
       setSaved({ ...form });
