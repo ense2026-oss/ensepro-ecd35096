@@ -15,78 +15,27 @@ const typeToModuleKey: Record<string, string> = {
   attendance: "time_edit",
 };
 
-interface TierApprover {
-  type: "role" | "employee";
-  value: string;
-}
-
-interface ApprovalModule {
-  key: string;
-  name: string;
-  tiers: TierApprover[];
-}
-
 /**
- * Get approver user_ids based on approval_config settings.
- * Falls back to all admin/hr if no config found.
+ * Get approver user_ids via SECURITY DEFINER RPC function.
+ * This bypasses RLS so even employees can resolve approver user_ids.
  */
 async function getApproverUserIds(notifType: string): Promise<string[]> {
   const moduleKey = typeToModuleKey[notifType];
   if (!moduleKey) {
-    // Fallback: all admin/hr
     return getFallbackApproverIds();
   }
 
-  const { data: setting } = await supabase
-    .from("company_settings")
-    .select("value")
-    .eq("key", "approval_config")
-    .maybeSingle();
+  const { data, error } = await supabase.rpc("get_approver_user_ids", {
+    module_key: moduleKey,
+  });
 
-  if (!setting?.value) {
+  if (error || !data || data.length === 0) {
     return getFallbackApproverIds();
   }
 
-  try {
-    const modules = setting.value as unknown as ApprovalModule[];
-    const mod = Array.isArray(modules) ? modules.find((m) => m.key === moduleKey) : null;
-    if (!mod || !mod.tiers || mod.tiers.length === 0) {
-      return getFallbackApproverIds();
-    }
-
-    const userIds = new Set<string>();
-
-    for (const tier of mod.tiers) {
-      if (tier.type === "role") {
-        // Get all user_ids with this role
-        const { data: roleUsers } = await supabase
-          .from("user_roles")
-          .select("user_id")
-          .eq("role", tier.value as any);
-        if (roleUsers) {
-          roleUsers.forEach((r) => userIds.add(r.user_id));
-        }
-      } else if (tier.type === "employee") {
-        // Get user_id from employees table
-        const { data: emp } = await supabase
-          .from("employees")
-          .select("user_id")
-          .eq("id", tier.value)
-          .maybeSingle();
-        if (emp?.user_id) {
-          userIds.add(emp.user_id);
-        }
-      }
-    }
-
-    if (userIds.size === 0) {
-      return getFallbackApproverIds();
-    }
-
-    return Array.from(userIds);
-  } catch {
-    return getFallbackApproverIds();
-  }
+  // Deduplicate
+  const unique = [...new Set(data.map((r: any) => r.user_id as string))];
+  return unique;
 }
 
 async function getFallbackApproverIds(): Promise<string[]> {
@@ -120,6 +69,9 @@ export async function notifyApprovers(params: NotifyParams) {
  * Notify the employee who submitted a request (approve/reject feedback)
  */
 export async function notifyRequester(employeeId: string, params: NotifyParams) {
+  // Use RPC to get user_id bypassing RLS
+  const { data } = await supabase.rpc("get_active_employee_names");
+  // Fallback to direct query for requester notification  
   const { data: emp } = await supabase
     .from("employees")
     .select("user_id")
