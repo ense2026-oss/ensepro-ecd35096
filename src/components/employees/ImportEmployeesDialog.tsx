@@ -1,7 +1,8 @@
 import { useState, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Upload, Download, FileSpreadsheet, CheckCircle2, XCircle, AlertTriangle, Loader2 } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import { Upload, Download, FileSpreadsheet, CheckCircle2, XCircle, AlertTriangle } from "lucide-react";
 import { useEmployees } from "@/contexts/EmployeeContext";
 import { useOrg } from "@/contexts/OrgContext";
 import { toast } from "sonner";
@@ -51,19 +52,24 @@ const ImportEmployeesDialog = ({ open, onOpenChange }: ImportEmployeesDialogProp
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [step, setStep] = useState<"upload" | "preview" | "importing" | "done">("upload");
   const [validationResults, setValidationResults] = useState<ValidationResult[]>([]);
-  const [importResults, setImportResults] = useState<{ success: number; failed: number }>({ success: 0, failed: 0 });
+  const [importResults, setImportResults] = useState<{ success: number; failed: number; failedNames: string[] }>({ success: 0, failed: 0, failedNames: [] });
   const [fileName, setFileName] = useState("");
+  const [progress, setProgress] = useState(0);
+  const [progressText, setProgressText] = useState("");
 
   const resetState = () => {
     setStep("upload");
     setValidationResults([]);
-    setImportResults({ success: 0, failed: 0 });
+    setImportResults({ success: 0, failed: 0, failedNames: [] });
     setFileName("");
+    setProgress(0);
+    setProgressText("");
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const handleClose = (v: boolean) => {
-    if (!v) resetState();
+    if (!v && step !== "importing") resetState();
+    if (step === "importing") return; // prevent closing during import
     onOpenChange(v);
   };
 
@@ -71,10 +77,7 @@ const ImportEmployeesDialog = ({ open, onOpenChange }: ImportEmployeesDialogProp
     const wb = XLSX.utils.book_new();
     const wsData = [TEMPLATE_COLUMNS, ...SAMPLE_DATA];
     const ws = XLSX.utils.aoa_to_sheet(wsData);
-
-    // Set column widths
     ws["!cols"] = TEMPLATE_COLUMNS.map(() => ({ wch: 18 }));
-
     XLSX.utils.book_append_sheet(wb, ws, "พนักงาน");
     XLSX.writeFile(wb, "template_import_employees.xlsx");
     toast.success("ดาวน์โหลดไฟล์ตัวอย่างสำเร็จ");
@@ -87,7 +90,7 @@ const ImportEmployeesDialog = ({ open, onOpenChange }: ImportEmployeesDialogProp
       lastName: String(row[2] || "").trim(),
       nickname: String(row[3] || "").trim(),
       phone: String(row[4] || "").trim(),
-      email: String(row[5] || "").trim(),
+      email: String(row[5] || "").replace(/\s+/g, "").trim(),
       dept: String(row[6] || "").trim(),
       position: String(row[7] || "").trim(),
       employeeType: String(row[8] || "พนักงานประจำ").trim(),
@@ -101,7 +104,13 @@ const ImportEmployeesDialog = ({ open, onOpenChange }: ImportEmployeesDialogProp
     if (!data.lastName) errors.push("ไม่มีนามสกุล");
     if (!data.dept) errors.push("ไม่มีสังกัด");
     if (!data.position) errors.push("ไม่มีตำแหน่ง");
-    if (!["นาย", "นาง", "นางสาว", "ดร.", "ผศ.ดร."].includes(data.prefix) && data.prefix) {
+    if (data.email) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(data.email) || data.email.includes("@.") || data.email.includes(".@")) {
+        errors.push(`อีเมล "${data.email}" รูปแบบไม่ถูกต้อง`);
+      }
+    }
+    if (!["นาย", "นาง", "นางสาว", "ดร.", "ผศ.ดร.", ""].includes(data.prefix)) {
       errors.push(`คำนำหน้า "${data.prefix}" ไม่ถูกต้อง`);
     }
     if (!["active", "leave", "inactive"].includes(data.status)) {
@@ -124,7 +133,6 @@ const ImportEmployeesDialog = ({ open, onOpenChange }: ImportEmployeesDialogProp
         const ws = wb.Sheets[wb.SheetNames[0]];
         const rows: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1 });
 
-        // Skip header row
         const dataRows = rows.slice(1).filter((r) => r.some((cell) => cell != null && String(cell).trim() !== ""));
         if (dataRows.length === 0) {
           toast.error("ไฟล์ไม่มีข้อมูลพนักงาน");
@@ -149,12 +157,19 @@ const ImportEmployeesDialog = ({ open, onOpenChange }: ImportEmployeesDialogProp
     }
 
     setStep("importing");
+    setProgress(0);
     let success = 0;
     let failed = 0;
+    const failedNames: string[] = [];
+    const total = validRows.length;
 
-    for (const result of validRows) {
+    for (let i = 0; i < total; i++) {
+      const result = validRows[i];
+      const d = result.data;
+      const displayName = `${d.prefix}${d.firstName} ${d.lastName}`;
+      setProgressText(`กำลังนำเข้า ${displayName} (${i + 1}/${total})`);
+
       try {
-        const d = result.data;
         const hue = Math.floor(Math.random() * 360);
         await addEmployee({
           avatar: d.firstName.charAt(0) || "?",
@@ -202,10 +217,13 @@ const ImportEmployeesDialog = ({ open, onOpenChange }: ImportEmployeesDialogProp
         success++;
       } catch {
         failed++;
+        failedNames.push(displayName);
       }
+
+      setProgress(Math.round(((i + 1) / total) * 100));
     }
 
-    setImportResults({ success, failed });
+    setImportResults({ success, failed, failedNames });
     setStep("done");
     if (success > 0) await refetch();
   };
@@ -228,7 +246,6 @@ const ImportEmployeesDialog = ({ open, onOpenChange }: ImportEmployeesDialogProp
           {/* Step: Upload */}
           {step === "upload" && (
             <div className="space-y-5 mt-4">
-              {/* Download Template */}
               <div className="p-4 rounded-xl border border-border bg-muted/30">
                 <p className="text-sm font-semibold mb-1">ขั้นตอนที่ 1: ดาวน์โหลดไฟล์ตัวอย่าง</p>
                 <p className="text-xs text-muted-foreground mb-3">ดาวน์โหลดไฟล์ตัวอย่างแล้วกรอกข้อมูลพนักงานตามรูปแบบที่กำหนด</p>
@@ -240,7 +257,6 @@ const ImportEmployeesDialog = ({ open, onOpenChange }: ImportEmployeesDialogProp
                 </button>
               </div>
 
-              {/* Upload File */}
               <div className="p-4 rounded-xl border border-border bg-muted/30">
                 <p className="text-sm font-semibold mb-1">ขั้นตอนที่ 2: อัพโหลดไฟล์</p>
                 <p className="text-xs text-muted-foreground mb-3">เลือกไฟล์ Excel ที่กรอกข้อมูลเรียบร้อยแล้ว</p>
@@ -254,7 +270,6 @@ const ImportEmployeesDialog = ({ open, onOpenChange }: ImportEmployeesDialogProp
                 </button>
               </div>
 
-              {/* Info */}
               <div className="p-3 rounded-xl bg-accent/30 text-xs text-muted-foreground space-y-1">
                 <p className="font-semibold text-foreground">คอลัมน์ที่รองรับ:</p>
                 <p>{TEMPLATE_COLUMNS.join(", ")}</p>
@@ -288,7 +303,7 @@ const ImportEmployeesDialog = ({ open, onOpenChange }: ImportEmployeesDialogProp
               <ScrollArea className="max-h-[40vh]">
                 <table className="w-full text-xs">
                   <thead>
-                    <tr className="border-b" style={{ borderColor: "hsl(var(--border))" }}>
+                    <tr className="border-b border-border">
                       <th className="text-left px-2 py-2 font-semibold text-muted-foreground">แถว</th>
                       <th className="text-left px-2 py-2 font-semibold text-muted-foreground">สถานะ</th>
                       <th className="text-left px-2 py-2 font-semibold text-muted-foreground">ชื่อ-นามสกุล</th>
@@ -299,7 +314,7 @@ const ImportEmployeesDialog = ({ open, onOpenChange }: ImportEmployeesDialogProp
                   </thead>
                   <tbody>
                     {validationResults.map((r, i) => (
-                      <tr key={i} className="border-b" style={{ borderColor: "hsl(var(--border))" }}>
+                      <tr key={i} className="border-b border-border">
                         <td className="px-2 py-2">{r.row}</td>
                         <td className="px-2 py-2">
                           {r.valid ? (
@@ -337,12 +352,19 @@ const ImportEmployeesDialog = ({ open, onOpenChange }: ImportEmployeesDialogProp
             </div>
           )}
 
-          {/* Step: Importing */}
+          {/* Step: Importing with Progress Bar */}
           {step === "importing" && (
-            <div className="flex flex-col items-center justify-center py-12 gap-4">
-              <Loader2 className="w-10 h-10 text-primary animate-spin" />
-              <p className="text-sm font-medium">กำลังนำเข้าข้อมูลพนักงาน...</p>
-              <p className="text-xs text-muted-foreground">กรุณารอสักครู่</p>
+            <div className="flex flex-col items-center justify-center py-12 gap-5">
+              <FileSpreadsheet className="w-10 h-10 text-primary" />
+              <div className="w-full max-w-md space-y-3">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="font-medium">กำลังนำเข้าข้อมูล...</span>
+                  <span className="font-bold text-primary">{progress}%</span>
+                </div>
+                <Progress value={progress} className="h-3" />
+                <p className="text-xs text-muted-foreground text-center">{progressText}</p>
+              </div>
+              <p className="text-xs text-muted-foreground">กรุณาอย่าปิดหน้าต่างนี้</p>
             </div>
           )}
 
@@ -361,6 +383,14 @@ const ImportEmployeesDialog = ({ open, onOpenChange }: ImportEmployeesDialogProp
                   </span>
                 )}
               </div>
+              {importResults.failedNames.length > 0 && (
+                <div className="w-full max-w-md p-3 rounded-xl bg-destructive/10 text-xs text-destructive space-y-1">
+                  <p className="font-semibold">รายชื่อที่นำเข้าไม่สำเร็จ:</p>
+                  {importResults.failedNames.map((name, i) => (
+                    <p key={i}>• {name}</p>
+                  ))}
+                </div>
+              )}
               <button
                 onClick={() => handleClose(false)}
                 className="mt-2 px-6 py-2 rounded-xl text-sm font-bold text-primary-foreground transition-all"
