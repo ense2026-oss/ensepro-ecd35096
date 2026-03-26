@@ -155,6 +155,10 @@ const Employees = () => {
             className="px-3 py-2.5 text-sm rounded-xl border bg-muted/30 outline-none cursor-pointer">
             {depts.map((d) => <option key={d} value={d}>{d === "all" ? "ทุกแผนก" : d}</option>)}
           </select>
+          <select value={selectedPosition} onChange={(e) => handlePositionChange(e.target.value)}
+            className="px-3 py-2.5 text-sm rounded-xl border bg-muted/30 outline-none cursor-pointer">
+            {positions.map((p) => <option key={p} value={p}>{p === "all" ? "ทุกตำแหน่ง" : p}</option>)}
+          </select>
           <div className="flex items-center gap-1 border rounded-xl p-1">
             <button onClick={() => setViewMode("table")}
               className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${viewMode === "table" ? "text-primary-foreground" : "text-muted-foreground"}`}
