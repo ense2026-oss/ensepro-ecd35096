@@ -541,7 +541,7 @@ const Organization = () => {
           <div className="flex items-center gap-3 px-5 py-4 rounded-2xl bg-primary/10 border-2 border-primary/30 min-w-[220px] max-w-md">
             <Building2 className="w-6 h-6 text-primary flex-shrink-0" />
             <div className="flex flex-col min-w-0">
-              <span className="text-base font-bold text-foreground truncate">{companyName || "บริษัท"}</span>
+              <span className="text-base font-bold text-foreground truncate">{programName || "บริษัท"}</span>
               <span className="text-xs text-muted-foreground">บริษัท / องค์กร</span>
             </div>
           </div>
