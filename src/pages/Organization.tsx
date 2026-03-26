@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo } from "react"; // unified org tree
 import { Plus, Edit, Trash2, Building2, Users, ChevronDown, ChevronRight, GripVertical, UserPlus, X, Crown, Network } from "lucide-react";
 import { useOrg, type Affiliation, type Position, type OrgLevel } from "@/contexts/OrgContext";
 import { useEmployees, type Employee } from "@/contexts/EmployeeContext";
