@@ -174,23 +174,12 @@ const EmployeeProfile = () => {
     if (newPassword !== confirmPassword) { setPasswordError("รหัสผ่านไม่ตรงกัน"); return; }
     setPasswordError("");
     
-    // If admin/HR is changing another user's password, use edge function
-    if (canEditRestricted && employee?.id) {
-      try {
-        const userId = (await supabase.from("employees").select("user_id").eq("id", employee.id).single()).data?.user_id;
-        if (userId) {
-          const { error } = await supabase.functions.invoke("reset-employee-password", {
-            body: { userId, newPassword },
-          });
-          if (error) throw error;
-          // Update initial_password in DB
-          await supabase.from("employees").update({ initial_password: newPassword } as any).eq("id", employee.id);
-          updateEmployee(employee.id, { initialPassword: newPassword } as any);
-        }
-      } catch (err: any) {
-        setPasswordError(err.message || "เกิดข้อผิดพลาด");
-        return;
-      }
+    try {
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) throw error;
+    } catch (err: any) {
+      setPasswordError(err.message || "เกิดข้อผิดพลาด");
+      return;
     }
     
     setNewPassword("");
