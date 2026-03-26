@@ -243,6 +243,9 @@ const OvertimeRequest = () => {
         status: r.status as OTStatus,
         createdAt: r.created_at,
         approvedBy: r.approved_by,
+        currentTier: r.current_tier || 1,
+        approvedTiers: r.approved_tiers || 0,
+        totalTiers: r.total_tiers || 1,
       })));
     }
     setLoading(false);
