@@ -55,13 +55,9 @@ const Leave = () => {
   const [allEmployeeNames, setAllEmployeeNames] = useState<string[]>([]);
   useEffect(() => {
     const fetchSubstitutes = async () => {
-      const { data } = await supabase
-        .from("employees")
-        .select("first_name, last_name")
-        .eq("status", "active")
-        .order("first_name");
+      const { data } = await supabase.rpc("get_active_employee_names");
       if (data) {
-        setAllEmployeeNames(data.map((e) => `${e.first_name} ${e.last_name}`));
+        setAllEmployeeNames(data.map((e: any) => e.full_name));
       }
     };
     fetchSubstitutes();
