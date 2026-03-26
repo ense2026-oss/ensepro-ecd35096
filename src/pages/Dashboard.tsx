@@ -382,6 +382,9 @@ const Dashboard = () => {
 
   const scopeLabel = viewType === "manager" ? `แผนก${myEmployee?.dept || ""}` : "ทั้งองค์กร";
 
+  // Show full skeleton during initial load
+  if (loading) return <DashboardSkeleton />;
+
   // ═══════════════════════════════════════════════
   // EMPLOYEE DASHBOARD
   // ═══════════════════════════════════════════════
