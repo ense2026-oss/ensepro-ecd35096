@@ -77,9 +77,12 @@ const LeaveTable = ({ records, onApprove, onReject, hideActions = false, current
                 <tr key={row.id} className="border-b hover:bg-muted/30 transition-colors" style={{ borderColor: "hsl(var(--border))" }}>
                   <td className="px-4 py-3.5">
                     <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold" style={{ background: "hsl(31 100% 93%)", color: "#FF870F" }}>
-                        {row.name.charAt(0)}
-                      </div>
+                      <EmployeeAvatar
+                        photoUrl={row.photoUrl}
+                        firstName={row.name}
+                        size="sm"
+                        rounded="lg"
+                      />
                       <span className="text-sm font-semibold">{row.name}</span>
                     </div>
                   </td>

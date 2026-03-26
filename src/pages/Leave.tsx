@@ -98,6 +98,7 @@ const Leave = () => {
         id: r.id,
         employeeId: r.employee_id,
         name: r.employees ? `${r.employees.first_name} ${r.employees.last_name}` : "",
+        photoUrl: r.employees?.photo_url || undefined,
         dept: r.employees?.dept || "",
         type: r.leave_type_name,
         from: r.date_from,
