@@ -682,8 +682,7 @@ const EmployeeProfile = () => {
             {emp.photoUrl ? (
               <LazyImage src={emp.photoUrl} alt={emp.firstName} className="w-24 h-24 rounded-2xl" />
             ) : (
-              <div className="w-24 h-24 rounded-2xl flex items-center justify-center text-3xl font-bold"
-                style={{ background: emp.avatarColor, color: emp.avatarTextColor }}>{emp.avatar}</div>
+              <LazyImage src={defaultAvatarImg} alt={emp.firstName || "Default"} className="w-24 h-24 rounded-2xl" />
             )}
             <input ref={photoInputRef} type="file" accept="image/*" onChange={handlePhotoUpload} className="hidden" />
             <button
