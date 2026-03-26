@@ -145,8 +145,6 @@ export const TimeEditProvider = ({ children }: { children: ReactNode }) => {
     return () => {
       clearTimeout(initTimer);
       if (debounceRef.current) clearTimeout(debounceRef.current);
-      if (debounceNotifRef.current) clearTimeout(debounceNotifRef.current);
-      supabase.removeChannel(channel);
     };
   }, [user, fetchEditRequests, fetchNotifications, debouncedFetchEdits, debouncedFetchNotifs]);
 
