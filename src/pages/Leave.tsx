@@ -51,12 +51,21 @@ const Leave = () => {
     return names.length > 0 ? names : (currentUserName ? [currentUserName] : []);
   }, [scopedEmployees, currentUserName]);
 
-  // All active employees for substitute dropdown (regardless of scope)
-  const allEmployeeNames = React.useMemo(() => {
-    return allEmployees
-      .filter((e) => e.status === "active")
-      .map((e) => `${e.firstName} ${e.lastName}`);
-  }, [allEmployees]);
+  // Fetch all active employee names for substitute dropdown (bypasses scope limitation)
+  const [allEmployeeNames, setAllEmployeeNames] = useState<string[]>([]);
+  useEffect(() => {
+    const fetchSubstitutes = async () => {
+      const { data } = await supabase
+        .from("employees")
+        .select("first_name, last_name")
+        .eq("status", "active")
+        .order("first_name");
+      if (data) {
+        setAllEmployeeNames(data.map((e) => `${e.first_name} ${e.last_name}`));
+      }
+    };
+    fetchSubstitutes();
+  }, []);
 
   const [leaveTypes, setLeaveTypes] = useState<LeaveType[]>([]);
   const [leaves, setLeaves] = useState<LeaveRecord[]>([]);
