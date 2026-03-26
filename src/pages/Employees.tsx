@@ -52,8 +52,9 @@ const Employees = () => {
       e.position.includes(search) ||
       e.email.includes(search);
     const matchDept = selectedDept === "all" || e.dept === selectedDept;
-    return matchSearch && matchDept;
-  }), [employees, search, selectedDept]);
+    const matchPos = selectedPosition === "all" || e.position === selectedPosition;
+    return matchSearch && matchDept && matchPos;
+  }), [employees, search, selectedDept, selectedPosition]);
 
   // Stats
   const stats = useMemo(() => ({
