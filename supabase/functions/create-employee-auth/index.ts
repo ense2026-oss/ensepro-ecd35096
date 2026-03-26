@@ -11,7 +11,9 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { email, password, fullName, role, employeeId } = await req.json();
+    const body = await req.json();
+    const email = (body.email || "").replace(/\s+/g, "").trim();
+    const { password, fullName, role, employeeId } = body;
 
     if (!email || !password || !employeeId) {
       return new Response(JSON.stringify({ error: "email, password, and employeeId are required" }), {
