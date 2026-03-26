@@ -133,7 +133,7 @@ const AffiliationSettings = () => {
                       <div key={pos.id} className="flex items-center gap-3 py-2 px-3 rounded-xl bg-muted/40">
                         <Briefcase className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                         <span className="text-sm flex-1 truncate">{pos.name}</span>
-                        <button onClick={() => openEditPos(pos.id, pos.name)} className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground">
+                        <button onClick={() => openEditPos(pos.id, pos.name, aff.id)} className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground">
                           <Edit className="w-3.5 h-3.5" />
                         </button>
                         <button onClick={() => setDeletePosId(pos.id)} className="p-1.5 rounded-lg hover:bg-destructive/10 transition-colors text-destructive">
