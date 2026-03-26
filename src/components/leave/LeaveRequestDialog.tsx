@@ -64,6 +64,7 @@ const LeaveRequestDialog = ({ open, onOpenChange, leaveTypes, onSubmit, canSelec
   const resetForm = () => {
     setLeaveType(leaveTypes[0]?.name || "");
     setSelectedEmployee(currentUserName || "");
+    setDurationType("full");
     setStartDate("");
     setEndDate("");
     setReason("");
