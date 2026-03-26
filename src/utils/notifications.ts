@@ -62,7 +62,7 @@ async function getApproverUserIds(notifType: string): Promise<string[]> {
         const { data: roleUsers } = await supabase
           .from("user_roles")
           .select("user_id")
-          .eq("role", tier.value);
+          .eq("role", tier.value as any);
         if (roleUsers) {
           roleUsers.forEach((r) => userIds.add(r.user_id));
         }
