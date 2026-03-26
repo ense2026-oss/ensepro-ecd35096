@@ -1,33 +1,41 @@
-import { useState } from "react";
-import { Plus, Edit, Trash2 } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Plus, Edit, Trash2, Loader2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 interface LeaveType {
-  id: number;
+  id: string;
   name: string;
-  daysPerYear: number;
-  requireDoc: boolean;
+  quota: number;
+  require_doc: boolean;
+  color: string;
+  sort_order: number;
 }
 
-const initialData: LeaveType[] = [
-  { id: 1, name: "ลาป่วย", daysPerYear: 30, requireDoc: true },
-  { id: 2, name: "ลาพักร้อน", daysPerYear: 10, requireDoc: false },
-  { id: 3, name: "ลากิจ", daysPerYear: 7, requireDoc: false },
-  { id: 4, name: "ลาคลอด", daysPerYear: 98, requireDoc: true },
-  { id: 5, name: "ลาบวช", daysPerYear: 15, requireDoc: false },
-];
-
-const emptyForm = { name: "", daysPerYear: 0, requireDoc: false };
+const emptyForm = { name: "", quota: 0, require_doc: false, color: "#6B7280" };
 
 const LeaveTypesSettings = () => {
   const { toast } = useToast();
-  const [items, setItems] = useState<LeaveType[]>(initialData);
+  const [items, setItems] = useState<LeaveType[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [deleteId, setDeleteId] = useState<number | null>(null);
-  const [editingId, setEditingId] = useState<number | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
+
+  const fetchItems = async () => {
+    const { data, error } = await supabase
+      .from("leave_types")
+      .select("*")
+      .order("sort_order");
+    if (!error && data) setItems(data);
+    setLoading(false);
+  };
+
+  useEffect(() => { fetchItems(); }, []);
 
   const openAdd = () => {
     setEditingId(null);
@@ -37,30 +45,55 @@ const LeaveTypesSettings = () => {
 
   const openEdit = (item: LeaveType) => {
     setEditingId(item.id);
-    setForm({ name: item.name, daysPerYear: item.daysPerYear, requireDoc: item.requireDoc });
+    setForm({ name: item.name, quota: item.quota, require_doc: item.require_doc, color: item.color });
     setDialogOpen(true);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!form.name.trim()) return;
-    if (editingId !== null) {
-      setItems((prev) => prev.map((i) => (i.id === editingId ? { ...i, ...form } : i)));
-      toast({ title: "แก้ไขสำเร็จ", description: `ประเภทการลา "${form.name}" ถูกอัปเดตแล้ว` });
+    setSaving(true);
+    if (editingId) {
+      const { error } = await supabase
+        .from("leave_types")
+        .update({ name: form.name, quota: form.quota, require_doc: form.require_doc, color: form.color })
+        .eq("id", editingId);
+      if (error) {
+        toast({ title: "เกิดข้อผิดพลาด", description: error.message, variant: "destructive" });
+      } else {
+        toast({ title: "แก้ไขสำเร็จ", description: `ประเภทการลา "${form.name}" ถูกอัปเดตแล้ว` });
+      }
     } else {
-      const newId = Math.max(0, ...items.map((i) => i.id)) + 1;
-      setItems((prev) => [...prev, { id: newId, ...form }]);
-      toast({ title: "เพิ่มสำเร็จ", description: `ประเภทการลา "${form.name}" ถูกเพิ่มแล้ว` });
+      const maxOrder = items.length > 0 ? Math.max(...items.map(i => i.sort_order)) + 1 : 0;
+      const { error } = await supabase
+        .from("leave_types")
+        .insert({ name: form.name, quota: form.quota, require_doc: form.require_doc, color: form.color, sort_order: maxOrder });
+      if (error) {
+        toast({ title: "เกิดข้อผิดพลาด", description: error.message, variant: "destructive" });
+      } else {
+        toast({ title: "เพิ่มสำเร็จ", description: `ประเภทการลา "${form.name}" ถูกเพิ่มแล้ว` });
+      }
     }
+    setSaving(false);
     setDialogOpen(false);
+    fetchItems();
   };
 
-  const handleDelete = () => {
-    if (deleteId === null) return;
-    const item = items.find((i) => i.id === deleteId);
-    setItems((prev) => prev.filter((i) => i.id !== deleteId));
+  const handleDelete = async () => {
+    if (!deleteId) return;
+    const item = items.find(i => i.id === deleteId);
+    const { error } = await supabase.from("leave_types").delete().eq("id", deleteId);
     setDeleteId(null);
-    toast({ title: "ลบสำเร็จ", description: `ประเภทการลา "${item?.name}" ถูกลบแล้ว`, variant: "destructive" });
+    if (error) {
+      toast({ title: "เกิดข้อผิดพลาด", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "ลบสำเร็จ", description: `ประเภทการลา "${item?.name}" ถูกลบแล้ว`, variant: "destructive" });
+      fetchItems();
+    }
   };
+
+  if (loading) {
+    return <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>;
+  }
 
   return (
     <div className="space-y-4">
@@ -89,12 +122,12 @@ const LeaveTypesSettings = () => {
               <tr key={lt.id} className="border-b hover:bg-muted/30" style={{ borderColor: "hsl(var(--border))" }}>
                 <td className="px-4 py-3 text-sm font-semibold">{lt.name}</td>
                 <td className="px-4 py-3">
-                  <span className="text-lg font-bold font-display" style={{ color: "#FF870F" }}>{lt.daysPerYear}</span>
+                  <span className="text-lg font-bold font-display" style={{ color: "#FF870F" }}>{lt.quota}</span>
                   <span className="text-sm text-muted-foreground ml-1">วัน</span>
                 </td>
                 <td className="px-4 py-3">
-                  <span className={lt.requireDoc ? "badge-late" : "badge-present"}>
-                    {lt.requireDoc ? "บังคับ" : "ไม่บังคับ"}
+                  <span className={lt.require_doc ? "badge-late" : "badge-present"}>
+                    {lt.require_doc ? "บังคับ" : "ไม่บังคับ"}
                   </span>
                 </td>
                 <td className="px-4 py-3">
@@ -109,15 +142,17 @@ const LeaveTypesSettings = () => {
                 </td>
               </tr>
             ))}
+            {items.length === 0 && (
+              <tr><td colSpan={4} className="px-4 py-8 text-center text-muted-foreground">ยังไม่มีประเภทการลา</td></tr>
+            )}
           </tbody>
         </table>
       </div>
 
-      {/* Add/Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>{editingId !== null ? "แก้ไขประเภทการลา" : "เพิ่มประเภทการลา"}</DialogTitle>
+            <DialogTitle>{editingId ? "แก้ไขประเภทการลา" : "เพิ่มประเภทการลา"}</DialogTitle>
             <DialogDescription className="sr-only">กรอกข้อมูลประเภทการลา</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
@@ -134,8 +169,8 @@ const LeaveTypesSettings = () => {
               <label className="block text-sm font-semibold mb-1.5">จำนวนวันต่อปี</label>
               <input
                 type="number"
-                value={form.daysPerYear}
-                onChange={(e) => setForm((f) => ({ ...f, daysPerYear: Number(e.target.value) }))}
+                value={form.quota}
+                onChange={(e) => setForm((f) => ({ ...f, quota: Number(e.target.value) }))}
                 min={0}
                 className="w-full px-3 py-2.5 text-sm rounded-xl border outline-none bg-muted/30"
               />
@@ -144,8 +179,8 @@ const LeaveTypesSettings = () => {
               <input
                 type="checkbox"
                 id="requireDoc"
-                checked={form.requireDoc}
-                onChange={(e) => setForm((f) => ({ ...f, requireDoc: e.target.checked }))}
+                checked={form.require_doc}
+                onChange={(e) => setForm((f) => ({ ...f, require_doc: e.target.checked }))}
                 className="w-4 h-4 rounded accent-[#FF870F]"
               />
               <label htmlFor="requireDoc" className="text-sm font-semibold cursor-pointer">ต้องแนบเอกสารประกอบ</label>
@@ -157,17 +192,17 @@ const LeaveTypesSettings = () => {
             </button>
             <button
               onClick={handleSave}
-              disabled={!form.name.trim()}
-              className="px-6 py-2 rounded-xl text-sm font-bold text-primary-foreground disabled:opacity-50"
+              disabled={!form.name.trim() || saving}
+              className="px-6 py-2 rounded-xl text-sm font-bold text-primary-foreground disabled:opacity-50 flex items-center gap-2"
               style={{ background: "linear-gradient(135deg, hsl(var(--primary)), hsl(31 100% 60%))" }}
             >
-              {editingId !== null ? "บันทึก" : "เพิ่ม"}
+              {saving && <Loader2 className="w-4 h-4 animate-spin" />}
+              {editingId ? "บันทึก" : "เพิ่ม"}
             </button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation */}
       <AlertDialog open={deleteId !== null} onOpenChange={(open) => !open && setDeleteId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
