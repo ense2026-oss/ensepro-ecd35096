@@ -21,6 +21,7 @@ interface LeaveRequestDialogProps {
 const LeaveRequestDialog = ({ open, onOpenChange, leaveTypes, onSubmit, canSelectEmployee, currentUserName, employeeNames = [], allEmployeeNames = [], editingRecord }: LeaveRequestDialogProps) => {
   const [leaveType, setLeaveType] = useState(leaveTypes[0]?.name || "");
   const [selectedEmployee, setSelectedEmployee] = useState(currentUserName || "");
+  const [durationType, setDurationType] = useState<"full" | "half">("full");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [reason, setReason] = useState("");
