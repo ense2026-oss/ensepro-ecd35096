@@ -83,6 +83,12 @@ const Employees = () => {
           <p className="text-sm text-muted-foreground mt-0.5">พนักงานทั้งหมด {employees.length} คน</p>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => setImportOpen(true)}
+            className="flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-medium hover:bg-muted transition-colors"
+          >
+            <Upload className="w-4 h-4" /> นำเข้า
+          </button>
           <button className="flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-medium hover:bg-muted transition-colors">
             <Download className="w-4 h-4" /> Export
           </button>
