@@ -567,12 +567,25 @@ const Organization = () => {
           <h2 className="text-xl font-bold font-display">โครงสร้างองค์กร</h2>
           <p className="text-sm text-muted-foreground mt-0.5">แผนผังโครงสร้างองค์กรแบบรวมศูนย์</p>
         </div>
-        {canAdd && (
-          <button onClick={() => openAddOrgLevel(null)}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold text-primary-foreground bg-primary hover:bg-primary/90 transition-all">
-            <Plus className="w-4 h-4" /> เพิ่มระดับองค์กร
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          {/* View toggle */}
+          <div className="flex items-center rounded-xl border border-border overflow-hidden">
+            <button onClick={() => setViewMode("tree")}
+              className={`flex items-center gap-1.5 px-3 py-2 text-xs font-bold transition-colors ${viewMode === "tree" ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground hover:bg-muted"}`}>
+              <List className="w-3.5 h-3.5" /> รายการ
+            </button>
+            <button onClick={() => setViewMode("chart")}
+              className={`flex items-center gap-1.5 px-3 py-2 text-xs font-bold transition-colors ${viewMode === "chart" ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground hover:bg-muted"}`}>
+              <LayoutGrid className="w-3.5 h-3.5" /> แผนผัง
+            </button>
+          </div>
+          {canAdd && (
+            <button onClick={() => openAddOrgLevel(null)}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold text-primary-foreground bg-primary hover:bg-primary/90 transition-all">
+              <Plus className="w-4 h-4" /> เพิ่มระดับองค์กร
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Summary stats */}
