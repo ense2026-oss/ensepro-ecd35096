@@ -57,6 +57,81 @@ const StatCard = forwardRef<HTMLDivElement, StatCardProps>(
 );
 StatCard.displayName = "StatCard";
 
+/* ─── Full-page Skeleton ─── */
+const DashboardSkeleton = () => (
+  <div className="space-y-6 animate-pulse">
+    {/* Welcome card */}
+    <div className="card-base p-6">
+      <Skeleton className="h-6 w-48 mb-2" />
+      <Skeleton className="h-4 w-64" />
+    </div>
+    {/* Stat cards row 1 */}
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      {Array.from({ length: 4 }).map((_, i) => (
+        <div key={i} className="card-base p-3 sm:p-5">
+          <div className="flex items-start justify-between mb-2 sm:mb-4">
+            <div className="flex-1">
+              <Skeleton className="h-3 w-20 mb-2" />
+              <Skeleton className="h-8 w-14 mb-1" />
+              <Skeleton className="h-3 w-24" />
+            </div>
+            <Skeleton className="w-9 h-9 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl" />
+          </div>
+        </div>
+      ))}
+    </div>
+    {/* Stat cards row 2 */}
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      {Array.from({ length: 4 }).map((_, i) => (
+        <div key={i} className="card-base p-3 sm:p-5">
+          <div className="flex items-start justify-between mb-2 sm:mb-4">
+            <div className="flex-1">
+              <Skeleton className="h-3 w-16 mb-2" />
+              <Skeleton className="h-8 w-12 mb-1" />
+              <Skeleton className="h-3 w-28" />
+            </div>
+            <Skeleton className="w-9 h-9 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl" />
+          </div>
+        </div>
+      ))}
+    </div>
+    {/* Charts row */}
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="card-base p-5 lg:col-span-2">
+        <Skeleton className="h-5 w-40 mb-2" />
+        <Skeleton className="h-3 w-24 mb-6" />
+        <Skeleton className="h-[240px] w-full rounded-xl" />
+      </div>
+      <div className="card-base p-5">
+        <Skeleton className="h-5 w-28 mb-2" />
+        <Skeleton className="h-3 w-32 mb-4" />
+        <Skeleton className="h-[200px] w-full rounded-xl" />
+      </div>
+    </div>
+    {/* Bottom row */}
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="card-base p-5">
+        <Skeleton className="h-5 w-32 mb-4" />
+        {Array.from({ length: 4 }).map((_, i) => (
+          <Skeleton key={i} className="h-14 w-full rounded-xl mb-3" />
+        ))}
+      </div>
+      <div className="card-base p-5">
+        <Skeleton className="h-5 w-32 mb-4" />
+        {Array.from({ length: 5 }).map((_, i) => (
+          <div key={i} className="mb-4">
+            <div className="flex justify-between mb-1.5">
+              <Skeleton className="h-4 w-20" />
+              <Skeleton className="h-4 w-16" />
+            </div>
+            <Skeleton className="h-2 w-full rounded-full" />
+          </div>
+        ))}
+      </div>
+    </div>
+  </div>
+);
+
 const LEAVE_COLORS: Record<string, string> = {
   "ลาป่วย": "#FF870F",
   "ลาพักร้อน": "#87FF0F",
@@ -306,6 +381,9 @@ const Dashboard = () => {
   }, [leaveRequests, otRequests]);
 
   const scopeLabel = viewType === "manager" ? `แผนก${myEmployee?.dept || ""}` : "ทั้งองค์กร";
+
+  // Show full skeleton during initial load
+  if (loading) return <DashboardSkeleton />;
 
   // ═══════════════════════════════════════════════
   // EMPLOYEE DASHBOARD
