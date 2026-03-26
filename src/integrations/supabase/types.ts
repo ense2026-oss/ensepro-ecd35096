@@ -82,6 +82,36 @@ export type Database = {
         }
         Relationships: []
       }
+      approval_logs: {
+        Row: {
+          action: string
+          approver_user_id: string
+          created_at: string
+          id: string
+          request_id: string
+          request_type: string
+          tier: number
+        }
+        Insert: {
+          action?: string
+          approver_user_id: string
+          created_at?: string
+          id?: string
+          request_id: string
+          request_type?: string
+          tier?: number
+        }
+        Update: {
+          action?: string
+          approver_user_id?: string
+          created_at?: string
+          id?: string
+          request_id?: string
+          request_type?: string
+          tier?: number
+        }
+        Relationships: []
+      }
       attendance_records: {
         Row: {
           check_in: string
