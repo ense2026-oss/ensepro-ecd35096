@@ -119,12 +119,12 @@ const ApprovalSettings = () => {
     if (existing) {
       ({ error } = await supabase
         .from("company_settings")
-        .update({ value: modules as unknown as Record<string, unknown>[], updated_at: new Date().toISOString() })
+        .update({ value: JSON.parse(JSON.stringify(modules)), updated_at: new Date().toISOString() })
         .eq("key", SETTINGS_KEY));
     } else {
       ({ error } = await supabase
         .from("company_settings")
-        .insert({ key: SETTINGS_KEY, value: modules as unknown as Record<string, unknown>[] }));
+        .insert([{ key: SETTINGS_KEY, value: JSON.parse(JSON.stringify(modules)) }]));
     }
 
     setSaving(false);
