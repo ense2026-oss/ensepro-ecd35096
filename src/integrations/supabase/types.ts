@@ -1046,6 +1046,84 @@ export type Database = {
         }
         Relationships: []
       }
+      shift_assignments: {
+        Row: {
+          assignment_type: string
+          created_at: string
+          employee_id: string
+          end_date: string
+          id: string
+          shift_id: string
+          start_date: string
+        }
+        Insert: {
+          assignment_type?: string
+          created_at?: string
+          employee_id: string
+          end_date?: string
+          id?: string
+          shift_id: string
+          start_date?: string
+        }
+        Update: {
+          assignment_type?: string
+          created_at?: string
+          employee_id?: string
+          end_date?: string
+          id?: string
+          shift_id?: string
+          start_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shift_assignments_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_assignments_shift_id_fkey"
+            columns: ["shift_id"]
+            isOneToOne: false
+            referencedRelation: "shifts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shifts: {
+        Row: {
+          break_minutes: number
+          color: string
+          created_at: string
+          end_time: string
+          id: string
+          name: string
+          sort_order: number
+          start_time: string
+        }
+        Insert: {
+          break_minutes?: number
+          color?: string
+          created_at?: string
+          end_time?: string
+          id?: string
+          name?: string
+          sort_order?: number
+          start_time?: string
+        }
+        Update: {
+          break_minutes?: number
+          color?: string
+          created_at?: string
+          end_time?: string
+          id?: string
+          name?: string
+          sort_order?: number
+          start_time?: string
+        }
+        Relationships: []
+      }
       time_edit_requests: {
         Row: {
           approved_tiers: number
