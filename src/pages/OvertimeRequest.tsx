@@ -216,7 +216,7 @@ const OvertimeRequest = () => {
   const [statusFilter, setStatusFilter] = useState<OTStatus | "all">("all");
   const [typeFilter, setTypeFilter] = useState<OTType | "all">("all");
   const { setOvertimePending } = usePendingCounts();
-  const { currentUser, role } = useAuth();
+  const { currentUser, role, user } = useAuth();
   const { canAction, getScope } = usePermissions();
   const canApprove = canAction(role, 'ot', 'approve');
   const canAdd = canAction(role, 'ot', 'add');
@@ -315,9 +315,32 @@ const OvertimeRequest = () => {
   const handleApprove = async (id: string) => {
     const req = requests.find((r) => r.id === id);
     if (!req) return;
+    if (!user?.id) return;
+
+    // Check if this user already acted on this request
+    const { data: existingLog } = await supabase
+      .from("approval_logs")
+      .select("id")
+      .eq("request_id", id)
+      .eq("request_type", "ot")
+      .eq("approver_user_id", user.id)
+      .maybeSingle();
+
+    if (existingLog) {
+      toast.error("คุณได้อนุมัติคำขอนี้ไปแล้ว");
+      return;
+    }
 
     const nextTier = (req.approvedTiers || 0) + 1;
     const totalTiers = req.totalTiers || 1;
+
+    await supabase.from("approval_logs").insert({
+      request_id: id,
+      request_type: "ot",
+      tier: nextTier,
+      action: "approve",
+      approver_user_id: user.id,
+    });
 
     if (nextTier >= totalTiers) {
       await supabase.from("overtime_requests").update({
@@ -353,6 +376,29 @@ const OvertimeRequest = () => {
   };
 
   const handleReject = async (id: string) => {
+    if (!user?.id) return;
+
+    const { data: existingLog } = await supabase
+      .from("approval_logs")
+      .select("id")
+      .eq("request_id", id)
+      .eq("request_type", "ot")
+      .eq("approver_user_id", user.id)
+      .maybeSingle();
+
+    if (existingLog) {
+      toast.error("คุณได้ดำเนินการกับคำขอนี้ไปแล้ว");
+      return;
+    }
+
+    await supabase.from("approval_logs").insert({
+      request_id: id,
+      request_type: "ot",
+      tier: (requests.find(r => r.id === id)?.approvedTiers || 0) + 1,
+      action: "reject",
+      approver_user_id: user.id,
+    });
+
     await supabase.from("overtime_requests").update({ status: "rejected" }).eq("id", id);
     setRequests((prev) => prev.map((r) => r.id === id ? { ...r, status: "rejected" as OTStatus } : r));
     toast.success("ปฏิเสธ OT เรียบร้อย");

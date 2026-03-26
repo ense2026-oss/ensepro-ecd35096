@@ -254,12 +254,35 @@ const Leave = () => {
   const handleApprove = async (id: string) => {
     const record = leaves.find((l) => l.id === id);
     if (!record) return;
+    if (!user?.id) return;
+
+    // Check if this user already approved/rejected this request
+    const { data: existingLog } = await supabase
+      .from("approval_logs")
+      .select("id")
+      .eq("request_id", id)
+      .eq("request_type", "leave")
+      .eq("approver_user_id", user.id)
+      .maybeSingle();
+
+    if (existingLog) {
+      toast({ title: "ไม่สามารถดำเนินการได้", description: "คุณได้อนุมัติคำขอนี้ไปแล้ว", variant: "destructive" });
+      return;
+    }
 
     const nextTier = (record.approvedTiers || 0) + 1;
     const totalTiers = record.totalTiers || 1;
 
+    // Log the approval
+    await supabase.from("approval_logs").insert({
+      request_id: id,
+      request_type: "leave",
+      tier: nextTier,
+      action: "approve",
+      approver_user_id: user.id,
+    });
+
     if (nextTier >= totalTiers) {
-      // All tiers approved → fully approve
       await supabase.from("leave_requests").update({
         status: "approved",
         approved_tiers: nextTier,
@@ -275,7 +298,6 @@ const Leave = () => {
         targetEmployee: record.name,
       });
     } else {
-      // Advance to next tier
       await supabase.from("leave_requests").update({
         approved_tiers: nextTier,
         current_tier: nextTier + 1,
@@ -283,7 +305,6 @@ const Leave = () => {
       setLeaves((prev) => prev.map((l) => l.id === id ? { ...l, approvedTiers: nextTier, currentTier: nextTier + 1 } : l));
       toast({ title: `อนุมัติระดับ ${nextTier}/${totalTiers}`, description: `รอการอนุมัติระดับถัดไป (${nextTier + 1}/${totalTiers})` });
 
-      // Notify next tier approver
       notifyTierApprover("leave", nextTier, {
         type: "leave",
         title: `คำขอลารอการอนุมัติ (ระดับ ${nextTier + 1}/${totalTiers})`,
@@ -294,6 +315,31 @@ const Leave = () => {
   };
 
   const handleReject = async (id: string) => {
+    if (!user?.id) return;
+
+    // Check if this user already acted on this request
+    const { data: existingLog } = await supabase
+      .from("approval_logs")
+      .select("id")
+      .eq("request_id", id)
+      .eq("request_type", "leave")
+      .eq("approver_user_id", user.id)
+      .maybeSingle();
+
+    if (existingLog) {
+      toast({ title: "ไม่สามารถดำเนินการได้", description: "คุณได้ดำเนินการกับคำขอนี้ไปแล้ว", variant: "destructive" });
+      return;
+    }
+
+    // Log the rejection
+    await supabase.from("approval_logs").insert({
+      request_id: id,
+      request_type: "leave",
+      tier: (leaves.find(l => l.id === id)?.approvedTiers || 0) + 1,
+      action: "reject",
+      approver_user_id: user.id,
+    });
+
     await supabase.from("leave_requests").update({ status: "rejected" }).eq("id", id);
     setLeaves((prev) => prev.map((l) => l.id === id ? { ...l, status: "rejected" } : l));
     toast({ title: "ไม่อนุมัติ", description: "ปฏิเสธคำขอลาเรียบร้อยแล้ว", variant: "destructive" });
