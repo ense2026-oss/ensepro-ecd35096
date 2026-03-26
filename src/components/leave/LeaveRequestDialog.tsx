@@ -181,9 +181,8 @@ const LeaveRequestDialog = ({ open, onOpenChange, leaveTypes, onSubmit, canSelec
               value={substitute}
               onChange={setSubstitute}
               options={[
-                { value: "", label: "เลือกผู้ทดแทน" },
-                ...substituteList.map((emp) => ({ value: emp, label: emp })),
                 { value: "no_substitute", label: "ไม่มีผู้ทดแทน" },
+                ...substituteList.map((emp) => ({ value: emp, label: emp })),
               ]}
               placeholder="เลือกผู้ทดแทน"
               allowClear
