@@ -348,6 +348,7 @@ const Leave = () => {
         canSelectEmployee={scope !== "self"}
         currentUserName={currentUserName}
         employeeNames={employeeNames}
+        allEmployeeNames={allEmployeeNames}
         editingRecord={editingRecord}
       />
 
