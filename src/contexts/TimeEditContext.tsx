@@ -42,12 +42,23 @@ interface TimeEditContextType {
   loading: boolean;
 }
 
-const TimeEditContext = createContext<TimeEditContextType | null>(null);
+const defaultContextValue: TimeEditContextType = {
+  editRequests: [],
+  addEditRequest: async () => {},
+  updateRequestStatus: async () => {},
+  notifications: [],
+  addNotification: async () => {},
+  markNotifRead: async () => {},
+  markAllNotifsRead: async () => {},
+  deleteNotif: async () => {},
+  toggleNotifRead: async () => {},
+  loading: true,
+};
+
+const TimeEditContext = createContext<TimeEditContextType>(defaultContextValue);
 
 export const useTimeEditRequests = () => {
-  const ctx = useContext(TimeEditContext);
-  if (!ctx) throw new Error("useTimeEditRequests must be used within TimeEditProvider");
-  return ctx;
+  return useContext(TimeEditContext);
 };
 
 function timeAgo(dateStr: string): string {
