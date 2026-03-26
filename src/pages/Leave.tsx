@@ -164,6 +164,26 @@ const Leave = () => {
     const lt = leaveTypes.find((t) => t.name === record.type);
     if (!lt) return;
 
+    // Check quota - calculate used days for this employee & leave type (excluding current editing record)
+    const usedDays = leaves
+      .filter((l) =>
+        l.employeeId === emp.id &&
+        l.type === record.type &&
+        l.status !== "rejected" &&
+        (!editingRecord || l.id !== editingRecord.id)
+      )
+      .reduce((sum, l) => sum + l.days, 0);
+
+    const remaining = lt.quota - usedDays;
+    if (lt.quota > 0 && record.days > remaining) {
+      toast({
+        title: "เกินโควต้าที่กำหนด",
+        description: `${record.type} เหลือโควต้า ${remaining} วัน แต่ยื่นขอ ${record.days} วัน`,
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (editingRecord) {
       const updateData: any = {
         leave_type_id: lt.id,
