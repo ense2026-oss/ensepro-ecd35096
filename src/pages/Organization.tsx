@@ -356,6 +356,11 @@ const Organization = () => {
   const [orgLevelFormName, setOrgLevelFormName] = useState("");
   const [orgLevelParentId, setOrgLevelParentId] = useState<string | null>(null);
 
+  // OrgLevel Assign Dialog
+  const [orgLevelAssignOpen, setOrgLevelAssignOpen] = useState(false);
+  const [assigningOrgLevel, setAssigningOrgLevel] = useState<OrgLevel | null>(null);
+  const [orgLevelSearchTerm, setOrgLevelSearchTerm] = useState("");
+
   // Company rename dialog
   const [renameOpen, setRenameOpen] = useState(false);
   const [renameValue, setRenameValue] = useState("");
