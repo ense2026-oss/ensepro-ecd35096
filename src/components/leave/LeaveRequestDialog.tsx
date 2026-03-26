@@ -66,7 +66,7 @@ const LeaveRequestDialog = ({ open, onOpenChange, leaveTypes, onSubmit, canSelec
     setStartDate("");
     setEndDate("");
     setReason("");
-    setSubstitute("");
+    setSubstitute("no_substitute");
     setFileName("");
     setFile(null);
     setExistingFileUrl(null);
