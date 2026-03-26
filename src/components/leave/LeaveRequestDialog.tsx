@@ -133,7 +133,7 @@ const LeaveRequestDialog = ({ open, onOpenChange, leaveTypes, onSubmit, canSelec
       name: selectedEmployee || currentUserName || "คุณ (ตัวเอง)",
       type: leaveType,
       from: formatDateThai(startDate),
-      to: formatDateThai(endDate),
+      to: formatDateThai(effectiveEndDate),
       days,
       reason,
       status: "pending",
