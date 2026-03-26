@@ -255,6 +255,17 @@ const OvertimeRequest = () => {
     fetchRequests();
   }, [fetchRequests]);
 
+  // Realtime subscription for overtime_requests
+  useEffect(() => {
+    const channel = supabase
+      .channel("ot-realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "overtime_requests" }, () => {
+        fetchRequests();
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [fetchRequests]);
+
   // Filter based on scope
   const userRequests = otScope === "all"
     ? requests

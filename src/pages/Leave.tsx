@@ -132,6 +132,17 @@ const Leave = () => {
     fetchLeaveTypes().then(() => fetchLeaves());
   }, [fetchLeaveTypes, fetchLeaves]);
 
+  // Realtime subscription for leave_requests
+  useEffect(() => {
+    const channel = supabase
+      .channel("leave-realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "leave_requests" }, () => {
+        fetchLeaves();
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [fetchLeaves]);
+
   const scopedLeaves = React.useMemo(() => {
     if (scope === "self") return leaves.filter((l) => l.employeeId === currentUser?.employeeId);
     if (scope === "department") return leaves.filter((l) => l.dept === currentDept);
