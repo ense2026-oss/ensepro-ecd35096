@@ -1090,6 +1090,12 @@ export type Database = {
           id: string
         }[]
       }
+      get_approver_user_ids: {
+        Args: { module_key: string }
+        Returns: {
+          user_id: string
+        }[]
+      }
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
