@@ -1,8 +1,10 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import { useEmployees, Employee, CustomPayrollItem } from "@/contexts/EmployeeContext";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Banknote, Users, TrendingUp, FileText, Search, Download, Eye, X,
   Calculator, Receipt, Wallet, ShieldCheck, ChevronDown, ChevronUp, Settings2, Plus, Trash2,
+  ChevronLeft, ChevronRight,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import EmployeeAvatar from "@/components/ui/employee-avatar";
@@ -16,8 +18,9 @@ import { exportPnd1Excel, exportPnd1Pdf, exportPayslipExcel, exportPayslipPdf, e
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-/* ─── Mock payroll config ─── */
+/* ─── Payroll config ─── */
 const PAYROLL_CONFIG = {
   otRateWorkday: 1.5,
   otRateHoliday: 3.0,
@@ -31,23 +34,18 @@ const PAYROLL_CONFIG = {
   shiftAllowanceNight: 100,
 };
 
-/* ─── Mock attendance data ─── */
-const mockAttendanceData: Record<string, { workDays: number; otHours: number; lateDays: number; absentDays: number; leaveDays: number }> = {
-  "a3f1b2c4-1234-5678-90ab-cdef01234567": { workDays: 22, otHours: 12, lateDays: 0, absentDays: 0, leaveDays: 0 },
-  "b4e2c3d5-2345-6789-01bc-def012345678": { workDays: 21, otHours: 4, lateDays: 1, absentDays: 0, leaveDays: 1 },
-  "c5f3d4e6-3456-7890-12cd-ef0123456789": { workDays: 22, otHours: 20, lateDays: 0, absentDays: 0, leaveDays: 0 },
-  "d6g4e5f7-4567-8901-23de-f01234567890": { workDays: 15, otHours: 0, lateDays: 0, absentDays: 0, leaveDays: 7 },
-  "e7h5f6g8-5678-9012-34ef-012345678901": { workDays: 22, otHours: 18, lateDays: 2, absentDays: 0, leaveDays: 0 },
-  "f8i6g7h9-6789-0123-45f0-123456789012": { workDays: 20, otHours: 6, lateDays: 0, absentDays: 2, leaveDays: 0 },
-  "g9j7h8i0-7890-1234-56g1-234567890123": { workDays: 0, otHours: 0, lateDays: 0, absentDays: 0, leaveDays: 0 },
-  "h0k8i9j1-8901-2345-67h2-345678901234": { workDays: 22, otHours: 2, lateDays: 0, absentDays: 0, leaveDays: 0 },
-  "i1l9j0k2-9012-3456-78i3-456789012345": { workDays: 22, otHours: 0, lateDays: 0, absentDays: 0, leaveDays: 0 },
-};
+/* ─── Attendance data type ─── */
+interface AttendanceStats {
+  workDays: number;
+  otHours: number;
+  lateDays: number;
+  absentDays: number;
+  leaveDays: number;
+}
 
 /* ─── Calculation helpers ─── */
-function calcPayroll(emp: Employee, config: typeof PAYROLL_CONFIG) {
+function calcPayroll(emp: Employee, config: typeof PAYROLL_CONFIG, att: AttendanceStats) {
   const salary = Number(emp.salary) || 0;
-  const att = mockAttendanceData[emp.id] || { workDays: 22, otHours: 0, lateDays: 0, absentDays: 0, leaveDays: 0 };
 
   const hourlyRate = salary / 30 / 8;
   const otPay = Math.round(att.otHours * hourlyRate * config.otRateWorkday);
@@ -328,6 +326,16 @@ function PayslipRow({ label, value, bold }: { label: string; value: string; bold
   );
 }
 
+/* ─── Month/Year helpers ─── */
+const THAI_MONTHS = ["มกราคม","กุมภาพันธ์","มีนาคม","เมษายน","พฤษภาคม","มิถุนายน","กรกฎาคม","สิงหาคม","กันยายน","ตุลาคม","พฤศจิกายน","ธันวาคม"];
+
+function getMonthDateRange(year: number, month: number) {
+  const startDate = `${year}-${String(month).padStart(2, "0")}-01`;
+  const lastDay = new Date(year, month, 0).getDate();
+  const endDate = `${year}-${String(month).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
+  return { startDate, endDate, totalWorkingDays: lastDay };
+}
+
 /* ═══════════════════════ Main Page ═══════════════════════ */
 const Payroll = () => {
   const { employees, updateEmployee } = useEmployees();
@@ -340,7 +348,89 @@ const Payroll = () => {
   const [customItemsOpen, setCustomItemsOpen] = useState(false);
   const [customItemsEmp, setCustomItemsEmp] = useState<Employee | null>(null);
 
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  // Month/Year selector
+  const now = new Date();
+  const [selectedMonth, setSelectedMonth] = useState(now.getMonth() + 1);
+  const [selectedYear, setSelectedYear] = useState(now.getFullYear());
+
+  // Real attendance data
+  const [attendanceMap, setAttendanceMap] = useState<Record<string, AttendanceStats>>({});
+  const [loadingData, setLoadingData] = useState(true);
+
   const activeEmployees = useMemo(() => employees.filter((e) => e.status === "active"), [employees]);
+
+  // Fetch real attendance, leave, OT data for selected month
+  useEffect(() => {
+    const fetchPayrollData = async () => {
+      setLoadingData(true);
+      const { startDate, endDate } = getMonthDateRange(selectedYear, selectedMonth);
+
+      try {
+        const [attRes, leaveRes, otRes] = await Promise.all([
+          supabase.from("attendance_records").select("employee_id, status, late, ot_hours, date")
+            .gte("date", startDate).lte("date", endDate),
+          supabase.from("leave_requests").select("employee_id, days, status, date_from, date_to")
+            .or(`date_from.lte.${endDate},date_to.gte.${startDate}`)
+            .in("status", ["approved"]),
+          supabase.from("overtime_requests").select("employee_id, hours, status")
+            .gte("date", startDate).lte("date", endDate)
+            .eq("status", "approved"),
+        ]);
+
+        const map: Record<string, AttendanceStats> = {};
+
+        // Initialize all active employees
+        activeEmployees.forEach((emp) => {
+          map[emp.id] = { workDays: 0, otHours: 0, lateDays: 0, absentDays: 0, leaveDays: 0 };
+        });
+
+        // Process attendance records
+        (attRes.data || []).forEach((rec: any) => {
+          if (!map[rec.employee_id]) map[rec.employee_id] = { workDays: 0, otHours: 0, lateDays: 0, absentDays: 0, leaveDays: 0 };
+          const stats = map[rec.employee_id];
+          if (rec.status === "present" || rec.status === "late") {
+            stats.workDays++;
+          } else if (rec.status === "absent") {
+            stats.absentDays++;
+          }
+          if (rec.late) stats.lateDays++;
+          stats.otHours += Number(rec.ot_hours) || 0;
+        });
+
+        // Process approved leave
+        (leaveRes.data || []).forEach((lr: any) => {
+          if (!map[lr.employee_id]) return;
+          map[lr.employee_id].leaveDays += Number(lr.days) || 0;
+        });
+
+        // Process approved OT (add to otHours if not already from attendance)
+        (otRes.data || []).forEach((ot: any) => {
+          if (!map[ot.employee_id]) return;
+          // Only add OT hours from approved OT requests if attendance doesn't track them
+          const attOt = map[ot.employee_id].otHours;
+          if (attOt === 0) {
+            map[ot.employee_id].otHours += Number(ot.hours) || 0;
+          }
+        });
+
+        setAttendanceMap(map);
+      } catch (err) {
+        console.error("Failed to fetch payroll data:", err);
+      } finally {
+        setLoadingData(false);
+      }
+    };
+
+    if (activeEmployees.length > 0) {
+      fetchPayrollData();
+    } else {
+      setLoadingData(false);
+    }
+  }, [activeEmployees, selectedMonth, selectedYear]);
 
   const depts = useMemo(() => {
     const s = new Set(activeEmployees.map((e) => e.dept));
@@ -348,12 +438,15 @@ const Payroll = () => {
   }, [activeEmployees]);
 
   const payrollData = useMemo(() => {
-    return activeEmployees.map((emp) => ({ emp, payroll: calcPayroll(emp, PAYROLL_CONFIG) }));
-  }, [activeEmployees]);
+    return activeEmployees.map((emp) => {
+      const att = attendanceMap[emp.id] || { workDays: 0, otHours: 0, lateDays: 0, absentDays: 0, leaveDays: 0 };
+      return { emp, payroll: calcPayroll(emp, PAYROLL_CONFIG, att) };
+    });
+  }, [activeEmployees, attendanceMap]);
 
   /* ─── Collect all unique custom item names across employees ─── */
   const dynamicColumns = useMemo(() => {
-    const incomeNames = new Map<string, string>(); // name -> first seen id
+    const incomeNames = new Map<string, string>();
     const deductionNames = new Map<string, string>();
     activeEmployees.forEach((emp) => {
       (emp.customPayrollItems || []).forEach((item) => {
@@ -390,6 +483,16 @@ const Payroll = () => {
     return list;
   }, [payrollData, search, filterDept, sortField, sortAsc]);
 
+  // Reset page when filters change
+  useEffect(() => { setCurrentPage(1); }, [search, filterDept, pageSize]);
+
+  // Pagination calculations
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const paginatedData = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filtered.slice(start, start + pageSize);
+  }, [filtered, currentPage, pageSize]);
+
   const totals = useMemo(() => {
     return payrollData.reduce(
       (acc, { payroll }) => ({
@@ -409,14 +512,12 @@ const Payroll = () => {
     if (customItemsEmp) updateEmployee(customItemsEmp.id, { customPayrollItems: items });
   };
 
-  /* ─── Inline edit helper: update a specific custom item amount by name ─── */
   const updateCustomItemAmount = useCallback((emp: Employee, itemName: string, type: "income" | "deduction", newAmount: number) => {
     const items = [...(emp.customPayrollItems || [])];
     const idx = items.findIndex((i) => i.name === itemName && i.type === type);
     if (idx >= 0) {
       items[idx] = { ...items[idx], amount: newAmount };
     } else {
-      // auto-create the item for this employee
       items.push({ id: crypto.randomUUID(), name: itemName, type, amount: newAmount, enabled: true });
     }
     updateEmployee(emp.id, { customPayrollItems: items });
@@ -439,19 +540,40 @@ const Payroll = () => {
 
   const totalDynColSpan = 4 + 1 + dynamicColumns.income.length + 3 + dynamicColumns.deduction.length + 1 + 1;
 
+  const thaiYear = selectedYear + 543;
+
   return (
     <div className="space-y-5">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-xl font-bold font-display">ระบบเงินเดือน</h2>
-          <p className="text-sm text-muted-foreground mt-0.5">สรุปเงินเดือนประจำเดือน กุมภาพันธ์ 2569</p>
+          <p className="text-sm text-muted-foreground mt-0.5">สรุปเงินเดือนประจำเดือน {THAI_MONTHS[selectedMonth - 1]} {thaiYear}</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+          {/* Month/Year selector */}
+          <select
+            value={selectedMonth}
+            onChange={(e) => setSelectedMonth(Number(e.target.value))}
+            className="px-3 py-2 text-sm rounded-xl border bg-muted/30 outline-none cursor-pointer"
+          >
+            {THAI_MONTHS.map((m, i) => (
+              <option key={i} value={i + 1}>{m}</option>
+            ))}
+          </select>
+          <select
+            value={selectedYear}
+            onChange={(e) => setSelectedYear(Number(e.target.value))}
+            className="px-3 py-2 text-sm rounded-xl border bg-muted/30 outline-none cursor-pointer"
+          >
+            {Array.from({ length: 5 }, (_, i) => now.getFullYear() - 2 + i).map((y) => (
+              <option key={y} value={y}>{y + 543}</option>
+            ))}
+          </select>
           <button onClick={() => { exportAllPayslipsExcel(employees); toast.success("ส่งออกสลิปเงินเดือนทั้งหมด Excel สำเร็จ"); }} className="flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-medium hover:bg-muted transition-colors">
             <Download className="w-4 h-4" /> Export Excel
           </button>
-          <button onClick={async () => { await exportPnd1Pdf(employees, "กุมภาพันธ์", "2569"); toast.success("ส่งออก ภ.ง.ด.1 PDF สำเร็จ"); }} className="flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-medium hover:bg-muted transition-colors">
+          <button onClick={async () => { await exportPnd1Pdf(employees, THAI_MONTHS[selectedMonth - 1], String(thaiYear)); toast.success("ส่งออก ภ.ง.ด.1 PDF สำเร็จ"); }} className="flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-medium hover:bg-muted transition-colors">
             <FileText className="w-4 h-4" /> ภ.ง.ด.1 PDF
           </button>
         </div>
@@ -468,6 +590,7 @@ const Payroll = () => {
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
         <Users className="w-4 h-4" />
         <span>พนักงานที่คำนวณเงินเดือน: <strong className="text-foreground">{activeEmployees.length}</strong> คน</span>
+        {loadingData && <span className="text-xs animate-pulse ml-2">กำลังโหลดข้อมูล...</span>}
       </div>
 
       {/* Filters */}
@@ -494,13 +617,11 @@ const Payroll = () => {
                 </th>
                 <th className="text-right px-3 py-3 font-semibold">OT</th>
                 <th className="text-right px-3 py-3 font-semibold">เบี้ยขยัน</th>
-                {/* Dynamic income columns */}
                 {dynamicColumns.income.map((name) => (
                   <th key={`h-inc-${name}`} className="text-right px-3 py-3 font-semibold text-emerald-600">{name}</th>
                 ))}
                 <th className="text-right px-3 py-3 font-semibold">ประกันสังคม</th>
                 <th className="text-right px-3 py-3 font-semibold">ภาษี</th>
-                {/* Dynamic deduction columns */}
                 {dynamicColumns.deduction.map((name) => (
                   <th key={`h-ded-${name}`} className="text-right px-3 py-3 font-semibold text-red-500">{name}</th>
                 ))}
@@ -511,7 +632,7 @@ const Payroll = () => {
               </tr>
             </thead>
             <tbody>
-              {filtered.map(({ emp, payroll }) => (
+              {paginatedData.map(({ emp, payroll }) => (
                 <tr key={emp.id} className="border-t hover:bg-muted/30 transition-colors">
                   <td className="px-4 py-3 sticky left-0 z-10 bg-background">
                     <div className="flex items-center gap-2.5">
@@ -525,7 +646,6 @@ const Payroll = () => {
                   <td className="text-right px-3 py-3">{formatCurrency(payroll.salary)}</td>
                   <td className="text-right px-3 py-3 tabular-nums">{formatCurrency(payroll.otPay)}</td>
                   <td className="text-right px-3 py-3 tabular-nums">{formatCurrency(payroll.diligence)}</td>
-                  {/* Dynamic income cells — inline editable */}
                   {dynamicColumns.income.map((name) => (
                     <td key={`${emp.id}-inc-${name}`} className="text-right px-3 py-3">
                       <EditableCell
@@ -536,7 +656,6 @@ const Payroll = () => {
                   ))}
                   <td className="text-right px-3 py-3 tabular-nums">{formatCurrency(payroll.ssf)}</td>
                   <td className="text-right px-3 py-3 tabular-nums">{formatCurrency(payroll.monthlyTax)}</td>
-                  {/* Dynamic deduction cells — inline editable */}
                   {dynamicColumns.deduction.map((name) => (
                     <td key={`${emp.id}-ded-${name}`} className="text-right px-3 py-3">
                       <EditableCell
@@ -555,11 +674,11 @@ const Payroll = () => {
                   </td>
                 </tr>
               ))}
-              {filtered.length === 0 && (
+              {paginatedData.length === 0 && (
                 <tr><td colSpan={totalDynColSpan} className="text-center py-8 text-muted-foreground">ไม่พบข้อมูล</td></tr>
               )}
             </tbody>
-            {filtered.length > 0 && (
+            {paginatedData.length > 0 && (
               <tfoot>
                 <tr className="border-t-2 font-semibold" style={{ background: "hsl(var(--muted) / 0.5)" }}>
                   <td className="px-4 py-3 sticky left-0 z-10" style={{ background: "hsl(var(--muted) / 0.5)" }}>รวมทั้งหมด ({filtered.length} คน)</td>
@@ -585,10 +704,69 @@ const Payroll = () => {
             )}
           </table>
         </div>
+
+        {/* Pagination */}
+        {filtered.length > 0 && (
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <span>แสดง</span>
+              <select
+                value={pageSize}
+                onChange={(e) => setPageSize(Number(e.target.value))}
+                className="px-2 py-1 rounded-lg border bg-muted/30 outline-none cursor-pointer text-sm"
+              >
+                {[10, 20, 50, 100].map((n) => (
+                  <option key={n} value={n}>{n}</option>
+                ))}
+              </select>
+              <span>รายการ จาก {filtered.length} รายการ</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={currentPage <= 1}
+                className="p-2 rounded-lg hover:bg-muted transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              {Array.from({ length: totalPages }, (_, i) => i + 1)
+                .filter((p) => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1)
+                .reduce<(number | "...")[]>((acc, p, i, arr) => {
+                  if (i > 0 && p - (arr[i - 1]) > 1) acc.push("...");
+                  acc.push(p);
+                  return acc;
+                }, [])
+                .map((p, i) =>
+                  p === "..." ? (
+                    <span key={`ellipsis-${i}`} className="px-2 text-sm text-muted-foreground">...</span>
+                  ) : (
+                    <button
+                      key={p}
+                      onClick={() => setCurrentPage(p as number)}
+                      className={`w-8 h-8 rounded-lg text-sm font-medium transition-colors ${
+                        currentPage === p
+                          ? "bg-primary text-primary-foreground"
+                          : "hover:bg-muted"
+                      }`}
+                    >
+                      {p}
+                    </button>
+                  )
+                )}
+              <button
+                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                disabled={currentPage >= totalPages}
+                className="p-2 rounded-lg hover:bg-muted transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {selectedEmp && (
-        <PayslipDialog open={payslipOpen} onClose={() => setPayslipOpen(false)} emp={selectedEmp} payroll={calcPayroll(selectedEmp, PAYROLL_CONFIG)} />
+        <PayslipDialog open={payslipOpen} onClose={() => setPayslipOpen(false)} emp={selectedEmp} payroll={calcPayroll(selectedEmp, PAYROLL_CONFIG, attendanceMap[selectedEmp.id] || { workDays: 0, otHours: 0, lateDays: 0, absentDays: 0, leaveDays: 0 })} />
       )}
 
       {customItemsEmp && (
