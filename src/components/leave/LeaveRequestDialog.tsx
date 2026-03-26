@@ -117,7 +117,7 @@ const LeaveRequestDialog = ({ open, onOpenChange, leaveTypes, onSubmit, canSelec
     const newErrors: Record<string, boolean> = {};
     if (!leaveType) newErrors.leaveType = true;
     if (!startDate) newErrors.startDate = true;
-    if (!endDate) newErrors.endDate = true;
+    if (durationType === "full" && !endDate) newErrors.endDate = true;
     if (!reason.trim()) newErrors.reason = true;
     if (requireDoc && !hasFile) newErrors.file = true;
 
