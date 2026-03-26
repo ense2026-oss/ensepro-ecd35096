@@ -1,0 +1,1 @@
+UPDATE employees SET initial_password = 'Password123!' WHERE (initial_password IS NULL OR initial_password = '') AND role != 'Admin';
