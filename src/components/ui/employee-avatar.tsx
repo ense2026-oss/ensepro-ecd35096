@@ -1,4 +1,5 @@
 import LazyImage from "@/components/ui/lazy-image";
+import defaultAvatarImg from "@/assets/default-avatar.png";
 
 interface EmployeeAvatarProps {
   photoUrl?: string;
