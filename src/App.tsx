@@ -88,7 +88,7 @@ const AppRoutes = () => (
               <PendingCountsProvider>
                 <ContractProvider>
                   <TimeEditProvider>
-                    <MainLayout />
+                    <MainLayout /> {/* layout */}
                   </TimeEditProvider>
                 </ContractProvider>
               </PendingCountsProvider>
