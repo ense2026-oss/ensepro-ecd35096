@@ -273,7 +273,9 @@ export const EmployeeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   useEffect(() => {
     if (session) {
-      fetchEmployees();
+      // Defer initial fetch so it doesn't block the first render
+      const timer = setTimeout(() => fetchEmployees(), 500);
+      return () => clearTimeout(timer);
     }
   }, [session, fetchEmployees]);
 

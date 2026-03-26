@@ -63,7 +63,6 @@ export const PermissionsProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const { user } = useAuth();
 
   const fetchPermissions = useCallback(async () => {
-    if (!user) { setPermissions([]); setLoading(false); return; }
     try {
       const { data, error } = await supabase
         .from("role_permissions")
@@ -76,7 +75,7 @@ export const PermissionsProvider: React.FC<{ children: React.ReactNode }> = ({ c
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, []);
 
   useEffect(() => {
     fetchPermissions();
