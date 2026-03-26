@@ -21,6 +21,7 @@ interface LeaveRequestDialogProps {
 const LeaveRequestDialog = ({ open, onOpenChange, leaveTypes, onSubmit, canSelectEmployee, currentUserName, employeeNames = [], allEmployeeNames = [], editingRecord }: LeaveRequestDialogProps) => {
   const [leaveType, setLeaveType] = useState(leaveTypes[0]?.name || "");
   const [selectedEmployee, setSelectedEmployee] = useState(currentUserName || "");
+  const [durationType, setDurationType] = useState<"full" | "half">("full");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [reason, setReason] = useState("");
@@ -63,6 +64,7 @@ const LeaveRequestDialog = ({ open, onOpenChange, leaveTypes, onSubmit, canSelec
   const resetForm = () => {
     setLeaveType(leaveTypes[0]?.name || "");
     setSelectedEmployee(currentUserName || "");
+    setDurationType("full");
     setStartDate("");
     setEndDate("");
     setReason("");
@@ -115,7 +117,7 @@ const LeaveRequestDialog = ({ open, onOpenChange, leaveTypes, onSubmit, canSelec
     const newErrors: Record<string, boolean> = {};
     if (!leaveType) newErrors.leaveType = true;
     if (!startDate) newErrors.startDate = true;
-    if (!endDate) newErrors.endDate = true;
+    if (durationType === "full" && !endDate) newErrors.endDate = true;
     if (!reason.trim()) newErrors.reason = true;
     if (requireDoc && !hasFile) newErrors.file = true;
 
@@ -124,13 +126,14 @@ const LeaveRequestDialog = ({ open, onOpenChange, leaveTypes, onSubmit, canSelec
       return;
     }
 
-    const days = calculateDays(startDate, endDate);
+    const days = durationType === "half" ? 0.5 : calculateDays(startDate, endDate);
+    const effectiveEndDate = durationType === "half" ? startDate : endDate;
 
     onSubmit({
       name: selectedEmployee || currentUserName || "คุณ (ตัวเอง)",
       type: leaveType,
       from: formatDateThai(startDate),
-      to: formatDateThai(endDate),
+      to: formatDateThai(effectiveEndDate),
       days,
       reason,
       status: "pending",
@@ -188,14 +191,27 @@ const LeaveRequestDialog = ({ open, onOpenChange, leaveTypes, onSubmit, canSelec
               allowClear
             />
           </div>
-          <div>
-            <label className="block text-sm font-semibold mb-1.5">วันที่เริ่มลา <span className="text-destructive">*</span></label>
-            <ThaiDatePicker value={startDate} onChange={setStartDate} placeholder="เลือกวันที่เริ่มลา" className={errors.startDate ? "border-destructive" : ""} />
+          <div className="sm:col-span-2">
+            <label className="block text-sm font-semibold mb-1.5">ระยะเวลา <span className="text-destructive">*</span></label>
+            <div className="flex gap-2">
+              <button type="button" onClick={() => { setDurationType("full"); }} className={`flex-1 px-4 py-2.5 text-sm font-semibold rounded-xl border transition-colors ${durationType === "full" ? "bg-primary text-primary-foreground border-primary" : "bg-muted/30 hover:bg-muted/50"}`}>
+                ทั้งวัน
+              </button>
+              <button type="button" onClick={() => { setDurationType("half"); setEndDate(""); }} className={`flex-1 px-4 py-2.5 text-sm font-semibold rounded-xl border transition-colors ${durationType === "half" ? "bg-primary text-primary-foreground border-primary" : "bg-muted/30 hover:bg-muted/50"}`}>
+                ครึ่งวัน
+              </button>
+            </div>
           </div>
-          <div>
-            <label className="block text-sm font-semibold mb-1.5">วันที่สิ้นสุด <span className="text-destructive">*</span></label>
-            <ThaiDatePicker value={endDate} onChange={setEndDate} placeholder="เลือกวันที่สิ้นสุด" className={errors.endDate ? "border-destructive" : ""} />
+          <div className={durationType === "half" ? "sm:col-span-2" : ""}>
+            <label className="block text-sm font-semibold mb-1.5">{durationType === "half" ? "วันที่ลา" : "วันที่เริ่มลา"} <span className="text-destructive">*</span></label>
+            <ThaiDatePicker value={startDate} onChange={setStartDate} placeholder={durationType === "half" ? "เลือกวันที่ลา" : "เลือกวันที่เริ่มลา"} className={errors.startDate ? "border-destructive" : ""} />
           </div>
+          {durationType === "full" && (
+            <div>
+              <label className="block text-sm font-semibold mb-1.5">วันที่สิ้นสุด <span className="text-destructive">*</span></label>
+              <ThaiDatePicker value={endDate} onChange={setEndDate} placeholder="เลือกวันที่สิ้นสุด" className={errors.endDate ? "border-destructive" : ""} />
+            </div>
+          )}
           <div className="sm:col-span-2">
             <label className="block text-sm font-semibold mb-1.5">เหตุผล <span className="text-destructive">*</span></label>
             <textarea rows={2} value={reason} onChange={(e) => setReason(e.target.value)} className={`w-full px-3 py-2.5 text-sm rounded-xl border outline-none bg-muted/30 resize-none ${errors.reason ? "border-destructive" : ""}`} placeholder="ระบุเหตุผลการลา..." />
