@@ -27,8 +27,8 @@ const AffiliationSettings = () => {
   const toggleExpand = (id: string) => setExpandedAffs((m) => ({ ...m, [id]: !m[id] }));
 
   // Affiliation CRUD
-  const openAddAff = () => { setEditingAffId(null); setAffForm({ name: "" }); setAffDialogOpen(true); };
-  const openEditAff = (aff: { id: string; name: string }) => { setEditingAffId(aff.id); setAffForm({ name: aff.name }); setAffDialogOpen(true); };
+  const openAddAff = () => { setEditingAffId(null); setAffForm({ name: "", parentOrgLevelId: "" }); setAffDialogOpen(true); };
+  const openEditAff = (aff: { id: string; name: string; parent_org_level_id?: string | null }) => { setEditingAffId(aff.id); setAffForm({ name: aff.name, parentOrgLevelId: aff.parent_org_level_id || "" }); setAffDialogOpen(true); };
 
   const handleSaveAff = async () => {
     if (!affForm.name.trim()) { toast({ title: "กรุณากรอกชื่อสังกัด", variant: "destructive" }); return; }
