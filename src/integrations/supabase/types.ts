@@ -763,6 +763,45 @@ export type Database = {
         }
         Relationships: []
       }
+      org_level_employees: {
+        Row: {
+          created_at: string
+          employee_id: string
+          id: string
+          org_level_id: string
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          employee_id: string
+          id?: string
+          org_level_id: string
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string
+          employee_id?: string
+          id?: string
+          org_level_id?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_level_employees_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "org_level_employees_org_level_id_fkey"
+            columns: ["org_level_id"]
+            isOneToOne: false
+            referencedRelation: "org_levels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       org_levels: {
         Row: {
           created_at: string
