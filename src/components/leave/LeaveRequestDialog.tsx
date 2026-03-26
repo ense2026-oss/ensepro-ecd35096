@@ -177,11 +177,17 @@ const LeaveRequestDialog = ({ open, onOpenChange, leaveTypes, onSubmit, canSelec
           </div>
           <div>
             <label className="block text-sm font-semibold mb-1.5">ผู้ทดแทน</label>
-            <select value={substitute} onChange={(e) => setSubstitute(e.target.value)} className="w-full px-3 py-2.5 text-sm rounded-xl border outline-none bg-muted/30 cursor-pointer">
-              <option value="">เลือกผู้ทดแทน</option>
-              {substituteList.map((emp) => <option key={emp}>{emp}</option>)}
-              <option value="no_substitute">ไม่มีผู้ทดแทน</option>
-            </select>
+            <SearchableSelect
+              value={substitute}
+              onChange={setSubstitute}
+              options={[
+                { value: "", label: "เลือกผู้ทดแทน" },
+                ...substituteList.map((emp) => ({ value: emp, label: emp })),
+                { value: "no_substitute", label: "ไม่มีผู้ทดแทน" },
+              ]}
+              placeholder="เลือกผู้ทดแทน"
+              allowClear
+            />
           </div>
           <div>
             <label className="block text-sm font-semibold mb-1.5">วันที่เริ่มลา <span className="text-destructive">*</span></label>

@@ -137,14 +137,16 @@ const ContractFormDialog = ({ open, onOpenChange, editContract }: Props) => {
           {/* Employee */}
           <div className="grid gap-1.5">
             <Label>พนักงาน *</Label>
-            <Select value={form.employeeId} onValueChange={handleEmployeeChange}>
-              <SelectTrigger><SelectValue placeholder="เลือกพนักงาน" /></SelectTrigger>
-              <SelectContent>
-                {activeEmployees.map((e) => (
-                  <SelectItem key={e.id} value={e.id}>{e.firstName} {e.lastName} — {e.position}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <SearchableSelect
+              value={form.employeeId}
+              onChange={handleEmployeeChange}
+              options={activeEmployees.map((e) => ({
+                value: e.id,
+                label: `${e.firstName} ${e.lastName}`,
+                subtitle: e.position,
+              }))}
+              placeholder="เลือกพนักงาน"
+            />
           </div>
 
           {/* Contract type */}

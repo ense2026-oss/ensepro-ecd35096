@@ -118,16 +118,16 @@ const OTRequestDialog = ({ open, onClose, onSubmit }: {
         {hasAdminAccess && (
           <div className="space-y-1.5">
             <label className="text-xs font-medium text-muted-foreground">พนักงาน *</label>
-            <select
+            <SearchableSelect
               value={form.employeeId}
-              onChange={(e) => setForm({ ...form, employeeId: e.target.value })}
-              className="w-full h-10 px-3 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-            >
-              <option value="">-- เลือกพนักงาน --</option>
-              {employees.map((emp) => (
-                <option key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName} — {emp.dept}</option>
-              ))}
-            </select>
+              onChange={(val) => setForm({ ...form, employeeId: val })}
+              options={employees.map((emp) => ({
+                value: emp.id,
+                label: `${emp.firstName} ${emp.lastName}`,
+                subtitle: emp.dept,
+              }))}
+              placeholder="-- เลือกพนักงาน --"
+            />
           </div>
         )}
 
