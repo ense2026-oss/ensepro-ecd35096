@@ -38,6 +38,39 @@ const Settings = () => {
   const [activeTab, setActiveTab] = useState("company");
   const isMobile = useIsMobile();
 
+  // Read module settings from localStorage and listen for changes
+  const getModuleSettings = (): Record<string, boolean> => {
+    try {
+      const saved = localStorage.getItem("module-settings");
+      return saved ? JSON.parse(saved) : {};
+    } catch { return {}; }
+  };
+
+  const [moduleSettings, setModuleSettings] = useState<Record<string, boolean>>(getModuleSettings);
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail as Record<string, boolean>;
+      setModuleSettings(detail);
+    };
+    window.addEventListener("module-settings-changed", handler);
+    return () => window.removeEventListener("module-settings-changed", handler);
+  }, []);
+
+  const tabs = ALL_TABS.filter((tab) => {
+    if ('requireModule' in tab && tab.requireModule) {
+      return moduleSettings[tab.requireModule] !== false;
+    }
+    return true;
+  });
+
+  // If active tab got hidden, switch to first available
+  useEffect(() => {
+    if (!tabs.find(t => t.id === activeTab)) {
+      setActiveTab(tabs[0]?.id || "company");
+    }
+  }, [tabs, activeTab]);
+
   const renderContent = () => {
     switch (activeTab) {
       case "company":
