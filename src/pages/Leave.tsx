@@ -251,15 +251,42 @@ const Leave = () => {
   };
 
   const handleApprove = async (id: string) => {
-    await supabase.from("leave_requests").update({ status: "approved" }).eq("id", id);
-    setLeaves((prev) => prev.map((l) => l.id === id ? { ...l, status: "approved" } : l));
-    toast({ title: "อนุมัติแล้ว", description: "อนุมัติคำขอลาเรียบร้อยแล้ว" });
     const record = leaves.find((l) => l.id === id);
-    if (record) {
+    if (!record) return;
+
+    const nextTier = (record.approvedTiers || 0) + 1;
+    const totalTiers = record.totalTiers || 1;
+
+    if (nextTier >= totalTiers) {
+      // All tiers approved → fully approve
+      await supabase.from("leave_requests").update({
+        status: "approved",
+        approved_tiers: nextTier,
+        current_tier: nextTier,
+      }).eq("id", id);
+      setLeaves((prev) => prev.map((l) => l.id === id ? { ...l, status: "approved", approvedTiers: nextTier } : l));
+      toast({ title: "อนุมัติแล้ว", description: "อนุมัติคำขอลาเรียบร้อยแล้ว (ครบทุกระดับ)" });
+
       notifyRequester(record.employeeId, {
         type: "approval",
         title: "คำขอลาได้รับการอนุมัติ",
         description: `คำขอลา ${record.type} ${record.days} วัน (${record.from} - ${record.to}) ได้รับการอนุมัติแล้ว`,
+        targetEmployee: record.name,
+      });
+    } else {
+      // Advance to next tier
+      await supabase.from("leave_requests").update({
+        approved_tiers: nextTier,
+        current_tier: nextTier + 1,
+      }).eq("id", id);
+      setLeaves((prev) => prev.map((l) => l.id === id ? { ...l, approvedTiers: nextTier, currentTier: nextTier + 1 } : l));
+      toast({ title: `อนุมัติระดับ ${nextTier}/${totalTiers}`, description: `รอการอนุมัติระดับถัดไป (${nextTier + 1}/${totalTiers})` });
+
+      // Notify next tier approver
+      notifyTierApprover("leave", nextTier, {
+        type: "leave",
+        title: `คำขอลารอการอนุมัติ (ระดับ ${nextTier + 1}/${totalTiers})`,
+        description: `${record.name} ยื่นขอลา ${record.type} ${record.days} วัน (${record.from} - ${record.to}) — ผ่านการอนุมัติระดับ ${nextTier} แล้ว`,
         targetEmployee: record.name,
       });
     }
