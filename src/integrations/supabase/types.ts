@@ -1107,6 +1107,28 @@ export type Database = {
         }
         Returns: boolean
       }
+      notify_approvers: {
+        Args: {
+          p_action_label?: string
+          p_description: string
+          p_module_key: string
+          p_target_employee?: string
+          p_title: string
+          p_type?: string
+        }
+        Returns: undefined
+      }
+      notify_requester: {
+        Args: {
+          p_action_label?: string
+          p_description: string
+          p_employee_id: string
+          p_target_employee?: string
+          p_title: string
+          p_type?: string
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role:
