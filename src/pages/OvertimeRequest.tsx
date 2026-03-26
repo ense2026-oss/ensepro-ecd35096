@@ -283,6 +283,7 @@ const OvertimeRequest = () => {
   };
 
   const handleAdd = async (req: Omit<OTRequest, "id" | "createdAt" | "status">) => {
+    const totalTiers = await getApprovalTiers("ot");
     await supabase.from("overtime_requests").insert({
       employee_id: req.employeeId,
       date: req.date,
@@ -291,10 +292,13 @@ const OvertimeRequest = () => {
       hours: req.hours,
       ot_type: req.type,
       reason: req.reason,
+      current_tier: 1,
+      approved_tiers: 0,
+      total_tiers: totalTiers,
     });
     fetchRequests();
     toast.success("ยื่นคำขอ OT เรียบร้อย");
-    notifyApprovers({
+    notifyTierApprover("ot", 0, {
       type: "ot",
       title: "คำขอ OT ใหม่",
       description: `${req.employeeName} ยื่นขอ OT ${req.date} (${req.startTime}-${req.endTime}) ${req.hours} ชม.`,
