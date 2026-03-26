@@ -126,7 +126,8 @@ const LeaveRequestDialog = ({ open, onOpenChange, leaveTypes, onSubmit, canSelec
       return;
     }
 
-    const days = calculateDays(startDate, endDate);
+    const days = durationType === "half" ? 0.5 : calculateDays(startDate, endDate);
+    const effectiveEndDate = durationType === "half" ? startDate : endDate;
 
     onSubmit({
       name: selectedEmployee || currentUserName || "คุณ (ตัวเอง)",
