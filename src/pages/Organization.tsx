@@ -794,6 +794,40 @@ const Organization = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Rename Company Dialog */}
+      <Dialog open={renameOpen} onOpenChange={setRenameOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Edit className="w-5 h-5 text-primary" /> แก้ไขชื่อองค์กร
+            </DialogTitle>
+            <DialogDescription className="sr-only">แก้ไขชื่อบริษัทหรือองค์กร</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-foreground">ชื่อองค์กร</label>
+              <input value={renameValue} onChange={(e) => setRenameValue(e.target.value)}
+                className="flex h-10 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                placeholder="ชื่อบริษัท / องค์กร" autoFocus />
+            </div>
+          </div>
+          <DialogFooter>
+            <DialogClose asChild>
+              <button className="px-4 py-2 rounded-xl text-sm font-medium border border-input bg-background hover:bg-accent transition-colors">ยกเลิก</button>
+            </DialogClose>
+            <button onClick={async () => {
+              if (!renameValue.trim()) { toast.error("กรุณากรอกชื่อองค์กร"); return; }
+              await updateProgramName(renameValue.trim());
+              setRenameOpen(false);
+              toast.success("แก้ไขชื่อองค์กรสำเร็จ");
+            }} disabled={saving}
+              className="px-4 py-2 rounded-xl text-sm font-bold text-primary-foreground bg-primary hover:bg-primary/90 transition-colors disabled:opacity-50">
+              บันทึก
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
