@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useBranding } from "@/contexts/BrandingContext";
-import { Upload, X } from "lucide-react";
+import { Upload, X, Loader2 } from "lucide-react";
 import { processFileUpload } from "@/utils/fileCompression";
+import { supabase } from "@/integrations/supabase/client";
 
 interface CompanyInfo {
   name: string;
@@ -14,13 +15,13 @@ interface CompanyInfo {
   mapsUrl: string;
 }
 
-const initialData: CompanyInfo = {
-  name: "บริษัท เอ็กซ์วาย จำกัด",
-  registrationNo: "0105567012345",
-  address: "123 ถ.สุขุมวิท แขวงคลองเตย กทม. 10110",
-  phone: "02-xxx-xxxx",
-  email: "info@company.com",
-  website: "https://www.company.com",
+const emptyData: CompanyInfo = {
+  name: "",
+  registrationNo: "",
+  address: "",
+  phone: "",
+  email: "",
+  website: "",
   mapsUrl: "",
 };
 
@@ -33,11 +34,15 @@ const fields: { key: keyof Omit<CompanyInfo, "mapsUrl">; label: string; placehol
   { key: "website", label: "Website", placeholder: "Website URL" },
 ];
 
+const COMPANY_KEY = "company_info";
+
 const CompanySettings = () => {
   const { toast } = useToast();
   const { programName, programSubtitle, logoUrl, logoOnlyUrl, displayMode, setProgramName, setProgramSubtitle, setLogoUrl, setLogoOnlyUrl, setDisplayMode } = useBranding();
-  const [form, setForm] = useState<CompanyInfo>(initialData);
-  const [saved, setSaved] = useState<CompanyInfo>(initialData);
+  const [form, setForm] = useState<CompanyInfo>(emptyData);
+  const [saved, setSaved] = useState<CompanyInfo>(emptyData);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [brandName, setBrandName] = useState(programName);
   const [brandSubtitle, setBrandSubtitle] = useState(programSubtitle);
   const [previewLogo, setPreviewLogo] = useState<string | null>(logoUrl);
@@ -45,6 +50,38 @@ const CompanySettings = () => {
   const [brandDisplayMode, setBrandDisplayMode] = useState<"logo-only" | "logo-and-name">(displayMode);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const fileInputOnlyRef = useRef<HTMLInputElement>(null);
+
+  // Load company info from DB
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const { data } = await supabase
+          .from("company_settings")
+          .select("value")
+          .eq("key", COMPANY_KEY)
+          .maybeSingle();
+        if (data?.value) {
+          const val = data.value as Record<string, string>;
+          const loaded: CompanyInfo = {
+            name: val.name || "",
+            registrationNo: val.registrationNo || "",
+            address: val.address || "",
+            phone: val.phone || "",
+            email: val.email || "",
+            website: val.website || "",
+            mapsUrl: val.mapsUrl || "",
+          };
+          setForm(loaded);
+          setSaved(loaded);
+        }
+      } catch (err) {
+        console.error("Failed to load company settings", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, []);
 
   useEffect(() => {
     setPreviewLogo(logoUrl);
@@ -57,9 +94,34 @@ const CompanySettings = () => {
   const isDirty = JSON.stringify(form) !== JSON.stringify(saved);
   const isBrandDirty = brandName !== programName || brandSubtitle !== programSubtitle || previewLogo !== logoUrl || previewLogoOnly !== logoOnlyUrl || brandDisplayMode !== displayMode;
 
-  const handleSave = () => {
-    setSaved({ ...form });
-    toast({ title: "บันทึกสำเร็จ", description: "ข้อมูลบริษัทถูกอัปเดตแล้ว" });
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const { data: existing } = await supabase
+        .from("company_settings")
+        .select("id")
+        .eq("key", COMPANY_KEY)
+        .maybeSingle();
+
+      if (existing) {
+        await supabase
+          .from("company_settings")
+          .update({ value: form as unknown as Record<string, unknown>, updated_at: new Date().toISOString() })
+          .eq("key", COMPANY_KEY);
+      } else {
+        await supabase
+          .from("company_settings")
+          .insert({ key: COMPANY_KEY, value: form as unknown as Record<string, unknown> });
+      }
+
+      setSaved({ ...form });
+      toast({ title: "บันทึกสำเร็จ", description: "ข้อมูลบริษัทถูกอัปเดตแล้ว" });
+    } catch (err) {
+      console.error(err);
+      toast({ title: "เกิดข้อผิดพลาด", description: "ไม่สามารถบันทึกข้อมูลได้", variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleReset = () => {
@@ -99,6 +161,15 @@ const CompanySettings = () => {
     if (fileInputOnlyRef.current) fileInputOnlyRef.current.value = "";
   };
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+        <span className="ml-2 text-sm text-muted-foreground">กำลังโหลดข้อมูล...</span>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-8">
       {/* Branding section */}
@@ -134,7 +205,6 @@ const CompanySettings = () => {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {/* Logo upload for current mode */}
           {brandDisplayMode === "logo-and-name" ? (
             <>
               <div className="sm:col-span-2">
@@ -265,10 +335,11 @@ const CompanySettings = () => {
         <div className="flex gap-3 mt-4">
           <button
             onClick={handleSave}
-            disabled={!isDirty}
-            className="px-6 py-2.5 rounded-xl text-sm font-bold text-primary-foreground disabled:opacity-50"
+            disabled={!isDirty || saving}
+            className="px-6 py-2.5 rounded-xl text-sm font-bold text-primary-foreground disabled:opacity-50 flex items-center gap-2"
             style={{ background: "linear-gradient(135deg, hsl(var(--primary)), hsl(31 100% 60%))", boxShadow: isDirty ? "0 4px 12px hsl(var(--primary) / 0.3)" : "none" }}
           >
+            {saving && <Loader2 className="w-4 h-4 animate-spin" />}
             บันทึกข้อมูล
           </button>
           {isDirty && (
