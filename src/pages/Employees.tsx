@@ -8,6 +8,7 @@ import { useEmployees } from "@/contexts/EmployeeContext";
 import type { Employee } from "@/contexts/EmployeeContext";
 import EmployeeFormDialog from "@/components/employees/EmployeeFormDialog";
 import DeleteEmployeeDialog from "@/components/employees/DeleteEmployeeDialog";
+import ImportEmployeesDialog from "@/components/employees/ImportEmployeesDialog";
 import EmployeeAvatar from "@/components/ui/employee-avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
