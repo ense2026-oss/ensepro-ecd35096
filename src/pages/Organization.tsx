@@ -232,7 +232,7 @@ const Organization = () => {
   const { employees, updateEmployee } = useEmployees();
   const { canAction } = usePermissions();
   const { role } = useAuth();
-  const { programName } = useBranding();
+  const { programName, updateProgramName } = useBranding();
   const canManage = canAction(role, "organization", "edit");
   const canAdd = canAction(role, "organization", "add");
   const canDelete = canAction(role, "organization", "delete");

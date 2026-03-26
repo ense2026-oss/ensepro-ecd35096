@@ -118,6 +118,10 @@ export const BrandingProvider = ({ children }: { children: ReactNode }) => {
     });
   };
 
+  const updateProgramName = useCallback(async (name: string) => {
+    update({ programName: name });
+  }, []);
+
   return (
     <BrandingContext.Provider
       value={{
@@ -127,6 +131,7 @@ export const BrandingProvider = ({ children }: { children: ReactNode }) => {
         setLogoUrl: (logoUrl) => update({ logoUrl }),
         setLogoOnlyUrl: (logoOnlyUrl) => update({ logoOnlyUrl }),
         setDisplayMode: (displayMode) => update({ displayMode }),
+        updateProgramName,
       }}
     >
       {children}
