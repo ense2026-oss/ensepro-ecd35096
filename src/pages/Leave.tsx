@@ -91,13 +91,14 @@ const Leave = () => {
   const fetchLeaves = useCallback(async () => {
     const { data } = await supabase
       .from("leave_requests")
-      .select("*, employees(first_name, last_name, dept)")
+      .select("*, employees(first_name, last_name, dept, photo_url)")
       .order("created_at", { ascending: false });
     if (data) {
       const records: LeaveRecord[] = data.map((r: any) => ({
         id: r.id,
         employeeId: r.employee_id,
         name: r.employees ? `${r.employees.first_name} ${r.employees.last_name}` : "",
+        photoUrl: r.employees?.photo_url || undefined,
         dept: r.employees?.dept || "",
         type: r.leave_type_name,
         from: r.date_from,
