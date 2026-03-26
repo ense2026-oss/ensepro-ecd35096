@@ -14,6 +14,9 @@ export interface LeaveRecord {
   status: string;
   file: boolean;
   fileUrl?: string;
+  currentTier?: number;
+  approvedTiers?: number;
+  totalTiers?: number;
 }
 
 const statusConf: Record<string, { label: string; color: string; bg: string }> = {
