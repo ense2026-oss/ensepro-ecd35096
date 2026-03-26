@@ -15,6 +15,7 @@ interface BrandingContextType extends BrandingState {
   setLogoUrl: (url: string | null) => void;
   setLogoOnlyUrl: (url: string | null) => void;
   setDisplayMode: (mode: "logo-only" | "logo-and-name") => void;
+  updateProgramName: (name: string) => Promise<void>;
 }
 
 const BRANDING_CACHE_KEY = "hrpro_branding_cache";
