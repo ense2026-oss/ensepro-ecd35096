@@ -13,6 +13,7 @@ interface LeaveRequestDialogProps {
   canSelectEmployee?: boolean;
   currentUserName?: string;
   employeeNames?: string[];
+  allEmployeeNames?: string[];
   editingRecord?: LeaveRecord | null;
 }
 

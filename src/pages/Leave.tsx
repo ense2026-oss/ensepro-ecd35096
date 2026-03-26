@@ -51,6 +51,13 @@ const Leave = () => {
     return names.length > 0 ? names : (currentUserName ? [currentUserName] : []);
   }, [scopedEmployees, currentUserName]);
 
+  // All active employees for substitute dropdown (regardless of scope)
+  const allEmployeeNames = React.useMemo(() => {
+    return allEmployees
+      .filter((e) => e.status === "active")
+      .map((e) => `${e.firstName} ${e.lastName}`);
+  }, [allEmployees]);
+
   const [leaveTypes, setLeaveTypes] = useState<LeaveType[]>([]);
   const [leaves, setLeaves] = useState<LeaveRecord[]>([]);
   const [filterStatus, setFilterStatus] = useState("all");
