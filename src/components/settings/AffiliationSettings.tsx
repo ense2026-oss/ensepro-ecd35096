@@ -11,7 +11,7 @@ import { toast } from "@/hooks/use-toast";
 import { useOrg } from "@/contexts/OrgContext";
 
 const AffiliationSettings = () => {
-  const { affiliations, addAffiliation, updateAffiliation, deleteAffiliation, addPosition, updatePosition, deletePosition } = useOrg();
+  const { affiliations, addAffiliation, updateAffiliation, deleteAffiliation, addPosition, updatePosition, deletePosition, orgLevelsFlat } = useOrg();
 
   const [affDialogOpen, setAffDialogOpen] = useState(false);
   const [posDialogOpen, setPosDialogOpen] = useState(false);
@@ -19,7 +19,7 @@ const AffiliationSettings = () => {
   const [deletePosId, setDeletePosId] = useState<string | null>(null);
   const [editingAffId, setEditingAffId] = useState<string | null>(null);
   const [editingPosId, setEditingPosId] = useState<string | null>(null);
-  const [affForm, setAffForm] = useState({ name: "" });
+  const [affForm, setAffForm] = useState({ name: "", parentOrgLevelId: "" });
   const [posForm, setPosForm] = useState({ name: "", affiliationId: "" });
   const [expandedAffs, setExpandedAffs] = useState<Record<string, boolean>>({});
   const [saving, setSaving] = useState(false);
