@@ -17,7 +17,7 @@ interface LeaveRequestDialogProps {
   editingRecord?: LeaveRecord | null;
 }
 
-const LeaveRequestDialog = ({ open, onOpenChange, leaveTypes, onSubmit, canSelectEmployee, currentUserName, employeeNames = [], editingRecord }: LeaveRequestDialogProps) => {
+const LeaveRequestDialog = ({ open, onOpenChange, leaveTypes, onSubmit, canSelectEmployee, currentUserName, employeeNames = [], allEmployeeNames = [], editingRecord }: LeaveRequestDialogProps) => {
   const [leaveType, setLeaveType] = useState(leaveTypes[0]?.name || "");
   const [selectedEmployee, setSelectedEmployee] = useState(currentUserName || "");
   const [startDate, setStartDate] = useState("");
