@@ -249,6 +249,7 @@ const Employees = () => {
         employeeName={deletingEmployee ? `${deletingEmployee.prefix}${deletingEmployee.firstName} ${deletingEmployee.lastName}` : ""}
         onConfirm={handleDeleteConfirm}
       />
+      <ImportEmployeesDialog open={importOpen} onOpenChange={setImportOpen} />
     </div>
   );
 };
