@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  Search, Plus, Filter, Download, MoreHorizontal, Eye, Edit, Trash2,
+  Search, Plus, Filter, Download, Upload, MoreHorizontal, Eye, Edit, Trash2,
   ChevronLeft, ChevronRight, Phone, Mail, MapPin,
 } from "lucide-react";
 import { useEmployees } from "@/contexts/EmployeeContext";
