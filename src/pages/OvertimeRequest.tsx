@@ -216,7 +216,7 @@ const OvertimeRequest = () => {
   const [statusFilter, setStatusFilter] = useState<OTStatus | "all">("all");
   const [typeFilter, setTypeFilter] = useState<OTType | "all">("all");
   const { setOvertimePending } = usePendingCounts();
-  const { currentUser, role } = useAuth();
+  const { currentUser, role, user } = useAuth();
   const { canAction, getScope } = usePermissions();
   const canApprove = canAction(role, 'ot', 'approve');
   const canAdd = canAction(role, 'ot', 'add');
