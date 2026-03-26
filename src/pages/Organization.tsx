@@ -260,6 +260,7 @@ const Organization = () => {
   const canManage = canAction(role, "organization", "edit");
   const canAdd = canAction(role, "organization", "add");
   const canDelete = canAction(role, "organization", "delete");
+  const [viewMode, setViewMode] = useState<"tree" | "chart">("tree");
 
   // ─── Org Level Employees ───
   const [orgLevelEmpRows, setOrgLevelEmpRows] = useState<{ org_level_id: string; employee_id: string }[]>([]);
