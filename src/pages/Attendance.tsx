@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import TimeInput24 from "@/components/ui/time-input-24";
+import SearchableSelect from "@/components/ui/searchable-select";
 import { useTimeEditRequests, type TimeEditRequest } from "@/contexts/TimeEditContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Plus, X, Loader2 } from "lucide-react";
+import SearchableSelect from "@/components/ui/searchable-select";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
