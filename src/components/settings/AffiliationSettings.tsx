@@ -86,11 +86,17 @@ const AffiliationSettings = () => {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <p className="text-sm text-muted-foreground">{affiliations.length} สังกัด, {totalPositions} ตำแหน่ง</p>
-        <button onClick={openAddAff}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold text-primary-foreground"
-          style={{ background: "linear-gradient(135deg, hsl(var(--primary)), hsl(31 100% 60%))", boxShadow: "0 4px 12px hsl(var(--primary) / 0.3)" }}>
-          <Plus className="w-4 h-4" /> เพิ่มสังกัด
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={openAddPosGlobal}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold border-2 border-primary text-primary hover:bg-primary/10 transition-colors">
+            <Briefcase className="w-4 h-4" /> เพิ่มตำแหน่งงาน
+          </button>
+          <button onClick={openAddAff}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold text-primary-foreground"
+            style={{ background: "linear-gradient(135deg, hsl(var(--primary)), hsl(31 100% 60%))", boxShadow: "0 4px 12px hsl(var(--primary) / 0.3)" }}>
+            <Plus className="w-4 h-4" /> เพิ่มสังกัด
+          </button>
+        </div>
       </div>
 
       <div className="space-y-3">
