@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect, useCallback } from "react"; // unified org tree
-import { Plus, Edit, Trash2, Building2, Users, ChevronDown, ChevronRight, GripVertical, UserPlus, X, Crown, Network } from "lucide-react";
+import { Plus, Edit, Trash2, Building2, Users, ChevronDown, ChevronRight, GripVertical, UserPlus, X, Crown, Network, LayoutGrid, List } from "lucide-react";
+import OrgChartView from "@/components/organization/OrgChartView";
 import { supabase } from "@/integrations/supabase/client";
 import { useOrg, type Affiliation, type Position, type OrgLevel } from "@/contexts/OrgContext";
 import { useEmployees, type Employee } from "@/contexts/EmployeeContext";
