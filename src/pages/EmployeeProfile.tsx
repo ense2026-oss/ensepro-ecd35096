@@ -198,27 +198,6 @@ const EmployeeProfile = () => {
     toast.success("เปลี่ยนรหัสผ่านสำเร็จ");
   };
 
-  const handleResetPassword = async () => {
-    if (!employee?.id) return;
-    setResetting(true);
-    const defaultPw = "Test1234!";
-    try {
-      const userId = (await supabase.from("employees").select("user_id").eq("id", employee.id).single()).data?.user_id;
-      if (userId) {
-        const { error } = await supabase.functions.invoke("reset-employee-password", {
-          body: { userId, newPassword: defaultPw },
-        });
-        if (error) throw error;
-        await supabase.from("employees").update({ initial_password: defaultPw } as any).eq("id", employee.id);
-        updateEmployee(employee.id, { initialPassword: defaultPw } as any);
-      }
-      toast.success(`รีเซ็ตรหัสผ่านเป็น ${defaultPw} สำเร็จ`);
-    } catch (err: any) {
-      toast.error(err.message || "เกิดข้อผิดพลาด");
-    } finally {
-      setResetting(false);
-    }
-  };
 
   /* ─── TAB: Personal ─── */
   const personalTab = (
