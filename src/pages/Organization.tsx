@@ -630,71 +630,85 @@ const Organization = () => {
         </div>
       </div>
 
-      {/* ═══════════ Unified Org Tree ═══════════ */}
-      <div className="card-base overflow-hidden p-5">
-        {/* Company Root */}
-        <div className="flex items-center gap-3 mb-2">
-          <div className="flex items-center gap-3 px-5 py-4 rounded-2xl bg-primary/10 border-2 border-primary/30 min-w-[220px] max-w-md">
-            <Building2 className="w-6 h-6 text-primary flex-shrink-0" />
-            <div className="flex flex-col min-w-0">
-              <span className="text-base font-bold text-foreground truncate">{programName || "บริษัท"}</span>
-              <span className="text-xs text-muted-foreground">บริษัท / องค์กร</span>
-            </div>
-          </div>
-          {canManage && (
-            <div className="flex items-center gap-1.5">
-              <button onClick={() => { setRenameValue(programName || ""); setRenameOpen(true); }}
-                className="w-8 h-8 rounded-full flex items-center justify-center bg-accent text-accent-foreground hover:bg-accent/80 transition-colors" title="แก้ไขชื่อองค์กร">
-                <Edit className="w-4 h-4" />
-              </button>
-              <button onClick={() => openAddOrgLevel(null)}
-                className="w-8 h-8 rounded-full flex items-center justify-center bg-primary/10 text-primary hover:bg-primary/20 transition-colors" title="เพิ่มระดับองค์กร">
-                <Plus className="w-4 h-4" />
-              </button>
-            </div>
-          )}
-        </div>
+      {/* ═══════════ Chart View ═══════════ */}
+      {viewMode === "chart" && (
+        <OrgChartView
+          programName={programName}
+          orgLevels={orgLevels}
+          affiliations={affiliations}
+          positionEmployeeMap={positionEmployeeMap}
+          orgLevelEmployeeMap={orgLevelEmployeeMap}
+          employees={employees}
+        />
+      )}
 
-        {/* Org Levels tree */}
-        <div className="relative ml-6">
-          {(orgLevels.length > 0 || rootAffiliations.length > 0) && (
-            <div className="absolute left-[11px] top-0 h-4 w-0.5 bg-border" />
-          )}
-          <div className="pt-2">
-            {orgLevels.map((ol, idx) => (
-              <OrgLevelNode
-                key={ol.id} node={ol} index={idx} total={orgLevels.length + rootAffiliations.length}
-                affiliations={affiliations} canManage={canManage} canAdd={canAdd}
-                onEdit={openEditOrgLevel}
-                onDelete={(o) => { setDeletingOrgLevel(o); setOrgLevelDeleteOpen(true); }}
-                onAddChild={(parentId) => openAddOrgLevel(parentId)}
-                onAssign={handleOrgLevelAssignClick}
-                renderAffiliation={renderAffiliation}
-                orgLevelEmployeeMap={orgLevelEmployeeMap}
-                employees={employees}
-              />
-            ))}
-            {/* Root-level affiliations (no parent org_level) */}
-            {rootAffiliations.map((aff, idx) => (
-              <div key={aff.id} className="relative">
-                {idx < rootAffiliations.length - 1 && <div className="absolute left-[11px] top-0 bottom-0 w-0.5 bg-border" />}
-                <div className="relative">
-                  <div className="absolute left-[11px] top-0 h-1/2 w-0.5 bg-border" />
-                  <div className="absolute left-[11px] top-1/2 w-[13px] h-0.5 bg-border" />
-                  <div style={{ width: 24, flexShrink: 0 }} />
-                  <div className="ml-6">
-                    {renderAffiliation(aff)}
+      {/* ═══════════ Unified Org Tree ═══════════ */}
+      {viewMode === "tree" && (
+        <div className="card-base overflow-hidden p-5">
+          {/* Company Root */}
+          <div className="flex items-center gap-3 mb-2">
+            <div className="flex items-center gap-3 px-5 py-4 rounded-2xl bg-primary/10 border-2 border-primary/30 min-w-[220px] max-w-md">
+              <Building2 className="w-6 h-6 text-primary flex-shrink-0" />
+              <div className="flex flex-col min-w-0">
+                <span className="text-base font-bold text-foreground truncate">{programName || "บริษัท"}</span>
+                <span className="text-xs text-muted-foreground">บริษัท / องค์กร</span>
+              </div>
+            </div>
+            {canManage && (
+              <div className="flex items-center gap-1.5">
+                <button onClick={() => { setRenameValue(programName || ""); setRenameOpen(true); }}
+                  className="w-8 h-8 rounded-full flex items-center justify-center bg-accent text-accent-foreground hover:bg-accent/80 transition-colors" title="แก้ไขชื่อองค์กร">
+                  <Edit className="w-4 h-4" />
+                </button>
+                <button onClick={() => openAddOrgLevel(null)}
+                  className="w-8 h-8 rounded-full flex items-center justify-center bg-primary/10 text-primary hover:bg-primary/20 transition-colors" title="เพิ่มระดับองค์กร">
+                  <Plus className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Org Levels tree */}
+          <div className="relative ml-6">
+            {(orgLevels.length > 0 || rootAffiliations.length > 0) && (
+              <div className="absolute left-[11px] top-0 h-4 w-0.5 bg-border" />
+            )}
+            <div className="pt-2">
+              {orgLevels.map((ol, idx) => (
+                <OrgLevelNode
+                  key={ol.id} node={ol} index={idx} total={orgLevels.length + rootAffiliations.length}
+                  affiliations={affiliations} canManage={canManage} canAdd={canAdd}
+                  onEdit={openEditOrgLevel}
+                  onDelete={(o) => { setDeletingOrgLevel(o); setOrgLevelDeleteOpen(true); }}
+                  onAddChild={(parentId) => openAddOrgLevel(parentId)}
+                  onAssign={handleOrgLevelAssignClick}
+                  renderAffiliation={renderAffiliation}
+                  orgLevelEmployeeMap={orgLevelEmployeeMap}
+                  employees={employees}
+                />
+              ))}
+              {/* Root-level affiliations (no parent org_level) */}
+              {rootAffiliations.map((aff, idx) => (
+                <div key={aff.id} className="relative">
+                  {idx < rootAffiliations.length - 1 && <div className="absolute left-[11px] top-0 bottom-0 w-0.5 bg-border" />}
+                  <div className="relative">
+                    <div className="absolute left-[11px] top-0 h-1/2 w-0.5 bg-border" />
+                    <div className="absolute left-[11px] top-1/2 w-[13px] h-0.5 bg-border" />
+                    <div style={{ width: 24, flexShrink: 0 }} />
+                    <div className="ml-6">
+                      {renderAffiliation(aff)}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
 
-        {orgLevels.length === 0 && affiliations.length === 0 && (
-          <p className="text-sm text-muted-foreground text-center py-8">ยังไม่มีโครงสร้าง — เพิ่มระดับองค์กรหรือสังกัดในหน้าตั้งค่า</p>
-        )}
-      </div>
+          {orgLevels.length === 0 && affiliations.length === 0 && (
+            <p className="text-sm text-muted-foreground text-center py-8">ยังไม่มีโครงสร้าง — เพิ่มระดับองค์กรหรือสังกัดในหน้าตั้งค่า</p>
+          )}
+        </div>
+      )}
 
       {/* ═══════════ Dialogs ═══════════ */}
       {/* Add Position Dialog */}
