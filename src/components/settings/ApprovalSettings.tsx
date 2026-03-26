@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Plus, X, Loader2 } from "lucide-react";
+import SearchableSelect from "@/components/ui/searchable-select";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -173,20 +174,26 @@ const ApprovalSettings = () => {
                   <option value="employee">ระบุพนักงาน</option>
                 </select>
 
-                <select
-                  value={tier.value}
-                  onChange={(e) => updateTier(mi, ti, { value: e.target.value })}
-                  className="px-3 py-2 text-sm rounded-xl border outline-none bg-muted/30 cursor-pointer flex-1 min-w-[140px]"
-                >
-                  {tier.type === "role"
-                    ? roleOptions.map((opt) => (
-                        <option key={opt.value} value={opt.value}>{opt.label}</option>
-                      ))
-                    : employees.map((emp) => (
-                        <option key={emp.id} value={emp.id}>{emp.name}</option>
-                      ))
-                  }
-                </select>
+                {tier.type === "role" ? (
+                  <select
+                    value={tier.value}
+                    onChange={(e) => updateTier(mi, ti, { value: e.target.value })}
+                    className="px-3 py-2 text-sm rounded-xl border outline-none bg-muted/30 cursor-pointer flex-1 min-w-[140px]"
+                  >
+                    {roleOptions.map((opt) => (
+                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <div className="flex-1 min-w-[140px]">
+                    <SearchableSelect
+                      value={tier.value}
+                      onChange={(val) => updateTier(mi, ti, { value: val })}
+                      options={employees.map((emp) => ({ value: emp.id, label: emp.name }))}
+                      placeholder="เลือกพนักงาน"
+                    />
+                  </div>
+                )}
 
                 {module.tiers.length > 1 && (
                   <button

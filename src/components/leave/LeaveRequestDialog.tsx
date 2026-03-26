@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Upload, X, FileText } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { ThaiDatePicker } from "@/components/ui/thai-date-picker";
+import SearchableSelect from "@/components/ui/searchable-select";
 import type { LeaveType } from "./LeaveQuotaCards";
 import type { LeaveRecord } from "./LeaveTable";
 
@@ -160,9 +161,12 @@ const LeaveRequestDialog = ({ open, onOpenChange, leaveTypes, onSubmit, canSelec
           {canSelectEmployee && employeeNames.length > 0 && !isEditing && (
             <div className="sm:col-span-2">
               <label className="block text-sm font-semibold mb-1.5">พนักงาน <span className="text-destructive">*</span></label>
-              <select value={selectedEmployee} onChange={(e) => setSelectedEmployee(e.target.value)} className="w-full px-3 py-2.5 text-sm rounded-xl border outline-none bg-muted/30 cursor-pointer">
-                {employeeNames.map((name) => <option key={name} value={name}>{name}</option>)}
-              </select>
+              <SearchableSelect
+                value={selectedEmployee}
+                onChange={setSelectedEmployee}
+                options={employeeNames.map((name) => ({ value: name, label: name }))}
+                placeholder="เลือกพนักงาน"
+              />
             </div>
           )}
           <div>
@@ -173,11 +177,17 @@ const LeaveRequestDialog = ({ open, onOpenChange, leaveTypes, onSubmit, canSelec
           </div>
           <div>
             <label className="block text-sm font-semibold mb-1.5">ผู้ทดแทน</label>
-            <select value={substitute} onChange={(e) => setSubstitute(e.target.value)} className="w-full px-3 py-2.5 text-sm rounded-xl border outline-none bg-muted/30 cursor-pointer">
-              <option value="">เลือกผู้ทดแทน</option>
-              {substituteList.map((emp) => <option key={emp}>{emp}</option>)}
-              <option value="no_substitute">ไม่มีผู้ทดแทน</option>
-            </select>
+            <SearchableSelect
+              value={substitute}
+              onChange={setSubstitute}
+              options={[
+                { value: "", label: "เลือกผู้ทดแทน" },
+                ...substituteList.map((emp) => ({ value: emp, label: emp })),
+                { value: "no_substitute", label: "ไม่มีผู้ทดแทน" },
+              ]}
+              placeholder="เลือกผู้ทดแทน"
+              allowClear
+            />
           </div>
           <div>
             <label className="block text-sm font-semibold mb-1.5">วันที่เริ่มลา <span className="text-destructive">*</span></label>

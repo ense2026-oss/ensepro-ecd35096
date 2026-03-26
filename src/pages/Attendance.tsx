@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import TimeInput24 from "@/components/ui/time-input-24";
+import SearchableSelect from "@/components/ui/searchable-select";
 import { useTimeEditRequests, type TimeEditRequest } from "@/contexts/TimeEditContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -589,30 +590,28 @@ const Attendance = () => {
           <div className="space-y-4 py-2">
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-muted-foreground">พนักงาน <span className="text-destructive">*</span></label>
-              <Select value={requestForm.employeeId} onValueChange={(val) => {
-                const emp = employees.find(e => e.id === val);
-                if (emp) {
-                  const match = attendance.find((a) => a.employeeId === val);
-                  setRequestForm((f) => ({
-                    ...f,
-                    employeeId: val,
-                    employeeName: `${emp.firstName} ${emp.lastName}`,
-                    originalCheckIn: match?.checkIn || "",
-                    originalCheckOut: match?.checkOut || "",
-                  }));
-                }
-              }}>
-                <SelectTrigger className="rounded-xl border bg-muted/30">
-                  <SelectValue placeholder="เลือกพนักงาน" />
-                </SelectTrigger>
-                <SelectContent>
-                  {employees.map((emp) => (
-                    <SelectItem key={emp.id} value={emp.id}>
-                      {emp.prefix || ""}{emp.firstName} {emp.lastName} — {emp.position}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <SearchableSelect
+                value={requestForm.employeeId}
+                onChange={(val) => {
+                  const emp = employees.find(e => e.id === val);
+                  if (emp) {
+                    const match = attendance.find((a) => a.employeeId === val);
+                    setRequestForm((f) => ({
+                      ...f,
+                      employeeId: val,
+                      employeeName: `${emp.firstName} ${emp.lastName}`,
+                      originalCheckIn: match?.checkIn || "",
+                      originalCheckOut: match?.checkOut || "",
+                    }));
+                  }
+                }}
+                options={employees.map((emp) => ({
+                  value: emp.id,
+                  label: `${emp.prefix || ""}${emp.firstName} ${emp.lastName}`,
+                  subtitle: emp.position,
+                }))}
+                placeholder="เลือกพนักงาน"
+              />
             </div>
             {requestForm.originalCheckIn && (
               <div className="grid grid-cols-2 gap-3 p-3 rounded-xl bg-muted/40">
