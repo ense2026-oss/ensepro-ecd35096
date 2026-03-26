@@ -148,8 +148,9 @@ const PositionNode = ({
 /* ═══════════════════ OrgLevel Tree Node ═══════════════════ */
 const OrgLevelNode = ({
   node, index, total, affiliations, canManage, canAdd,
-  onEdit, onDelete, onAddChild,
+  onEdit, onDelete, onAddChild, onAssign,
   renderAffiliation,
+  orgLevelEmployeeMap, employees: allEmployees,
 }: {
   node: OrgLevel; index: number; total: number;
   affiliations: Affiliation[];
@@ -157,12 +158,15 @@ const OrgLevelNode = ({
   onEdit: (o: OrgLevel) => void;
   onDelete: (o: OrgLevel) => void;
   onAddChild: (parentId: string) => void;
+  onAssign: (o: OrgLevel) => void;
   renderAffiliation: (aff: Affiliation) => React.ReactNode;
+  orgLevelEmployeeMap: Map<string, Employee[]>;
+  employees: Employee[];
 }) => {
   const children = node.children || [];
   const isLast = index === total - 1;
-  // Find affiliations attached to this org_level
   const attachedAffs = affiliations.filter(a => a.parent_org_level_id === node.id);
+  const assignedEmployees = orgLevelEmployeeMap.get(node.id) || [];
 
   return (
     <div className="relative">
@@ -177,11 +181,29 @@ const OrgLevelNode = ({
             <Network className="w-5 h-5 text-primary flex-shrink-0" />
             <div className="flex flex-col min-w-0 flex-1">
               <span className="text-sm font-bold text-foreground truncate">{node.name}</span>
-              <span className="text-xs text-muted-foreground">ระดับองค์กร</span>
+              {assignedEmployees.length > 0 ? (
+                <div className="flex items-center gap-1 mt-1 flex-wrap">
+                  <div className="flex -space-x-1.5">
+                    {assignedEmployees.slice(0, 4).map((emp) => (
+                      <OrgEmployeeAvatar key={emp.id} emp={emp} size="sm" />
+                    ))}
+                  </div>
+                  <span className="text-xs text-muted-foreground ml-1.5 truncate">
+                    {assignedEmployees.length <= 2
+                      ? assignedEmployees.map(e => `${e.firstName} ${e.lastName?.charAt(0) || ""}.`).join(", ")
+                      : `${assignedEmployees[0].firstName} +${assignedEmployees.length - 1}`}
+                  </span>
+                </div>
+              ) : (
+                <span className="text-xs text-muted-foreground/60 mt-0.5">ระดับองค์กร</span>
+              )}
             </div>
           </div>
           {canManage && (
             <div className="flex items-center gap-1.5">
+              <button onClick={() => onAssign(node)} className="w-8 h-8 rounded-full flex items-center justify-center bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 transition-colors" title="กำหนดบุคคล">
+                <UserPlus className="w-4 h-4" />
+              </button>
               <button onClick={() => onAddChild(node.id)} className="w-8 h-8 rounded-full flex items-center justify-center bg-primary/10 text-primary hover:bg-primary/20 transition-colors" title="เพิ่มระดับย่อย">
                 <Plus className="w-4 h-4" />
               </button>
@@ -196,15 +218,15 @@ const OrgLevelNode = ({
         </div>
       </div>
 
-      {/* Children: sub org levels + attached affiliations */}
       {(children.length > 0 || attachedAffs.length > 0) && (
         <div className="relative ml-[35px]">
           {children.map((child, idx) => (
             <OrgLevelNode
               key={child.id} node={child} index={idx} total={children.length + attachedAffs.length}
               affiliations={affiliations} canManage={canManage} canAdd={canAdd}
-              onEdit={onEdit} onDelete={onDelete} onAddChild={onAddChild}
+              onEdit={onEdit} onDelete={onDelete} onAddChild={onAddChild} onAssign={onAssign}
               renderAffiliation={renderAffiliation}
+              orgLevelEmployeeMap={orgLevelEmployeeMap} employees={allEmployees}
             />
           ))}
           {attachedAffs.map((aff, idx) => (
