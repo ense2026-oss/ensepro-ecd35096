@@ -1,41 +1,63 @@
 
 
-## Plan: Fix Console Warnings
+## Plan: Optimize Login-to-Dashboard Loading Performance
 
-### Problems Identified
-1. **Missing `DialogDescription`** — ~15+ Dialog components across the project use `DialogContent` without `DialogDescription`, triggering Radix UI warnings. Per existing accessibility standards (memory), these should use `VisuallyHidden` when no visible description is needed.
-2. **MobileFooterNav ref warning** — React warns that function components cannot receive refs. This is likely from React Router or the parent layout attempting to pass a ref.
+### Problem Analysis
 
-*Note: WebSocket failures, 404s, and refresh token errors in the screenshot are dev-server/session artifacts — not code bugs.*
+After login, the user experiences a long loading time. Here's the chain of events causing the delay:
 
-### Approach
+```text
+Login submit
+  → Supabase auth (network call ~300-500ms)
+  → AuthContext: getSession + fetchProfileAndRole (3 parallel queries ~500ms)
+  → Wait for profileReady + permLoading
+  → PermissionsContext: fetch role_permissions (~300ms)
+  → MainLayout renders → redirect to /dashboard
+  → Dashboard: fetchAll (7+ parallel DB queries ~500-800ms)
+  → EmployeeContext: fetch all employees + education/work/payroll (~500ms)
+  → PendingCountsContext: fetch notification + pending counts (~300ms)
+  → BrandingContext: fetch branding from company_settings (~200ms)
+```
 
-**1. Add hidden `DialogDescription` to all Dialogs missing it**
+Total waterfall: **~2.5-4 seconds** of sequential network calls before the user sees content.
 
-Import `DialogDescription` and add a `VisuallyHidden`-wrapped description to every `DialogContent` that lacks one. Files to update:
+### Approach — 5 Optimizations
 
-- `src/pages/Attendance.tsx` (3 dialogs)
-- `src/pages/CheckIn.tsx` (1 dialog)
-- `src/pages/Payroll.tsx` (2 dialogs)
-- `src/pages/Organization.tsx` (2 dialogs)
-- `src/pages/ShiftManagement.tsx` (1 dialog)
-- `src/components/leave/LeaveRequestDialog.tsx`
-- `src/components/contracts/ContractFormDialog.tsx`
-- `src/components/contracts/ContractDetailDialog.tsx`
-- `src/components/contracts/SignatureDialog.tsx`
-- `src/components/settings/ShiftsSettings.tsx`
-- `src/components/settings/RolesSettings.tsx`
-- `src/components/settings/LeaveTypesSettings.tsx`
-- `src/components/settings/LocationsSettings.tsx`
+**1. Remove double auth check (eliminate ~500ms)**
+- `AuthContext.onAuthStateChange` fires AFTER `getSession`, causing `fetchProfileAndRole` to run **twice** on login
+- Fix: skip re-fetching in `onAuthStateChange` if profile data already matches the same user ID
 
-Pattern: Add `<DialogDescription className="sr-only">...</DialogDescription>` after each `DialogTitle`.
+**2. Lazy-load heavy contexts (eliminate ~500ms from initial render)**
+- `EmployeeContext` fetches ALL employees on mount — this blocks the layout even if user goes to Dashboard (which fetches its own employee data)
+- Defer `EmployeeContext.fetchEmployees()` with a short timeout (e.g., 500ms) so it doesn't block initial render
+- Same for `OrgContext` — it's not needed on Dashboard
 
-**2. Fix MobileFooterNav ref warning**
+**3. Parallelize PermissionsContext with AuthContext (save ~300ms)**
+- Currently permissions wait for auth to complete, then fetch sequentially
+- Start permissions fetch as soon as `user` is available, without waiting for `profileReady`
 
-Wrap `MobileFooterNav` with `React.forwardRef` so React doesn't warn when the parent layout renders it.
+**4. Show Dashboard skeleton immediately (perceived performance)**
+- Currently MainLayout shows a blank spinner until ALL contexts are ready
+- Instead: render the Dashboard layout with skeleton cards immediately once `user` exists, let data fill in progressively
+- Remove the `permLoading` gate from MainLayout — permissions can load in background
+
+**5. Cache branding in localStorage (save ~200ms on reload)**
+- Load branding from localStorage instantly on mount
+- Fetch from DB in background and update if changed
+- This prevents the login page from flickering while branding loads
+
+### Files to Modify
+
+| File | Change |
+|------|--------|
+| `src/contexts/AuthContext.tsx` | Skip duplicate fetchProfileAndRole when same user |
+| `src/contexts/PermissionsContext.tsx` | Start fetch on `user` instead of waiting for full profile |
+| `src/contexts/EmployeeContext.tsx` | Defer initial fetch with setTimeout |
+| `src/contexts/BrandingContext.tsx` | Add localStorage cache layer |
+| `src/components/layout/MainLayout.tsx` | Remove `permLoading` from blocking gate, show content sooner |
+| `src/pages/Dashboard.tsx` | No changes needed (already has skeleton loading) |
 
 ### Impact
-- Eliminates all `Missing Description` console warnings
-- Eliminates the `forwardRef` warning
-- No visual changes to the UI
+- Estimated reduction: **1.5-2 seconds** off the login-to-content time
+- No functional changes — same data, same UI, just faster loading sequence
 
