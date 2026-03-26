@@ -9,7 +9,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useEmployees } from "@/contexts/EmployeeContext";
 import { usePermissions } from "@/contexts/PermissionsContext";
 import { supabase } from "@/integrations/supabase/client";
-import { notifyApprovers, notifyRequester } from "@/utils/notifications";
+import { notifyApprovers, notifyRequester, getApprovalTiers, notifyTierApprover } from "@/utils/notifications";
 import {
   AlertDialog,
   AlertDialogAction,
