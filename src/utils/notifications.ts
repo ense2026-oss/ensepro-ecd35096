@@ -69,9 +69,6 @@ export async function notifyApprovers(params: NotifyParams) {
  * Notify the employee who submitted a request (approve/reject feedback)
  */
 export async function notifyRequester(employeeId: string, params: NotifyParams) {
-  // Use RPC to get user_id bypassing RLS
-  const { data } = await supabase.rpc("get_active_employee_names");
-  // Fallback to direct query for requester notification  
   const { data: emp } = await supabase
     .from("employees")
     .select("user_id")
