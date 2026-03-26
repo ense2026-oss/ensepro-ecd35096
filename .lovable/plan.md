@@ -1,63 +1,62 @@
 
 
-## Plan: Optimize Login-to-Dashboard Loading Performance
+## Plan: Restructure Organization to Unified Tree
 
-### Problem Analysis
+### What the user wants
 
-After login, the user experiences a long loading time. Here's the chain of events causing the delay:
+Currently, each affiliation (สังกัด) has its own separate position tree. The user wants a **single unified org tree** where:
 
 ```text
-Login submit
-  → Supabase auth (network call ~300-500ms)
-  → AuthContext: getSession + fetchProfileAndRole (3 parallel queries ~500ms)
-  → Wait for profileReady + permLoading
-  → PermissionsContext: fetch role_permissions (~300ms)
-  → MainLayout renders → redirect to /dashboard
-  → Dashboard: fetchAll (7+ parallel DB queries ~500-800ms)
-  → EmployeeContext: fetch all employees + education/work/payroll (~500ms)
-  → PendingCountsContext: fetch notification + pending counts (~300ms)
-  → BrandingContext: fetch branding from company_settings (~200ms)
+บริษัทพลังงานนครพิงค์ จำกัด  (company name from settings)
+  └─ ผู้อำนวยการ              (company-level position)
+      └─ หัวหน้า              (company-level position)
+          ├─ รถไฟฟ้า ขสมช      (affiliation → its positions)
+          └─ เตาเผาขยะสวนดอก   (affiliation → its positions)
 ```
 
-Total waterfall: **~2.5-4 seconds** of sequential network calls before the user sees content.
+### Approach
 
-### Approach — 5 Optimizations
+**1. New database table: `org_levels`** — stores company-level positions that sit above affiliations in the hierarchy.
 
-**1. Remove double auth check (eliminate ~500ms)**
-- `AuthContext.onAuthStateChange` fires AFTER `getSession`, causing `fetchProfileAndRole` to run **twice** on login
-- Fix: skip re-fetching in `onAuthStateChange` if profile data already matches the same user ID
+| Column | Type | Description |
+|--------|------|-------------|
+| id | uuid | PK |
+| name | text | e.g. ผู้อำนวยการ, หัวหน้า |
+| parent_id | uuid nullable | self-referencing for hierarchy |
+| sort_order | int | ordering |
 
-**2. Lazy-load heavy contexts (eliminate ~500ms from initial render)**
-- `EmployeeContext` fetches ALL employees on mount — this blocks the layout even if user goes to Dashboard (which fetches its own employee data)
-- Defer `EmployeeContext.fetchEmployees()` with a short timeout (e.g., 500ms) so it doesn't block initial render
-- Same for `OrgContext` — it's not needed on Dashboard
+RLS: Same pattern as affiliations (Admin/HR/Manager manage, authenticated read).
 
-**3. Parallelize PermissionsContext with AuthContext (save ~300ms)**
-- Currently permissions wait for auth to complete, then fetch sequentially
-- Start permissions fetch as soon as `user` is available, without waiting for `profileReady`
+**2. Update `affiliations` table** — add `parent_org_level_id` column (uuid, nullable, references org_levels) to specify which company-level node each affiliation branches from. If null, affiliations appear directly under the company root.
 
-**4. Show Dashboard skeleton immediately (perceived performance)**
-- Currently MainLayout shows a blank spinner until ALL contexts are ready
-- Instead: render the Dashboard layout with skeleton cards immediately once `user` exists, let data fill in progressively
-- Remove the `permLoading` gate from MainLayout — permissions can load in background
+**3. Update `OrgContext.tsx`**
+- Add CRUD for `org_levels` (fetch, add, update, delete, reorder)
+- Fetch `affiliations` with their `parent_org_level_id`
+- Expose the full org hierarchy data
 
-**5. Cache branding in localStorage (save ~200ms on reload)**
-- Load branding from localStorage instantly on mount
-- Fetch from DB in background and update if changed
-- This prevents the login page from flickering while branding loads
+**4. Rewrite `Organization.tsx` UI**
+- Render a single unified tree starting from the company name (pulled from `company_settings`)
+- Below the company root, render `org_levels` as tree nodes (recursive, supporting hierarchy)
+- At the appropriate org_level node (or at root if no org_levels), render affiliations as branch nodes
+- Under each affiliation, render its positions tree (same as current)
+- Support add/edit/delete for org_level nodes
+- Support assigning employees to org_level nodes (add `position_id` compatibility or a new `org_level_id` on employees)
 
-### Files to Modify
+**5. Update `AffiliationSettings.tsx`**
+- Add a dropdown to select which `org_level` each affiliation belongs under
+
+### Files to modify
 
 | File | Change |
 |------|--------|
-| `src/contexts/AuthContext.tsx` | Skip duplicate fetchProfileAndRole when same user |
-| `src/contexts/PermissionsContext.tsx` | Start fetch on `user` instead of waiting for full profile |
-| `src/contexts/EmployeeContext.tsx` | Defer initial fetch with setTimeout |
-| `src/contexts/BrandingContext.tsx` | Add localStorage cache layer |
-| `src/components/layout/MainLayout.tsx` | Remove `permLoading` from blocking gate, show content sooner |
-| `src/pages/Dashboard.tsx` | No changes needed (already has skeleton loading) |
+| Migration SQL | Create `org_levels` table, add `parent_org_level_id` to `affiliations` |
+| `src/contexts/OrgContext.tsx` | Add org_levels CRUD, fetch org_levels, expose hierarchy |
+| `src/pages/Organization.tsx` | Rewrite to render unified tree: company → org_levels → affiliations → positions |
+| `src/components/settings/AffiliationSettings.tsx` | Add parent org_level selector when adding/editing affiliations |
 
 ### Impact
-- Estimated reduction: **1.5-2 seconds** off the login-to-content time
-- No functional changes — same data, same UI, just faster loading sequence
+- Organization page shows one cohesive tree instead of separate sections per affiliation
+- Existing position data and employee assignments remain intact
+- Company-level roles (ผู้อำนวยการ, หัวหน้า) can have employees assigned to them
+- No breaking changes to other pages that reference affiliations/positions
 
