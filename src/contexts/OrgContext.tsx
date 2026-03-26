@@ -15,7 +15,16 @@ export interface Affiliation {
   id: string;
   name: string;
   sort_order: number;
+  parent_org_level_id: string | null;
   positions: Position[];
+}
+
+export interface OrgLevel {
+  id: string;
+  name: string;
+  parent_id: string | null;
+  sort_order: number;
+  children?: OrgLevel[];
 }
 
 export interface OrgNode {
@@ -29,102 +38,10 @@ export interface OrgNode {
   children?: OrgNode[];
 }
 
-/* ═══════════════════ Tree Helpers (OrgNode — kept local) ═══════════════════ */
-const INITIAL_ORG: OrgNode = {
-  id: "1",
-  name: "บริษัท เอ็กซ์วาย จำกัด",
-  position: "บริษัท",
-  dept: "สำนักงานใหญ่",
-  email: "info@company.com",
-  phone: "02-xxx-xxxx",
-  headCount: 248,
-  children: [
-    {
-      id: "2", name: "นายประธาน รุ่งเรือง", position: "CEO / กรรมการผู้จัดการ", dept: "ผู้บริหาร",
-      email: "ceo@company.com", phone: "081-000-0001", headCount: 248,
-      children: [
-        {
-          id: "3", name: "นางสาวสุภาพ ดีมาก", position: "ผู้อำนวยการฝ่าย HR", dept: "ฝ่าย HR",
-          email: "hr@company.com", phone: "081-000-0002", headCount: 12,
-          children: [
-            { id: "7", name: "นิดา สุขใจ", position: "เจ้าหน้าที่ HR", dept: "ฝ่าย HR", email: "nida@company.com", phone: "086-789-0123", headCount: 0 },
-            { id: "8", name: "กาญจนา ใสซื่อ", position: "เจ้าหน้าที่ธุรการ", dept: "ฝ่าย HR", email: "kanchana@company.com", phone: "088-901-2345", headCount: 0 },
-          ],
-        },
-        {
-          id: "4", name: "นายสมชาย ใจดี", position: "ผู้จัดการฝ่ายขาย", dept: "ฝ่ายขาย",
-          email: "somchai@company.com", phone: "081-234-5678", headCount: 45,
-          children: [
-            { id: "9", name: "ประสิทธิ์ ทำได้", position: "พนักงานขาย", dept: "ฝ่ายขาย", email: "prasit@company.com", phone: "087-890-1234", headCount: 0 },
-          ],
-        },
-        {
-          id: "5", name: "นายมานะ ขยัน", position: "หัวหน้าฝ่าย IT", dept: "ฝ่าย IT",
-          email: "mana@company.com", phone: "083-456-7890", headCount: 18,
-          children: [
-            { id: "10", name: "พัฒนา โค้ดดี", position: "นักพัฒนา Frontend", dept: "ฝ่าย IT", email: "dev@company.com", phone: "089-012-3456", headCount: 0 },
-          ],
-        },
-        {
-          id: "6", name: "นางสาวสุดา ดีใจ", position: "ผู้จัดการฝ่ายบัญชี", dept: "ฝ่ายบัญชี",
-          email: "suda@company.com", phone: "084-567-8901", headCount: 24,
-        },
-      ],
-    },
-  ],
-};
-
+/* ═══════════════════ Tree Helpers ═══════════════════ */
 export const genId = () => crypto.randomUUID().slice(0, 8);
 
-export const updateNodeHelper = (tree: OrgNode, id: string, updater: (n: OrgNode) => OrgNode): OrgNode => {
-  if (tree.id === id) return updater(tree);
-  return { ...tree, children: tree.children?.map((c) => updateNodeHelper(c, id, updater)) };
-};
-
-export const addChildHelper = (tree: OrgNode, parentId: string, child: OrgNode): OrgNode => {
-  if (tree.id === parentId) return { ...tree, children: [...(tree.children || []), child] };
-  return { ...tree, children: tree.children?.map((c) => addChildHelper(c, parentId, child)) };
-};
-
-export const removeNodeHelper = (tree: OrgNode, id: string): OrgNode => ({
-  ...tree,
-  children: tree.children?.filter((c) => c.id !== id).map((c) => removeNodeHelper(c, id)),
-});
-
-export const findNode = (tree: OrgNode, id: string): OrgNode | null => {
-  if (tree.id === id) return tree;
-  for (const c of tree.children || []) {
-    const found = findNode(c, id);
-    if (found) return found;
-  }
-  return null;
-};
-
-export const countNodes = (tree: OrgNode): number =>
-  1 + (tree.children?.reduce((sum, c) => sum + countNodes(c), 0) || 0);
-
-export const countDepts = (tree: OrgNode, set = new Set<string>()): number => {
-  set.add(tree.dept);
-  tree.children?.forEach((c) => countDepts(c, set));
-  return set.size;
-};
-
-const collectDepartments = (node: OrgNode, set: Set<string>) => {
-  if (node.dept && node.dept !== "สำนักงานใหญ่") set.add(node.dept);
-  node.children?.forEach((c) => collectDepartments(c, set));
-};
-
-const findDeptHead = (node: OrgNode, deptName: string): string | null => {
-  if (node.dept === deptName && node.children && node.children.length > 0) return node.name;
-  for (const c of node.children || []) {
-    if (c.dept === deptName) return c.name;
-    const found = findDeptHead(c, deptName);
-    if (found) return found;
-  }
-  return null;
-};
-
-/* ═══════════════════ Build Position Tree from flat rows ═══════════════════ */
+/* ─── Build Position Tree from flat rows ─── */
 interface DbPosition {
   id: string;
   affiliation_id: string;
@@ -147,8 +64,37 @@ const buildPositionTree = (flat: DbPosition[]): Position[] => {
     }
   });
 
-  // Sort by sort_order at each level
   const sortTree = (nodes: Position[]) => {
+    nodes.sort((a, b) => a.sort_order - b.sort_order);
+    nodes.forEach((n) => { if (n.children?.length) sortTree(n.children); });
+  };
+  sortTree(roots);
+  return roots;
+};
+
+/* ─── Build OrgLevel Tree from flat rows ─── */
+interface DbOrgLevel {
+  id: string;
+  name: string;
+  parent_id: string | null;
+  sort_order: number;
+}
+
+const buildOrgLevelTree = (flat: DbOrgLevel[]): OrgLevel[] => {
+  const map = new Map<string, OrgLevel>();
+  flat.forEach((o) => map.set(o.id, { ...o, children: [] }));
+
+  const roots: OrgLevel[] = [];
+  flat.forEach((o) => {
+    const node = map.get(o.id)!;
+    if (o.parent_id && map.has(o.parent_id)) {
+      map.get(o.parent_id)!.children!.push(node);
+    } else {
+      roots.push(node);
+    }
+  });
+
+  const sortTree = (nodes: OrgLevel[]) => {
     nodes.sort((a, b) => a.sort_order - b.sort_order);
     nodes.forEach((n) => { if (n.children?.length) sortTree(n.children); });
   };
@@ -158,34 +104,35 @@ const buildPositionTree = (flat: DbPosition[]): Position[] => {
 
 /* ═══════════════════ Context ═══════════════════ */
 interface OrgContextType {
-  orgTree: OrgNode;
-  setOrgTree: React.Dispatch<React.SetStateAction<OrgNode>>;
-  departments: string[];
-  getDeptHead: (deptName: string) => string | null;
-  updateNode: (id: string, updater: (n: OrgNode) => OrgNode) => void;
-  addChild: (parentId: string, child: OrgNode) => void;
-  removeNode: (id: string) => void;
   affiliations: Affiliation[];
   allPositions: string[];
   affiliationNames: string[];
   loading: boolean;
   refetchAffiliations: () => Promise<void>;
-  // CRUD for affiliations
-  addAffiliation: (name: string) => Promise<Affiliation | null>;
-  updateAffiliation: (id: string, name: string) => Promise<void>;
+  // Affiliation CRUD
+  addAffiliation: (name: string, parentOrgLevelId?: string | null) => Promise<Affiliation | null>;
+  updateAffiliation: (id: string, name: string, parentOrgLevelId?: string | null) => Promise<void>;
   deleteAffiliation: (id: string) => Promise<void>;
-  // CRUD for positions
+  // Position CRUD
   addPosition: (affiliationId: string, parentId: string | null, name: string) => Promise<Position | null>;
   updatePosition: (id: string, name: string) => Promise<void>;
   deletePosition: (id: string) => Promise<void>;
   reorderPositions: (ids: string[]) => Promise<void>;
+  // OrgLevel
+  orgLevels: OrgLevel[];
+  orgLevelsFlat: DbOrgLevel[];
+  addOrgLevel: (name: string, parentId: string | null) => Promise<OrgLevel | null>;
+  updateOrgLevel: (id: string, name: string) => Promise<void>;
+  deleteOrgLevel: (id: string) => Promise<void>;
+  refetchOrgLevels: () => Promise<void>;
 }
 
 const OrgContext = createContext<OrgContextType | null>(null);
 
 export const OrgProvider = ({ children }: { children: ReactNode }) => {
-  const [orgTree, setOrgTree] = useState<OrgNode>(INITIAL_ORG);
   const [affiliations, setAffiliations] = useState<Affiliation[]>([]);
+  const [orgLevels, setOrgLevels] = useState<OrgLevel[]>([]);
+  const [orgLevelsFlat, setOrgLevelsFlat] = useState<DbOrgLevel[]>([]);
   const [loading, setLoading] = useState(true);
 
   /* ─── Fetch ─── */
@@ -195,41 +142,52 @@ export const OrgProvider = ({ children }: { children: ReactNode }) => {
       supabase.from("positions").select("*").order("sort_order"),
     ]);
 
-    const affs = (affRes.data || []) as { id: string; name: string; sort_order: number }[];
+    const affs = (affRes.data || []) as { id: string; name: string; sort_order: number; parent_org_level_id: string | null }[];
     const allPos = (posRes.data || []) as DbPosition[];
 
     const result: Affiliation[] = affs.map((a) => ({
       id: a.id,
       name: a.name,
       sort_order: a.sort_order,
+      parent_org_level_id: a.parent_org_level_id,
       positions: buildPositionTree(allPos.filter((p) => p.affiliation_id === a.id)),
     }));
 
     setAffiliations(result);
-    setLoading(false);
+  }, []);
+
+  const fetchOrgLevels = useCallback(async () => {
+    const { data } = await supabase.from("org_levels").select("*").order("sort_order");
+    const flat = (data || []) as DbOrgLevel[];
+    setOrgLevelsFlat(flat);
+    setOrgLevels(buildOrgLevelTree(flat));
   }, []);
 
   useEffect(() => {
-    // Defer org data loading to not block initial render
-    const timer = setTimeout(() => fetchAffiliations(), 300);
+    const timer = setTimeout(async () => {
+      await Promise.all([fetchAffiliations(), fetchOrgLevels()]);
+      setLoading(false);
+    }, 300);
     return () => clearTimeout(timer);
-  }, [fetchAffiliations]);
+  }, [fetchAffiliations, fetchOrgLevels]);
 
   /* ─── Affiliation CRUD ─── */
-  const addAffiliation = useCallback(async (name: string): Promise<Affiliation | null> => {
+  const addAffiliation = useCallback(async (name: string, parentOrgLevelId?: string | null): Promise<Affiliation | null> => {
     const maxOrder = affiliations.length;
     const { data, error } = await supabase
       .from("affiliations")
-      .insert({ name, sort_order: maxOrder })
+      .insert({ name, sort_order: maxOrder, parent_org_level_id: parentOrgLevelId || null })
       .select()
       .single();
     if (error || !data) return null;
     await fetchAffiliations();
-    return { id: data.id, name: data.name, sort_order: data.sort_order, positions: [] };
+    return { id: data.id, name: data.name, sort_order: data.sort_order, parent_org_level_id: data.parent_org_level_id, positions: [] };
   }, [affiliations.length, fetchAffiliations]);
 
-  const updateAffiliation = useCallback(async (id: string, name: string) => {
-    await supabase.from("affiliations").update({ name }).eq("id", id);
+  const updateAffiliation = useCallback(async (id: string, name: string, parentOrgLevelId?: string | null) => {
+    const update: any = { name };
+    if (parentOrgLevelId !== undefined) update.parent_org_level_id = parentOrgLevelId;
+    await supabase.from("affiliations").update(update).eq("id", id);
     await fetchAffiliations();
   }, [fetchAffiliations]);
 
@@ -240,13 +198,8 @@ export const OrgProvider = ({ children }: { children: ReactNode }) => {
 
   /* ─── Position CRUD ─── */
   const addPosition = useCallback(async (affiliationId: string, parentId: string | null, name: string): Promise<Position | null> => {
-    // Get max sort_order for siblings
     let query = supabase.from("positions").select("sort_order").eq("affiliation_id", affiliationId);
-    if (parentId) {
-      query = query.eq("parent_id", parentId);
-    } else {
-      query = query.is("parent_id", null);
-    }
+    if (parentId) { query = query.eq("parent_id", parentId); } else { query = query.is("parent_id", null); }
     const { data: siblings } = await query;
     const maxOrder = siblings?.length ? Math.max(...siblings.map((s: any) => s.sort_order)) + 1 : 0;
 
@@ -271,20 +224,40 @@ export const OrgProvider = ({ children }: { children: ReactNode }) => {
   }, [fetchAffiliations]);
 
   const reorderPositions = useCallback(async (ids: string[]) => {
-    // Update sort_order for each position
     await Promise.all(ids.map((id, idx) =>
       supabase.from("positions").update({ sort_order: idx }).eq("id", id)
     ));
     await fetchAffiliations();
   }, [fetchAffiliations]);
 
-  /* ─── Derived ─── */
-  const departments = useMemo(() => {
-    const set = new Set<string>();
-    collectDepartments(orgTree, set);
-    return Array.from(set).sort();
-  }, [orgTree]);
+  /* ─── OrgLevel CRUD ─── */
+  const addOrgLevel = useCallback(async (name: string, parentId: string | null): Promise<OrgLevel | null> => {
+    let query = supabase.from("org_levels").select("sort_order");
+    if (parentId) { query = query.eq("parent_id", parentId); } else { query = query.is("parent_id", null); }
+    const { data: siblings } = await query;
+    const maxOrder = siblings?.length ? Math.max(...siblings.map((s: any) => s.sort_order)) + 1 : 0;
 
+    const { data, error } = await supabase
+      .from("org_levels")
+      .insert({ name, parent_id: parentId, sort_order: maxOrder })
+      .select()
+      .single();
+    if (error || !data) return null;
+    await fetchOrgLevels();
+    return { id: data.id, name: data.name, parent_id: data.parent_id, sort_order: data.sort_order };
+  }, [fetchOrgLevels]);
+
+  const updateOrgLevel = useCallback(async (id: string, name: string) => {
+    await supabase.from("org_levels").update({ name }).eq("id", id);
+    await fetchOrgLevels();
+  }, [fetchOrgLevels]);
+
+  const deleteOrgLevel = useCallback(async (id: string) => {
+    await supabase.from("org_levels").delete().eq("id", id);
+    await fetchOrgLevels();
+  }, [fetchOrgLevels]);
+
+  /* ─── Derived ─── */
   const affiliationNames = useMemo(() => affiliations.map((a) => a.name), [affiliations]);
 
   const allPositions = useMemo(() => {
@@ -299,27 +272,15 @@ export const OrgProvider = ({ children }: { children: ReactNode }) => {
     return Array.from(set).sort();
   }, [affiliations]);
 
-  const getDeptHead = useCallback((deptName: string) => findDeptHead(orgTree, deptName), [orgTree]);
-
-  const updateNode = useCallback((id: string, updater: (n: OrgNode) => OrgNode) => {
-    setOrgTree((tree) => updateNodeHelper(tree, id, updater));
-  }, []);
-
-  const addChild = useCallback((parentId: string, child: OrgNode) => {
-    setOrgTree((tree) => addChildHelper(tree, parentId, child));
-  }, []);
-
-  const removeNode = useCallback((id: string) => {
-    setOrgTree((tree) => removeNodeHelper(tree, id));
-  }, []);
-
   return (
     <OrgContext.Provider value={{
-      orgTree, setOrgTree, departments, getDeptHead, updateNode, addChild, removeNode,
       affiliations, allPositions, affiliationNames, loading,
       refetchAffiliations: fetchAffiliations,
       addAffiliation, updateAffiliation, deleteAffiliation,
       addPosition, updatePosition, deletePosition, reorderPositions,
+      orgLevels, orgLevelsFlat,
+      addOrgLevel, updateOrgLevel, deleteOrgLevel,
+      refetchOrgLevels: fetchOrgLevels,
     }}>
       {children}
     </OrgContext.Provider>

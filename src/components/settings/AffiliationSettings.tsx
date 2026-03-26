@@ -11,7 +11,7 @@ import { toast } from "@/hooks/use-toast";
 import { useOrg } from "@/contexts/OrgContext";
 
 const AffiliationSettings = () => {
-  const { affiliations, addAffiliation, updateAffiliation, deleteAffiliation, addPosition, updatePosition, deletePosition } = useOrg();
+  const { affiliations, addAffiliation, updateAffiliation, deleteAffiliation, addPosition, updatePosition, deletePosition, orgLevelsFlat } = useOrg();
 
   const [affDialogOpen, setAffDialogOpen] = useState(false);
   const [posDialogOpen, setPosDialogOpen] = useState(false);
@@ -19,7 +19,7 @@ const AffiliationSettings = () => {
   const [deletePosId, setDeletePosId] = useState<string | null>(null);
   const [editingAffId, setEditingAffId] = useState<string | null>(null);
   const [editingPosId, setEditingPosId] = useState<string | null>(null);
-  const [affForm, setAffForm] = useState({ name: "" });
+  const [affForm, setAffForm] = useState({ name: "", parentOrgLevelId: "" });
   const [posForm, setPosForm] = useState({ name: "", affiliationId: "" });
   const [expandedAffs, setExpandedAffs] = useState<Record<string, boolean>>({});
   const [saving, setSaving] = useState(false);
@@ -27,17 +27,17 @@ const AffiliationSettings = () => {
   const toggleExpand = (id: string) => setExpandedAffs((m) => ({ ...m, [id]: !m[id] }));
 
   // Affiliation CRUD
-  const openAddAff = () => { setEditingAffId(null); setAffForm({ name: "" }); setAffDialogOpen(true); };
-  const openEditAff = (aff: { id: string; name: string }) => { setEditingAffId(aff.id); setAffForm({ name: aff.name }); setAffDialogOpen(true); };
+  const openAddAff = () => { setEditingAffId(null); setAffForm({ name: "", parentOrgLevelId: "" }); setAffDialogOpen(true); };
+  const openEditAff = (aff: { id: string; name: string; parent_org_level_id?: string | null }) => { setEditingAffId(aff.id); setAffForm({ name: aff.name, parentOrgLevelId: aff.parent_org_level_id || "" }); setAffDialogOpen(true); };
 
   const handleSaveAff = async () => {
     if (!affForm.name.trim()) { toast({ title: "กรุณากรอกชื่อสังกัด", variant: "destructive" }); return; }
     setSaving(true);
     if (editingAffId) {
-      await updateAffiliation(editingAffId, affForm.name);
+      await updateAffiliation(editingAffId, affForm.name, affForm.parentOrgLevelId || null);
       toast({ title: "แก้ไขสังกัดสำเร็จ", description: affForm.name });
     } else {
-      await addAffiliation(affForm.name);
+      await addAffiliation(affForm.name, affForm.parentOrgLevelId || null);
       toast({ title: "เพิ่มสังกัดสำเร็จ", description: affForm.name });
     }
     setSaving(false);
@@ -169,9 +169,24 @@ const AffiliationSettings = () => {
           <div className="space-y-4 pt-2">
             <div>
               <label className="block text-sm font-semibold mb-1.5">ชื่อสังกัด</label>
-              <input value={affForm.name} onChange={(e) => setAffForm({ name: e.target.value })} placeholder="เช่น รถไฟฟ้าขสมช"
+              <input value={affForm.name} onChange={(e) => setAffForm((f) => ({ ...f, name: e.target.value }))} placeholder="เช่น รถไฟฟ้าขสมช"
                 className="w-full px-3 py-2.5 text-sm rounded-xl border outline-none bg-muted/30 focus:ring-2 focus:ring-primary/30 transition-shadow" />
             </div>
+            {orgLevelsFlat.length > 0 && (
+              <div>
+                <label className="block text-sm font-semibold mb-1.5">อยู่ภายใต้ระดับองค์กร</label>
+                <select
+                  value={affForm.parentOrgLevelId}
+                  onChange={(e) => setAffForm((f) => ({ ...f, parentOrgLevelId: e.target.value }))}
+                  className="w-full px-3 py-2.5 text-sm rounded-xl border outline-none bg-muted/30 focus:ring-2 focus:ring-primary/30 transition-shadow"
+                >
+                  <option value="">— ไม่ระบุ (แสดงที่ระดับบนสุด) —</option>
+                  {orgLevelsFlat.map((ol) => (
+                    <option key={ol.id} value={ol.id}>{ol.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
             <div className="flex justify-end gap-2 pt-2">
               <button onClick={() => setAffDialogOpen(false)} className="px-4 py-2 rounded-xl text-sm font-medium text-muted-foreground hover:bg-muted transition-colors">ยกเลิก</button>
               <button onClick={handleSaveAff} disabled={saving}

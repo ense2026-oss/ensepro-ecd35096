@@ -19,21 +19,32 @@ export type Database = {
           created_at: string
           id: string
           name: string
+          parent_org_level_id: string | null
           sort_order: number
         }
         Insert: {
           created_at?: string
           id?: string
           name?: string
+          parent_org_level_id?: string | null
           sort_order?: number
         }
         Update: {
           created_at?: string
           id?: string
           name?: string
+          parent_org_level_id?: string | null
           sort_order?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "affiliations_parent_org_level_id_fkey"
+            columns: ["parent_org_level_id"]
+            isOneToOne: false
+            referencedRelation: "org_levels"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       app_notifications: {
         Row: {
@@ -751,6 +762,38 @@ export type Database = {
           sort_order?: number
         }
         Relationships: []
+      }
+      org_levels: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          parent_id: string | null
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name?: string
+          parent_id?: string | null
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          parent_id?: string | null
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_levels_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "org_levels"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       overtime_requests: {
         Row: {
