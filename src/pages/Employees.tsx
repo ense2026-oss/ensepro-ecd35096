@@ -40,8 +40,11 @@ const Employees = () => {
   const [deletingEmployee, setDeletingEmployee] = useState<Employee | null>(null);
   const [importOpen, setImportOpen] = useState(false);
 
-  const depts = ["all", ...Array.from(new Set(employees.map((e) => e.dept)))];
-
+  const depts = ["all", ...Array.from(new Set(employees.map((e) => e.dept).filter(Boolean)))];
+  const positions = useMemo(() => {
+    const src = selectedDept === "all" ? employees : employees.filter((e) => e.dept === selectedDept);
+    return ["all", ...Array.from(new Set(src.map((e) => e.position).filter(Boolean)))];
+  }, [employees, selectedDept]);
   const filtered = useMemo(() => employees.filter((e) => {
     const name = `${e.prefix}${e.firstName} ${e.lastName}`;
     const matchSearch =
