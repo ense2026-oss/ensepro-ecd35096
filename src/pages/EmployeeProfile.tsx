@@ -6,7 +6,7 @@ import {
   Phone, Mail, MapPin, Calendar, CreditCard, Droplets,
   Building, Star, Lock, Eye, EyeOff, AlertCircle
 } from "lucide-react";
-import { RefreshCw } from "lucide-react";
+
 import { ThaiDatePicker } from "@/components/ui/thai-date-picker";
 import { useEmployees } from "@/contexts/EmployeeContext";
 import { useOrg, type Position } from "@/contexts/OrgContext";
@@ -112,7 +112,7 @@ const EmployeeProfile = () => {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordError, setPasswordError] = useState("");
-  const [resetting, setResetting] = useState(false);
+  
   const photoInputRef = useRef<HTMLInputElement>(null);
 
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -174,23 +174,12 @@ const EmployeeProfile = () => {
     if (newPassword !== confirmPassword) { setPasswordError("รหัสผ่านไม่ตรงกัน"); return; }
     setPasswordError("");
     
-    // If admin/HR is changing another user's password, use edge function
-    if (canEditRestricted && employee?.id) {
-      try {
-        const userId = (await supabase.from("employees").select("user_id").eq("id", employee.id).single()).data?.user_id;
-        if (userId) {
-          const { error } = await supabase.functions.invoke("reset-employee-password", {
-            body: { userId, newPassword },
-          });
-          if (error) throw error;
-          // Update initial_password in DB
-          await supabase.from("employees").update({ initial_password: newPassword } as any).eq("id", employee.id);
-          updateEmployee(employee.id, { initialPassword: newPassword } as any);
-        }
-      } catch (err: any) {
-        setPasswordError(err.message || "เกิดข้อผิดพลาด");
-        return;
-      }
+    try {
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) throw error;
+    } catch (err: any) {
+      setPasswordError(err.message || "เกิดข้อผิดพลาด");
+      return;
     }
     
     setNewPassword("");
@@ -198,27 +187,6 @@ const EmployeeProfile = () => {
     toast.success("เปลี่ยนรหัสผ่านสำเร็จ");
   };
 
-  const handleResetPassword = async () => {
-    if (!employee?.id) return;
-    setResetting(true);
-    const defaultPw = "Test1234!";
-    try {
-      const userId = (await supabase.from("employees").select("user_id").eq("id", employee.id).single()).data?.user_id;
-      if (userId) {
-        const { error } = await supabase.functions.invoke("reset-employee-password", {
-          body: { userId, newPassword: defaultPw },
-        });
-        if (error) throw error;
-        await supabase.from("employees").update({ initial_password: defaultPw } as any).eq("id", employee.id);
-        updateEmployee(employee.id, { initialPassword: defaultPw } as any);
-      }
-      toast.success(`รีเซ็ตรหัสผ่านเป็น ${defaultPw} สำเร็จ`);
-    } catch (err: any) {
-      toast.error(err.message || "เกิดข้อผิดพลาด");
-    } finally {
-      setResetting(false);
-    }
-  };
 
   /* ─── TAB: Personal ─── */
   const personalTab = (
@@ -604,19 +572,6 @@ const EmployeeProfile = () => {
         </div>
       </div>
 
-      {/* Reset password - admin/HR only */}
-      {canEditRestricted && (
-        <div>
-          <SectionLabel>รีเซ็ตรหัสผ่าน</SectionLabel>
-          <div className="card-base p-5 space-y-3">
-            <p className="text-xs text-muted-foreground">รีเซ็ตรหัสผ่านเป็นค่าเริ่มต้น (Test1234!) เพื่อให้พนักงานเข้าสู่ระบบได้ใหม่</p>
-            <button onClick={handleResetPassword} disabled={resetting}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-primary-foreground bg-destructive hover:bg-destructive/90 shadow-md transition-all disabled:opacity-50">
-              <RefreshCw className={`w-4 h-4 ${resetting ? "animate-spin" : ""}`} /> {resetting ? "กำลังรีเซ็ต..." : "รีเซ็ตรหัสผ่าน"}
-            </button>
-          </div>
-        </div>
-      )}
 
       <div>
         <SectionLabel>เปลี่ยนรหัสผ่าน</SectionLabel>
