@@ -274,7 +274,11 @@ const Dashboard = () => {
   const activeEmployees = employees.filter((e) => e.status === "active").length;
   const presentToday = todayAttendance.filter((a) => a.status === "present" || a.status === "late").length;
   const lateToday = todayAttendance.filter((a) => a.late).length;
-  const leaveToday = todayAttendance.filter((a) => a.status === "leave").length;
+  // Count leave today from leave_requests where today falls within date range and status is approved or pending
+  const leaveToday = leaveRequests.filter((l) => {
+    if (l.status !== "approved" && l.status !== "pending") return false;
+    return l.date_from <= today && l.date_to >= today;
+  }).length;
 
   const pendingLeaves = leaveRequests.filter((l) => l.status === "pending").length;
   const pendingOT = otRequests.filter((o) => o.status === "pending").length;
