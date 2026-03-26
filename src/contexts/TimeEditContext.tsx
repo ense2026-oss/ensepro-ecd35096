@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useCallback, useEffect, useRef, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { notifyApprovers } from "@/utils/notifications";
+import { notifyTierApprover, getApprovalTiers } from "@/utils/notifications";
 
 export interface TimeEditRequest {
   id: string;
