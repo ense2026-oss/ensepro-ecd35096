@@ -31,6 +31,9 @@ interface OTRequest {
   status: OTStatus;
   createdAt: string;
   approvedBy?: string;
+  currentTier?: number;
+  approvedTiers?: number;
+  totalTiers?: number;
 }
 
 const otTypeLabels: Record<OTType, { label: string; className: string }> = {
