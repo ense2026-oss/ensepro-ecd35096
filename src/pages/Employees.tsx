@@ -28,6 +28,7 @@ const Employees = () => {
   const { employees, addEmployee, updateEmployee, deleteEmployee } = useEmployees();
   const [search, setSearch] = useState("");
   const [selectedDept, setSelectedDept] = useState("all");
+  const [selectedPosition, setSelectedPosition] = useState("all");
   const [viewMode, setViewMode] = useState<"table" | "card">("table");
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
