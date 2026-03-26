@@ -111,6 +111,7 @@ export const BrandingProvider = ({ children }: { children: ReactNode }) => {
   const update = (partial: Partial<BrandingState>) => {
     setState((s) => {
       const next = { ...s, ...partial };
+      localStorage.setItem(BRANDING_CACHE_KEY, JSON.stringify(next));
       persist(next);
       return next;
     });
