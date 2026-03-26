@@ -126,31 +126,16 @@ const LeaveTable = ({ records, onApprove, onReject, hideActions = false, current
                     <td className="px-4 py-3.5">
                       <div className="flex gap-1">
                         {/* Approve/Reject for managers */}
-                        {hasPending && row.status === "pending" && !hideActions && (() => {
-                          const alreadyApprovedByFirstTier = (row.approvedTiers || 0) >= 1 && (row.currentTier || 1) > 1;
-                          if (alreadyApprovedByFirstTier) {
-                            return (
-                              <>
-                                <span className="p-1.5 rounded-lg cursor-not-allowed opacity-50 text-muted-foreground">
-                                  <CheckCircle className="w-4 h-4" />
-                                </span>
-                                <span className="p-1.5 rounded-lg cursor-not-allowed opacity-50 text-muted-foreground">
-                                  <XCircle className="w-4 h-4" />
-                                </span>
-                              </>
-                            );
-                          }
-                          return (
-                            <>
-                              <button onClick={() => onApprove(row.id)} className="p-1.5 rounded-lg hover:bg-muted transition-colors" style={{ color: "hsl(90 100% 30%)" }}>
-                                <CheckCircle className="w-4 h-4" />
-                              </button>
-                              <button onClick={() => onReject(row.id)} className="p-1.5 rounded-lg hover:bg-muted transition-colors text-destructive">
-                                <XCircle className="w-4 h-4" />
-                              </button>
-                            </>
-                          );
-                        })()}
+                        {hasPending && row.status === "pending" && !hideActions && (
+                          <>
+                            <button onClick={() => onApprove(row.id)} className="p-1.5 rounded-lg hover:bg-muted transition-colors" style={{ color: "hsl(90 100% 30%)" }}>
+                              <CheckCircle className="w-4 h-4" />
+                            </button>
+                            <button onClick={() => onReject(row.id)} className="p-1.5 rounded-lg hover:bg-muted transition-colors text-destructive">
+                              <XCircle className="w-4 h-4" />
+                            </button>
+                          </>
+                        )}
                         {/* Edit/Delete for own pending */}
                         {isOwnPending && onEdit && (
                           <button onClick={() => onEdit(row)} className="p-1.5 rounded-lg hover:bg-muted transition-colors text-primary" title="แก้ไข">
