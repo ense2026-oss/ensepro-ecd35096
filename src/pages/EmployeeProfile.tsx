@@ -583,19 +583,6 @@ const EmployeeProfile = () => {
         </div>
       </div>
 
-      {/* Reset password - admin/HR only */}
-      {canEditRestricted && (
-        <div>
-          <SectionLabel>รีเซ็ตรหัสผ่าน</SectionLabel>
-          <div className="card-base p-5 space-y-3">
-            <p className="text-xs text-muted-foreground">รีเซ็ตรหัสผ่านเป็นค่าเริ่มต้น (Test1234!) เพื่อให้พนักงานเข้าสู่ระบบได้ใหม่</p>
-            <button onClick={handleResetPassword} disabled={resetting}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-primary-foreground bg-destructive hover:bg-destructive/90 shadow-md transition-all disabled:opacity-50">
-              <RefreshCw className={`w-4 h-4 ${resetting ? "animate-spin" : ""}`} /> {resetting ? "กำลังรีเซ็ต..." : "รีเซ็ตรหัสผ่าน"}
-            </button>
-          </div>
-        </div>
-      )}
 
       <div>
         <SectionLabel>เปลี่ยนรหัสผ่าน</SectionLabel>
