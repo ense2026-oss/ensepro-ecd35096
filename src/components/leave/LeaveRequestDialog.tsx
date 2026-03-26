@@ -32,7 +32,7 @@ const LeaveRequestDialog = ({ open, onOpenChange, leaveTypes, onSubmit, canSelec
 
   const selectedType = leaveTypes.find((lt) => lt.name === leaveType);
   const requireDoc = selectedType?.requireDoc ?? false;
-  const substituteList = employeeNames.filter((n) => n !== (selectedEmployee || currentUserName));
+  const substituteList = (allEmployeeNames.length > 0 ? allEmployeeNames : employeeNames).filter((n) => n !== (selectedEmployee || currentUserName));
 
   useEffect(() => {
     if (editingRecord && open) {
