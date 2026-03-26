@@ -315,6 +315,31 @@ const Leave = () => {
   };
 
   const handleReject = async (id: string) => {
+    if (!user?.id) return;
+
+    // Check if this user already acted on this request
+    const { data: existingLog } = await supabase
+      .from("approval_logs")
+      .select("id")
+      .eq("request_id", id)
+      .eq("request_type", "leave")
+      .eq("approver_user_id", user.id)
+      .maybeSingle();
+
+    if (existingLog) {
+      toast({ title: "ไม่สามารถดำเนินการได้", description: "คุณได้ดำเนินการกับคำขอนี้ไปแล้ว", variant: "destructive" });
+      return;
+    }
+
+    // Log the rejection
+    await supabase.from("approval_logs").insert({
+      request_id: id,
+      request_type: "leave",
+      tier: (leaves.find(l => l.id === id)?.approvedTiers || 0) + 1,
+      action: "reject",
+      approver_user_id: user.id,
+    });
+
     await supabase.from("leave_requests").update({ status: "rejected" }).eq("id", id);
     setLeaves((prev) => prev.map((l) => l.id === id ? { ...l, status: "rejected" } : l));
     toast({ title: "ไม่อนุมัติ", description: "ปฏิเสธคำขอลาเรียบร้อยแล้ว", variant: "destructive" });
