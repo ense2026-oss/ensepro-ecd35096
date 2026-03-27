@@ -9,6 +9,7 @@ import type { Employee } from "@/contexts/EmployeeContext";
 import EmployeeFormDialog from "@/components/employees/EmployeeFormDialog";
 import DeleteEmployeeDialog from "@/components/employees/DeleteEmployeeDialog";
 import ImportEmployeesDialog from "@/components/employees/ImportEmployeesDialog";
+import ExportEmployeesDialog from "@/components/employees/ExportEmployeesDialog";
 import EmployeeStatsCards from "@/components/employees/EmployeeStatsCards";
 import EmployeeAvatar from "@/components/ui/employee-avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
