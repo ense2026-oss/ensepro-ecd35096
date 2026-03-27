@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Upload, X, FileText } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogBody, DialogFooter } from "@/components/ui/dialog";
 import { ThaiDatePicker } from "@/components/ui/thai-date-picker";
 import SearchableSelect from "@/components/ui/searchable-select";
 import type { LeaveType } from "./LeaveQuotaCards";
