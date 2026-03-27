@@ -312,9 +312,9 @@ const Dashboard = () => {
   const pendingTimeEdits = timeEditRequests.length;
   const totalPending = pendingLeaves + pendingOT + pendingTimeEdits;
 
-  const approvedToday = [
-    ...leaveRequests.filter((l) => l.status === "approved"),
-    ...otRequests.filter((o) => o.status === "approved"),
+  const approvedThisMonth = [
+    ...leaveRequests.filter((l) => l.status === "approved" && l.date_from >= monthStart && l.date_from <= monthEnd),
+    ...otRequests.filter((o) => o.status === "approved" && o.date >= monthStart && o.date <= monthEnd),
   ].length;
 
   const monthOtHours = otRequests
