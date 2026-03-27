@@ -252,19 +252,19 @@ const EmployeeFormDialog = ({ open, onOpenChange, employee, onSave }: EmployeeFo
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <InputField label="Username" value={form.username} onChange={set("username")} placeholder="auto-generated if empty" />
           </div>
+        </DialogBody>
 
-          <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-border">
-            <button onClick={() => onOpenChange(false)}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors">
-              <X className="w-4 h-4" /> ยกเลิก
-            </button>
-            <button onClick={handleSave}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold text-primary-foreground transition-all"
-              style={{ background: "linear-gradient(135deg, hsl(var(--primary)), hsl(31 100% 60%))", boxShadow: "0 4px 12px hsl(var(--primary) / 0.3)" }}>
-              <Save className="w-4 h-4" /> {isEdit ? "บันทึก" : "เพิ่มพนักงาน"}
-            </button>
-          </div>
-        </ScrollArea>
+        <DialogFooter className="px-6 pb-6 pt-4 border-t border-border">
+          <button onClick={() => onOpenChange(false)}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors">
+            <X className="w-4 h-4" /> ยกเลิก
+          </button>
+          <button onClick={handleSave}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold text-primary-foreground transition-all"
+            style={{ background: "linear-gradient(135deg, hsl(var(--primary)), hsl(31 100% 60%))", boxShadow: "0 4px 12px hsl(var(--primary) / 0.3)" }}>
+            <Save className="w-4 h-4" /> {isEdit ? "บันทึก" : "เพิ่มพนักงาน"}
+          </button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
