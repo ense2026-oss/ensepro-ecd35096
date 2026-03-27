@@ -138,15 +138,15 @@ const EmployeeFormDialog = ({ open, onOpenChange, employee, onSave }: EmployeeFo
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] p-0">
-        <DialogHeader className="px-6 pt-6 pb-0">
+      <DialogContent className="max-w-2xl p-0">
+        <DialogHeader className="px-6 pt-6 pb-2">
           <DialogTitle className="text-lg font-bold">{isEdit ? "แก้ไขข้อมูลพนักงาน" : "เพิ่มพนักงานใหม่"}</DialogTitle>
           <DialogDescription className="text-sm text-muted-foreground">
             {isEdit ? "แก้ไขข้อมูลพนักงานด้านล่าง" : "กรอกข้อมูลพนักงานใหม่ด้านล่าง"}
           </DialogDescription>
         </DialogHeader>
 
-        <ScrollArea className="px-6 pb-6 max-h-[65vh]">
+        <DialogBody className="px-6">
           {errors.length > 0 && (
             <div className="mb-4 p-3 rounded-xl border border-destructive/30 bg-destructive/5 text-sm text-destructive space-y-1">
               {errors.map((e, i) => <p key={i}>• {e}</p>)}
