@@ -36,6 +36,7 @@ const DEFAULT_COLUMNS: ColumnOption[] = [
   { key: "shift", label: "กะทำงาน", checked: false, getValue: (e) => e.shift },
   { key: "emergencyName", label: "ผู้ติดต่อฉุกเฉิน", checked: false, getValue: (e) => e.emergencyName },
   { key: "emergencyPhone", label: "เบอร์ฉุกเฉิน", checked: false, getValue: (e) => e.emergencyPhone },
+  { key: "initialPassword", label: "รหัสผ่าน", checked: false, getValue: (e) => e.initialPassword || "" },
 ];
 
 interface Props {
