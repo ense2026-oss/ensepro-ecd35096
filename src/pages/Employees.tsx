@@ -40,6 +40,7 @@ const Employees = () => {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deletingEmployee, setDeletingEmployee] = useState<Employee | null>(null);
   const [importOpen, setImportOpen] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
 
   const depts = ["all", ...Array.from(new Set(employees.map((e) => e.dept).filter(Boolean)))];
   const positions = useMemo(() => {
