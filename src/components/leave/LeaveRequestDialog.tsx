@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Upload, X, FileText } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogBody, DialogFooter } from "@/components/ui/dialog";
 import { ThaiDatePicker } from "@/components/ui/thai-date-picker";
 import SearchableSelect from "@/components/ui/searchable-select";
 import type { LeaveType } from "./LeaveQuotaCards";
@@ -160,7 +160,7 @@ const LeaveRequestDialog = ({ open, onOpenChange, leaveTypes, onSubmit, canSelec
           <DialogDescription className="sr-only">กรอกข้อมูลคำขอลางาน</DialogDescription>
         </DialogHeader>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
+        <DialogBody className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {canSelectEmployee && employeeNames.length > 0 && !isEditing && (
             <div className="sm:col-span-2">
               <label className="block text-sm font-semibold mb-1.5">พนักงาน <span className="text-destructive">*</span></label>
@@ -250,11 +250,10 @@ const LeaveRequestDialog = ({ open, onOpenChange, leaveTypes, onSubmit, canSelec
               </label>
             )}
           </div>
-        </div>
-
-        {Object.keys(errors).length > 0 && (
-          <p className="text-sm text-destructive font-medium">กรุณากรอกข้อมูลที่จำเป็นให้ครบถ้วน</p>
-        )}
+          {Object.keys(errors).length > 0 && (
+            <p className="text-sm text-destructive font-medium sm:col-span-2">กรุณากรอกข้อมูลที่จำเป็นให้ครบถ้วน</p>
+          )}
+        </DialogBody>
 
         <DialogFooter className="mt-4">
           <button type="button" onClick={() => { resetForm(); onOpenChange(false); }} className="px-5 py-2.5 rounded-xl border text-sm font-semibold hover:bg-muted transition-colors">

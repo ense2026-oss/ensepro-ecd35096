@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogBody, DialogFooter } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Save, X, ScanFace, Upload, Camera } from "lucide-react";
 import type { Employee } from "@/contexts/EmployeeContext";
@@ -138,15 +138,15 @@ const EmployeeFormDialog = ({ open, onOpenChange, employee, onSave }: EmployeeFo
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] p-0">
-        <DialogHeader className="px-6 pt-6 pb-0">
+      <DialogContent className="max-w-2xl p-0">
+        <DialogHeader className="px-6 pt-6 pb-2">
           <DialogTitle className="text-lg font-bold">{isEdit ? "แก้ไขข้อมูลพนักงาน" : "เพิ่มพนักงานใหม่"}</DialogTitle>
           <DialogDescription className="text-sm text-muted-foreground">
             {isEdit ? "แก้ไขข้อมูลพนักงานด้านล่าง" : "กรอกข้อมูลพนักงานใหม่ด้านล่าง"}
           </DialogDescription>
         </DialogHeader>
 
-        <ScrollArea className="px-6 pb-6 max-h-[65vh]">
+        <DialogBody className="px-6">
           {errors.length > 0 && (
             <div className="mb-4 p-3 rounded-xl border border-destructive/30 bg-destructive/5 text-sm text-destructive space-y-1">
               {errors.map((e, i) => <p key={i}>• {e}</p>)}
@@ -252,19 +252,19 @@ const EmployeeFormDialog = ({ open, onOpenChange, employee, onSave }: EmployeeFo
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <InputField label="Username" value={form.username} onChange={set("username")} placeholder="auto-generated if empty" />
           </div>
+        </DialogBody>
 
-          <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-border">
-            <button onClick={() => onOpenChange(false)}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors">
-              <X className="w-4 h-4" /> ยกเลิก
-            </button>
-            <button onClick={handleSave}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold text-primary-foreground transition-all"
-              style={{ background: "linear-gradient(135deg, hsl(var(--primary)), hsl(31 100% 60%))", boxShadow: "0 4px 12px hsl(var(--primary) / 0.3)" }}>
-              <Save className="w-4 h-4" /> {isEdit ? "บันทึก" : "เพิ่มพนักงาน"}
-            </button>
-          </div>
-        </ScrollArea>
+        <DialogFooter className="px-6 pb-6 pt-4 border-t border-border">
+          <button onClick={() => onOpenChange(false)}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors">
+            <X className="w-4 h-4" /> ยกเลิก
+          </button>
+          <button onClick={handleSave}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold text-primary-foreground transition-all"
+            style={{ background: "linear-gradient(135deg, hsl(var(--primary)), hsl(31 100% 60%))", boxShadow: "0 4px 12px hsl(var(--primary) / 0.3)" }}>
+            <Save className="w-4 h-4" /> {isEdit ? "บันทึก" : "เพิ่มพนักงาน"}
+          </button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
