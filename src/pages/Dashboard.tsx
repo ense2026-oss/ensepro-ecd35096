@@ -57,6 +57,33 @@ const StatCard = forwardRef<HTMLDivElement, StatCardProps>(
 );
 StatCard.displayName = "StatCard";
 
+/* ─── LiveClock ─── */
+const THAI_DAYS = ["อาทิตย์", "จันทร์", "อังคาร", "พุธ", "พฤหัสบดี", "ศุกร์", "เสาร์"];
+const THAI_MONTHS_CLOCK = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
+
+const LiveClock = () => {
+  const [now, setNow] = useState(new Date());
+  useEffect(() => {
+    const t = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(t);
+  }, []);
+  const hh = String(now.getHours()).padStart(2, "0");
+  const mm = String(now.getMinutes()).padStart(2, "0");
+  const ss = String(now.getSeconds()).padStart(2, "0");
+  const thaiDate = `วัน${THAI_DAYS[now.getDay()]}ที่ ${now.getDate()} ${THAI_MONTHS_CLOCK[now.getMonth()]} พ.ศ. ${now.getFullYear() + 543}`;
+  return (
+    <div className="text-right flex-shrink-0">
+      <div className="flex items-baseline justify-end gap-0.5">
+        <span className="text-3xl sm:text-4xl font-bold font-display tracking-tight text-primary">{hh}</span>
+        <span className="text-3xl sm:text-4xl font-bold font-display tracking-tight text-primary animate-pulse">:</span>
+        <span className="text-3xl sm:text-4xl font-bold font-display tracking-tight text-primary">{mm}</span>
+        <span className="text-base sm:text-lg font-semibold text-muted-foreground ml-0.5">{ss}</span>
+      </div>
+      <p className="text-[11px] sm:text-xs text-muted-foreground mt-0.5">{thaiDate}</p>
+    </div>
+  );
+};
+
 /* ─── Full-page Skeleton ─── */
 const DashboardSkeleton = () => (
   <div className="space-y-6 animate-pulse">
@@ -417,9 +444,12 @@ const Dashboard = () => {
 
     return (
       <div className="space-y-6">
-        <div className="card-base p-6">
-          <h2 className="text-xl font-bold font-display mb-1">สวัสดี, {currentUser.firstName} {currentUser.lastName} 👋</h2>
-          <p className="text-sm text-muted-foreground">ยินดีต้อนรับเข้าสู่ระบบ HR — มุมมองพนักงาน</p>
+        <div className="card-base p-6 flex items-center justify-between">
+          <div>
+            <h2 className="text-xl font-bold font-display mb-1">สวัสดี, {currentUser.firstName} {currentUser.lastName} 👋</h2>
+            <p className="text-sm text-muted-foreground">ยินดีต้อนรับเข้าสู่ระบบ HR — มุมมองพนักงาน</p>
+          </div>
+          <LiveClock />
         </div>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {leaveQuotaCards.map((lq) => (
