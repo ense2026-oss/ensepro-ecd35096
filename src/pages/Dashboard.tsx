@@ -417,9 +417,12 @@ const Dashboard = () => {
 
     return (
       <div className="space-y-6">
-        <div className="card-base p-6">
-          <h2 className="text-xl font-bold font-display mb-1">สวัสดี, {currentUser.firstName} {currentUser.lastName} 👋</h2>
-          <p className="text-sm text-muted-foreground">ยินดีต้อนรับเข้าสู่ระบบ HR — มุมมองพนักงาน</p>
+        <div className="card-base p-6 flex items-center justify-between">
+          <div>
+            <h2 className="text-xl font-bold font-display mb-1">สวัสดี, {currentUser.firstName} {currentUser.lastName} 👋</h2>
+            <p className="text-sm text-muted-foreground">ยินดีต้อนรับเข้าสู่ระบบ HR — มุมมองพนักงาน</p>
+          </div>
+          <LiveClock />
         </div>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {leaveQuotaCards.map((lq) => (
