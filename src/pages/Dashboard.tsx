@@ -226,8 +226,8 @@ const Dashboard = () => {
         const [empRes, attRes, leaveRes, otRes, teRes, monthAttRes, ciRes] = await Promise.all([
           supabase.from("employees").select("id, first_name, last_name, dept, status, user_id, start_date").eq("dept", myDept),
           supabase.from("attendance_records").select("id, employee_id, date, status, late").eq("date", today),
-          supabase.from("leave_requests").select("id, employee_id, leave_type_name, date_from, date_to, days, status, created_at, employees(first_name, last_name)").gte("date_from", monthStart),
-          supabase.from("overtime_requests").select("id, employee_id, date, hours, status, ot_type, created_at, employees(first_name, last_name)").gte("date", monthStart),
+          supabase.from("leave_requests").select("id, employee_id, leave_type_name, date_from, date_to, days, status, created_at, employees(first_name, last_name)").lte("date_from", monthEnd).gte("date_to", monthStart),
+          supabase.from("overtime_requests").select("id, employee_id, date, hours, status, ot_type, created_at, employees(first_name, last_name)").gte("date", monthStart).lte("date", monthEnd),
           supabase.from("time_edit_requests").select("id, employee_id").eq("status", "pending"),
           supabase.from("attendance_records").select("date, status, late, employee_id").gte("date", monthStart).lte("date", monthEnd),
           empId ? supabase.from("check_in_records").select("*").eq("employee_id", empId).eq("date", today).maybeSingle() : Promise.resolve({ data: null }),
@@ -246,10 +246,10 @@ const Dashboard = () => {
         const [empRes, attRes, leaveRes, otRes, teRes, monthAttRes, ciRes] = await Promise.all([
           supabase.from("employees").select("id, first_name, last_name, dept, status, user_id, start_date"),
           supabase.from("attendance_records").select("id, employee_id, date, status, late").eq("date", today),
-          supabase.from("leave_requests").select("id, employee_id, leave_type_name, date_from, date_to, days, status, created_at, employees(first_name, last_name)").gte("date_from", monthStart),
-          supabase.from("overtime_requests").select("id, employee_id, date, hours, status, ot_type, created_at, employees(first_name, last_name)").gte("date", monthStart),
+          supabase.from("leave_requests").select("id, employee_id, leave_type_name, date_from, date_to, days, status, created_at, employees(first_name, last_name)").lte("date_from", monthEnd).gte("date_to", monthStart),
+          supabase.from("overtime_requests").select("id, employee_id, date, hours, status, ot_type, created_at, employees(first_name, last_name)").gte("date", monthStart).lte("date", monthEnd),
           supabase.from("time_edit_requests").select("id").eq("status", "pending"),
-          supabase.from("attendance_records").select("date, status, late").gte("date", monthStart).lte("date", monthEnd),
+          supabase.from("attendance_records").select("date, status, late, employee_id").gte("date", monthStart).lte("date", monthEnd),
           empId ? supabase.from("check_in_records").select("*").eq("employee_id", empId).eq("date", today).maybeSingle() : Promise.resolve({ data: null }),
         ]);
 
@@ -385,30 +385,32 @@ const Dashboard = () => {
 
   // Recent activity
   const recentActivity = useMemo(() => {
-    const items: { id: string; name: string; action: string; time: string; type: string; status: string }[] = [];
-    leaveRequests.slice(0, 4).forEach((l) => {
+    const items: { id: string; name: string; action: string; time: string; createdAt: string; type: string; status: string }[] = [];
+    leaveRequests.forEach((l) => {
       const emp = (l as any).employees;
       items.push({
         id: l.id,
         name: emp ? `${emp.first_name} ${emp.last_name}` : "พนักงาน",
         action: `ยื่นคำขอ${l.leave_type_name}`,
         time: format(new Date(l.created_at), "HH:mm น."),
+        createdAt: l.created_at,
         type: "leave",
-        status: l.status === "approved" ? "success" : l.status === "pending" ? "pending" : "info",
+        status: l.status === "approved" ? "success" : l.status === "pending" ? "pending" : l.status === "rejected" ? "rejected" : "info",
       });
     });
-    otRequests.slice(0, 3).forEach((o) => {
+    otRequests.forEach((o) => {
       const emp = (o as any).employees;
       items.push({
         id: o.id,
         name: emp ? `${emp.first_name} ${emp.last_name}` : "พนักงาน",
         action: `ขอ OT ${o.hours} ชม.`,
         time: format(new Date(o.created_at), "HH:mm น."),
+        createdAt: o.created_at,
         type: "ot",
-        status: o.status === "approved" ? "success" : o.status === "pending" ? "pending" : "info",
+        status: o.status === "approved" ? "success" : o.status === "pending" ? "pending" : o.status === "rejected" ? "rejected" : "info",
       });
     });
-    return items.sort((a, b) => b.time.localeCompare(a.time)).slice(0, 6);
+    return items.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 6);
   }, [leaveRequests, otRequests]);
 
   const scopeLabel = viewType === "manager" ? `แผนก${myEmployee?.dept || ""}` : "ทั้งองค์กร";
@@ -637,8 +639,8 @@ const Dashboard = () => {
                   </div>
                   <div className="flex flex-col items-end gap-1 flex-shrink-0">
                     <span className="text-xs text-muted-foreground">{act.time}</span>
-                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${act.status === "success" ? "badge-present" : act.status === "pending" ? "badge-late" : "badge-leave"}`}>
-                      {act.status === "success" ? "อนุมัติ" : act.status === "pending" ? "รออนุมัติ" : "ข้อมูล"}
+                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${act.status === "success" ? "badge-present" : act.status === "pending" ? "badge-late" : act.status === "rejected" ? "badge-absent" : "badge-leave"}`}>
+                      {act.status === "success" ? "อนุมัติ" : act.status === "pending" ? "รออนุมัติ" : act.status === "rejected" ? "ไม่อนุมัติ" : "ข้อมูล"}
                     </span>
                   </div>
                 </div>
