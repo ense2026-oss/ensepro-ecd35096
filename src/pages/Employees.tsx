@@ -9,6 +9,7 @@ import type { Employee } from "@/contexts/EmployeeContext";
 import EmployeeFormDialog from "@/components/employees/EmployeeFormDialog";
 import DeleteEmployeeDialog from "@/components/employees/DeleteEmployeeDialog";
 import ImportEmployeesDialog from "@/components/employees/ImportEmployeesDialog";
+import ExportEmployeesDialog from "@/components/employees/ExportEmployeesDialog";
 import EmployeeStatsCards from "@/components/employees/EmployeeStatsCards";
 import EmployeeAvatar from "@/components/ui/employee-avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -39,6 +40,7 @@ const Employees = () => {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deletingEmployee, setDeletingEmployee] = useState<Employee | null>(null);
   const [importOpen, setImportOpen] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
 
   const depts = ["all", ...Array.from(new Set(employees.map((e) => e.dept).filter(Boolean)))];
   const positions = useMemo(() => {
@@ -130,7 +132,7 @@ const Employees = () => {
           <button onClick={() => setImportOpen(true)} className="flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-medium hover:bg-muted transition-colors">
             <Upload className="w-4 h-4" /> นำเข้า
           </button>
-          <button className="flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-medium hover:bg-muted transition-colors">
+          <button onClick={() => setExportOpen(true)} className="flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-medium hover:bg-muted transition-colors">
             <Download className="w-4 h-4" /> Export
           </button>
           <button onClick={handleAdd} className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all"
@@ -363,6 +365,7 @@ const Employees = () => {
         employeeName={deletingEmployee ? `${deletingEmployee.prefix}${deletingEmployee.firstName} ${deletingEmployee.lastName}` : ""}
         onConfirm={handleDeleteConfirm} />
       <ImportEmployeesDialog open={importOpen} onOpenChange={setImportOpen} />
+      <ExportEmployeesDialog open={exportOpen} onOpenChange={setExportOpen} employees={filtered} />
     </div>
   );
 };
