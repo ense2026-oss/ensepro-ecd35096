@@ -132,7 +132,7 @@ const Employees = () => {
           <button onClick={() => setImportOpen(true)} className="flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-medium hover:bg-muted transition-colors">
             <Upload className="w-4 h-4" /> นำเข้า
           </button>
-          <button className="flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-medium hover:bg-muted transition-colors">
+          <button onClick={() => setExportOpen(true)} className="flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-medium hover:bg-muted transition-colors">
             <Download className="w-4 h-4" /> Export
           </button>
           <button onClick={handleAdd} className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all"
