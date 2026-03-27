@@ -114,48 +114,50 @@ const SignatureDialog = ({ open, onOpenChange, onSign, signerName }: Props) => {
           <DialogDescription className="sr-only">ลงนามในสัญญา</DialogDescription>
         </DialogHeader>
 
-        <Tabs value={tab} onValueChange={(v) => setTab(v as "draw" | "upload")}>
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="draw" className="gap-1.5"><Pencil className="w-4 h-4" />วาดลายเซ็น</TabsTrigger>
-            <TabsTrigger value="upload" className="gap-1.5"><Upload className="w-4 h-4" />อัพโหลด</TabsTrigger>
-          </TabsList>
+        <DialogBody>
+          <Tabs value={tab} onValueChange={(v) => setTab(v as "draw" | "upload")}>
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="draw" className="gap-1.5"><Pencil className="w-4 h-4" />วาดลายเซ็น</TabsTrigger>
+              <TabsTrigger value="upload" className="gap-1.5"><Upload className="w-4 h-4" />อัพโหลด</TabsTrigger>
+            </TabsList>
 
-          <TabsContent value="draw" className="mt-4">
-            <div className="border rounded-lg overflow-hidden bg-white">
-              <canvas
-                ref={canvasRef}
-                width={440}
-                height={200}
-                className="w-full cursor-crosshair touch-none"
-                onMouseDown={startDraw}
-                onMouseMove={draw}
-                onMouseUp={stopDraw}
-                onMouseLeave={stopDraw}
-                onTouchStart={startDraw}
-                onTouchMove={draw}
-                onTouchEnd={stopDraw}
-              />
-            </div>
-            <Button variant="ghost" size="sm" onClick={clearCanvas} className="mt-2">ล้างลายเซ็น</Button>
-          </TabsContent>
+            <TabsContent value="draw" className="mt-4">
+              <div className="border rounded-lg overflow-hidden bg-white">
+                <canvas
+                  ref={canvasRef}
+                  width={440}
+                  height={200}
+                  className="w-full cursor-crosshair touch-none"
+                  onMouseDown={startDraw}
+                  onMouseMove={draw}
+                  onMouseUp={stopDraw}
+                  onMouseLeave={stopDraw}
+                  onTouchStart={startDraw}
+                  onTouchMove={draw}
+                  onTouchEnd={stopDraw}
+                />
+              </div>
+              <Button variant="ghost" size="sm" onClick={clearCanvas} className="mt-2">ล้างลายเซ็น</Button>
+            </TabsContent>
 
-          <TabsContent value="upload" className="mt-4">
-            <div className="border-2 border-dashed rounded-lg p-8 text-center">
-              {uploadedImage ? (
-                <div className="space-y-3">
-                  <img src={uploadedImage} alt="signature" className="max-h-32 mx-auto" />
-                  <Button variant="ghost" size="sm" onClick={() => setUploadedImage(null)}>เลือกไฟล์ใหม่</Button>
-                </div>
-              ) : (
-                <label className="cursor-pointer space-y-2 block">
-                  <Upload className="w-8 h-8 mx-auto text-muted-foreground" />
-                  <p className="text-sm text-muted-foreground">คลิกเพื่ออัพโหลดไฟล์ลายเซ็น (PNG, JPG)</p>
-                  <input type="file" accept="image/png,image/jpeg" className="hidden" onChange={handleFileUpload} />
-                </label>
-              )}
-            </div>
-          </TabsContent>
-        </Tabs>
+            <TabsContent value="upload" className="mt-4">
+              <div className="border-2 border-dashed rounded-lg p-8 text-center">
+                {uploadedImage ? (
+                  <div className="space-y-3">
+                    <img src={uploadedImage} alt="signature" className="max-h-32 mx-auto" />
+                    <Button variant="ghost" size="sm" onClick={() => setUploadedImage(null)}>เลือกไฟล์ใหม่</Button>
+                  </div>
+                ) : (
+                  <label className="cursor-pointer space-y-2 block">
+                    <Upload className="w-8 h-8 mx-auto text-muted-foreground" />
+                    <p className="text-sm text-muted-foreground">คลิกเพื่ออัพโหลดไฟล์ลายเซ็น (PNG, JPG)</p>
+                    <input type="file" accept="image/png,image/jpeg" className="hidden" onChange={handleFileUpload} />
+                  </label>
+                )}
+              </div>
+            </TabsContent>
+          </Tabs>
+        </DialogBody>
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>ยกเลิก</Button>

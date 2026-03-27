@@ -231,7 +231,7 @@ const ContractFormDialog = ({ open, onOpenChange, editContract }: Props) => {
             <Label>หมายเหตุ</Label>
             <Textarea value={form.notes} onChange={(e) => set("notes", e.target.value)} rows={3} />
           </div>
-        </div>
+        </DialogBody>
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>ยกเลิก</Button>
