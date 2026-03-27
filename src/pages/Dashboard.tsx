@@ -639,8 +639,8 @@ const Dashboard = () => {
                   </div>
                   <div className="flex flex-col items-end gap-1 flex-shrink-0">
                     <span className="text-xs text-muted-foreground">{act.time}</span>
-                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${act.status === "success" ? "badge-present" : act.status === "pending" ? "badge-late" : "badge-leave"}`}>
-                      {act.status === "success" ? "อนุมัติ" : act.status === "pending" ? "รออนุมัติ" : "ข้อมูล"}
+                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${act.status === "success" ? "badge-present" : act.status === "pending" ? "badge-late" : act.status === "rejected" ? "badge-absent" : "badge-leave"}`}>
+                      {act.status === "success" ? "อนุมัติ" : act.status === "pending" ? "รออนุมัติ" : act.status === "rejected" ? "ไม่อนุมัติ" : "ข้อมูล"}
                     </span>
                   </div>
                 </div>
