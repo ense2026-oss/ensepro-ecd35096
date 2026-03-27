@@ -246,10 +246,10 @@ const Dashboard = () => {
         const [empRes, attRes, leaveRes, otRes, teRes, monthAttRes, ciRes] = await Promise.all([
           supabase.from("employees").select("id, first_name, last_name, dept, status, user_id, start_date"),
           supabase.from("attendance_records").select("id, employee_id, date, status, late").eq("date", today),
-          supabase.from("leave_requests").select("id, employee_id, leave_type_name, date_from, date_to, days, status, created_at, employees(first_name, last_name)").gte("date_from", monthStart),
-          supabase.from("overtime_requests").select("id, employee_id, date, hours, status, ot_type, created_at, employees(first_name, last_name)").gte("date", monthStart),
+          supabase.from("leave_requests").select("id, employee_id, leave_type_name, date_from, date_to, days, status, created_at, employees(first_name, last_name)").lte("date_from", monthEnd).gte("date_to", monthStart),
+          supabase.from("overtime_requests").select("id, employee_id, date, hours, status, ot_type, created_at, employees(first_name, last_name)").gte("date", monthStart).lte("date", monthEnd),
           supabase.from("time_edit_requests").select("id").eq("status", "pending"),
-          supabase.from("attendance_records").select("date, status, late").gte("date", monthStart).lte("date", monthEnd),
+          supabase.from("attendance_records").select("date, status, late, employee_id").gte("date", monthStart).lte("date", monthEnd),
           empId ? supabase.from("check_in_records").select("*").eq("employee_id", empId).eq("date", today).maybeSingle() : Promise.resolve({ data: null }),
         ]);
 
