@@ -57,8 +57,13 @@ const DialogHeader = ({ className, ...props }: React.HTMLAttributes<HTMLDivEleme
 DialogHeader.displayName = "DialogHeader";
 
 const DialogFooter = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
-  <div className={cn("flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2", className)} {...props} />
+  <div className={cn("flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 px-6 pb-6 shrink-0", className)} {...props} />
 );
+
+const DialogBody = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
+  <div className={cn("flex-1 overflow-y-auto px-6 py-4", className)} {...props} />
+);
+DialogBody.displayName = "DialogBody";
 DialogFooter.displayName = "DialogFooter";
 
 const DialogTitle = React.forwardRef<
