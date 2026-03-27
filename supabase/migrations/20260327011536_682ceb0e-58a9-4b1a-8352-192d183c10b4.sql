@@ -1,0 +1,1 @@
+DELETE FROM overtime_requests;
