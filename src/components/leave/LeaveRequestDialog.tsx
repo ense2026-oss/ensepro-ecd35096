@@ -250,11 +250,10 @@ const LeaveRequestDialog = ({ open, onOpenChange, leaveTypes, onSubmit, canSelec
               </label>
             )}
           </div>
-        </div>
-
-        {Object.keys(errors).length > 0 && (
-          <p className="text-sm text-destructive font-medium">กรุณากรอกข้อมูลที่จำเป็นให้ครบถ้วน</p>
-        )}
+          {Object.keys(errors).length > 0 && (
+            <p className="text-sm text-destructive font-medium sm:col-span-2">กรุณากรอกข้อมูลที่จำเป็นให้ครบถ้วน</p>
+          )}
+        </DialogBody>
 
         <DialogFooter className="mt-4">
           <button type="button" onClick={() => { resetForm(); onOpenChange(false); }} className="px-5 py-2.5 rounded-xl border text-sm font-semibold hover:bg-muted transition-colors">
