@@ -160,7 +160,7 @@ const LeaveRequestDialog = ({ open, onOpenChange, leaveTypes, onSubmit, canSelec
           <DialogDescription className="sr-only">กรอกข้อมูลคำขอลางาน</DialogDescription>
         </DialogHeader>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
+        <DialogBody className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {canSelectEmployee && employeeNames.length > 0 && !isEditing && (
             <div className="sm:col-span-2">
               <label className="block text-sm font-semibold mb-1.5">พนักงาน <span className="text-destructive">*</span></label>
