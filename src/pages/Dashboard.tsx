@@ -385,30 +385,32 @@ const Dashboard = () => {
 
   // Recent activity
   const recentActivity = useMemo(() => {
-    const items: { id: string; name: string; action: string; time: string; type: string; status: string }[] = [];
-    leaveRequests.slice(0, 4).forEach((l) => {
+    const items: { id: string; name: string; action: string; time: string; createdAt: string; type: string; status: string }[] = [];
+    leaveRequests.forEach((l) => {
       const emp = (l as any).employees;
       items.push({
         id: l.id,
         name: emp ? `${emp.first_name} ${emp.last_name}` : "พนักงาน",
         action: `ยื่นคำขอ${l.leave_type_name}`,
         time: format(new Date(l.created_at), "HH:mm น."),
+        createdAt: l.created_at,
         type: "leave",
-        status: l.status === "approved" ? "success" : l.status === "pending" ? "pending" : "info",
+        status: l.status === "approved" ? "success" : l.status === "pending" ? "pending" : l.status === "rejected" ? "rejected" : "info",
       });
     });
-    otRequests.slice(0, 3).forEach((o) => {
+    otRequests.forEach((o) => {
       const emp = (o as any).employees;
       items.push({
         id: o.id,
         name: emp ? `${emp.first_name} ${emp.last_name}` : "พนักงาน",
         action: `ขอ OT ${o.hours} ชม.`,
         time: format(new Date(o.created_at), "HH:mm น."),
+        createdAt: o.created_at,
         type: "ot",
-        status: o.status === "approved" ? "success" : o.status === "pending" ? "pending" : "info",
+        status: o.status === "approved" ? "success" : o.status === "pending" ? "pending" : o.status === "rejected" ? "rejected" : "info",
       });
     });
-    return items.sort((a, b) => b.time.localeCompare(a.time)).slice(0, 6);
+    return items.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 6);
   }, [leaveRequests, otRequests]);
 
   const scopeLabel = viewType === "manager" ? `แผนก${myEmployee?.dept || ""}` : "ทั้งองค์กร";
