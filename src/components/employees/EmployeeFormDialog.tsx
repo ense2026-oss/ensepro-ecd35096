@@ -54,6 +54,17 @@ const SelectField = ({ label, value, onChange, options }: {
   </div>
 );
 
+const TextAreaField = ({ label, value, onChange, rows = 2 }: {
+  label: string; value: string; onChange: (v: string) => void; rows?: number;
+}) => (
+  <div className="space-y-1.5 col-span-full">
+    <label className="text-xs font-medium text-muted-foreground">{label}</label>
+    <textarea value={value} onChange={(e) => onChange(e.target.value)} rows={rows}
+      className="w-full px-3 py-2 text-sm rounded-xl border border-border bg-muted/30 outline-none focus:ring-2 focus:ring-primary/30 transition-all resize-none"
+    />
+  </div>
+);
+
 const SectionLabel = ({ children }: { children: React.ReactNode }) => (
   <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3 mt-5 first:mt-0">{children}</p>
 );
@@ -65,7 +76,6 @@ const EmployeeFormDialog = ({ open, onOpenChange, employee, onSave }: EmployeeFo
   const [errors, setErrors] = useState<string[]>([]);
   const photoInputRef = useRef<HTMLInputElement>(null);
 
-  // Filter positions based on selected affiliation (recursive)
   const filteredPositions = useMemo(() => {
     const collectNames = (positions: { name: string; children?: any[] }[]): string[] => {
       const names: string[] = [];
@@ -114,14 +124,13 @@ const EmployeeFormDialog = ({ open, onOpenChange, employee, onSave }: EmployeeFo
     if (!form.position.trim() || form.position === "-- เลือกตำแหน่ง --") errs.push("กรุณาเลือกตำแหน่ง");
     if (errs.length) { setErrors(errs); return; }
 
-    // Auto-generate avatar data
     const avatar = form.firstName.charAt(0) || "?";
     const hue = Math.floor(Math.random() * 360);
     onSave({
       ...form,
       avatar,
-      avatarColor: `hsl(${hue} 70% 90%)`,
-      avatarTextColor: `hsl(${hue} 70% 35%)`,
+      avatarColor: isEdit ? form.avatarColor : `hsl(${hue} 70% 90%)`,
+      avatarTextColor: isEdit ? form.avatarTextColor : `hsl(${hue} 70% 35%)`,
       username: form.username || `${form.firstName.toLowerCase()}.${form.lastName.charAt(0).toLowerCase()}`,
     });
     onOpenChange(false);
@@ -144,16 +153,14 @@ const EmployeeFormDialog = ({ open, onOpenChange, employee, onSave }: EmployeeFo
             </div>
           )}
 
+          {/* รูปภาพพนักงาน */}
           <SectionLabel>รูปภาพพนักงาน</SectionLabel>
           <div className="flex items-center gap-4 mb-2">
             {form.photoUrl ? (
               <div className="relative">
                 <img src={form.photoUrl} alt="Employee" className="w-20 h-20 rounded-xl object-cover border border-border" />
-                <button
-                  type="button"
-                  onClick={handleRemovePhoto}
-                  className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center"
-                >
+                <button type="button" onClick={handleRemovePhoto}
+                  className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center">
                   <X className="w-3 h-3" />
                 </button>
               </div>
@@ -164,32 +171,46 @@ const EmployeeFormDialog = ({ open, onOpenChange, employee, onSave }: EmployeeFo
             )}
             <div className="space-y-1.5">
               <input ref={photoInputRef} type="file" accept="image/*" onChange={handlePhotoChange} className="hidden" />
-              <button
-                type="button"
-                onClick={() => photoInputRef.current?.click()}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium border border-border hover:bg-muted transition-colors"
-              >
+              <button type="button" onClick={() => photoInputRef.current?.click()}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium border border-border hover:bg-muted transition-colors">
                 <Upload className="w-4 h-4" /> เลือกรูปภาพ
               </button>
               <p className="text-[10px] text-muted-foreground">รองรับ JPG, PNG ขนาดไม่เกิน 2MB</p>
             </div>
           </div>
 
+          {/* ข้อมูลพื้นฐาน */}
           <SectionLabel>ข้อมูลพื้นฐาน</SectionLabel>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <SelectField label="คำนำหน้า" value={form.prefix} onChange={set("prefix")} options={["นาย", "นาง", "นางสาว", "ดร.", "ผศ.ดร."]} />
             <InputField label="ชื่อ" value={form.firstName} onChange={set("firstName")} required />
             <InputField label="นามสกุล" value={form.lastName} onChange={set("lastName")} required />
             <InputField label="ชื่อเล่น" value={form.nickname} onChange={set("nickname")} />
+            <InputField label="วันเกิด" value={form.birthDate} onChange={set("birthDate")} placeholder="YYYY-MM-DD" />
+            <InputField label="เลขบัตรประชาชน" value={form.nationalId} onChange={set("nationalId")} placeholder="X-XXXX-XXXXX-XX-X" />
+            <SelectField label="สัญชาติ" value={form.nationality} onChange={set("nationality")} options={["ไทย", "อื่นๆ"]} />
+            <SelectField label="ศาสนา" value={form.religion} onChange={set("religion")} options={["พุทธ", "คริสต์", "อิสลาม", "ฮินดู", "อื่นๆ"]} />
+            <SelectField label="หมู่เลือด" value={form.bloodGroup} onChange={set("bloodGroup")} options={["A", "B", "AB", "O"]} />
+            <InputField label="วันออกบัตร" value={form.idIssueDate} onChange={set("idIssueDate")} placeholder="YYYY-MM-DD" />
+            <InputField label="วันหมดอายุบัตร" value={form.idExpireDate} onChange={set("idExpireDate")} placeholder="YYYY-MM-DD" />
             <InputField label="เบอร์โทรศัพท์" value={form.phone} onChange={set("phone")} type="tel" />
             <InputField label="อีเมล" value={form.email} onChange={set("email")} type="email" />
           </div>
 
+          {/* ที่อยู่ */}
+          <SectionLabel>ที่อยู่</SectionLabel>
+          <div className="grid grid-cols-1 gap-3">
+            <TextAreaField label="ที่อยู่ตามบัตร" value={form.address} onChange={set("address")} />
+            <TextAreaField label="ที่อยู่ปัจจุบัน" value={form.homeAddress} onChange={set("homeAddress")} />
+          </div>
+
+          {/* ข้อมูลการทำงาน */}
           <SectionLabel>ข้อมูลการทำงาน</SectionLabel>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <SelectField label="สังกัด (แผนก/หน่วยงาน)" value={form.dept} onChange={set("dept")} options={["-- เลือกสังกัด --", ...affiliationNames]} />
             <SelectField label="ตำแหน่ง" value={form.position} onChange={set("position")} options={["-- เลือกตำแหน่ง --", ...filteredPositions]} />
             <SelectField label="ประเภทพนักงาน" value={form.employeeType} onChange={set("employeeType")} options={["พนักงานประจำ", "พนักงานชั่วคราว", "พนักงานทดลองงาน"]} />
+            <InputField label="วันที่เริ่มงาน" value={form.startDate} onChange={set("startDate")} placeholder="YYYY-MM-DD" />
             <InputField label="เงินเดือน (บาท)" value={form.salary} onChange={set("salary")} type="number" />
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
@@ -203,6 +224,33 @@ const EmployeeFormDialog = ({ open, onOpenChange, employee, onSave }: EmployeeFo
             </div>
             <SelectField label="สถานะ" value={form.status} onChange={set("status")} options={["active", "leave", "inactive"]} />
             <SelectField label="Role" value={form.role} onChange={set("role")} options={["Executive", "Manager", "Admin", "HR", "Accountant", "Employee"]} />
+          </div>
+
+          {/* ข้อมูลครอบครัว */}
+          <SectionLabel>ข้อมูลครอบครัว</SectionLabel>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <SelectField label="สถานภาพสมรส" value={form.maritalStatus} onChange={set("maritalStatus")} options={["โสด", "สมรส", "หย่าร้าง", "หม้าย"]} />
+            <InputField label="ชื่อคู่สมรส" value={form.spouseName} onChange={set("spouseName")} />
+            <InputField label="เบอร์โทรคู่สมรส" value={form.spousePhone} onChange={set("spousePhone")} type="tel" />
+            <div />
+            <InputField label="ชื่อบิดา" value={form.fatherName} onChange={set("fatherName")} />
+            <InputField label="เบอร์โทรบิดา" value={form.fatherPhone} onChange={set("fatherPhone")} type="tel" />
+            <InputField label="ชื่อมารดา" value={form.motherName} onChange={set("motherName")} />
+            <InputField label="เบอร์โทรมารดา" value={form.motherPhone} onChange={set("motherPhone")} type="tel" />
+          </div>
+
+          {/* ผู้ติดต่อฉุกเฉิน */}
+          <SectionLabel>ผู้ติดต่อฉุกเฉิน</SectionLabel>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <InputField label="ชื่อผู้ติดต่อฉุกเฉิน" value={form.emergencyName} onChange={set("emergencyName")} />
+            <InputField label="ความสัมพันธ์" value={form.emergencyRelation} onChange={set("emergencyRelation")} />
+            <InputField label="เบอร์โทรฉุกเฉิน" value={form.emergencyPhone} onChange={set("emergencyPhone")} type="tel" />
+          </div>
+
+          {/* บัญชีผู้ใช้ */}
+          <SectionLabel>บัญชีผู้ใช้</SectionLabel>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <InputField label="Username" value={form.username} onChange={set("username")} placeholder="auto-generated if empty" />
           </div>
 
           <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-border">
