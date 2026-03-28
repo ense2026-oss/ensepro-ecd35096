@@ -66,7 +66,12 @@ function loadAuthCache(userId: string): AuthCache | null {
 
 function saveAuthCache(data: Omit<AuthCache, "timestamp">) {
   try {
-    localStorage.setItem(AUTH_CACHE_KEY, JSON.stringify({ ...data, timestamp: Date.now() }));
+    // Don't cache large photo_url (base64) data to keep localStorage small
+    const safeData = { ...data };
+    if (safeData.employeeData?.photo_url && safeData.employeeData.photo_url.length > 500) {
+      safeData.employeeData = { ...safeData.employeeData, photo_url: null };
+    }
+    localStorage.setItem(AUTH_CACHE_KEY, JSON.stringify({ ...safeData, timestamp: Date.now() }));
   } catch {}
 }
 
