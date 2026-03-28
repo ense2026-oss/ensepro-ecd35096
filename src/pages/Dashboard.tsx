@@ -200,9 +200,9 @@ const Dashboard = () => {
       const [ltRes, empLookup] = await Promise.all([
         supabase.from("leave_types").select("*"),
         empIdDirect
-          ? supabase.from("employees").select("*").eq("id", empIdDirect).maybeSingle()
+          ? supabase.from("employees").select("id, first_name, last_name, dept, status, user_id, start_date").eq("id", empIdDirect).maybeSingle()
           : userId
-            ? supabase.from("employees").select("*").eq("user_id", userId).maybeSingle()
+            ? supabase.from("employees").select("id, first_name, last_name, dept, status, user_id, start_date").eq("user_id", userId).maybeSingle()
             : Promise.resolve({ data: null }),
       ]);
 
