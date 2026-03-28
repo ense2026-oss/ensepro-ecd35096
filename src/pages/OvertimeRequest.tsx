@@ -57,12 +57,12 @@ const OTRequestDialog = ({ open, onClose, onSubmit }: {
 }) => {
   const { employees } = useEmployees();
   const { currentUser, role } = useAuth();
-  const { canAction, getScope } = usePermissions();
+  const { canAction } = usePermissions();
   const canAdd = canAction(role, 'ot', 'add');
   const hasAdminAccess = canAdd || canAction(role, 'ot', 'approve');
-  const isEmployee = role === "employee";
+  const isEmployee = !hasAdminAccess;
   const [form, setForm] = useState({
-    employeeId: (isEmployee || (!hasAdminAccess)) && currentUser ? currentUser.id : "",
+    employeeId: isEmployee && currentUser ? currentUser.id : "",
     dateFrom: "",
     dateTo: "",
     startTime: "18:00",
@@ -70,8 +70,6 @@ const OTRequestDialog = ({ open, onClose, onSubmit }: {
     type: "workday" as OTType,
     reason: "",
   });
-
-  if (!open) return null;
 
   const selectedEmp = employees.find((e) => e.id === form.employeeId);
   const empDept = selectedEmp?.dept || "";
@@ -108,94 +106,106 @@ const OTRequestDialog = ({ open, onClose, onSubmit }: {
     onClose();
   };
 
-  return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40" onClick={onClose}>
-      <div className="card-base w-full max-w-lg mx-4 p-6 space-y-5 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-bold flex items-center gap-2">
-            <Clock className="w-5 h-5 text-primary" /> ยื่นขอทำงานโอที
-          </h3>
-          <button onClick={onClose} className="p-1 rounded-lg hover:bg-muted transition-colors">
-            <X className="w-5 h-5 text-muted-foreground" />
-          </button>
-        </div>
+  const resetForm = () => {
+    setForm({
+      employeeId: isEmployee && currentUser ? currentUser.id : "",
+      dateFrom: "",
+      dateTo: "",
+      startTime: "18:00",
+      endTime: "21:00",
+      type: "workday" as OTType,
+      reason: "",
+    });
+  };
 
-        {hasAdminAccess && (
+  return (
+    <Dialog open={open} onOpenChange={(v) => { if (!v) { resetForm(); onClose(); } }}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 font-display">
+            <Clock className="w-5 h-5 text-primary" /> ยื่นขอทำงานโอที
+          </DialogTitle>
+          <DialogDescription className="sr-only">กรอกข้อมูลคำขอทำงานล่วงเวลา</DialogDescription>
+        </DialogHeader>
+
+        <DialogBody className="space-y-4">
+          {hasAdminAccess && (
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">พนักงาน *</label>
+              <SearchableSelect
+                value={form.employeeId}
+                onChange={(val) => setForm({ ...form, employeeId: val })}
+                options={employees.map((emp) => ({
+                  value: emp.id,
+                  label: `${emp.firstName} ${emp.lastName}`,
+                  subtitle: emp.dept,
+                }))}
+                placeholder="-- เลือกพนักงาน --"
+              />
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">วันที่เริ่ม OT *</label>
+              <ThaiDatePicker value={form.dateFrom} onChange={(v) => setForm({ ...form, dateFrom: v })} placeholder="เลือกวันที่เริ่ม" />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">วันที่สิ้นสุด</label>
+              <ThaiDatePicker value={form.dateTo} onChange={(v) => setForm({ ...form, dateTo: v })} placeholder="เลือกวันที่สิ้นสุด" />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">เวลาเริ่ม</label>
+              <TimeInput24 value={form.startTime} onChange={(v) => setForm({ ...form, startTime: v })} />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">เวลาสิ้นสุด</label>
+              <TimeInput24 value={form.endTime} onChange={(v) => setForm({ ...form, endTime: v })} />
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 p-3 rounded-xl bg-muted/60">
+            <TrendingUp className="w-4 h-4 text-primary" />
+            <span className="text-sm font-medium">ชั่วโมง OT:</span>
+            <span className="text-sm font-bold text-primary">{calcHours()} ชั่วโมง</span>
+          </div>
+
           <div className="space-y-1.5">
-            <label className="text-xs font-medium text-muted-foreground">พนักงาน *</label>
-            <SearchableSelect
-              value={form.employeeId}
-              onChange={(val) => setForm({ ...form, employeeId: val })}
-              options={employees.map((emp) => ({
-                value: emp.id,
-                label: `${emp.firstName} ${emp.lastName}`,
-                subtitle: emp.dept,
-              }))}
-              placeholder="-- เลือกพนักงาน --"
+            <label className="text-xs font-medium text-muted-foreground">ประเภท OT</label>
+            <div className="flex gap-2">
+              {(Object.keys(otTypeLabels) as OTType[]).map((t) => (
+                <button
+                  key={t}
+                  onClick={() => setForm({ ...form, type: t })}
+                  className="flex-1 py-2 rounded-xl border-2 text-xs font-medium transition-all"
+                  style={{
+                    borderColor: form.type === t ? "hsl(var(--primary))" : "hsl(var(--border))",
+                    background: form.type === t ? "hsl(var(--primary) / 0.08)" : "transparent",
+                  }}
+                >
+                  {otTypeLabels[t].label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground">เหตุผลในการขอ OT *</label>
+            <textarea
+              value={form.reason}
+              onChange={(e) => setForm({ ...form, reason: e.target.value })}
+              rows={3}
+              placeholder="ระบุเหตุผลหรือรายละเอียดงานที่ต้องทำ..."
+              className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/30"
             />
           </div>
-        )}
+        </DialogBody>
 
-        <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-muted-foreground">วันที่เริ่ม OT *</label>
-            <ThaiDatePicker value={form.dateFrom} onChange={(v) => setForm({ ...form, dateFrom: v })} placeholder="เลือกวันที่เริ่ม" />
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-muted-foreground">วันที่สิ้นสุด</label>
-            <ThaiDatePicker value={form.dateTo} onChange={(v) => setForm({ ...form, dateTo: v })} placeholder="เลือกวันที่สิ้นสุด" />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-muted-foreground">เวลาเริ่ม</label>
-            <TimeInput24 value={form.startTime} onChange={(v) => setForm({ ...form, startTime: v })} />
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-muted-foreground">เวลาสิ้นสุด</label>
-            <TimeInput24 value={form.endTime} onChange={(v) => setForm({ ...form, endTime: v })} />
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2 p-3 rounded-xl bg-muted/60">
-          <TrendingUp className="w-4 h-4 text-primary" />
-          <span className="text-sm font-medium">ชั่วโมง OT:</span>
-          <span className="text-sm font-bold text-primary">{calcHours()} ชั่วโมง</span>
-        </div>
-
-        <div className="space-y-1.5">
-          <label className="text-xs font-medium text-muted-foreground">ประเภท OT</label>
-          <div className="flex gap-2">
-            {(Object.keys(otTypeLabels) as OTType[]).map((t) => (
-              <button
-                key={t}
-                onClick={() => setForm({ ...form, type: t })}
-                className="flex-1 py-2 rounded-xl border-2 text-xs font-medium transition-all"
-                style={{
-                  borderColor: form.type === t ? "hsl(var(--primary))" : "hsl(var(--border))",
-                  background: form.type === t ? "hsl(var(--primary) / 0.08)" : "transparent",
-                }}
-              >
-                {otTypeLabels[t].label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="space-y-1.5">
-          <label className="text-xs font-medium text-muted-foreground">เหตุผลในการขอ OT *</label>
-          <textarea
-            value={form.reason}
-            onChange={(e) => setForm({ ...form, reason: e.target.value })}
-            rows={3}
-            placeholder="ระบุเหตุผลหรือรายละเอียดงานที่ต้องทำ..."
-            className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/30"
-          />
-        </div>
-
-        <div className="flex gap-3 pt-2">
-          <button onClick={onClose} className="flex-1 h-10 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors">ยกเลิก</button>
+        <DialogFooter>
+          <button onClick={() => { resetForm(); onClose(); }} className="flex-1 h-10 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors">ยกเลิก</button>
           <button
             onClick={handleSubmit}
             disabled={!form.employeeId || !form.dateFrom || !form.reason}
@@ -203,9 +213,9 @@ const OTRequestDialog = ({ open, onClose, onSubmit }: {
           >
             ยื่นคำขอ
           </button>
-        </div>
-      </div>
-    </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 };
 
