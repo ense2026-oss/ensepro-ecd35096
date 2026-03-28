@@ -127,6 +127,17 @@ const EmployeeProfile = () => {
   const [activeTab, setActiveTab] = useState("personal");
   const [isEditing, setIsEditing] = useState(false);
   const [data, setData] = useState(employee ? { ...employee } : null);
+
+  // Fetch photo_url on-demand (not included in list query for performance)
+  useEffect(() => {
+    if (!id || !employee) return;
+    if (employee.photoUrl) return; // already has photo
+    supabase.from("employees").select("photo_url").eq("id", id).maybeSingle().then(({ data: row }) => {
+      if (row?.photo_url) {
+        setData((d) => d ? { ...d, photoUrl: row.photo_url } : d);
+      }
+    });
+  }, [id, employee]);
   const [showPassword, setShowPassword] = useState(false);
   const [showInitialPassword, setShowInitialPassword] = useState(false);
   const [newPassword, setNewPassword] = useState("");
