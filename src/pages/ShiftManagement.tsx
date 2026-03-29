@@ -502,7 +502,7 @@ const ShiftManagement = () => {
 
       {/* Assignment Dialog (Bulk) */}
       <Dialog open={assignDialogOpen} onOpenChange={setAssignDialogOpen}>
-        <DialogContent className="sm:max-w-xl">
+        <DialogContent className="sm:max-w-xl pl-5">
           <DialogHeader>
             <DialogTitle>{editAssignId ? "แก้ไขการกำหนดกะ" : "กำหนดกะการทำงานล่วงหน้า"}</DialogTitle>
             <DialogDescription className="sr-only">กำหนดกะการทำงานให้พนักงาน</DialogDescription>
