@@ -608,7 +608,7 @@ const ShiftManagement = () => {
 
       {/* Calendar Dialog (Individual) */}
       <Dialog open={calendarDialogOpen} onOpenChange={setCalendarDialogOpen}>
-        <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto px-5">
+        <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto px-5 pb-5">
           <DialogHeader>
             <DialogTitle className="text-center space-y-1">
               <div className="text-sm font-normal text-muted-foreground">จัดการพนักงานชื่อ : {calendarEmployee?.name}</div>
