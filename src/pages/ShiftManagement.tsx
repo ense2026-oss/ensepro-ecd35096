@@ -85,7 +85,7 @@ const ShiftManagement = () => {
   const fetchData = useCallback(async () => {
     const [shiftsRes, empRes, assignRes] = await Promise.all([
       supabase.from("shifts").select("*").order("sort_order"),
-      supabase.from("employees").select("id, first_name, last_name, dept, position").eq("status", "active"),
+      supabase.from("employees").select("id, first_name, last_name, dept, position, photo_url").eq("status", "active"),
       supabase.from("shift_assignments").select("*").order("created_at", { ascending: false }),
     ]);
 
@@ -96,6 +96,8 @@ const ShiftManagement = () => {
         name: `${e.first_name} ${e.last_name}`,
         department: e.dept || "ไม่ระบุ",
         position: e.position || "",
+        photoUrl: e.photo_url || undefined,
+        firstName: e.first_name || "",
       })));
     }
     if (assignRes.data) setAssignments(assignRes.data);
