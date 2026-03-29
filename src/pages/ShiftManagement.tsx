@@ -8,6 +8,7 @@ import { ThaiDatePicker } from "@/components/ui/thai-date-picker";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
+import EmployeeAvatar from "@/components/ui/employee-avatar";
 
 interface Shift {
   id: string;
