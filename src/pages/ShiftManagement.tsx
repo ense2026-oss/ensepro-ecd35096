@@ -218,12 +218,27 @@ const ShiftManagement = () => {
 
   // Calendar Dialog Logic
   const calendarEmployee = employees.find(e => e.id === calendarEmployeeId);
+  // Build a merged map: bulk expanded dates + day overrides
   const empDayAssigns = useMemo(() => {
     if (!calendarEmployeeId) return {};
     const map: Record<string, ShiftAssignment> = {};
-    dayAssignments.filter(da => da.employee_id === calendarEmployeeId).forEach(da => { map[da.start_date] = da; });
+    // First, expand bulk assignments into individual dates
+    bulkAssignments
+      .filter(ba => ba.employee_id === calendarEmployeeId)
+      .forEach(ba => {
+        const start = new Date(ba.start_date);
+        const end = new Date(ba.end_date);
+        for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+          const ds = d.toISOString().slice(0, 10);
+          map[ds] = ba;
+        }
+      });
+    // Then overlay day assignments (they take priority)
+    dayAssignments
+      .filter(da => da.employee_id === calendarEmployeeId)
+      .forEach(da => { map[da.start_date] = da; });
     return map;
-  }, [dayAssignments, calendarEmployeeId]);
+  }, [dayAssignments, bulkAssignments, calendarEmployeeId]);
 
   const calendarDays = useMemo(() => {
     const firstDay = new Date(calendarYear, calendarMonth, 1);
