@@ -8,6 +8,7 @@ import { ThaiDatePicker } from "@/components/ui/thai-date-picker";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
+import EmployeeAvatar from "@/components/ui/employee-avatar";
 
 interface Shift {
   id: string;
@@ -23,6 +24,8 @@ interface Employee {
   name: string;
   department: string;
   position: string;
+  photoUrl?: string;
+  firstName?: string;
 }
 
 interface ShiftAssignment {
@@ -82,7 +85,7 @@ const ShiftManagement = () => {
   const fetchData = useCallback(async () => {
     const [shiftsRes, empRes, assignRes] = await Promise.all([
       supabase.from("shifts").select("*").order("sort_order"),
-      supabase.from("employees").select("id, first_name, last_name, dept, position").eq("status", "active"),
+      supabase.from("employees").select("id, first_name, last_name, dept, position, photo_url").eq("status", "active"),
       supabase.from("shift_assignments").select("*").order("created_at", { ascending: false }),
     ]);
 
@@ -93,6 +96,8 @@ const ShiftManagement = () => {
         name: `${e.first_name} ${e.last_name}`,
         department: e.dept || "ไม่ระบุ",
         position: e.position || "",
+        photoUrl: e.photo_url || undefined,
+        firstName: e.first_name || "",
       })));
     }
     if (assignRes.data) setAssignments(assignRes.data);
@@ -213,12 +218,27 @@ const ShiftManagement = () => {
 
   // Calendar Dialog Logic
   const calendarEmployee = employees.find(e => e.id === calendarEmployeeId);
+  // Build a merged map: bulk expanded dates + day overrides
   const empDayAssigns = useMemo(() => {
     if (!calendarEmployeeId) return {};
     const map: Record<string, ShiftAssignment> = {};
-    dayAssignments.filter(da => da.employee_id === calendarEmployeeId).forEach(da => { map[da.start_date] = da; });
+    // First, expand bulk assignments into individual dates
+    bulkAssignments
+      .filter(ba => ba.employee_id === calendarEmployeeId)
+      .forEach(ba => {
+        const start = new Date(ba.start_date);
+        const end = new Date(ba.end_date);
+        for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+          const ds = d.toISOString().slice(0, 10);
+          map[ds] = ba;
+        }
+      });
+    // Then overlay day assignments (they take priority)
+    dayAssignments
+      .filter(da => da.employee_id === calendarEmployeeId)
+      .forEach(da => { map[da.start_date] = da; });
     return map;
-  }, [dayAssignments, calendarEmployeeId]);
+  }, [dayAssignments, bulkAssignments, calendarEmployeeId]);
 
   const calendarDays = useMemo(() => {
     const firstDay = new Date(calendarYear, calendarMonth, 1);
@@ -450,9 +470,7 @@ const ShiftManagement = () => {
                     <tr key={a.id} className="border-b hover:bg-muted/30 transition-colors" style={{ borderColor: "hsl(var(--border))" }}>
                       <td className="px-5 py-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-lg flex items-center justify-center text-xs font-bold" style={{ background: `${shiftColor}15`, color: shiftColor }}>
-                            {emp?.name?.charAt(0) || "?"}
-                          </div>
+                          <EmployeeAvatar photoUrl={emp?.photoUrl} firstName={emp?.firstName} size="md" rounded="lg" />
                           <div>
                             <div className="text-sm font-semibold">{getEmployeeName(a.employee_id)}</div>
                             <div className="text-xs text-muted-foreground">{emp?.department}</div>
@@ -590,7 +608,7 @@ const ShiftManagement = () => {
 
       {/* Calendar Dialog (Individual) */}
       <Dialog open={calendarDialogOpen} onOpenChange={setCalendarDialogOpen}>
-        <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto px-5">
           <DialogHeader>
             <DialogTitle className="text-center space-y-1">
               <div className="text-sm font-normal text-muted-foreground">จัดการพนักงานชื่อ : {calendarEmployee?.name}</div>
