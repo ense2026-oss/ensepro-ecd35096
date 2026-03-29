@@ -455,9 +455,7 @@ const ShiftManagement = () => {
                     <tr key={a.id} className="border-b hover:bg-muted/30 transition-colors" style={{ borderColor: "hsl(var(--border))" }}>
                       <td className="px-5 py-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-lg flex items-center justify-center text-xs font-bold" style={{ background: `${shiftColor}15`, color: shiftColor }}>
-                            {emp?.name?.charAt(0) || "?"}
-                          </div>
+                          <EmployeeAvatar photoUrl={emp?.photoUrl} firstName={emp?.firstName} size="md" rounded="lg" />
                           <div>
                             <div className="text-sm font-semibold">{getEmployeeName(a.employee_id)}</div>
                             <div className="text-xs text-muted-foreground">{emp?.department}</div>
