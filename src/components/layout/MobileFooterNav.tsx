@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import { usePendingCounts } from "@/contexts/PendingCountsContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { usePermissions } from "@/contexts/PermissionsContext";
+import { useModuleSettings } from "@/hooks/useModuleSettings";
 import {
   LayoutDashboard,
   Users,
