@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Building2, MapPin, Shield, Clock, Calendar, Workflow, ScanFace, Palette, Banknote, FileSignature, ToggleRight, ChevronRight, Network } from "lucide-react";
+import { useModuleSettings } from "@/hooks/useModuleSettings";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import LocationsSettings from "@/components/settings/LocationsSettings";
