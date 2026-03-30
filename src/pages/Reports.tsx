@@ -114,12 +114,7 @@ const attendanceMonthly = [
   { month: "มิ.ย.", ปกติ: 435, สาย: 12, ขาด: 4 },
 ];
 
-const leavePieData = [
-  { name: "ลาป่วย", value: 45, color: "#FF870F" },
-  { name: "ลากิจ", value: 32, color: "#9CA3AF" },
-  { name: "ลาพักร้อน", value: 28, color: "#87FF0F" },
-  { name: "อื่นๆ", value: 8, color: "#E5E5E5" },
-];
+const defaultLeavePieColors = ["#FF870F", "#9CA3AF", "#87FF0F", "#E5E5E5", "#3b82f6", "#a855f7", "#ef4444", "#14b8a6"];
 
 const headcountData = [
   { dept: "IT", count: 45 },
