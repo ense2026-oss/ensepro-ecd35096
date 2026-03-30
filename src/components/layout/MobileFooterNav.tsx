@@ -48,20 +48,7 @@ const MobileFooterNav = React.forwardRef<HTMLDivElement>((_, ref) => {
   const isMobile = useIsMobile();
   const { canAccessRoute, isSelfOnly } = usePermissions();
 
-  const getModuleSettings = useCallback(() => {
-    try {
-      const saved = localStorage.getItem('module-settings');
-      return saved ? JSON.parse(saved) : {};
-    } catch { return {}; }
-  }, []);
-
-  const [moduleSettings, setModuleSettings] = useState<Record<string, boolean>>(getModuleSettings);
-
-  useEffect(() => {
-    const handler = () => setModuleSettings(getModuleSettings());
-    window.addEventListener('module-settings-changed', handler);
-    return () => window.removeEventListener('module-settings-changed', handler);
-  }, [getModuleSettings]);
+  const { modules: moduleSettings } = useModuleSettings();
 
   const menuItems = allMenuItems.filter((item) => {
     if (!canAccessRoute(role, item.path)) return false;
