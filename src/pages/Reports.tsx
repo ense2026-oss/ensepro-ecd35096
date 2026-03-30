@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { useEmployees } from "@/contexts/EmployeeContext";
 import {
   calculateAnnualIncome, calculateMonthlyTax, formatCurrency,
@@ -113,12 +114,7 @@ const attendanceMonthly = [
   { month: "มิ.ย.", ปกติ: 435, สาย: 12, ขาด: 4 },
 ];
 
-const leavePieData = [
-  { name: "ลาป่วย", value: 45, color: "#FF870F" },
-  { name: "ลากิจ", value: 32, color: "#9CA3AF" },
-  { name: "ลาพักร้อน", value: 28, color: "#87FF0F" },
-  { name: "อื่นๆ", value: 8, color: "#E5E5E5" },
-];
+const defaultLeavePieColors = ["#FF870F", "#9CA3AF", "#87FF0F", "#E5E5E5", "#3b82f6", "#a855f7", "#ef4444", "#14b8a6"];
 
 const headcountData = [
   { dept: "IT", count: 45 },
@@ -155,12 +151,7 @@ const mockAttendanceTable = [
   { id: "EMP-005", name: "ประภาส มั่นคง", date: "20/02/2569", checkIn: "08:00", checkOut: "17:00", status: "ปกติ", hours: "9:00" },
 ];
 
-const mockLeaveTable = [
-  { id: "EMP-001", name: "สมชาย ใจดี", type: "ลาป่วย", from: "18/02/2569", to: "18/02/2569", days: 1, status: "อนุมัติ" },
-  { id: "EMP-003", name: "วิชัย เก่งกาจ", type: "ลาพักร้อน", from: "25/02/2569", to: "28/02/2569", days: 4, status: "รออนุมัติ" },
-  { id: "EMP-004", name: "นภา สดใส", type: "ลากิจ", from: "22/02/2569", to: "22/02/2569", days: 1, status: "อนุมัติ" },
-  { id: "EMP-002", name: "สมหญิง รักงาน", type: "ลาป่วย", from: "15/02/2569", to: "16/02/2569", days: 2, status: "อนุมัติ" },
-];
+// mockLeaveTable removed - now fetched from database
 
 // --- Shift mock data ---
 const shiftDistribution = [
@@ -232,6 +223,70 @@ const Reports = () => {
   const [filterYear, setFilterYear] = useState("2569");
   const [filterMonth, setFilterMonth] = useState("กุมภาพันธ์");
   const [expandedCats, setExpandedCats] = useState<Record<string, boolean>>({ employees: true, organization: true, attendance: true, leave: true, shifts: true, payroll: true });
+
+  // --- Real leave data ---
+  const [leaveData, setLeaveData] = useState<any[]>([]);
+  const [leavePieData, setLeavePieData] = useState<{ name: string; value: number; color: string }[]>([]);
+  const [leaveLoading, setLeaveLoading] = useState(false);
+
+  const monthIndexMap: Record<string, number> = {
+    "มกราคม": 1, "กุมภาพันธ์": 2, "มีนาคม": 3, "เมษายน": 4,
+    "พฤษภาคม": 5, "มิถุนายน": 6, "กรกฎาคม": 7, "สิงหาคม": 8,
+    "กันยายน": 9, "ตุลาคม": 10, "พฤศจิกายน": 11, "ธันวาคม": 12,
+  };
+
+  const fetchLeaveData = useCallback(async () => {
+    setLeaveLoading(true);
+    try {
+      const ceYear = parseInt(filterYear) - 543;
+      const monthNum = monthIndexMap[filterMonth] || 1;
+      const startDate = `${ceYear}-${String(monthNum).padStart(2, '0')}-01`;
+      const endDay = new Date(ceYear, monthNum, 0).getDate();
+      const endDate = `${ceYear}-${String(monthNum).padStart(2, '0')}-${String(endDay).padStart(2, '0')}`;
+
+      const { data, error } = await supabase
+        .from("leave_requests")
+        .select("*, employees!leave_requests_employee_id_fkey(first_name, last_name, username)")
+        .gte("date_from", startDate)
+        .lte("date_from", endDate)
+        .order("date_from", { ascending: false });
+
+      if (error) throw error;
+
+      const rows = (data || []).map((r: any) => ({
+        name: r.employees ? `${r.employees.first_name} ${r.employees.last_name}` : "ไม่ทราบ",
+        empId: r.employees?.username || "-",
+        type: r.leave_type_name || "-",
+        from: r.date_from,
+        to: r.date_to,
+        days: Number(r.days),
+        status: r.status === "approved" ? "อนุมัติ" : r.status === "rejected" ? "ไม่อนุมัติ" : "รออนุมัติ",
+      }));
+      setLeaveData(rows);
+
+      // Build pie data
+      const typeMap: Record<string, number> = {};
+      rows.forEach((r: any) => {
+        typeMap[r.type] = (typeMap[r.type] || 0) + r.days;
+      });
+      const pieEntries = Object.entries(typeMap).map(([name, value], i) => ({
+        name,
+        value: value as number,
+        color: defaultLeavePieColors[i % defaultLeavePieColors.length],
+      }));
+      setLeavePieData(pieEntries);
+    } catch (err) {
+      console.error("Error fetching leave data:", err);
+    } finally {
+      setLeaveLoading(false);
+    }
+  }, [filterYear, filterMonth]);
+
+  useEffect(() => {
+    if (selectedReport?.startsWith("leave-")) {
+      fetchLeaveData();
+    }
+  }, [selectedReport, fetchLeaveData]);
 
   const toggleCat = (cat: string) => setExpandedCats((p) => ({ ...p, [cat]: !p[cat] }));
 
@@ -330,7 +385,7 @@ const Reports = () => {
               <option key={m} value={m}>{m}</option>
             ))}
           </select>
-          <button className="ml-auto flex items-center gap-1.5 text-sm font-medium px-3 py-2 rounded-lg hover:bg-muted transition-colors" style={{ color: "#FF870F" }}>
+          <button onClick={() => { if (currentReport?.category === 'leave') fetchLeaveData(); }} className="ml-auto flex items-center gap-1.5 text-sm font-medium px-3 py-2 rounded-lg hover:bg-muted transition-colors" style={{ color: "#FF870F" }}>
             <RefreshCw className="w-3.5 h-3.5" />
             รีเฟรช
           </button>
@@ -654,27 +709,33 @@ const Reports = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {mockLeaveTable.map((row, i) => (
-                    <tr key={i} className="border-t border-border hover:bg-muted/30 transition-colors">
-                      <td className="px-4 py-3 font-mono text-xs">{row.id}</td>
-                      <td className="px-4 py-3 font-medium">{row.name}</td>
-                      <td className="px-4 py-3">{row.type}</td>
-                      <td className="px-4 py-3">{row.from}</td>
-                      <td className="px-4 py-3">{row.to}</td>
-                      <td className="px-4 py-3">{row.days}</td>
-                      <td className="px-4 py-3">
-                        <span
-                          className="px-2 py-0.5 rounded-full text-xs font-medium"
-                          style={{
-                            background: row.status === "อนุมัติ" ? "hsl(var(--accent-green) / 0.15)" : "hsl(31 100% 95%)",
-                            color: row.status === "อนุมัติ" ? "#4CAF50" : "#FF870F",
-                          }}
-                        >
-                          {row.status}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
+                  {leaveLoading ? (
+                    <tr><td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">กำลังโหลดข้อมูล...</td></tr>
+                  ) : leaveData.length === 0 ? (
+                    <tr><td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">ไม่พบข้อมูลการลาในเดือนที่เลือก</td></tr>
+                  ) : (
+                    leaveData.map((row, i) => (
+                      <tr key={i} className="border-t border-border hover:bg-muted/30 transition-colors">
+                        <td className="px-4 py-3 font-mono text-xs">{row.empId}</td>
+                        <td className="px-4 py-3 font-medium">{row.name}</td>
+                        <td className="px-4 py-3">{row.type}</td>
+                        <td className="px-4 py-3">{row.from}</td>
+                        <td className="px-4 py-3">{row.to}</td>
+                        <td className="px-4 py-3">{row.days}</td>
+                        <td className="px-4 py-3">
+                          <span
+                            className="px-2 py-0.5 rounded-full text-xs font-medium"
+                            style={{
+                              background: row.status === "อนุมัติ" ? "hsl(var(--accent-green) / 0.15)" : row.status === "ไม่อนุมัติ" ? "hsl(0 80% 95%)" : "hsl(31 100% 95%)",
+                              color: row.status === "อนุมัติ" ? "#4CAF50" : row.status === "ไม่อนุมัติ" ? "#ef4444" : "#FF870F",
+                            }}
+                          >
+                            {row.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             )}
