@@ -709,27 +709,33 @@ const Reports = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {mockLeaveTable.map((row, i) => (
-                    <tr key={i} className="border-t border-border hover:bg-muted/30 transition-colors">
-                      <td className="px-4 py-3 font-mono text-xs">{row.id}</td>
-                      <td className="px-4 py-3 font-medium">{row.name}</td>
-                      <td className="px-4 py-3">{row.type}</td>
-                      <td className="px-4 py-3">{row.from}</td>
-                      <td className="px-4 py-3">{row.to}</td>
-                      <td className="px-4 py-3">{row.days}</td>
-                      <td className="px-4 py-3">
-                        <span
-                          className="px-2 py-0.5 rounded-full text-xs font-medium"
-                          style={{
-                            background: row.status === "อนุมัติ" ? "hsl(var(--accent-green) / 0.15)" : "hsl(31 100% 95%)",
-                            color: row.status === "อนุมัติ" ? "#4CAF50" : "#FF870F",
-                          }}
-                        >
-                          {row.status}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
+                  {leaveLoading ? (
+                    <tr><td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">กำลังโหลดข้อมูล...</td></tr>
+                  ) : leaveData.length === 0 ? (
+                    <tr><td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">ไม่พบข้อมูลการลาในเดือนที่เลือก</td></tr>
+                  ) : (
+                    leaveData.map((row, i) => (
+                      <tr key={i} className="border-t border-border hover:bg-muted/30 transition-colors">
+                        <td className="px-4 py-3 font-mono text-xs">{row.empId}</td>
+                        <td className="px-4 py-3 font-medium">{row.name}</td>
+                        <td className="px-4 py-3">{row.type}</td>
+                        <td className="px-4 py-3">{row.from}</td>
+                        <td className="px-4 py-3">{row.to}</td>
+                        <td className="px-4 py-3">{row.days}</td>
+                        <td className="px-4 py-3">
+                          <span
+                            className="px-2 py-0.5 rounded-full text-xs font-medium"
+                            style={{
+                              background: row.status === "อนุมัติ" ? "hsl(var(--accent-green) / 0.15)" : row.status === "ไม่อนุมัติ" ? "hsl(0 80% 95%)" : "hsl(31 100% 95%)",
+                              color: row.status === "อนุมัติ" ? "#4CAF50" : row.status === "ไม่อนุมัติ" ? "#ef4444" : "#FF870F",
+                            }}
+                          >
+                            {row.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             )}
