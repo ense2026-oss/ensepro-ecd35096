@@ -1,29 +1,36 @@
 
 
-## แผนการแก้ไข: สร้างบัญชี Auth ให้พนักงานที่ยังไม่มี
+## ปัญหาที่พบ
 
-### สรุปปัญหา
-พนักงาน 25 คนมีข้อมูลในตาราง employees แต่ไม่มีบัญชี Auth (user_id = null) จึงล็อกอินไม่ได้ และบางคนมีอีเมลรูปแบบผิด
+ระบบตั้งค่าโมดูลปัจจุบันใช้ **localStorage** ในการเก็บสถานะเปิด/ปิดโมดูล ซึ่งหมายความว่า:
+- การตั้งค่าจะมีผลเฉพาะในเบราว์เซอร์ของ Admin ที่ทำการตั้งค่าเท่านั้น
+- พนักงานและ roles อื่นๆ ไม่ได้รับการตั้งค่าเพราะ localStorage ของแต่ละคนแยกกัน
 
-### ขั้นตอนการแก้ไข
+## แนวทางแก้ไข
 
-**1. แก้ไขอีเมลที่รูปแบบไม่ถูกต้อง**
-- SQL migration เพื่อ fix 4 อีเมลที่มีปัญหา:
-  - `sutee1410@ gmail.com` → `sutee1410@gmail.com`
-  - `Yodyachai 885@gmail.com` → `yodyachai885@gmail.com`
-  - `Watson01415@.gmail.com` → `watson01415@gmail.com`
-  - `tiger_009@hotmail` → `tiger_009@hotmail.com`
+ย้ายการเก็บค่าโมดูลจาก localStorage ไปเก็บในฐานข้อมูล (ตาราง `company_settings` ที่มีอยู่แล้ว) โดยใช้ key `module_settings`
 
-**2. สร้างบัญชี Auth ให้พนักงาน 25 คน**
-- เรียก Edge Function `create-employee-auth` ที่มีอยู่แล้วเพื่อสร้างบัญชี Auth สำหรับแต่ละคน
-- ใช้อีเมลจากตาราง employees และรหัสผ่านเริ่มต้น `Password123!`
-- Function จะสร้าง auth user, profile, user_role และเชื่อม user_id กลับมาที่ employees อัตโนมัติ
+### ขั้นตอน
 
-**3. อัปเดต initial_password**
-- ตั้ง `initial_password = 'Password123!'` ให้กับ 25 คนที่เพิ่งสร้างบัญชี
+1. **ModuleSettings.tsx** — เปลี่ยนจาก localStorage เป็นอ่าน/เขียนจากตาราง `company_settings` (key: `module_settings`) ใช้รูปแบบ upsert เหมือน CompanySettings
+   
+2. **Sidebar.tsx** — เปลี่ยนจากอ่าน localStorage เป็นดึงค่าจาก `company_settings` ตอน mount และ subscribe realtime changes
+
+3. **MobileFooterNav.tsx** — เช่นเดียวกับ Sidebar
+
+4. **Settings.tsx** — เปลี่ยนจากอ่าน localStorage เป็นใช้ค่าจากฐานข้อมูลเดียวกัน
+
+5. **สร้าง Hook กลาง `useModuleSettings`** — เพื่อลดโค้ดซ้ำ โดย hook นี้จะ:
+   - ดึงค่าจาก `company_settings` (key = `module_settings`) ตอน mount
+   - Subscribe realtime เพื่ออัพเดทอัตโนมัติเมื่อ admin เปลี่ยนค่า
+   - ยังคง dispatch `module-settings-changed` event เพื่อให้ component ในหน้าเดียวกันอัพเดททันที
+
+6. **เปิด realtime สำหรับตาราง `company_settings`** — เพิ่ม migration: `ALTER PUBLICATION supabase_realtime ADD TABLE public.company_settings;`
 
 ### รายละเอียดทางเทคนิค
-- ใช้ `create-employee-auth` Edge Function ที่มี service role key สร้าง auth user แบบ email_confirm: true
-- Function ทำ sanitize email อยู่แล้ว (ลบ whitespace)
-- แต่อีเมลที่มี `@.` หรือขาด TLD ต้องแก้ในฐานข้อมูลก่อน เพราะ function จะ reject
+
+- ค่าในฐานข้อมูลจะเป็น JSONB format: `{"employees": true, "attendance": false, "leave": true, ...}`
+- ตาราง `company_settings` มี RLS policy ที่อนุญาตให้ทุกคนอ่านได้ และ admin/hr เขียนได้ — เหมาะสมแล้ว
+- ลบการอ้างอิง localStorage (`module-settings` key) ออกทั้งหมด
+- เก็บ custom event `module-settings-changed` ไว้เป็น fallback สำหรับ in-page reactivity
 
