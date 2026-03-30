@@ -27,19 +27,8 @@ const Topbar = ({ onMenuToggle, pageTitle = "Dashboard", pageSubtitle = "ภา�
   const profileRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLDivElement>(null);
 
-  // Module settings for check-in visibility
-  const getModuleSettings = useCallback(() => {
-    try {
-      const saved = localStorage.getItem('module-settings');
-      return saved ? JSON.parse(saved) : {};
-    } catch { return {}; }
-  }, []);
-  const [moduleSettings, setModuleSettings] = useState<Record<string, boolean>>(getModuleSettings);
-  useEffect(() => {
-    const handler = () => setModuleSettings(getModuleSettings());
-    window.addEventListener('module-settings-changed', handler);
-    return () => window.removeEventListener('module-settings-changed', handler);
-  }, [getModuleSettings]);
+  // Module settings for check-in visibility (from DB via hook)
+  const { modules: moduleSettings } = useModuleSettings();
   const isCheckInEnabled = moduleSettings['check-in'] !== false;
 
   // Demo searchable items
