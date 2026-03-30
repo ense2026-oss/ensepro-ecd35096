@@ -385,7 +385,7 @@ const Reports = () => {
               <option key={m} value={m}>{m}</option>
             ))}
           </select>
-          <button className="ml-auto flex items-center gap-1.5 text-sm font-medium px-3 py-2 rounded-lg hover:bg-muted transition-colors" style={{ color: "#FF870F" }}>
+          <button onClick={() => { if (currentReport?.category === 'leave') fetchLeaveData(); }} className="ml-auto flex items-center gap-1.5 text-sm font-medium px-3 py-2 rounded-lg hover:bg-muted transition-colors" style={{ color: "#FF870F" }}>
             <RefreshCw className="w-3.5 h-3.5" />
             รีเฟรช
           </button>
