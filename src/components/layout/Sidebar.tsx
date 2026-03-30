@@ -1,9 +1,9 @@
-import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { usePendingCounts } from "@/contexts/PendingCountsContext";
 import { useBranding } from "@/contexts/BrandingContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/contexts/PermissionsContext";
+import { useModuleSettings } from "@/hooks/useModuleSettings";
 import EmployeeAvatar from "@/components/ui/employee-avatar";
 import {
   LayoutDashboard,
