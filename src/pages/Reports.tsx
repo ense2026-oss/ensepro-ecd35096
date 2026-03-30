@@ -224,6 +224,70 @@ const Reports = () => {
   const [filterMonth, setFilterMonth] = useState("กุมภาพันธ์");
   const [expandedCats, setExpandedCats] = useState<Record<string, boolean>>({ employees: true, organization: true, attendance: true, leave: true, shifts: true, payroll: true });
 
+  // --- Real leave data ---
+  const [leaveData, setLeaveData] = useState<any[]>([]);
+  const [leavePieData, setLeavePieData] = useState<{ name: string; value: number; color: string }[]>([]);
+  const [leaveLoading, setLeaveLoading] = useState(false);
+
+  const monthIndexMap: Record<string, number> = {
+    "มกราคม": 1, "กุมภาพันธ์": 2, "มีนาคม": 3, "เมษายน": 4,
+    "พฤษภาคม": 5, "มิถุนายน": 6, "กรกฎาคม": 7, "สิงหาคม": 8,
+    "กันยายน": 9, "ตุลาคม": 10, "พฤศจิกายน": 11, "ธันวาคม": 12,
+  };
+
+  const fetchLeaveData = useCallback(async () => {
+    setLeaveLoading(true);
+    try {
+      const ceYear = parseInt(filterYear) - 543;
+      const monthNum = monthIndexMap[filterMonth] || 1;
+      const startDate = `${ceYear}-${String(monthNum).padStart(2, '0')}-01`;
+      const endDay = new Date(ceYear, monthNum, 0).getDate();
+      const endDate = `${ceYear}-${String(monthNum).padStart(2, '0')}-${String(endDay).padStart(2, '0')}`;
+
+      const { data, error } = await supabase
+        .from("leave_requests")
+        .select("*, employees!leave_requests_employee_id_fkey(first_name, last_name, username)")
+        .gte("date_from", startDate)
+        .lte("date_from", endDate)
+        .order("date_from", { ascending: false });
+
+      if (error) throw error;
+
+      const rows = (data || []).map((r: any) => ({
+        name: r.employees ? `${r.employees.first_name} ${r.employees.last_name}` : "ไม่ทราบ",
+        empId: r.employees?.username || "-",
+        type: r.leave_type_name || "-",
+        from: r.date_from,
+        to: r.date_to,
+        days: Number(r.days),
+        status: r.status === "approved" ? "อนุมัติ" : r.status === "rejected" ? "ไม่อนุมัติ" : "รออนุมัติ",
+      }));
+      setLeaveData(rows);
+
+      // Build pie data
+      const typeMap: Record<string, number> = {};
+      rows.forEach((r: any) => {
+        typeMap[r.type] = (typeMap[r.type] || 0) + r.days;
+      });
+      const pieEntries = Object.entries(typeMap).map(([name, value], i) => ({
+        name,
+        value: value as number,
+        color: defaultLeavePieColors[i % defaultLeavePieColors.length],
+      }));
+      setLeavePieData(pieEntries);
+    } catch (err) {
+      console.error("Error fetching leave data:", err);
+    } finally {
+      setLeaveLoading(false);
+    }
+  }, [filterYear, filterMonth]);
+
+  useEffect(() => {
+    if (selectedReport?.startsWith("leave-")) {
+      fetchLeaveData();
+    }
+  }, [selectedReport, fetchLeaveData]);
+
   const toggleCat = (cat: string) => setExpandedCats((p) => ({ ...p, [cat]: !p[cat] }));
 
   const filteredReports = activeCategory ? reportTypes.filter((r) => r.category === activeCategory) : reportTypes;
