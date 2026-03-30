@@ -151,12 +151,7 @@ const mockAttendanceTable = [
   { id: "EMP-005", name: "ประภาส มั่นคง", date: "20/02/2569", checkIn: "08:00", checkOut: "17:00", status: "ปกติ", hours: "9:00" },
 ];
 
-const mockLeaveTable = [
-  { id: "EMP-001", name: "สมชาย ใจดี", type: "ลาป่วย", from: "18/02/2569", to: "18/02/2569", days: 1, status: "อนุมัติ" },
-  { id: "EMP-003", name: "วิชัย เก่งกาจ", type: "ลาพักร้อน", from: "25/02/2569", to: "28/02/2569", days: 4, status: "รออนุมัติ" },
-  { id: "EMP-004", name: "นภา สดใส", type: "ลากิจ", from: "22/02/2569", to: "22/02/2569", days: 1, status: "อนุมัติ" },
-  { id: "EMP-002", name: "สมหญิง รักงาน", type: "ลาป่วย", from: "15/02/2569", to: "16/02/2569", days: 2, status: "อนุมัติ" },
-];
+// mockLeaveTable removed - now fetched from database
 
 // --- Shift mock data ---
 const shiftDistribution = [
