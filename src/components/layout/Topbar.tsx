@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
+import { useModuleSettings } from "@/hooks/useModuleSettings";
 import { Search, Bell, ChevronDown, Settings, User, LogOut, Menu, MapPin, Clock, CalendarDays, Users, FileText, LayoutDashboard, GitBranch } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
