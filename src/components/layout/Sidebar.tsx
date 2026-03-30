@@ -1,9 +1,9 @@
-import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { usePendingCounts } from "@/contexts/PendingCountsContext";
 import { useBranding } from "@/contexts/BrandingContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/contexts/PermissionsContext";
+import { useModuleSettings } from "@/hooks/useModuleSettings";
 import EmployeeAvatar from "@/components/ui/employee-avatar";
 import {
   LayoutDashboard,
@@ -75,22 +75,8 @@ const Sidebar = ({ collapsed, onToggle, onNavigate }: SidebarProps) => {
   const { currentUser, role, logout } = useAuth();
   const { canAccessRoute, isSelfOnly: permSelfOnly } = usePermissions();
 
-  // Module settings: listen for real-time changes
-  const [enabledModules, setEnabledModules] = useState<Record<string, boolean>>(() => {
-    try {
-      const saved = localStorage.getItem("module-settings");
-      return saved ? JSON.parse(saved) : {};
-    } catch { return {}; }
-  });
-
-  useEffect(() => {
-    const handler = (e: Event) => {
-      const detail = (e as CustomEvent).detail;
-      if (detail) setEnabledModules(detail);
-    };
-    window.addEventListener("module-settings-changed", handler);
-    return () => window.removeEventListener("module-settings-changed", handler);
-  }, []);
+  // Module settings from DB with realtime
+  const { modules: enabledModules } = useModuleSettings();
 
   const pathToModule: Record<string, string> = {
     "/employees": "employees",
