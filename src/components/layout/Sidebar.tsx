@@ -45,7 +45,7 @@ const allNavItems = [
     items: [
       { path: "/attendance", label: "บันทึกเวลา", icon: Clock },
       { path: "/leave", label: "การลางาน", icon: CalendarDays },
-      { path: "/overtime", label: "ล่วงเวลา", icon: Clock },
+      { path: "/overtime", label: "ทำงานโอที", icon: Clock },
       { path: "/check-in", label: "เช็คอิน", icon: MapPin },
       { path: "/shift-management", label: "จัดการกะ", icon: CalendarDays },
     ],
