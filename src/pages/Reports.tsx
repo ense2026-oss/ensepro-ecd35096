@@ -577,28 +577,48 @@ const Reports = () => {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <div className="rounded-2xl border border-border bg-card p-5">
               <h3 className="text-sm font-bold mb-4">สัดส่วนการลาตามประเภท</h3>
-              <ResponsiveContainer width="100%" height={260}>
-                <RechartsPie>
-                  <Pie data={leavePieData} cx="50%" cy="50%" innerRadius={60} outerRadius={100} paddingAngle={3} dataKey="value" label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
-                    {leavePieData.map((entry, i) => (
-                      <Cell key={i} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </RechartsPie>
-              </ResponsiveContainer>
+              {leavePieData.length > 0 ? (
+                <ResponsiveContainer width="100%" height={260}>
+                  <RechartsPie>
+                    <Pie data={leavePieData} cx="50%" cy="50%" innerRadius={60} outerRadius={100} paddingAngle={3} dataKey="value" label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
+                      {leavePieData.map((entry, i) => (
+                        <Cell key={i} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </RechartsPie>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-[260px] flex items-center justify-center text-muted-foreground text-sm">ไม่มีข้อมูล</div>
+              )}
             </div>
             <div className="rounded-2xl border border-border bg-card p-5">
-              <h3 className="text-sm font-bold mb-4">จำนวนวันลาแยกตามเดือน</h3>
-              <ResponsiveContainer width="100%" height={260}>
-                <BarChart data={attendanceMonthly.map((d, i) => ({ month: d.month, วันลา: [12, 8, 15, 20, 10, 7][i] }))}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis dataKey="month" fontSize={12} />
-                  <YAxis fontSize={12} />
-                  <Tooltip />
-                  <Bar dataKey="วันลา" fill="#FF870F" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+              <h3 className="text-sm font-bold mb-4">
+                {selectedReport === "leave-yearly" ? "จำนวนวันลาแยกตามเดือน (ข้อมูลจริง)" : "จำนวนวันลาแยกตามเดือน"}
+              </h3>
+              {(selectedReport === "leave-yearly" && leaveYearlyChartData.length > 0) ? (
+                <ResponsiveContainer width="100%" height={260}>
+                  <BarChart data={leaveYearlyChartData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis dataKey="month" fontSize={12} />
+                    <YAxis fontSize={12} />
+                    <Tooltip />
+                    <Bar dataKey="รวม" fill="#FF870F" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : leaveMonthlyBarData.length > 0 ? (
+                <ResponsiveContainer width="100%" height={260}>
+                  <BarChart data={leaveMonthlyBarData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis dataKey="month" fontSize={12} />
+                    <YAxis fontSize={12} />
+                    <Tooltip />
+                    <Bar dataKey="รวม" fill="#FF870F" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-[260px] flex items-center justify-center text-muted-foreground text-sm">ไม่มีข้อมูล</div>
+              )}
             </div>
           </div>
         )}
