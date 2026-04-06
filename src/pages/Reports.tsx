@@ -228,12 +228,18 @@ const Reports = () => {
   const [leaveData, setLeaveData] = useState<any[]>([]);
   const [leavePieData, setLeavePieData] = useState<{ name: string; value: number; color: string }[]>([]);
   const [leaveLoading, setLeaveLoading] = useState(false);
+  const [leaveBalanceData, setLeaveBalanceData] = useState<any[]>([]);
+  const [leaveYearlyData, setLeaveYearlyData] = useState<any[]>([]);
+  const [leaveYearlyChartData, setLeaveYearlyChartData] = useState<any[]>([]);
+  const [leaveMonthlyBarData, setLeaveMonthlyBarData] = useState<any[]>([]);
 
   const monthIndexMap: Record<string, number> = {
     "มกราคม": 1, "กุมภาพันธ์": 2, "มีนาคม": 3, "เมษายน": 4,
     "พฤษภาคม": 5, "มิถุนายน": 6, "กรกฎาคม": 7, "สิงหาคม": 8,
     "กันยายน": 9, "ตุลาคม": 10, "พฤศจิกายน": 11, "ธันวาคม": 12,
   };
+
+  const monthShortNames = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
 
   const fetchLeaveData = useCallback(async () => {
     setLeaveLoading(true);
@@ -282,11 +288,150 @@ const Reports = () => {
     }
   }, [filterYear, filterMonth]);
 
-  useEffect(() => {
-    if (selectedReport?.startsWith("leave-")) {
-      fetchLeaveData();
+  // Fetch leave balance (quota remaining) for all employees
+  const fetchLeaveBalance = useCallback(async () => {
+    setLeaveLoading(true);
+    try {
+      const ceYear = parseInt(filterYear) - 543;
+      const yearStart = `${ceYear}-01-01`;
+      const yearEnd = `${ceYear}-12-31`;
+
+      const [typesRes, requestsRes, empsRes] = await Promise.all([
+        supabase.from("leave_types").select("*").order("sort_order"),
+        supabase.from("leave_requests").select("employee_id, leave_type_id, leave_type_name, days, status")
+          .gte("date_from", yearStart).lte("date_from", yearEnd)
+          .neq("status", "rejected"),
+        supabase.from("employees").select("id, first_name, last_name, username").eq("status", "active"),
+      ]);
+
+      const leaveTypes = typesRes.data || [];
+      const requests = requestsRes.data || [];
+      const emps = empsRes.data || [];
+
+      // Group used days per employee per leave type
+      const usedMap: Record<string, Record<string, number>> = {};
+      requests.forEach((r: any) => {
+        if (!usedMap[r.employee_id]) usedMap[r.employee_id] = {};
+        const key = r.leave_type_id;
+        usedMap[r.employee_id][key] = (usedMap[r.employee_id][key] || 0) + Number(r.days);
+      });
+
+      const balanceRows = emps.map((emp: any) => {
+        const row: any = {
+          empId: emp.username || "-",
+          name: `${emp.first_name} ${emp.last_name}`,
+        };
+        let totalQuota = 0;
+        let totalUsed = 0;
+        leaveTypes.forEach((lt: any) => {
+          const used = usedMap[emp.id]?.[lt.id] || 0;
+          row[`${lt.name}_quota`] = lt.quota;
+          row[`${lt.name}_used`] = used;
+          row[`${lt.name}_remaining`] = lt.quota - used;
+          totalQuota += lt.quota;
+          totalUsed += used;
+        });
+        row.totalQuota = totalQuota;
+        row.totalUsed = totalUsed;
+        row.totalRemaining = totalQuota - totalUsed;
+        return row;
+      });
+
+      setLeaveBalanceData(balanceRows);
+
+      // Build pie for balance overview
+      const overallTypeUsage: Record<string, number> = {};
+      requests.forEach((r: any) => {
+        const name = r.leave_type_name || "อื่นๆ";
+        overallTypeUsage[name] = (overallTypeUsage[name] || 0) + Number(r.days);
+      });
+      const pieEntries = Object.entries(overallTypeUsage).map(([name, value], i) => ({
+        name, value: value as number,
+        color: leaveTypes.find((lt: any) => lt.name === name)?.color || defaultLeavePieColors[i % defaultLeavePieColors.length],
+      }));
+      setLeavePieData(pieEntries);
+    } catch (err) {
+      console.error("Error fetching leave balance:", err);
+    } finally {
+      setLeaveLoading(false);
     }
-  }, [selectedReport, fetchLeaveData]);
+  }, [filterYear]);
+
+  // Fetch yearly leave summary
+  const fetchLeaveYearly = useCallback(async () => {
+    setLeaveLoading(true);
+    try {
+      const ceYear = parseInt(filterYear) - 543;
+      const yearStart = `${ceYear}-01-01`;
+      const yearEnd = `${ceYear}-12-31`;
+
+      const [requestsRes, typesRes] = await Promise.all([
+        supabase.from("leave_requests").select("date_from, leave_type_name, days, status")
+          .gte("date_from", yearStart).lte("date_from", yearEnd)
+          .neq("status", "rejected"),
+        supabase.from("leave_types").select("name, color").order("sort_order"),
+      ]);
+
+      const requests = requestsRes.data || [];
+      const leaveTypes = typesRes.data || [];
+      const typeNames = leaveTypes.map((lt: any) => lt.name);
+
+      // Aggregate by month
+      const monthlyMap: Record<number, Record<string, number>> = {};
+      for (let m = 1; m <= 12; m++) monthlyMap[m] = {};
+
+      requests.forEach((r: any) => {
+        const month = parseInt(r.date_from.split("-")[1]);
+        const name = r.leave_type_name || "อื่นๆ";
+        monthlyMap[month][name] = (monthlyMap[month][name] || 0) + Number(r.days);
+      });
+
+      const chartData = monthShortNames.map((label, i) => {
+        const row: any = { month: label };
+        let total = 0;
+        typeNames.forEach((tn: string) => {
+          const val = monthlyMap[i + 1][tn] || 0;
+          row[tn] = val;
+          total += val;
+        });
+        row["รวม"] = total;
+        return row;
+      });
+
+      setLeaveYearlyChartData(chartData);
+      setLeaveMonthlyBarData(chartData);
+
+      // Build yearly summary table (by type)
+      const yearlyRows = typeNames.map((tn: string) => {
+        let total = 0;
+        const monthValues: Record<string, number> = {};
+        monthShortNames.forEach((label, i) => {
+          const val = monthlyMap[i + 1][tn] || 0;
+          monthValues[label] = val;
+          total += val;
+        });
+        return { type: tn, ...monthValues, total, color: leaveTypes.find((lt: any) => lt.name === tn)?.color || "#6B7280" };
+      });
+      setLeaveYearlyData(yearlyRows);
+
+      // Pie data for yearly
+      const pieEntries = yearlyRows.filter(r => r.total > 0).map((r, i) => ({
+        name: r.type, value: r.total,
+        color: r.color || defaultLeavePieColors[i % defaultLeavePieColors.length],
+      }));
+      setLeavePieData(pieEntries);
+    } catch (err) {
+      console.error("Error fetching yearly leave:", err);
+    } finally {
+      setLeaveLoading(false);
+    }
+  }, [filterYear]);
+
+  useEffect(() => {
+    if (selectedReport === "leave-summary") fetchLeaveData();
+    else if (selectedReport === "leave-balance") fetchLeaveBalance();
+    else if (selectedReport === "leave-yearly") fetchLeaveYearly();
+  }, [selectedReport, fetchLeaveData, fetchLeaveBalance, fetchLeaveYearly]);
 
   const toggleCat = (cat: string) => setExpandedCats((p) => ({ ...p, [cat]: !p[cat] }));
 
@@ -385,7 +530,11 @@ const Reports = () => {
               <option key={m} value={m}>{m}</option>
             ))}
           </select>
-          <button onClick={() => { if (currentReport?.category === 'leave') fetchLeaveData(); }} className="ml-auto flex items-center gap-1.5 text-sm font-medium px-3 py-2 rounded-lg hover:bg-muted transition-colors" style={{ color: "#FF870F" }}>
+          <button onClick={() => { 
+            if (selectedReport === 'leave-summary') fetchLeaveData();
+            else if (selectedReport === 'leave-balance') fetchLeaveBalance();
+            else if (selectedReport === 'leave-yearly') fetchLeaveYearly();
+          }} className="ml-auto flex items-center gap-1.5 text-sm font-medium px-3 py-2 rounded-lg hover:bg-muted transition-colors" style={{ color: "#FF870F" }}>
             <RefreshCw className="w-3.5 h-3.5" />
             รีเฟรช
           </button>
@@ -428,28 +577,48 @@ const Reports = () => {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <div className="rounded-2xl border border-border bg-card p-5">
               <h3 className="text-sm font-bold mb-4">สัดส่วนการลาตามประเภท</h3>
-              <ResponsiveContainer width="100%" height={260}>
-                <RechartsPie>
-                  <Pie data={leavePieData} cx="50%" cy="50%" innerRadius={60} outerRadius={100} paddingAngle={3} dataKey="value" label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
-                    {leavePieData.map((entry, i) => (
-                      <Cell key={i} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </RechartsPie>
-              </ResponsiveContainer>
+              {leavePieData.length > 0 ? (
+                <ResponsiveContainer width="100%" height={260}>
+                  <RechartsPie>
+                    <Pie data={leavePieData} cx="50%" cy="50%" innerRadius={60} outerRadius={100} paddingAngle={3} dataKey="value" label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
+                      {leavePieData.map((entry, i) => (
+                        <Cell key={i} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </RechartsPie>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-[260px] flex items-center justify-center text-muted-foreground text-sm">ไม่มีข้อมูล</div>
+              )}
             </div>
             <div className="rounded-2xl border border-border bg-card p-5">
-              <h3 className="text-sm font-bold mb-4">จำนวนวันลาแยกตามเดือน</h3>
-              <ResponsiveContainer width="100%" height={260}>
-                <BarChart data={attendanceMonthly.map((d, i) => ({ month: d.month, วันลา: [12, 8, 15, 20, 10, 7][i] }))}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis dataKey="month" fontSize={12} />
-                  <YAxis fontSize={12} />
-                  <Tooltip />
-                  <Bar dataKey="วันลา" fill="#FF870F" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+              <h3 className="text-sm font-bold mb-4">
+                {selectedReport === "leave-yearly" ? "จำนวนวันลาแยกตามเดือน (ข้อมูลจริง)" : "จำนวนวันลาแยกตามเดือน"}
+              </h3>
+              {(selectedReport === "leave-yearly" && leaveYearlyChartData.length > 0) ? (
+                <ResponsiveContainer width="100%" height={260}>
+                  <BarChart data={leaveYearlyChartData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis dataKey="month" fontSize={12} />
+                    <YAxis fontSize={12} />
+                    <Tooltip />
+                    <Bar dataKey="รวม" fill="#FF870F" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : leaveMonthlyBarData.length > 0 ? (
+                <ResponsiveContainer width="100%" height={260}>
+                  <BarChart data={leaveMonthlyBarData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis dataKey="month" fontSize={12} />
+                    <YAxis fontSize={12} />
+                    <Tooltip />
+                    <Bar dataKey="รวม" fill="#FF870F" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-[260px] flex items-center justify-center text-muted-foreground text-sm">ไม่มีข้อมูล</div>
+              )}
             </div>
           </div>
         )}
@@ -624,7 +793,7 @@ const Reports = () => {
         <div className="rounded-2xl border border-border bg-card overflow-hidden">
           <div className="p-4 border-b border-border flex items-center justify-between">
             <h3 className="text-sm font-bold">ข้อมูลรายละเอียด</h3>
-            <span className="text-xs text-muted-foreground">แสดง Mock Data</span>
+            <span className="text-xs text-muted-foreground">{cat === "leave" ? "ข้อมูลจริงจากระบบ" : "แสดง Mock Data"}</span>
           </div>
           <div className="overflow-x-auto">
             {(cat === "employees" || cat === "organization") && (
@@ -695,7 +864,7 @@ const Reports = () => {
                 </tbody>
               </table>
             )}
-            {cat === "leave" && (
+            {cat === "leave" && selectedReport === "leave-summary" && (
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-muted/50">
@@ -739,6 +908,101 @@ const Reports = () => {
                 </tbody>
               </table>
             )}
+            {cat === "leave" && selectedReport === "leave-balance" && (() => {
+              const leaveTypeNames = leaveBalanceData.length > 0
+                ? Object.keys(leaveBalanceData[0]).filter(k => k.endsWith("_quota")).map(k => k.replace("_quota", ""))
+                : [];
+              return (
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-muted/50">
+                      <th className="text-left px-4 py-3 font-semibold">รหัส</th>
+                      <th className="text-left px-4 py-3 font-semibold">ชื่อ-สกุล</th>
+                      {leaveTypeNames.map(tn => (
+                        <th key={tn} className="text-center px-3 py-3 font-semibold" colSpan={1}>{tn}<br/><span className="text-xs font-normal text-muted-foreground">คงเหลือ/โควต้า</span></th>
+                      ))}
+                      <th className="text-center px-3 py-3 font-semibold">รวม<br/><span className="text-xs font-normal text-muted-foreground">คงเหลือ/โควต้า</span></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {leaveLoading ? (
+                      <tr><td colSpan={leaveTypeNames.length + 3} className="px-4 py-8 text-center text-muted-foreground">กำลังโหลดข้อมูล...</td></tr>
+                    ) : leaveBalanceData.length === 0 ? (
+                      <tr><td colSpan={leaveTypeNames.length + 3} className="px-4 py-8 text-center text-muted-foreground">ไม่พบข้อมูล</td></tr>
+                    ) : (
+                      leaveBalanceData.map((row: any, i: number) => (
+                        <tr key={i} className="border-t border-border hover:bg-muted/30 transition-colors">
+                          <td className="px-4 py-3 font-mono text-xs">{row.empId}</td>
+                          <td className="px-4 py-3 font-medium">{row.name}</td>
+                          {leaveTypeNames.map(tn => (
+                            <td key={tn} className="px-3 py-3 text-center">
+                              <span className={`font-semibold ${row[`${tn}_remaining`] <= 0 ? 'text-destructive' : ''}`}>
+                                {row[`${tn}_remaining`]}
+                              </span>
+                              <span className="text-muted-foreground">/{row[`${tn}_quota`]}</span>
+                            </td>
+                          ))}
+                          <td className="px-3 py-3 text-center">
+                            <span className={`font-bold ${row.totalRemaining <= 0 ? 'text-destructive' : ''}`}>{row.totalRemaining}</span>
+                            <span className="text-muted-foreground">/{row.totalQuota}</span>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              );
+            })()}
+            {cat === "leave" && selectedReport === "leave-yearly" && (() => {
+              return (
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-muted/50">
+                      <th className="text-left px-4 py-3 font-semibold">ประเภทการลา</th>
+                      {monthShortNames.map(m => (
+                        <th key={m} className="text-center px-2 py-3 font-semibold text-xs">{m}</th>
+                      ))}
+                      <th className="text-center px-3 py-3 font-semibold">รวม</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {leaveLoading ? (
+                      <tr><td colSpan={14} className="px-4 py-8 text-center text-muted-foreground">กำลังโหลดข้อมูล...</td></tr>
+                    ) : leaveYearlyData.length === 0 ? (
+                      <tr><td colSpan={14} className="px-4 py-8 text-center text-muted-foreground">ไม่พบข้อมูลการลาในปีที่เลือก</td></tr>
+                    ) : (
+                      leaveYearlyData.map((row: any, i: number) => (
+                        <tr key={i} className="border-t border-border hover:bg-muted/30 transition-colors">
+                          <td className="px-4 py-3 font-medium">
+                            <span className="inline-block w-3 h-3 rounded-full mr-2" style={{ background: row.color }} />
+                            {row.type}
+                          </td>
+                          {monthShortNames.map(m => (
+                            <td key={m} className="px-2 py-3 text-center tabular-nums">{row[m] || 0}</td>
+                          ))}
+                          <td className="px-3 py-3 text-center font-bold tabular-nums">{row.total}</td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                  {leaveYearlyData.length > 0 && (
+                    <tfoot>
+                      <tr className="border-t-2 font-semibold" style={{ background: "hsl(var(--muted) / 0.5)" }}>
+                        <td className="px-4 py-3">รวมทั้งหมด</td>
+                        {monthShortNames.map(m => (
+                          <td key={m} className="px-2 py-3 text-center tabular-nums">
+                            {leaveYearlyData.reduce((sum: number, r: any) => sum + (r[m] || 0), 0)}
+                          </td>
+                        ))}
+                        <td className="px-3 py-3 text-center font-bold tabular-nums" style={{ color: "#FF870F" }}>
+                          {leaveYearlyData.reduce((sum: number, r: any) => sum + r.total, 0)}
+                        </td>
+                      </tr>
+                    </tfoot>
+                  )}
+                </table>
+              );
+            })()}
             {cat === "shifts" && (
               <table className="w-full text-sm">
                 <thead>
