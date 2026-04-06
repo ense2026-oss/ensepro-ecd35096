@@ -864,7 +864,7 @@ const Reports = () => {
                 </tbody>
               </table>
             )}
-            {cat === "leave" && (
+            {cat === "leave" && selectedReport === "leave-summary" && (
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-muted/50">
@@ -908,6 +908,101 @@ const Reports = () => {
                 </tbody>
               </table>
             )}
+            {cat === "leave" && selectedReport === "leave-balance" && (() => {
+              const leaveTypeNames = leaveBalanceData.length > 0
+                ? Object.keys(leaveBalanceData[0]).filter(k => k.endsWith("_quota")).map(k => k.replace("_quota", ""))
+                : [];
+              return (
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-muted/50">
+                      <th className="text-left px-4 py-3 font-semibold">รหัส</th>
+                      <th className="text-left px-4 py-3 font-semibold">ชื่อ-สกุล</th>
+                      {leaveTypeNames.map(tn => (
+                        <th key={tn} className="text-center px-3 py-3 font-semibold" colSpan={1}>{tn}<br/><span className="text-xs font-normal text-muted-foreground">คงเหลือ/โควต้า</span></th>
+                      ))}
+                      <th className="text-center px-3 py-3 font-semibold">รวม<br/><span className="text-xs font-normal text-muted-foreground">คงเหลือ/โควต้า</span></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {leaveLoading ? (
+                      <tr><td colSpan={leaveTypeNames.length + 3} className="px-4 py-8 text-center text-muted-foreground">กำลังโหลดข้อมูล...</td></tr>
+                    ) : leaveBalanceData.length === 0 ? (
+                      <tr><td colSpan={leaveTypeNames.length + 3} className="px-4 py-8 text-center text-muted-foreground">ไม่พบข้อมูล</td></tr>
+                    ) : (
+                      leaveBalanceData.map((row: any, i: number) => (
+                        <tr key={i} className="border-t border-border hover:bg-muted/30 transition-colors">
+                          <td className="px-4 py-3 font-mono text-xs">{row.empId}</td>
+                          <td className="px-4 py-3 font-medium">{row.name}</td>
+                          {leaveTypeNames.map(tn => (
+                            <td key={tn} className="px-3 py-3 text-center">
+                              <span className={`font-semibold ${row[`${tn}_remaining`] <= 0 ? 'text-destructive' : ''}`}>
+                                {row[`${tn}_remaining`]}
+                              </span>
+                              <span className="text-muted-foreground">/{row[`${tn}_quota`]}</span>
+                            </td>
+                          ))}
+                          <td className="px-3 py-3 text-center">
+                            <span className={`font-bold ${row.totalRemaining <= 0 ? 'text-destructive' : ''}`}>{row.totalRemaining}</span>
+                            <span className="text-muted-foreground">/{row.totalQuota}</span>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              );
+            })()}
+            {cat === "leave" && selectedReport === "leave-yearly" && (() => {
+              return (
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-muted/50">
+                      <th className="text-left px-4 py-3 font-semibold">ประเภทการลา</th>
+                      {monthShortNames.map(m => (
+                        <th key={m} className="text-center px-2 py-3 font-semibold text-xs">{m}</th>
+                      ))}
+                      <th className="text-center px-3 py-3 font-semibold">รวม</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {leaveLoading ? (
+                      <tr><td colSpan={14} className="px-4 py-8 text-center text-muted-foreground">กำลังโหลดข้อมูล...</td></tr>
+                    ) : leaveYearlyData.length === 0 ? (
+                      <tr><td colSpan={14} className="px-4 py-8 text-center text-muted-foreground">ไม่พบข้อมูลการลาในปีที่เลือก</td></tr>
+                    ) : (
+                      leaveYearlyData.map((row: any, i: number) => (
+                        <tr key={i} className="border-t border-border hover:bg-muted/30 transition-colors">
+                          <td className="px-4 py-3 font-medium">
+                            <span className="inline-block w-3 h-3 rounded-full mr-2" style={{ background: row.color }} />
+                            {row.type}
+                          </td>
+                          {monthShortNames.map(m => (
+                            <td key={m} className="px-2 py-3 text-center tabular-nums">{row[m] || 0}</td>
+                          ))}
+                          <td className="px-3 py-3 text-center font-bold tabular-nums">{row.total}</td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                  {leaveYearlyData.length > 0 && (
+                    <tfoot>
+                      <tr className="border-t-2 font-semibold" style={{ background: "hsl(var(--muted) / 0.5)" }}>
+                        <td className="px-4 py-3">รวมทั้งหมด</td>
+                        {monthShortNames.map(m => (
+                          <td key={m} className="px-2 py-3 text-center tabular-nums">
+                            {leaveYearlyData.reduce((sum: number, r: any) => sum + (r[m] || 0), 0)}
+                          </td>
+                        ))}
+                        <td className="px-3 py-3 text-center font-bold tabular-nums" style={{ color: "#FF870F" }}>
+                          {leaveYearlyData.reduce((sum: number, r: any) => sum + r.total, 0)}
+                        </td>
+                      </tr>
+                    </tfoot>
+                  )}
+                </table>
+              );
+            })()}
             {cat === "shifts" && (
               <table className="w-full text-sm">
                 <thead>
