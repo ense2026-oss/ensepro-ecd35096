@@ -6,6 +6,11 @@ import {
   DEFAULT_TAX_DEDUCTION, type TaxConfig,
 } from "@/utils/taxCalculation";
 import { exportPnd1Excel, exportPnd1Pdf, exportAllPayslipsExcel } from "@/utils/exportPayroll";
+import {
+  exportLeaveSummaryExcel, exportLeaveSummaryPdf,
+  exportLeaveBalanceExcel, exportLeaveBalancePdf,
+  exportLeaveYearlyExcel, exportLeaveYearlyPdf,
+} from "@/utils/exportLeaveReports";
 import { toast } from "sonner";
 import {
   Users,
