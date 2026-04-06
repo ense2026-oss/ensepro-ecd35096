@@ -228,12 +228,18 @@ const Reports = () => {
   const [leaveData, setLeaveData] = useState<any[]>([]);
   const [leavePieData, setLeavePieData] = useState<{ name: string; value: number; color: string }[]>([]);
   const [leaveLoading, setLeaveLoading] = useState(false);
+  const [leaveBalanceData, setLeaveBalanceData] = useState<any[]>([]);
+  const [leaveYearlyData, setLeaveYearlyData] = useState<any[]>([]);
+  const [leaveYearlyChartData, setLeaveYearlyChartData] = useState<any[]>([]);
+  const [leaveMonthlyBarData, setLeaveMonthlyBarData] = useState<any[]>([]);
 
   const monthIndexMap: Record<string, number> = {
     "มกราคม": 1, "กุมภาพันธ์": 2, "มีนาคม": 3, "เมษายน": 4,
     "พฤษภาคม": 5, "มิถุนายน": 6, "กรกฎาคม": 7, "สิงหาคม": 8,
     "กันยายน": 9, "ตุลาคม": 10, "พฤศจิกายน": 11, "ธันวาคม": 12,
   };
+
+  const monthShortNames = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
 
   const fetchLeaveData = useCallback(async () => {
     setLeaveLoading(true);
@@ -282,11 +288,150 @@ const Reports = () => {
     }
   }, [filterYear, filterMonth]);
 
-  useEffect(() => {
-    if (selectedReport?.startsWith("leave-")) {
-      fetchLeaveData();
+  // Fetch leave balance (quota remaining) for all employees
+  const fetchLeaveBalance = useCallback(async () => {
+    setLeaveLoading(true);
+    try {
+      const ceYear = parseInt(filterYear) - 543;
+      const yearStart = `${ceYear}-01-01`;
+      const yearEnd = `${ceYear}-12-31`;
+
+      const [typesRes, requestsRes, empsRes] = await Promise.all([
+        supabase.from("leave_types").select("*").order("sort_order"),
+        supabase.from("leave_requests").select("employee_id, leave_type_id, leave_type_name, days, status")
+          .gte("date_from", yearStart).lte("date_from", yearEnd)
+          .neq("status", "rejected"),
+        supabase.from("employees").select("id, first_name, last_name, username").eq("status", "active"),
+      ]);
+
+      const leaveTypes = typesRes.data || [];
+      const requests = requestsRes.data || [];
+      const emps = empsRes.data || [];
+
+      // Group used days per employee per leave type
+      const usedMap: Record<string, Record<string, number>> = {};
+      requests.forEach((r: any) => {
+        if (!usedMap[r.employee_id]) usedMap[r.employee_id] = {};
+        const key = r.leave_type_id;
+        usedMap[r.employee_id][key] = (usedMap[r.employee_id][key] || 0) + Number(r.days);
+      });
+
+      const balanceRows = emps.map((emp: any) => {
+        const row: any = {
+          empId: emp.username || "-",
+          name: `${emp.first_name} ${emp.last_name}`,
+        };
+        let totalQuota = 0;
+        let totalUsed = 0;
+        leaveTypes.forEach((lt: any) => {
+          const used = usedMap[emp.id]?.[lt.id] || 0;
+          row[`${lt.name}_quota`] = lt.quota;
+          row[`${lt.name}_used`] = used;
+          row[`${lt.name}_remaining`] = lt.quota - used;
+          totalQuota += lt.quota;
+          totalUsed += used;
+        });
+        row.totalQuota = totalQuota;
+        row.totalUsed = totalUsed;
+        row.totalRemaining = totalQuota - totalUsed;
+        return row;
+      });
+
+      setLeaveBalanceData(balanceRows);
+
+      // Build pie for balance overview
+      const overallTypeUsage: Record<string, number> = {};
+      requests.forEach((r: any) => {
+        const name = r.leave_type_name || "อื่นๆ";
+        overallTypeUsage[name] = (overallTypeUsage[name] || 0) + Number(r.days);
+      });
+      const pieEntries = Object.entries(overallTypeUsage).map(([name, value], i) => ({
+        name, value: value as number,
+        color: leaveTypes.find((lt: any) => lt.name === name)?.color || defaultLeavePieColors[i % defaultLeavePieColors.length],
+      }));
+      setLeavePieData(pieEntries);
+    } catch (err) {
+      console.error("Error fetching leave balance:", err);
+    } finally {
+      setLeaveLoading(false);
     }
-  }, [selectedReport, fetchLeaveData]);
+  }, [filterYear]);
+
+  // Fetch yearly leave summary
+  const fetchLeaveYearly = useCallback(async () => {
+    setLeaveLoading(true);
+    try {
+      const ceYear = parseInt(filterYear) - 543;
+      const yearStart = `${ceYear}-01-01`;
+      const yearEnd = `${ceYear}-12-31`;
+
+      const [requestsRes, typesRes] = await Promise.all([
+        supabase.from("leave_requests").select("date_from, leave_type_name, days, status")
+          .gte("date_from", yearStart).lte("date_from", yearEnd)
+          .neq("status", "rejected"),
+        supabase.from("leave_types").select("name, color").order("sort_order"),
+      ]);
+
+      const requests = requestsRes.data || [];
+      const leaveTypes = typesRes.data || [];
+      const typeNames = leaveTypes.map((lt: any) => lt.name);
+
+      // Aggregate by month
+      const monthlyMap: Record<number, Record<string, number>> = {};
+      for (let m = 1; m <= 12; m++) monthlyMap[m] = {};
+
+      requests.forEach((r: any) => {
+        const month = parseInt(r.date_from.split("-")[1]);
+        const name = r.leave_type_name || "อื่นๆ";
+        monthlyMap[month][name] = (monthlyMap[month][name] || 0) + Number(r.days);
+      });
+
+      const chartData = monthShortNames.map((label, i) => {
+        const row: any = { month: label };
+        let total = 0;
+        typeNames.forEach((tn: string) => {
+          const val = monthlyMap[i + 1][tn] || 0;
+          row[tn] = val;
+          total += val;
+        });
+        row["รวม"] = total;
+        return row;
+      });
+
+      setLeaveYearlyChartData(chartData);
+      setLeaveMonthlyBarData(chartData);
+
+      // Build yearly summary table (by type)
+      const yearlyRows = typeNames.map((tn: string) => {
+        let total = 0;
+        const monthValues: Record<string, number> = {};
+        monthShortNames.forEach((label, i) => {
+          const val = monthlyMap[i + 1][tn] || 0;
+          monthValues[label] = val;
+          total += val;
+        });
+        return { type: tn, ...monthValues, total, color: leaveTypes.find((lt: any) => lt.name === tn)?.color || "#6B7280" };
+      });
+      setLeaveYearlyData(yearlyRows);
+
+      // Pie data for yearly
+      const pieEntries = yearlyRows.filter(r => r.total > 0).map((r, i) => ({
+        name: r.type, value: r.total,
+        color: r.color || defaultLeavePieColors[i % defaultLeavePieColors.length],
+      }));
+      setLeavePieData(pieEntries);
+    } catch (err) {
+      console.error("Error fetching yearly leave:", err);
+    } finally {
+      setLeaveLoading(false);
+    }
+  }, [filterYear]);
+
+  useEffect(() => {
+    if (selectedReport === "leave-summary") fetchLeaveData();
+    else if (selectedReport === "leave-balance") fetchLeaveBalance();
+    else if (selectedReport === "leave-yearly") fetchLeaveYearly();
+  }, [selectedReport, fetchLeaveData, fetchLeaveBalance, fetchLeaveYearly]);
 
   const toggleCat = (cat: string) => setExpandedCats((p) => ({ ...p, [cat]: !p[cat] }));
 
