@@ -445,6 +445,38 @@ const Reports = () => {
   const handleExport = async (format: ExportFormat) => {
     const reportId = currentReport?.id;
 
+    // Leave-specific exports
+    if (reportId === "leave-summary") {
+      if (format === "excel") {
+        exportLeaveSummaryExcel(leaveData, filterMonth, filterYear);
+        toast.success("ส่งออกสรุปการลาประจำเดือนเป็น Excel สำเร็จ");
+      } else {
+        await exportLeaveSummaryPdf(leaveData, filterMonth, filterYear);
+        toast.success("ส่งออกสรุปการลาประจำเดือนเป็น PDF สำเร็จ");
+      }
+      return;
+    }
+    if (reportId === "leave-balance") {
+      if (format === "excel") {
+        exportLeaveBalanceExcel(leaveBalanceData, filterYear);
+        toast.success("ส่งออกโควต้าการลาเป็น Excel สำเร็จ");
+      } else {
+        await exportLeaveBalancePdf(leaveBalanceData, filterYear);
+        toast.success("ส่งออกโควต้าการลาเป็น PDF สำเร็จ");
+      }
+      return;
+    }
+    if (reportId === "leave-yearly") {
+      if (format === "excel") {
+        exportLeaveYearlyExcel(leaveYearlyData, filterYear);
+        toast.success("ส่งออกสรุปการลาประจำปีเป็น Excel สำเร็จ");
+      } else {
+        await exportLeaveYearlyPdf(leaveYearlyData, filterYear);
+        toast.success("ส่งออกสรุปการลาประจำปีเป็น PDF สำเร็จ");
+      }
+      return;
+    }
+
     // Payroll-specific exports
     if (reportId === "payroll-pnd1") {
       if (format === "excel") {
