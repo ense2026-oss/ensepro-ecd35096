@@ -30,18 +30,8 @@ Deno.serve(async (req) => {
 
     const token = authHeader.replace("Bearer ", "");
 
-    // Verify token using getUser (most reliable method)
-    const { data: { user: callingUser }, error: userError } = await supabaseAdmin.auth.admin.getUserById(
-      // First decode the token to get the user ID
-      (() => {
-        try {
-          const payload = JSON.parse(atob(token.split(".")[1]));
-          return payload.sub;
-        } catch {
-          return "";
-        }
-      })()
-    );
+    // Verify token by getting user directly
+    const { data: { user: callingUser }, error: userError } = await supabaseAdmin.auth.getUser(token);
 
     if (userError || !callingUser) {
       return new Response(JSON.stringify({ error: "Invalid token" }), {
