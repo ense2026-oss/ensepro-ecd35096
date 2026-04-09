@@ -1,0 +1,1 @@
+UPDATE public.employees SET initial_password = 'Password123!' WHERE user_id IS NOT NULL;
