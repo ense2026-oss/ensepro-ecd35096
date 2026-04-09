@@ -11,7 +11,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { defaultPassword, excludeAdmins } = await req.json();
+    const { defaultPassword, excludeAdmins, batchStart = 0, batchSize = 20 } = await req.json();
     const password = defaultPassword || "Password123!";
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -20,18 +20,20 @@ Deno.serve(async (req) => {
       auth: { autoRefreshToken: false, persistSession: false },
     });
 
-    // Get all employees with user_id (have auth accounts)
-    const { data: employees, error: empError } = await supabaseAdmin
+    // Get employees with user_id, with pagination
+    let query = supabaseAdmin
       .from("employees")
       .select("id, first_name, last_name, user_id, role")
-      .not("user_id", "is", null);
+      .not("user_id", "is", null)
+      .order("created_at", { ascending: true })
+      .range(batchStart, batchStart + batchSize - 1);
 
+    const { data: employees, error: empError } = await query;
     if (empError) throw empError;
 
     const results: { name: string; success: boolean; error?: string }[] = [];
 
     for (const emp of employees || []) {
-      // Skip admin if excludeAdmins is true
       if (excludeAdmins && emp.role === "Admin") {
         results.push({ name: `${emp.first_name} ${emp.last_name}`, success: true, error: "skipped (admin)" });
         continue;
@@ -46,7 +48,6 @@ Deno.serve(async (req) => {
         if (updateError) {
           results.push({ name: `${emp.first_name} ${emp.last_name}`, success: false, error: updateError.message });
         } else {
-          // Update initial_password field
           await supabaseAdmin
             .from("employees")
             .update({ initial_password: password })
@@ -62,6 +63,7 @@ Deno.serve(async (req) => {
     const successCount = results.filter(r => r.success && r.error !== "skipped (admin)").length;
     const skippedCount = results.filter(r => r.error === "skipped (admin)").length;
     const failedCount = results.filter(r => !r.success).length;
+    const hasMore = (employees?.length || 0) >= batchSize;
 
     return new Response(JSON.stringify({
       message: `รีเซ็ตรหัสผ่านสำเร็จ ${successCount} คน, ข้าม ${skippedCount} คน, ล้มเหลว ${failedCount} คน`,
@@ -69,6 +71,8 @@ Deno.serve(async (req) => {
       successCount,
       skippedCount,
       failedCount,
+      hasMore,
+      nextBatchStart: batchStart + batchSize,
     }), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
