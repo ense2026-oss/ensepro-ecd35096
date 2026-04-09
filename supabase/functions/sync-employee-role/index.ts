@@ -29,18 +29,18 @@ Deno.serve(async (req) => {
     }
 
     const token = authHeader.replace("Bearer ", "");
-    const anonClient = createClient(supabaseUrl, anonKey, {
-      global: { headers: { Authorization: authHeader } },
-    });
-    const { data: claimsData, error: claimsError } = await anonClient.auth.getClaims(token);
-    if (claimsError || !claimsData?.claims) {
+
+    // Verify token by getting user directly
+    const { data: { user: callingUser }, error: userError } = await supabaseAdmin.auth.getUser(token);
+
+    if (userError || !callingUser) {
       return new Response(JSON.stringify({ error: "Invalid token" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const userId = claimsData.claims.sub as string;
+    const userId = callingUser.id;
 
     // Check caller has admin role
     const { data: callerRole } = await supabaseAdmin
@@ -49,7 +49,7 @@ Deno.serve(async (req) => {
       .eq("user_id", userId)
       .single();
     
-    if (!callerRole || callerRole.role !== "admin") {
+    if (!callerRole || !["admin", "hr"].includes(callerRole.role)) {
       return new Response(JSON.stringify({ error: "Admin access required" }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
