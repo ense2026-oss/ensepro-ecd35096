@@ -1,4 +1,4 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { createClient } from "npm:@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -13,32 +13,40 @@ Deno.serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+
     const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
       auth: { autoRefreshToken: false, persistSession: false },
     });
 
-    // Verify caller is admin
+    // Verify caller token
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
+    if (!authHeader?.startsWith("Bearer ")) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
     const token = authHeader.replace("Bearer ", "");
-    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
-    if (authError || !user) {
+    const anonClient = createClient(supabaseUrl, anonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const { data: claimsData, error: claimsError } = await anonClient.auth.getClaims(token);
+    if (claimsError || !claimsData?.claims) {
       return new Response(JSON.stringify({ error: "Invalid token" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
+    const userId = claimsData.claims.sub as string;
+
     // Check caller has admin role
     const { data: callerRole } = await supabaseAdmin
       .from("user_roles")
       .select("role")
-      .eq("user_id", user.id)
+      .eq("user_id", userId)
       .single();
     
     if (!callerRole || callerRole.role !== "admin") {
@@ -56,7 +64,6 @@ Deno.serve(async (req) => {
     };
 
     if (action === "sync_role") {
-      // Sync employee role to user_roles
       if (!employeeId || !newRole) {
         return new Response(JSON.stringify({ error: "employeeId and newRole required" }), {
           status: 400,
@@ -66,7 +73,6 @@ Deno.serve(async (req) => {
 
       const appRole = roleMap[newRole] || newRole.toLowerCase();
 
-      // Get employee's user_id
       const { data: emp } = await supabaseAdmin
         .from("employees")
         .select("user_id")
@@ -80,7 +86,6 @@ Deno.serve(async (req) => {
         });
       }
 
-      // Update user_roles
       const { error: roleError } = await supabaseAdmin
         .from("user_roles")
         .update({ role: appRole })
@@ -88,13 +93,11 @@ Deno.serve(async (req) => {
 
       if (roleError) {
         console.error("Role sync error:", roleError);
-        // Try upsert
         await supabaseAdmin
           .from("user_roles")
           .upsert({ user_id: emp.user_id, role: appRole }, { onConflict: "user_id,role" });
       }
 
-      // Also update user metadata
       await supabaseAdmin.auth.admin.updateUserById(emp.user_id, {
         user_metadata: { role: appRole },
       });
@@ -106,7 +109,6 @@ Deno.serve(async (req) => {
       });
 
     } else if (action === "cleanup_employee") {
-      // Cleanup auth account when employee is deleted
       if (!employeeId) {
         return new Response(JSON.stringify({ error: "employeeId required" }), {
           status: 400,
@@ -114,7 +116,6 @@ Deno.serve(async (req) => {
         });
       }
 
-      // Get employee's user_id before deletion
       const { data: emp } = await supabaseAdmin
         .from("employees")
         .select("user_id")
@@ -122,11 +123,8 @@ Deno.serve(async (req) => {
         .single();
 
       if (emp?.user_id) {
-        // Delete user_roles
         await supabaseAdmin.from("user_roles").delete().eq("user_id", emp.user_id);
-        // Delete profile
         await supabaseAdmin.from("profiles").delete().eq("id", emp.user_id);
-        // Delete auth user
         const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(emp.user_id);
         if (deleteError) {
           console.error("Failed to delete auth user:", deleteError);
