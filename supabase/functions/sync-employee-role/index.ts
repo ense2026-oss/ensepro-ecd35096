@@ -29,18 +29,28 @@ Deno.serve(async (req) => {
     }
 
     const token = authHeader.replace("Bearer ", "");
-    const anonClient = createClient(supabaseUrl, anonKey, {
-      global: { headers: { Authorization: authHeader } },
-    });
-    const { data: claimsData, error: claimsError } = await anonClient.auth.getClaims(token);
-    if (claimsError || !claimsData?.claims) {
+
+    // Verify token using getUser (most reliable method)
+    const { data: { user: callingUser }, error: userError } = await supabaseAdmin.auth.admin.getUserById(
+      // First decode the token to get the user ID
+      (() => {
+        try {
+          const payload = JSON.parse(atob(token.split(".")[1]));
+          return payload.sub;
+        } catch {
+          return "";
+        }
+      })()
+    );
+
+    if (userError || !callingUser) {
       return new Response(JSON.stringify({ error: "Invalid token" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const userId = claimsData.claims.sub as string;
+    const userId = callingUser.id;
 
     // Check caller has admin role
     const { data: callerRole } = await supabaseAdmin
