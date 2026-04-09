@@ -303,11 +303,13 @@ const OvertimeRequest = () => {
     return true;
   });
 
+  // Stats widgets always show current user's own data
+  const myOwnRequests = requests.filter((r) => currentUser && r.employeeId === (currentUser.employeeId || currentUser.id));
   const stats = {
-    total: userRequests.length,
-    pending: pendingCount,
-    approved: approvedCount,
-    totalHours: userRequests.filter((r) => r.status === "approved").reduce((sum, r) => sum + r.hours, 0),
+    total: myOwnRequests.length,
+    pending: myOwnRequests.filter((r) => r.status === "pending").length,
+    approved: myOwnRequests.filter((r) => r.status === "approved").length,
+    totalHours: myOwnRequests.filter((r) => r.status === "approved").reduce((sum, r) => sum + r.hours, 0),
   };
 
   const handleAdd = async (req: Omit<OTRequest, "id" | "createdAt" | "status">) => {
