@@ -114,12 +114,11 @@ const Leave = () => {
       }));
       setLeaves(records);
 
-      const quotaRecords = scope === "self"
-        ? records.filter((r) => r.employeeId === currentUser?.employeeId)
-        : records;
+      // Quota cards always show current user's own usage
+      const myRecords = records.filter((r) => r.employeeId === currentUser?.employeeId);
 
       setLeaveTypes((prev) => prev.map((lt) => {
-        const used = quotaRecords
+        const used = myRecords
           .filter((r) => r.type === lt.name && r.status !== "rejected")
           .reduce((sum, r) => sum + r.days, 0);
         return { ...lt, used };
