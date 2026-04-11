@@ -109,7 +109,7 @@ const OTRequestDialog = ({ open, onClose, onSubmit }: {
 
   const resetForm = () => {
     setForm({
-      employeeId: isEmployee && currentUser ? currentUser.id : "",
+      employeeId: shouldLockEmployee && currentUser ? currentUser.id : "",
       dateFrom: "",
       dateTo: "",
       startTime: "18:00",
@@ -130,7 +130,7 @@ const OTRequestDialog = ({ open, onClose, onSubmit }: {
         </DialogHeader>
 
         <DialogBody className="space-y-4">
-          {hasAdminAccess && (
+          {isAdmin && (
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-muted-foreground">พนักงาน *</label>
               <SearchableSelect
