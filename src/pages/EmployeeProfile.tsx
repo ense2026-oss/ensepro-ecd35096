@@ -664,26 +664,13 @@ const EmployeeProfile = () => {
     security: securityTab,
   };
 
-  const [slideState, setSlideState] = useState<"entering" | "visible" | "exiting">("entering");
-
-  useEffect(() => {
-    // Trigger enter animation after mount
-    const t = requestAnimationFrame(() => setSlideState("visible"));
-    return () => cancelAnimationFrame(t);
-  }, []);
-
-  const handleBack = useCallback(() => {
-    setSlideState("exiting");
-    setTimeout(() => navigate("/employees"), 350);
-  }, [navigate]);
-
   return (
     <div
-      className="space-y-5 transition-all duration-350 ease-[cubic-bezier(0.22,1,0.36,1)]"
+      className="space-y-5"
       style={{
         transform: slideState === "visible" ? "translateX(0)" : "translateX(100%)",
         opacity: slideState === "visible" ? 1 : 0,
-        transitionDuration: "350ms",
+        transition: "transform 350ms cubic-bezier(0.22, 1, 0.36, 1), opacity 350ms cubic-bezier(0.22, 1, 0.36, 1)",
       }}
     >
       {/* Back + Header */}
