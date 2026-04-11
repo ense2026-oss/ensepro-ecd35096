@@ -60,9 +60,10 @@ const OTRequestDialog = ({ open, onClose, onSubmit }: {
   const { canAction } = usePermissions();
   const canAdd = canAction(role, 'ot', 'add');
   const hasAdminAccess = canAdd || canAction(role, 'ot', 'approve');
-  const isEmployee = !hasAdminAccess;
+  const isAdmin = role === 'admin';
+  const shouldLockEmployee = !isAdmin;
   const [form, setForm] = useState({
-    employeeId: isEmployee && currentUser ? currentUser.id : "",
+    employeeId: shouldLockEmployee && currentUser ? currentUser.id : "",
     dateFrom: "",
     dateTo: "",
     startTime: "18:00",
