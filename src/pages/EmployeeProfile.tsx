@@ -177,7 +177,7 @@ const EmployeeProfile = () => {
         <AlertCircle className="w-16 h-16 text-muted-foreground" />
         <h2 className="text-xl font-bold">ไม่พบข้อมูลพนักงาน</h2>
         <p className="text-sm text-muted-foreground">ไม่พบพนักงานที่มี ID นี้ในระบบ</p>
-        <button onClick={() => navigate("/employees")}
+        <button onClick={handleBack}
           className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold text-primary-foreground bg-primary hover:bg-primary/90 shadow-md transition-all">
           <ArrowLeft className="w-4 h-4" /> กลับไปหน้ารายชื่อ
         </button>
