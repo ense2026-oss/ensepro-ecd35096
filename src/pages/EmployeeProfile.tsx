@@ -652,12 +652,32 @@ const EmployeeProfile = () => {
     security: securityTab,
   };
 
+  const [slideState, setSlideState] = useState<"entering" | "visible" | "exiting">("entering");
+
+  useEffect(() => {
+    // Trigger enter animation after mount
+    const t = requestAnimationFrame(() => setSlideState("visible"));
+    return () => cancelAnimationFrame(t);
+  }, []);
+
+  const handleBack = useCallback(() => {
+    setSlideState("exiting");
+    setTimeout(() => navigate("/employees"), 350);
+  }, [navigate]);
+
   return (
-    <div className="space-y-5 animate-fade-in">
+    <div
+      className="space-y-5 transition-all duration-350 ease-[cubic-bezier(0.22,1,0.36,1)]"
+      style={{
+        transform: slideState === "visible" ? "translateX(0)" : "translateX(100%)",
+        opacity: slideState === "visible" ? 1 : 0,
+        transitionDuration: "350ms",
+      }}
+    >
       {/* Back + Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <button onClick={() => navigate("/employees")} className="p-2 rounded-xl border border-border hover:bg-muted transition-colors text-muted-foreground hover:text-foreground">
+          <button onClick={handleBack} className="p-2 rounded-xl border border-border hover:bg-muted transition-colors text-muted-foreground hover:text-foreground">
             <ArrowLeft className="w-4 h-4" />
           </button>
           <div>
