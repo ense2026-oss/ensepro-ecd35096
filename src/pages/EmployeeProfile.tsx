@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   ArrowLeft, Camera, Edit, Save, X, Plus, Trash2,
@@ -146,6 +146,18 @@ const EmployeeProfile = () => {
   
   const photoInputRef = useRef<HTMLInputElement>(null);
 
+  const [slideState, setSlideState] = useState<"entering" | "visible" | "exiting">("entering");
+
+  useEffect(() => {
+    const t = requestAnimationFrame(() => setSlideState("visible"));
+    return () => cancelAnimationFrame(t);
+  }, []);
+
+  const handleBack = useCallback(() => {
+    setSlideState("exiting");
+    setTimeout(() => navigate("/employees"), 350);
+  }, [navigate]);
+
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -165,7 +177,7 @@ const EmployeeProfile = () => {
         <AlertCircle className="w-16 h-16 text-muted-foreground" />
         <h2 className="text-xl font-bold">ไม่พบข้อมูลพนักงาน</h2>
         <p className="text-sm text-muted-foreground">ไม่พบพนักงานที่มี ID นี้ในระบบ</p>
-        <button onClick={() => navigate("/employees")}
+        <button onClick={handleBack}
           className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold text-primary-foreground bg-primary hover:bg-primary/90 shadow-md transition-all">
           <ArrowLeft className="w-4 h-4" /> กลับไปหน้ารายชื่อ
         </button>
@@ -653,11 +665,18 @@ const EmployeeProfile = () => {
   };
 
   return (
-    <div className="space-y-5 animate-fade-in">
+    <div
+      className="space-y-5"
+      style={{
+        transform: slideState === "visible" ? "translateX(0)" : "translateX(100%)",
+        opacity: slideState === "visible" ? 1 : 0,
+        transition: "transform 350ms cubic-bezier(0.22, 1, 0.36, 1), opacity 350ms cubic-bezier(0.22, 1, 0.36, 1)",
+      }}
+    >
       {/* Back + Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <button onClick={() => navigate("/employees")} className="p-2 rounded-xl border border-border hover:bg-muted transition-colors text-muted-foreground hover:text-foreground">
+          <button onClick={handleBack} className="p-2 rounded-xl border border-border hover:bg-muted transition-colors text-muted-foreground hover:text-foreground">
             <ArrowLeft className="w-4 h-4" />
           </button>
           <div>
