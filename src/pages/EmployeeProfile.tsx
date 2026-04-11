@@ -146,6 +146,18 @@ const EmployeeProfile = () => {
   
   const photoInputRef = useRef<HTMLInputElement>(null);
 
+  const [slideState, setSlideState] = useState<"entering" | "visible" | "exiting">("entering");
+
+  useEffect(() => {
+    const t = requestAnimationFrame(() => setSlideState("visible"));
+    return () => cancelAnimationFrame(t);
+  }, []);
+
+  const handleBack = useCallback(() => {
+    setSlideState("exiting");
+    setTimeout(() => navigate("/employees"), 350);
+  }, [navigate]);
+
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
