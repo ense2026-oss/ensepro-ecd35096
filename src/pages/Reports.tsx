@@ -792,40 +792,63 @@ const Reports = () => {
           </div>
         )}
 
-        {cat === "organization" && (
+        {cat === "overtime" && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <div className="rounded-2xl border border-border bg-card p-5">
-              <h3 className="text-sm font-bold mb-4">Headcount ตามแผนก</h3>
-              <ResponsiveContainer width="100%" height={260}>
-                <BarChart data={headcountData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis dataKey="dept" fontSize={12} />
-                  <YAxis fontSize={12} />
-                  <Tooltip />
-                  <Bar dataKey="count" fill="#87FF0F" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+              <h3 className="text-sm font-bold mb-4">
+                {currentReport?.id === "ot-trend" ? "ชั่วโมง OT รายเดือน (ทั้งปี)" : "ชั่วโมง OT แยกตามประเภท"}
+              </h3>
+              {currentReport?.id === "ot-trend" && otMonthlyChartData.length > 0 ? (
+                <ResponsiveContainer width="100%" height={260}>
+                  <BarChart data={otMonthlyChartData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis dataKey="month" fontSize={12} />
+                    <YAxis fontSize={12} />
+                    <Tooltip />
+                    <Legend />
+                    <Bar dataKey="ชั่วโมงOT" fill="#87FF0F" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="จำนวนคำขอ" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : otPieData.length > 0 ? (
+                <ResponsiveContainer width="100%" height={260}>
+                  <RechartsPie>
+                    <Pie data={otPieData} cx="50%" cy="50%" innerRadius={60} outerRadius={100} paddingAngle={3} dataKey="value" label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
+                      {otPieData.map((entry, i) => (
+                        <Cell key={i} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </RechartsPie>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-[260px] flex items-center justify-center text-muted-foreground text-sm">{otLoading ? "กำลังโหลด..." : "ไม่มีข้อมูล"}</div>
+              )}
             </div>
             <div className="rounded-2xl border border-border bg-card p-5">
-              <h3 className="text-sm font-bold mb-4">สัดส่วนพนักงานตามประเภท</h3>
-              <ResponsiveContainer width="100%" height={260}>
-                <RechartsPie>
-                  <Pie
-                    data={[
-                      { name: "พนักงานประจำ", value: 120, color: "#FF870F" },
-                      { name: "พนักงานชั่วคราว", value: 25, color: "#9CA3AF" },
-                      { name: "พนักงานทดลองงาน", value: 15, color: "#87FF0F" },
-                    ]}
-                    cx="50%" cy="50%" innerRadius={60} outerRadius={100} paddingAngle={3} dataKey="value"
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                  >
-                    <Cell fill="#FF870F" />
-                    <Cell fill="#9CA3AF" />
-                    <Cell fill="#87FF0F" />
-                  </Pie>
-                  <Tooltip />
-                </RechartsPie>
-              </ResponsiveContainer>
+              <h3 className="text-sm font-bold mb-4">สถิติ OT ประจำเดือน</h3>
+              {otData.length > 0 ? (
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="p-4 rounded-xl bg-muted/50">
+                    <p className="text-2xl font-bold" style={{ color: "#87FF0F" }}>{otData.length}</p>
+                    <p className="text-xs text-muted-foreground mt-1">คำขอทั้งหมด</p>
+                  </div>
+                  <div className="p-4 rounded-xl bg-muted/50">
+                    <p className="text-2xl font-bold" style={{ color: "#3b82f6" }}>{Math.round(otData.reduce((s: number, r: any) => s + r.hours, 0) * 100) / 100}</p>
+                    <p className="text-xs text-muted-foreground mt-1">ชั่วโมงรวม</p>
+                  </div>
+                  <div className="p-4 rounded-xl bg-muted/50">
+                    <p className="text-2xl font-bold" style={{ color: "#4CAF50" }}>{otData.filter((r: any) => r.status === "อนุมัติ").length}</p>
+                    <p className="text-xs text-muted-foreground mt-1">อนุมัติแล้ว</p>
+                  </div>
+                  <div className="p-4 rounded-xl bg-muted/50">
+                    <p className="text-2xl font-bold" style={{ color: "#FF870F" }}>{otData.filter((r: any) => r.status === "รออนุมัติ").length}</p>
+                    <p className="text-xs text-muted-foreground mt-1">รออนุมัติ</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="h-[260px] flex items-center justify-center text-muted-foreground text-sm">{otLoading ? "กำลังโหลด..." : "ไม่มีข้อมูล"}</div>
+              )}
             </div>
           </div>
         )}
