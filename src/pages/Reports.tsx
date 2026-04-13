@@ -76,10 +76,10 @@ const reportTypes: ReportType[] = [
   { id: "emp-new", name: "พนักงานเข้าใหม่", description: "รายงานพนักงานเข้าใหม่ตามช่วงเวลา", icon: UserCheck, category: "employees" },
   { id: "emp-resign", name: "พนักงานลาออก / พ้นสภาพ", description: "สรุปพนักงานที่ลาออกหรือพ้นสภาพตามช่วงเวลา", icon: UserX, category: "employees" },
   { id: "emp-birthday", name: "วันเกิดพนักงาน", description: "รายงานวันเกิดพนักงานรายเดือน", icon: Calendar, category: "employees" },
-  // Organization
-  { id: "org-structure", name: "โครงสร้างองค์กร", description: "แผนผังโครงสร้างแผนกและตำแหน่งงานทั้งหมด", icon: GitBranch, category: "organization" },
-  { id: "org-headcount", name: "Headcount ตามแผนก", description: "จำนวนพนักงานแยกตามแผนกและตำแหน่ง", icon: Building2, category: "organization" },
-  { id: "org-ratio", name: "อัตราส่วนบุคลากร", description: "สัดส่วนพนักงานตามประเภท เพศ และอายุงาน", icon: PieChart, category: "organization" },
+  // Overtime
+  { id: "ot-summary", name: "สรุป OT ประจำเดือน", description: "ภาพรวมชั่วโมง OT แยกตามพนักงานในแต่ละเดือน", icon: Clock, category: "overtime" },
+  { id: "ot-by-type", name: "OT แยกตามประเภท", description: "สรุปชั่วโมง OT แยกตามประเภท (วันทำงาน/วันหยุด/วันนักขัตฤกษ์)", icon: PieChart, category: "overtime" },
+  { id: "ot-trend", name: "แนวโน้ม OT รายเดือน", description: "กราฟแสดงแนวโน้มชั่วโมง OT และจำนวนคำขอตลอดทั้งปี", icon: TrendingUp, category: "overtime" },
   // Attendance
   { id: "att-daily", name: "รายงานเข้างานรายวัน", description: "สรุปเวลาเข้า-ออกงานของพนักงานรายวัน", icon: Clock, category: "attendance" },
   { id: "att-monthly", name: "สรุปเข้างานรายเดือน", description: "สถิติการเข้างาน มาสาย ขาดงาน ประจำเดือน", icon: BarChart3, category: "attendance" },
