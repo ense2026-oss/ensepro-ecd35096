@@ -438,11 +438,104 @@ const Reports = () => {
     }
   }, [filterYear]);
 
+  // --- Fetch OT data ---
+  const fetchOtData = useCallback(async () => {
+    setOtLoading(true);
+    try {
+      const ceYear = parseInt(filterYear) - 543;
+      const monthNum = monthIndexMap[filterMonth] || 1;
+      const startDate = `${ceYear}-${String(monthNum).padStart(2, '0')}-01`;
+      const endDay = new Date(ceYear, monthNum, 0).getDate();
+      const endDate = `${ceYear}-${String(monthNum).padStart(2, '0')}-${String(endDay).padStart(2, '0')}`;
+
+      const { data, error } = await supabase
+        .from("overtime_requests")
+        .select("*, employees!overtime_requests_employee_id_fkey(first_name, last_name, username, dept)")
+        .gte("date", startDate)
+        .lte("date", endDate)
+        .order("date", { ascending: false });
+
+      if (error) throw error;
+
+      const rows = (data || []).map((r: any) => {
+        const emp = r.employees;
+        const name = emp ? `${emp.first_name} ${emp.last_name}` : "ไม่ทราบ";
+        const dept = emp?.dept || "-";
+        const statusMap: Record<string, string> = { pending: "รออนุมัติ", approved: "อนุมัติ", rejected: "ไม่อนุมัติ" };
+        const otTypeMap: Record<string, string> = { workday: "วันทำงาน", holiday: "วันหยุด", special: "วันนักขัตฤกษ์" };
+        return {
+          id: r.id,
+          empId: emp?.username || "-",
+          name,
+          dept,
+          date: r.date,
+          startTime: r.start_time,
+          endTime: r.end_time,
+          hours: r.hours,
+          otType: otTypeMap[r.ot_type] || r.ot_type,
+          rawOtType: r.ot_type,
+          status: statusMap[r.status] || r.status,
+          reason: r.reason,
+        };
+      });
+
+      setOtData(rows);
+
+      // Pie by type
+      const typeGroups: Record<string, number> = {};
+      rows.forEach((r: any) => { typeGroups[r.otType] = (typeGroups[r.otType] || 0) + r.hours; });
+      const otTypeColors: Record<string, string> = { "วันทำงาน": "#3b82f6", "วันหยุด": "#FF870F", "วันนักขัตฤกษ์": "#ef4444" };
+      setOtPieData(Object.entries(typeGroups).map(([name, value]) => ({
+        name, value, color: otTypeColors[name] || "#9CA3AF",
+      })));
+    } catch (err) {
+      console.error("Error fetching OT data:", err);
+    } finally {
+      setOtLoading(false);
+    }
+  }, [filterYear, filterMonth]);
+
+  const fetchOtTrend = useCallback(async () => {
+    setOtLoading(true);
+    try {
+      const ceYear = parseInt(filterYear) - 543;
+      const { data, error } = await supabase
+        .from("overtime_requests")
+        .select("date, hours, status")
+        .gte("date", `${ceYear}-01-01`)
+        .lte("date", `${ceYear}-12-31`);
+
+      if (error) throw error;
+
+      const monthlyMap: Record<number, { hours: number; count: number }> = {};
+      for (let i = 1; i <= 12; i++) monthlyMap[i] = { hours: 0, count: 0 };
+      (data || []).forEach((r: any) => {
+        const m = parseInt(r.date.split("-")[1]);
+        if (monthlyMap[m]) {
+          monthlyMap[m].hours += r.hours || 0;
+          monthlyMap[m].count += 1;
+        }
+      });
+
+      setOtMonthlyChartData(monthShortNames.map((label, i) => ({
+        month: label,
+        ชั่วโมงOT: Math.round(monthlyMap[i + 1].hours * 100) / 100,
+        จำนวนคำขอ: monthlyMap[i + 1].count,
+      })));
+    } catch (err) {
+      console.error("Error fetching OT trend:", err);
+    } finally {
+      setOtLoading(false);
+    }
+  }, [filterYear]);
+
   useEffect(() => {
     if (selectedReport === "leave-summary") fetchLeaveData();
     else if (selectedReport === "leave-balance") fetchLeaveBalance();
     else if (selectedReport === "leave-yearly") fetchLeaveYearly();
-  }, [selectedReport, fetchLeaveData, fetchLeaveBalance, fetchLeaveYearly]);
+    else if (selectedReport === "ot-summary" || selectedReport === "ot-by-type") fetchOtData();
+    else if (selectedReport === "ot-trend") fetchOtTrend();
+  }, [selectedReport, fetchLeaveData, fetchLeaveBalance, fetchLeaveYearly, fetchOtData, fetchOtTrend]);
 
   const toggleCat = (cat: string) => setExpandedCats((p) => ({ ...p, [cat]: !p[cat] }));
 
