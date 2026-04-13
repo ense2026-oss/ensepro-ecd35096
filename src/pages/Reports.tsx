@@ -238,6 +238,12 @@ const Reports = () => {
   const [leaveYearlyChartData, setLeaveYearlyChartData] = useState<any[]>([]);
   const [leaveMonthlyBarData, setLeaveMonthlyBarData] = useState<any[]>([]);
 
+  // --- Real OT data ---
+  const [otData, setOtData] = useState<any[]>([]);
+  const [otLoading, setOtLoading] = useState(false);
+  const [otPieData, setOtPieData] = useState<{ name: string; value: number; color: string }[]>([]);
+  const [otMonthlyChartData, setOtMonthlyChartData] = useState<any[]>([]);
+
   const monthIndexMap: Record<string, number> = {
     "มกราคม": 1, "กุมภาพันธ์": 2, "มีนาคม": 3, "เมษายน": 4,
     "พฤษภาคม": 5, "มิถุนายน": 6, "กรกฎาคม": 7, "สิงหาคม": 8,
