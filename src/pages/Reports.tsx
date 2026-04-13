@@ -58,7 +58,7 @@ import {
 } from "recharts";
 
 // --- Types ---
-type ReportCategory = "employees" | "organization" | "attendance" | "leave" | "shifts" | "payroll";
+type ReportCategory = "employees" | "overtime" | "attendance" | "leave" | "shifts" | "payroll";
 type ExportFormat = "excel" | "pdf";
 
 interface ReportType {
@@ -76,10 +76,10 @@ const reportTypes: ReportType[] = [
   { id: "emp-new", name: "พนักงานเข้าใหม่", description: "รายงานพนักงานเข้าใหม่ตามช่วงเวลา", icon: UserCheck, category: "employees" },
   { id: "emp-resign", name: "พนักงานลาออก / พ้นสภาพ", description: "สรุปพนักงานที่ลาออกหรือพ้นสภาพตามช่วงเวลา", icon: UserX, category: "employees" },
   { id: "emp-birthday", name: "วันเกิดพนักงาน", description: "รายงานวันเกิดพนักงานรายเดือน", icon: Calendar, category: "employees" },
-  // Organization
-  { id: "org-structure", name: "โครงสร้างองค์กร", description: "แผนผังโครงสร้างแผนกและตำแหน่งงานทั้งหมด", icon: GitBranch, category: "organization" },
-  { id: "org-headcount", name: "Headcount ตามแผนก", description: "จำนวนพนักงานแยกตามแผนกและตำแหน่ง", icon: Building2, category: "organization" },
-  { id: "org-ratio", name: "อัตราส่วนบุคลากร", description: "สัดส่วนพนักงานตามประเภท เพศ และอายุงาน", icon: PieChart, category: "organization" },
+  // Overtime
+  { id: "ot-summary", name: "สรุป OT ประจำเดือน", description: "ภาพรวมชั่วโมง OT แยกตามพนักงานในแต่ละเดือน", icon: Clock, category: "overtime" },
+  { id: "ot-by-type", name: "OT แยกตามประเภท", description: "สรุปชั่วโมง OT แยกตามประเภท (วันทำงาน/วันหยุด/วันนักขัตฤกษ์)", icon: PieChart, category: "overtime" },
+  { id: "ot-trend", name: "แนวโน้ม OT รายเดือน", description: "กราฟแสดงแนวโน้มชั่วโมง OT และจำนวนคำขอตลอดทั้งปี", icon: TrendingUp, category: "overtime" },
   // Attendance
   { id: "att-daily", name: "รายงานเข้างานรายวัน", description: "สรุปเวลาเข้า-ออกงานของพนักงานรายวัน", icon: Clock, category: "attendance" },
   { id: "att-monthly", name: "สรุปเข้างานรายเดือน", description: "สถิติการเข้างาน มาสาย ขาดงาน ประจำเดือน", icon: BarChart3, category: "attendance" },
@@ -102,7 +102,7 @@ const reportTypes: ReportType[] = [
 
 const categories: { key: ReportCategory; label: string; icon: React.ElementType; color: string }[] = [
   { key: "employees", label: "ข้อมูลพนักงาน", icon: Users, color: "#FF870F" },
-  { key: "organization", label: "โครงสร้างองค์กร", icon: GitBranch, color: "#87FF0F" },
+  { key: "overtime", label: "ระบบโอที", icon: Clock, color: "#87FF0F" },
   { key: "attendance", label: "บันทึกเวลา", icon: Clock, color: "#6B7280" },
   { key: "leave", label: "ระบบลางาน", icon: CalendarDays, color: "#FF870F" },
   { key: "shifts", label: "ระบบกะงาน", icon: Clock, color: "#a855f7" },
@@ -227,7 +227,7 @@ const Reports = () => {
   const [selectedReport, setSelectedReport] = useState<string | null>(null);
   const [filterYear, setFilterYear] = useState("2569");
   const [filterMonth, setFilterMonth] = useState("กุมภาพันธ์");
-  const [expandedCats, setExpandedCats] = useState<Record<string, boolean>>({ employees: true, organization: true, attendance: true, leave: true, shifts: true, payroll: true });
+  const [expandedCats, setExpandedCats] = useState<Record<string, boolean>>({ employees: true, overtime: true, attendance: true, leave: true, shifts: true, payroll: true });
 
   // --- Real leave data ---
   const [leaveData, setLeaveData] = useState<any[]>([]);
@@ -237,6 +237,12 @@ const Reports = () => {
   const [leaveYearlyData, setLeaveYearlyData] = useState<any[]>([]);
   const [leaveYearlyChartData, setLeaveYearlyChartData] = useState<any[]>([]);
   const [leaveMonthlyBarData, setLeaveMonthlyBarData] = useState<any[]>([]);
+
+  // --- Real OT data ---
+  const [otData, setOtData] = useState<any[]>([]);
+  const [otLoading, setOtLoading] = useState(false);
+  const [otPieData, setOtPieData] = useState<{ name: string; value: number; color: string }[]>([]);
+  const [otMonthlyChartData, setOtMonthlyChartData] = useState<any[]>([]);
 
   const monthIndexMap: Record<string, number> = {
     "มกราคม": 1, "กุมภาพันธ์": 2, "มีนาคม": 3, "เมษายน": 4,
@@ -432,11 +438,104 @@ const Reports = () => {
     }
   }, [filterYear]);
 
+  // --- Fetch OT data ---
+  const fetchOtData = useCallback(async () => {
+    setOtLoading(true);
+    try {
+      const ceYear = parseInt(filterYear) - 543;
+      const monthNum = monthIndexMap[filterMonth] || 1;
+      const startDate = `${ceYear}-${String(monthNum).padStart(2, '0')}-01`;
+      const endDay = new Date(ceYear, monthNum, 0).getDate();
+      const endDate = `${ceYear}-${String(monthNum).padStart(2, '0')}-${String(endDay).padStart(2, '0')}`;
+
+      const { data, error } = await supabase
+        .from("overtime_requests")
+        .select("*, employees!overtime_requests_employee_id_fkey(first_name, last_name, username, dept)")
+        .gte("date", startDate)
+        .lte("date", endDate)
+        .order("date", { ascending: false });
+
+      if (error) throw error;
+
+      const rows = (data || []).map((r: any) => {
+        const emp = r.employees;
+        const name = emp ? `${emp.first_name} ${emp.last_name}` : "ไม่ทราบ";
+        const dept = emp?.dept || "-";
+        const statusMap: Record<string, string> = { pending: "รออนุมัติ", approved: "อนุมัติ", rejected: "ไม่อนุมัติ" };
+        const otTypeMap: Record<string, string> = { workday: "วันทำงาน", holiday: "วันหยุด", special: "วันนักขัตฤกษ์" };
+        return {
+          id: r.id,
+          empId: emp?.username || "-",
+          name,
+          dept,
+          date: r.date,
+          startTime: r.start_time,
+          endTime: r.end_time,
+          hours: r.hours,
+          otType: otTypeMap[r.ot_type] || r.ot_type,
+          rawOtType: r.ot_type,
+          status: statusMap[r.status] || r.status,
+          reason: r.reason,
+        };
+      });
+
+      setOtData(rows);
+
+      // Pie by type
+      const typeGroups: Record<string, number> = {};
+      rows.forEach((r: any) => { typeGroups[r.otType] = (typeGroups[r.otType] || 0) + r.hours; });
+      const otTypeColors: Record<string, string> = { "วันทำงาน": "#3b82f6", "วันหยุด": "#FF870F", "วันนักขัตฤกษ์": "#ef4444" };
+      setOtPieData(Object.entries(typeGroups).map(([name, value]) => ({
+        name, value, color: otTypeColors[name] || "#9CA3AF",
+      })));
+    } catch (err) {
+      console.error("Error fetching OT data:", err);
+    } finally {
+      setOtLoading(false);
+    }
+  }, [filterYear, filterMonth]);
+
+  const fetchOtTrend = useCallback(async () => {
+    setOtLoading(true);
+    try {
+      const ceYear = parseInt(filterYear) - 543;
+      const { data, error } = await supabase
+        .from("overtime_requests")
+        .select("date, hours, status")
+        .gte("date", `${ceYear}-01-01`)
+        .lte("date", `${ceYear}-12-31`);
+
+      if (error) throw error;
+
+      const monthlyMap: Record<number, { hours: number; count: number }> = {};
+      for (let i = 1; i <= 12; i++) monthlyMap[i] = { hours: 0, count: 0 };
+      (data || []).forEach((r: any) => {
+        const m = parseInt(r.date.split("-")[1]);
+        if (monthlyMap[m]) {
+          monthlyMap[m].hours += r.hours || 0;
+          monthlyMap[m].count += 1;
+        }
+      });
+
+      setOtMonthlyChartData(monthShortNames.map((label, i) => ({
+        month: label,
+        ชั่วโมงOT: Math.round(monthlyMap[i + 1].hours * 100) / 100,
+        จำนวนคำขอ: monthlyMap[i + 1].count,
+      })));
+    } catch (err) {
+      console.error("Error fetching OT trend:", err);
+    } finally {
+      setOtLoading(false);
+    }
+  }, [filterYear]);
+
   useEffect(() => {
     if (selectedReport === "leave-summary") fetchLeaveData();
     else if (selectedReport === "leave-balance") fetchLeaveBalance();
     else if (selectedReport === "leave-yearly") fetchLeaveYearly();
-  }, [selectedReport, fetchLeaveData, fetchLeaveBalance, fetchLeaveYearly]);
+    else if (selectedReport === "ot-summary" || selectedReport === "ot-by-type") fetchOtData();
+    else if (selectedReport === "ot-trend") fetchOtTrend();
+  }, [selectedReport, fetchLeaveData, fetchLeaveBalance, fetchLeaveYearly, fetchOtData, fetchOtTrend]);
 
   const toggleCat = (cat: string) => setExpandedCats((p) => ({ ...p, [cat]: !p[cat] }));
 
@@ -571,6 +670,8 @@ const Reports = () => {
             if (selectedReport === 'leave-summary') fetchLeaveData();
             else if (selectedReport === 'leave-balance') fetchLeaveBalance();
             else if (selectedReport === 'leave-yearly') fetchLeaveYearly();
+            else if (selectedReport === 'ot-summary' || selectedReport === 'ot-by-type') fetchOtData();
+            else if (selectedReport === 'ot-trend') fetchOtTrend();
           }} className="ml-auto flex items-center gap-1.5 text-sm font-medium px-3 py-2 rounded-lg hover:bg-muted transition-colors" style={{ color: "#FF870F" }}>
             <RefreshCw className="w-3.5 h-3.5" />
             รีเฟรช
@@ -691,40 +792,63 @@ const Reports = () => {
           </div>
         )}
 
-        {cat === "organization" && (
+        {cat === "overtime" && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <div className="rounded-2xl border border-border bg-card p-5">
-              <h3 className="text-sm font-bold mb-4">Headcount ตามแผนก</h3>
-              <ResponsiveContainer width="100%" height={260}>
-                <BarChart data={headcountData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis dataKey="dept" fontSize={12} />
-                  <YAxis fontSize={12} />
-                  <Tooltip />
-                  <Bar dataKey="count" fill="#87FF0F" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+              <h3 className="text-sm font-bold mb-4">
+                {currentReport?.id === "ot-trend" ? "ชั่วโมง OT รายเดือน (ทั้งปี)" : "ชั่วโมง OT แยกตามประเภท"}
+              </h3>
+              {currentReport?.id === "ot-trend" && otMonthlyChartData.length > 0 ? (
+                <ResponsiveContainer width="100%" height={260}>
+                  <BarChart data={otMonthlyChartData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis dataKey="month" fontSize={12} />
+                    <YAxis fontSize={12} />
+                    <Tooltip />
+                    <Legend />
+                    <Bar dataKey="ชั่วโมงOT" fill="#87FF0F" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="จำนวนคำขอ" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : otPieData.length > 0 ? (
+                <ResponsiveContainer width="100%" height={260}>
+                  <RechartsPie>
+                    <Pie data={otPieData} cx="50%" cy="50%" innerRadius={60} outerRadius={100} paddingAngle={3} dataKey="value" label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
+                      {otPieData.map((entry, i) => (
+                        <Cell key={i} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </RechartsPie>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-[260px] flex items-center justify-center text-muted-foreground text-sm">{otLoading ? "กำลังโหลด..." : "ไม่มีข้อมูล"}</div>
+              )}
             </div>
             <div className="rounded-2xl border border-border bg-card p-5">
-              <h3 className="text-sm font-bold mb-4">สัดส่วนพนักงานตามประเภท</h3>
-              <ResponsiveContainer width="100%" height={260}>
-                <RechartsPie>
-                  <Pie
-                    data={[
-                      { name: "พนักงานประจำ", value: 120, color: "#FF870F" },
-                      { name: "พนักงานชั่วคราว", value: 25, color: "#9CA3AF" },
-                      { name: "พนักงานทดลองงาน", value: 15, color: "#87FF0F" },
-                    ]}
-                    cx="50%" cy="50%" innerRadius={60} outerRadius={100} paddingAngle={3} dataKey="value"
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                  >
-                    <Cell fill="#FF870F" />
-                    <Cell fill="#9CA3AF" />
-                    <Cell fill="#87FF0F" />
-                  </Pie>
-                  <Tooltip />
-                </RechartsPie>
-              </ResponsiveContainer>
+              <h3 className="text-sm font-bold mb-4">สถิติ OT ประจำเดือน</h3>
+              {otData.length > 0 ? (
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="p-4 rounded-xl bg-muted/50">
+                    <p className="text-2xl font-bold" style={{ color: "#87FF0F" }}>{otData.length}</p>
+                    <p className="text-xs text-muted-foreground mt-1">คำขอทั้งหมด</p>
+                  </div>
+                  <div className="p-4 rounded-xl bg-muted/50">
+                    <p className="text-2xl font-bold" style={{ color: "#3b82f6" }}>{Math.round(otData.reduce((s: number, r: any) => s + r.hours, 0) * 100) / 100}</p>
+                    <p className="text-xs text-muted-foreground mt-1">ชั่วโมงรวม</p>
+                  </div>
+                  <div className="p-4 rounded-xl bg-muted/50">
+                    <p className="text-2xl font-bold" style={{ color: "#4CAF50" }}>{otData.filter((r: any) => r.status === "อนุมัติ").length}</p>
+                    <p className="text-xs text-muted-foreground mt-1">อนุมัติแล้ว</p>
+                  </div>
+                  <div className="p-4 rounded-xl bg-muted/50">
+                    <p className="text-2xl font-bold" style={{ color: "#FF870F" }}>{otData.filter((r: any) => r.status === "รออนุมัติ").length}</p>
+                    <p className="text-xs text-muted-foreground mt-1">รออนุมัติ</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="h-[260px] flex items-center justify-center text-muted-foreground text-sm">{otLoading ? "กำลังโหลด..." : "ไม่มีข้อมูล"}</div>
+              )}
             </div>
           </div>
         )}
@@ -830,10 +954,10 @@ const Reports = () => {
         <div className="rounded-2xl border border-border bg-card overflow-hidden">
           <div className="p-4 border-b border-border flex items-center justify-between">
             <h3 className="text-sm font-bold">ข้อมูลรายละเอียด</h3>
-            <span className="text-xs text-muted-foreground">{cat === "leave" ? "ข้อมูลจริงจากระบบ" : "แสดง Mock Data"}</span>
+            <span className="text-xs text-muted-foreground">{(cat === "leave" || cat === "overtime") ? "ข้อมูลจริงจากระบบ" : "แสดง Mock Data"}</span>
           </div>
           <div className="overflow-x-auto">
-            {(cat === "employees" || cat === "organization") && (
+            {cat === "employees" && (
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-muted/50">
@@ -899,6 +1023,67 @@ const Reports = () => {
                     </tr>
                   ))}
                 </tbody>
+              </table>
+            )}
+            {cat === "overtime" && (
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-muted/50">
+                    <th className="text-left px-4 py-3 font-semibold">รหัส</th>
+                    <th className="text-left px-4 py-3 font-semibold">ชื่อ-สกุล</th>
+                    <th className="text-left px-4 py-3 font-semibold">แผนก</th>
+                    <th className="text-left px-4 py-3 font-semibold">วันที่</th>
+                    <th className="text-left px-4 py-3 font-semibold">เริ่ม</th>
+                    <th className="text-left px-4 py-3 font-semibold">สิ้นสุด</th>
+                    <th className="text-right px-4 py-3 font-semibold">ชั่วโมง</th>
+                    <th className="text-left px-4 py-3 font-semibold">ประเภท</th>
+                    <th className="text-left px-4 py-3 font-semibold">สถานะ</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {otLoading ? (
+                    <tr><td colSpan={9} className="px-4 py-8 text-center text-muted-foreground">กำลังโหลดข้อมูล...</td></tr>
+                  ) : otData.length === 0 ? (
+                    <tr><td colSpan={9} className="px-4 py-8 text-center text-muted-foreground">ไม่พบข้อมูล OT ในเดือนที่เลือก</td></tr>
+                  ) : (
+                    otData.map((row: any) => (
+                      <tr key={row.id} className="border-t border-border hover:bg-muted/30 transition-colors">
+                        <td className="px-4 py-3 font-mono text-xs">{row.empId}</td>
+                        <td className="px-4 py-3 font-medium">{row.name}</td>
+                        <td className="px-4 py-3">{row.dept}</td>
+                        <td className="px-4 py-3">{row.date}</td>
+                        <td className="px-4 py-3">{row.startTime}</td>
+                        <td className="px-4 py-3">{row.endTime}</td>
+                        <td className="px-4 py-3 text-right tabular-nums font-semibold">{row.hours}</td>
+                        <td className="px-4 py-3">
+                          <span className="px-2 py-0.5 rounded-full text-xs font-medium" style={{
+                            background: row.rawOtType === "workday" ? "hsl(217 91% 95%)" : row.rawOtType === "holiday" ? "hsl(31 100% 95%)" : "hsl(0 80% 95%)",
+                            color: row.rawOtType === "workday" ? "#3b82f6" : row.rawOtType === "holiday" ? "#FF870F" : "#ef4444",
+                          }}>
+                            {row.otType}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="px-2 py-0.5 rounded-full text-xs font-medium" style={{
+                            background: row.status === "อนุมัติ" ? "hsl(var(--accent-green) / 0.15)" : row.status === "ไม่อนุมัติ" ? "hsl(0 80% 95%)" : "hsl(31 100% 95%)",
+                            color: row.status === "อนุมัติ" ? "#4CAF50" : row.status === "ไม่อนุมัติ" ? "#ef4444" : "#FF870F",
+                          }}>
+                            {row.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+                {otData.length > 0 && (
+                  <tfoot>
+                    <tr className="border-t-2 font-semibold" style={{ background: "hsl(var(--muted) / 0.5)" }}>
+                      <td className="px-4 py-3" colSpan={6}>รวมทั้งหมด ({otData.length} รายการ)</td>
+                      <td className="px-4 py-3 text-right tabular-nums" style={{ color: "#87FF0F" }}>{Math.round(otData.reduce((s: number, r: any) => s + r.hours, 0) * 100) / 100}</td>
+                      <td className="px-4 py-3" colSpan={2}></td>
+                    </tr>
+                  </tfoot>
+                )}
               </table>
             )}
             {cat === "leave" && selectedReport === "leave-summary" && (
