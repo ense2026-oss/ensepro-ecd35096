@@ -954,10 +954,10 @@ const Reports = () => {
         <div className="rounded-2xl border border-border bg-card overflow-hidden">
           <div className="p-4 border-b border-border flex items-center justify-between">
             <h3 className="text-sm font-bold">ข้อมูลรายละเอียด</h3>
-            <span className="text-xs text-muted-foreground">{cat === "leave" ? "ข้อมูลจริงจากระบบ" : "แสดง Mock Data"}</span>
+            <span className="text-xs text-muted-foreground">{(cat === "leave" || cat === "overtime") ? "ข้อมูลจริงจากระบบ" : "แสดง Mock Data"}</span>
           </div>
           <div className="overflow-x-auto">
-            {(cat === "employees" || cat === "organization") && (
+            {cat === "employees" && (
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-muted/50">
