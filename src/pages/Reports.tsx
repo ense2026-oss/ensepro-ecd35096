@@ -102,7 +102,7 @@ const reportTypes: ReportType[] = [
 
 const categories: { key: ReportCategory; label: string; icon: React.ElementType; color: string }[] = [
   { key: "employees", label: "ข้อมูลพนักงาน", icon: Users, color: "#FF870F" },
-  { key: "organization", label: "โครงสร้างองค์กร", icon: GitBranch, color: "#87FF0F" },
+  { key: "overtime", label: "ระบบโอที", icon: Clock, color: "#87FF0F" },
   { key: "attendance", label: "บันทึกเวลา", icon: Clock, color: "#6B7280" },
   { key: "leave", label: "ระบบลางาน", icon: CalendarDays, color: "#FF870F" },
   { key: "shifts", label: "ระบบกะงาน", icon: Clock, color: "#a855f7" },
