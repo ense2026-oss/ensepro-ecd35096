@@ -58,7 +58,7 @@ import {
 } from "recharts";
 
 // --- Types ---
-type ReportCategory = "employees" | "organization" | "attendance" | "leave" | "shifts" | "payroll";
+type ReportCategory = "employees" | "overtime" | "attendance" | "leave" | "shifts" | "payroll";
 type ExportFormat = "excel" | "pdf";
 
 interface ReportType {
