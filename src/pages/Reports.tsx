@@ -1025,6 +1025,67 @@ const Reports = () => {
                 </tbody>
               </table>
             )}
+            {cat === "overtime" && (
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-muted/50">
+                    <th className="text-left px-4 py-3 font-semibold">รหัส</th>
+                    <th className="text-left px-4 py-3 font-semibold">ชื่อ-สกุล</th>
+                    <th className="text-left px-4 py-3 font-semibold">แผนก</th>
+                    <th className="text-left px-4 py-3 font-semibold">วันที่</th>
+                    <th className="text-left px-4 py-3 font-semibold">เริ่ม</th>
+                    <th className="text-left px-4 py-3 font-semibold">สิ้นสุด</th>
+                    <th className="text-right px-4 py-3 font-semibold">ชั่วโมง</th>
+                    <th className="text-left px-4 py-3 font-semibold">ประเภท</th>
+                    <th className="text-left px-4 py-3 font-semibold">สถานะ</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {otLoading ? (
+                    <tr><td colSpan={9} className="px-4 py-8 text-center text-muted-foreground">กำลังโหลดข้อมูล...</td></tr>
+                  ) : otData.length === 0 ? (
+                    <tr><td colSpan={9} className="px-4 py-8 text-center text-muted-foreground">ไม่พบข้อมูล OT ในเดือนที่เลือก</td></tr>
+                  ) : (
+                    otData.map((row: any) => (
+                      <tr key={row.id} className="border-t border-border hover:bg-muted/30 transition-colors">
+                        <td className="px-4 py-3 font-mono text-xs">{row.empId}</td>
+                        <td className="px-4 py-3 font-medium">{row.name}</td>
+                        <td className="px-4 py-3">{row.dept}</td>
+                        <td className="px-4 py-3">{row.date}</td>
+                        <td className="px-4 py-3">{row.startTime}</td>
+                        <td className="px-4 py-3">{row.endTime}</td>
+                        <td className="px-4 py-3 text-right tabular-nums font-semibold">{row.hours}</td>
+                        <td className="px-4 py-3">
+                          <span className="px-2 py-0.5 rounded-full text-xs font-medium" style={{
+                            background: row.rawOtType === "workday" ? "hsl(217 91% 95%)" : row.rawOtType === "holiday" ? "hsl(31 100% 95%)" : "hsl(0 80% 95%)",
+                            color: row.rawOtType === "workday" ? "#3b82f6" : row.rawOtType === "holiday" ? "#FF870F" : "#ef4444",
+                          }}>
+                            {row.otType}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="px-2 py-0.5 rounded-full text-xs font-medium" style={{
+                            background: row.status === "อนุมัติ" ? "hsl(var(--accent-green) / 0.15)" : row.status === "ไม่อนุมัติ" ? "hsl(0 80% 95%)" : "hsl(31 100% 95%)",
+                            color: row.status === "อนุมัติ" ? "#4CAF50" : row.status === "ไม่อนุมัติ" ? "#ef4444" : "#FF870F",
+                          }}>
+                            {row.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+                {otData.length > 0 && (
+                  <tfoot>
+                    <tr className="border-t-2 font-semibold" style={{ background: "hsl(var(--muted) / 0.5)" }}>
+                      <td className="px-4 py-3" colSpan={6}>รวมทั้งหมด ({otData.length} รายการ)</td>
+                      <td className="px-4 py-3 text-right tabular-nums" style={{ color: "#87FF0F" }}>{Math.round(otData.reduce((s: number, r: any) => s + r.hours, 0) * 100) / 100}</td>
+                      <td className="px-4 py-3" colSpan={2}></td>
+                    </tr>
+                  </tfoot>
+                )}
+              </table>
+            )}
             {cat === "leave" && selectedReport === "leave-summary" && (
               <table className="w-full text-sm">
                 <thead>
