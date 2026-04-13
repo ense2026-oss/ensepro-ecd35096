@@ -227,7 +227,7 @@ const Reports = () => {
   const [selectedReport, setSelectedReport] = useState<string | null>(null);
   const [filterYear, setFilterYear] = useState("2569");
   const [filterMonth, setFilterMonth] = useState("กุมภาพันธ์");
-  const [expandedCats, setExpandedCats] = useState<Record<string, boolean>>({ employees: true, organization: true, attendance: true, leave: true, shifts: true, payroll: true });
+  const [expandedCats, setExpandedCats] = useState<Record<string, boolean>>({ employees: true, overtime: true, attendance: true, leave: true, shifts: true, payroll: true });
 
   // --- Real leave data ---
   const [leaveData, setLeaveData] = useState<any[]>([]);
