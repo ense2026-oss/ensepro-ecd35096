@@ -1362,7 +1362,7 @@ const Reports = () => {
                 </table>
               );
             })()}
-            {cat === "shifts" && (
+            {cat === "shifts" && currentReport?.id !== "shift-change" && (
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-muted/50">
@@ -1371,13 +1371,70 @@ const Reports = () => {
                     <th className="text-left px-4 py-3 font-semibold">แผนก</th>
                     <th className="text-left px-4 py-3 font-semibold">กะ</th>
                     <th className="text-left px-4 py-3 font-semibold">ช่วงเวลา</th>
-                    <th className="text-left px-4 py-3 font-semibold">วันทำงาน</th>
-                    <th className="text-left px-4 py-3 font-semibold">ชั่วโมง</th>
+                    <th className="text-left px-4 py-3 font-semibold">ประเภท</th>
                     <th className="text-left px-4 py-3 font-semibold">สถานะ</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {(currentReport?.id === "shift-change" ? [] : mockShiftTable).map((row) => (
+                  {shiftData.length === 0 ? (
+                    <tr><td colSpan={7} className="text-center py-8 text-muted-foreground">{shiftLoading ? "กำลังโหลด..." : "ไม่มีข้อมูล"}</td></tr>
+                  ) : shiftData.map((row: any, i: number) => (
+                    <tr key={i} className="border-t border-border hover:bg-muted/30 transition-colors">
+                      <td className="px-4 py-3 font-mono text-xs">{row.id}</td>
+                      <td className="px-4 py-3 font-medium">{row.name}</td>
+                      <td className="px-4 py-3">{row.dept}</td>
+                      <td className="px-4 py-3">
+                        <span className="px-2 py-0.5 rounded-full text-xs font-bold text-white" style={{ background: row.shiftColor }}>
+                          {row.shift}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">{row.period}</td>
+                      <td className="px-4 py-3">{row.assignmentType === "day" ? "รายวัน" : "ประจำ"}</td>
+                      <td className="px-4 py-3">
+                        <span className="px-2 py-0.5 rounded-full text-xs font-medium" style={{
+                          background: "hsl(var(--accent-green) / 0.15)",
+                          color: "#4CAF50",
+                        }}>
+                          {row.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+            {cat === "shifts" && currentReport?.id === "shift-change" && (
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-muted/50">
+                    <th className="text-left px-4 py-3 font-semibold">รหัส</th>
+                    <th className="text-left px-4 py-3 font-semibold">ชื่อ-สกุล</th>
+                    <th className="text-left px-4 py-3 font-semibold">กะเดิม</th>
+                    <th className="text-left px-4 py-3 font-semibold">กะใหม่</th>
+                    <th className="text-left px-4 py-3 font-semibold">วันที่</th>
+                    <th className="text-left px-4 py-3 font-semibold">หมายเหตุ</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {shiftChangeLog.length === 0 ? (
+                    <tr><td colSpan={6} className="text-center py-8 text-muted-foreground">{shiftLoading ? "กำลังโหลด..." : "ไม่มีข้อมูลการเปลี่ยนกะ"}</td></tr>
+                  ) : shiftChangeLog.map((row: any, i: number) => (
+                    <tr key={i} className="border-t border-border hover:bg-muted/30 transition-colors">
+                      <td className="px-4 py-3 font-mono text-xs">{row.id}</td>
+                      <td className="px-4 py-3 font-medium">{row.name}</td>
+                      <td className="px-4 py-3">{row.fromShift}</td>
+                      <td className="px-4 py-3">
+                        <span className="px-2 py-0.5 rounded-full text-xs font-bold text-white" style={{ background: row.toShiftColor }}>
+                          {row.toShift}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">{row.date}</td>
+                      <td className="px-4 py-3">{row.reason}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
                     <tr key={row.id} className="border-t border-border hover:bg-muted/30 transition-colors">
                       <td className="px-4 py-3 font-mono text-xs">{row.id}</td>
                       <td className="px-4 py-3 font-medium">{row.name}</td>
