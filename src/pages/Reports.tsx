@@ -221,12 +221,38 @@ const payrollSummaryData = [
 const fiscalYears = ["2569", "2568", "2567", "2566"];
 const months = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
 
+// Parse Thai date "DD/MM/YYYY(BE)" to { ceYear, month, day }
+const parseThaiDate = (dateStr: string): { ceYear: number; month: number; day: number } | null => {
+  if (!dateStr) return null;
+  // Handle DD/MM/YYYY format (Thai BE or CE)
+  const slashParts = dateStr.split("/");
+  if (slashParts.length === 3) {
+    const day = parseInt(slashParts[0]);
+    const month = parseInt(slashParts[1]);
+    let year = parseInt(slashParts[2]);
+    if (year > 2400) year -= 543; // Convert BE to CE
+    return { ceYear: year, month, day };
+  }
+  // Handle YYYY-MM-DD format (ISO)
+  const isoParts = dateStr.split("-");
+  if (isoParts.length === 3) {
+    let year = parseInt(isoParts[0]);
+    if (year > 2400) year -= 543;
+    return { ceYear: year, month: parseInt(isoParts[1]), day: parseInt(isoParts[2]) };
+  }
+  return null;
+};
+
+const currentDate = new Date();
+const currentThaiYear = String(currentDate.getFullYear() + 543);
+const currentMonthName = months[currentDate.getMonth()];
+
 const Reports = () => {
   const { employees } = useEmployees();
   const [activeCategory, setActiveCategory] = useState<ReportCategory | null>(null);
   const [selectedReport, setSelectedReport] = useState<string | null>(null);
-  const [filterYear, setFilterYear] = useState("2569");
-  const [filterMonth, setFilterMonth] = useState("กุมภาพันธ์");
+  const [filterYear, setFilterYear] = useState(currentThaiYear);
+  const [filterMonth, setFilterMonth] = useState(currentMonthName);
   const [expandedCats, setExpandedCats] = useState<Record<string, boolean>>({ employees: true, overtime: true, attendance: true, leave: true, shifts: true, payroll: true });
 
   // --- Real leave data ---
