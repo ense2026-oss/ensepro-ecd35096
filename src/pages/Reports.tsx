@@ -533,13 +533,138 @@ const Reports = () => {
     }
   }, [filterYear]);
 
+  // --- Fetch Shift data ---
+  const fetchShiftData = useCallback(async () => {
+    setShiftLoading(true);
+    try {
+      const ceYear = parseInt(filterYear) - 543;
+      const monthNum = monthIndexMap[filterMonth] || 1;
+
+      const [shiftsRes, assignmentsRes, empsRes] = await Promise.all([
+        supabase.from("shifts").select("*").order("sort_order"),
+        supabase.from("shift_assignments").select("*"),
+        supabase.from("employees").select("id, first_name, last_name, username, dept, shift").eq("status", "active"),
+      ]);
+
+      const shifts = shiftsRes.data || [];
+      const assignments = assignmentsRes.data || [];
+      const emps = empsRes.data || [];
+
+      const empMap = new Map(emps.map((e: any) => [e.id, e]));
+      const shiftMap = new Map(shifts.map((s: any) => [s.id, s]));
+
+      // Filter assignments by selected month/year
+      const filteredAssignments = assignments.filter((a: any) => {
+        const parsed = parseThaiDate(a.start_date);
+        if (!parsed) return false;
+        return parsed.ceYear === ceYear && parsed.month === monthNum;
+      });
+
+      // Build table data
+      const tableRows = filteredAssignments.map((a: any) => {
+        const emp = empMap.get(a.employee_id);
+        const shift = shiftMap.get(a.shift_id);
+        return {
+          id: emp?.username || "-",
+          name: emp ? `${emp.first_name} ${emp.last_name}` : "ไม่ทราบ",
+          dept: emp?.dept || "-",
+          shift: shift?.name || "-",
+          shiftColor: shift?.color || "#6B7280",
+          period: `${a.start_date} - ${a.end_date}`,
+          assignmentType: a.assignment_type,
+          status: "ปฏิบัติงาน",
+        };
+      });
+      setShiftData(tableRows);
+
+      // Pie: count employees per shift
+      const shiftCounts: Record<string, { count: number; color: string }> = {};
+      tableRows.forEach((r: any) => {
+        if (!shiftCounts[r.shift]) shiftCounts[r.shift] = { count: 0, color: r.shiftColor };
+        shiftCounts[r.shift].count++;
+      });
+      setShiftPieData(Object.entries(shiftCounts).map(([name, v]) => ({
+        name, value: v.count, color: v.color,
+      })));
+
+      // Monthly distribution chart (all year)
+      const yearAssignments = assignments.filter((a: any) => {
+        const parsed = parseThaiDate(a.start_date);
+        return parsed && parsed.ceYear === ceYear;
+      });
+
+      const monthlyShiftMap: Record<number, Record<string, number>> = {};
+      for (let m = 1; m <= 12; m++) monthlyShiftMap[m] = {};
+
+      yearAssignments.forEach((a: any) => {
+        const parsed = parseThaiDate(a.start_date);
+        if (!parsed) return;
+        const shift = shiftMap.get(a.shift_id);
+        const shiftName = shift?.name || "อื่นๆ";
+        monthlyShiftMap[parsed.month][shiftName] = (monthlyShiftMap[parsed.month][shiftName] || 0) + 1;
+      });
+
+      const shiftNames = shifts.map((s: any) => s.name);
+      setShiftDistribution(monthShortNames.map((label, i) => {
+        const row: any = { month: label };
+        shiftNames.forEach((sn: string) => { row[sn] = monthlyShiftMap[i + 1][sn] || 0; });
+        return row;
+      }));
+
+      // Coverage data: group by shift time ranges
+      const coverageMap: Record<string, number> = {};
+      const timeSlots = ["00:00-06:00", "06:00-08:00", "08:00-12:00", "12:00-14:00", "14:00-17:00", "17:00-22:00", "22:00-00:00"];
+      timeSlots.forEach(t => { coverageMap[t] = 0; });
+
+      filteredAssignments.forEach((a: any) => {
+        const shift = shiftMap.get(a.shift_id);
+        if (!shift) return;
+        const startH = parseInt(shift.start_time?.split(":")[0] || "0");
+        const endH = parseInt(shift.end_time?.split(":")[0] || "0");
+        timeSlots.forEach(slot => {
+          const slotStart = parseInt(slot.split("-")[0].split(":")[0]);
+          const slotEnd = parseInt(slot.split("-")[1].split(":")[0]) || 24;
+          if (endH > startH) {
+            if (startH < slotEnd && endH > slotStart) coverageMap[slot]++;
+          } else {
+            // Overnight shift
+            if (startH < slotEnd || endH > slotStart) coverageMap[slot]++;
+          }
+        });
+      });
+      setShiftCoverageData(timeSlots.map(t => ({ time: t, จำนวนพนักงาน: coverageMap[t] })));
+
+      // Change log: find "day" type assignments (individual overrides)
+      const dayAssignments = filteredAssignments.filter((a: any) => a.assignment_type === "day");
+      setShiftChangeLog(dayAssignments.map((a: any) => {
+        const emp = empMap.get(a.employee_id);
+        const shift = shiftMap.get(a.shift_id);
+        return {
+          id: emp?.username || "-",
+          name: emp ? `${emp.first_name} ${emp.last_name}` : "ไม่ทราบ",
+          fromShift: emp?.shift || "-",
+          toShift: shift?.name || "-",
+          toShiftColor: shift?.color || "#6B7280",
+          date: a.start_date,
+          reason: "มอบหมายกะรายวัน",
+        };
+      }));
+
+    } catch (err) {
+      console.error("Error fetching shift data:", err);
+    } finally {
+      setShiftLoading(false);
+    }
+  }, [filterYear, filterMonth]);
+
   useEffect(() => {
     if (selectedReport === "leave-summary") fetchLeaveData();
     else if (selectedReport === "leave-balance") fetchLeaveBalance();
     else if (selectedReport === "leave-yearly") fetchLeaveYearly();
     else if (selectedReport === "ot-summary" || selectedReport === "ot-by-type") fetchOtData();
     else if (selectedReport === "ot-trend") fetchOtTrend();
-  }, [selectedReport, fetchLeaveData, fetchLeaveBalance, fetchLeaveYearly, fetchOtData, fetchOtTrend]);
+    else if (selectedReport?.startsWith("shift-")) fetchShiftData();
+  }, [selectedReport, fetchLeaveData, fetchLeaveBalance, fetchLeaveYearly, fetchOtData, fetchOtTrend, fetchShiftData]);
 
   const toggleCat = (cat: string) => setExpandedCats((p) => ({ ...p, [cat]: !p[cat] }));
 
