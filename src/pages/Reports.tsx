@@ -218,7 +218,7 @@ const payrollSummaryData = [
   { month: "มิ.ย.", เงินเดือน: 458000, OT: 41000, เบี้ยขยัน: 12000, ประกันสังคม: 5250, ภาษี: 28500 },
 ];
 
-const fiscalYears = ["2569", "2568", "2567", "2566"];
+const fiscalYears = Array.from({ length: 4 }, (_, i) => String(new Date().getFullYear() + 543 - i));
 const months = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
 
 // Parse Thai date "DD/MM/YYYY(BE)" to { ceYear, month, day }
