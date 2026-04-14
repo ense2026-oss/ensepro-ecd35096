@@ -283,20 +283,22 @@ const Reports = () => {
     try {
       const ceYear = parseInt(filterYear) - 543;
       const monthNum = monthIndexMap[filterMonth] || 1;
-      const startDate = `${ceYear}-${String(monthNum).padStart(2, '0')}-01`;
-      const endDay = new Date(ceYear, monthNum, 0).getDate();
-      const endDate = `${ceYear}-${String(monthNum).padStart(2, '0')}-${String(endDay).padStart(2, '0')}`;
 
       const { data, error } = await supabase
         .from("leave_requests")
         .select("*, employees!leave_requests_employee_id_fkey(first_name, last_name, username)")
-        .gte("date_from", startDate)
-        .lte("date_from", endDate)
-        .order("date_from", { ascending: false });
+        .order("created_at", { ascending: false });
 
       if (error) throw error;
 
-      const rows = (data || []).map((r: any) => ({
+      // Filter client-side by parsing dates
+      const filtered = (data || []).filter((r: any) => {
+        const parsed = parseThaiDate(r.date_from);
+        if (!parsed) return false;
+        return parsed.ceYear === ceYear && parsed.month === monthNum;
+      });
+
+      const rows = filtered.map((r: any) => ({
         name: r.employees ? `${r.employees.first_name} ${r.employees.last_name}` : "ไม่ทราบ",
         empId: r.employees?.username || "-",
         type: r.leave_type_name || "-",
