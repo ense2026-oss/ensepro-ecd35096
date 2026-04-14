@@ -986,31 +986,39 @@ const Reports = () => {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <div className="rounded-2xl border border-border bg-card p-5">
               <h3 className="text-sm font-bold mb-4">จำนวนพนักงานแยกตามกะรายเดือน</h3>
-              <ResponsiveContainer width="100%" height={260}>
-                <BarChart data={shiftDistribution}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis dataKey="month" fontSize={12} />
-                  <YAxis fontSize={12} />
-                  <Tooltip />
-                  <Legend />
-                  <Bar dataKey="กะเช้า" fill="#22c55e" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="กะบ่าย" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="กะดึก" fill="#a855f7" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+              {shiftDistribution.length > 0 ? (
+                <ResponsiveContainer width="100%" height={260}>
+                  <BarChart data={shiftDistribution}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis dataKey="month" fontSize={12} />
+                    <YAxis fontSize={12} />
+                    <Tooltip />
+                    <Legend />
+                    {shiftPieData.map((s) => (
+                      <Bar key={s.name} dataKey={s.name} fill={s.color} radius={[4, 4, 0, 0]} />
+                    ))}
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-[260px] flex items-center justify-center text-muted-foreground text-sm">{shiftLoading ? "กำลังโหลด..." : "ไม่มีข้อมูล"}</div>
+              )}
             </div>
             <div className="rounded-2xl border border-border bg-card p-5">
               <h3 className="text-sm font-bold mb-4">สัดส่วนพนักงานตามกะ</h3>
-              <ResponsiveContainer width="100%" height={260}>
-                <RechartsPie>
-                  <Pie data={shiftPieData} cx="50%" cy="50%" innerRadius={60} outerRadius={100} paddingAngle={3} dataKey="value" label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
-                    {shiftPieData.map((entry, i) => (
-                      <Cell key={i} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </RechartsPie>
-              </ResponsiveContainer>
+              {shiftPieData.length > 0 ? (
+                <ResponsiveContainer width="100%" height={260}>
+                  <RechartsPie>
+                    <Pie data={shiftPieData} cx="50%" cy="50%" innerRadius={60} outerRadius={100} paddingAngle={3} dataKey="value" label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
+                      {shiftPieData.map((entry, i) => (
+                        <Cell key={i} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </RechartsPie>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-[260px] flex items-center justify-center text-muted-foreground text-sm">{shiftLoading ? "กำลังโหลด..." : "ไม่มีข้อมูล"}</div>
+              )}
             </div>
             {(currentReport?.id === "shift-coverage") && (
               <div className="rounded-2xl border border-border bg-card p-5 lg:col-span-2">
