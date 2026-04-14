@@ -158,46 +158,7 @@ const mockAttendanceTable = [
 
 // mockLeaveTable removed - now fetched from database
 
-// --- Shift mock data ---
-const shiftDistribution = [
-  { month: "ม.ค.", กะเช้า: 180, กะบ่าย: 120, กะดึก: 90 },
-  { month: "ก.พ.", กะเช้า: 175, กะบ่าย: 125, กะดึก: 85 },
-  { month: "มี.ค.", กะเช้า: 190, กะบ่าย: 115, กะดึก: 95 },
-  { month: "เม.ย.", กะเช้า: 170, กะบ่าย: 130, กะดึก: 88 },
-  { month: "พ.ค.", กะเช้า: 185, กะบ่าย: 118, กะดึก: 92 },
-  { month: "มิ.ย.", กะเช้า: 192, กะบ่าย: 122, กะดึก: 86 },
-];
-
-const shiftPieData = [
-  { name: "กะเช้า", value: 45, color: "#22c55e" },
-  { name: "กะบ่าย", value: 30, color: "#3b82f6" },
-  { name: "กะดึก", value: 25, color: "#a855f7" },
-];
-
-const mockShiftTable = [
-  { id: "EMP-001", name: "สมชาย ใจดี", dept: "IT", shift: "กะเช้า", period: "01/02/2569 - 28/02/2569", days: 20, hours: "160:00", status: "ปฏิบัติงาน" },
-  { id: "EMP-002", name: "สมหญิง รักงาน", dept: "HR", shift: "กะเช้า", period: "01/02/2569 - 28/02/2569", days: 20, hours: "160:00", status: "ปฏิบัติงาน" },
-  { id: "EMP-003", name: "วิชัย เก่งกาจ", dept: "Sales", shift: "กะบ่าย", period: "01/02/2569 - 28/02/2569", days: 18, hours: "144:00", status: "ปฏิบัติงาน" },
-  { id: "EMP-004", name: "นภา สดใส", dept: "Marketing", shift: "กะดึก", period: "01/02/2569 - 28/02/2569", days: 22, hours: "176:00", status: "ปฏิบัติงาน" },
-  { id: "EMP-005", name: "ประภาส มั่นคง", dept: "Finance", shift: "กะบ่าย", period: "01/02/2569 - 28/02/2569", days: 19, hours: "152:00", status: "ปฏิบัติงาน" },
-  { id: "EMP-006", name: "จันทร์เพ็ญ วงษ์สวัสดิ์", dept: "Sales", shift: "กะดึก", period: "15/02/2569 - 28/02/2569", days: 10, hours: "80:00", status: "เปลี่ยนกะ" },
-];
-
-const shiftChangeLog = [
-  { id: "EMP-003", name: "วิชัย เก่งกาจ", fromShift: "กะเช้า", toShift: "กะบ่าย", date: "05/02/2569", reason: "ความจำเป็นส่วนตัว", approver: "ผู้จัดการฝ่ายขาย" },
-  { id: "EMP-006", name: "จันทร์เพ็ญ วงษ์สวัสดิ์", fromShift: "กะบ่าย", toShift: "กะดึก", date: "15/02/2569", reason: "สลับกับเพื่อนร่วมงาน", approver: "ผู้จัดการฝ่ายขาย" },
-  { id: "EMP-004", name: "นภา สดใส", fromShift: "กะเช้า", toShift: "กะดึก", date: "01/02/2569", reason: "กำหนดตามนโยบายบริษัท", approver: "ฝ่ายบุคคล" },
-];
-
-const shiftCoverageData = [
-  { time: "00:00-06:00", จำนวนพนักงาน: 12 },
-  { time: "06:00-08:00", จำนวนพนักงาน: 25 },
-  { time: "08:00-12:00", จำนวนพนักงาน: 45 },
-  { time: "12:00-14:00", จำนวนพนักงาน: 40 },
-  { time: "14:00-17:00", จำนวนพนักงาน: 42 },
-  { time: "17:00-22:00", จำนวนพนักงาน: 30 },
-  { time: "22:00-00:00", จำนวนพนักงาน: 15 },
-];
+// Shift mock data removed - now fetched from database
 
 // --- Fiscal year options ---
 const taxCumulativeData = [
