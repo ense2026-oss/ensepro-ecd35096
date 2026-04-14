@@ -158,46 +158,7 @@ const mockAttendanceTable = [
 
 // mockLeaveTable removed - now fetched from database
 
-// --- Shift mock data ---
-const shiftDistribution = [
-  { month: "ม.ค.", กะเช้า: 180, กะบ่าย: 120, กะดึก: 90 },
-  { month: "ก.พ.", กะเช้า: 175, กะบ่าย: 125, กะดึก: 85 },
-  { month: "มี.ค.", กะเช้า: 190, กะบ่าย: 115, กะดึก: 95 },
-  { month: "เม.ย.", กะเช้า: 170, กะบ่าย: 130, กะดึก: 88 },
-  { month: "พ.ค.", กะเช้า: 185, กะบ่าย: 118, กะดึก: 92 },
-  { month: "มิ.ย.", กะเช้า: 192, กะบ่าย: 122, กะดึก: 86 },
-];
-
-const shiftPieData = [
-  { name: "กะเช้า", value: 45, color: "#22c55e" },
-  { name: "กะบ่าย", value: 30, color: "#3b82f6" },
-  { name: "กะดึก", value: 25, color: "#a855f7" },
-];
-
-const mockShiftTable = [
-  { id: "EMP-001", name: "สมชาย ใจดี", dept: "IT", shift: "กะเช้า", period: "01/02/2569 - 28/02/2569", days: 20, hours: "160:00", status: "ปฏิบัติงาน" },
-  { id: "EMP-002", name: "สมหญิง รักงาน", dept: "HR", shift: "กะเช้า", period: "01/02/2569 - 28/02/2569", days: 20, hours: "160:00", status: "ปฏิบัติงาน" },
-  { id: "EMP-003", name: "วิชัย เก่งกาจ", dept: "Sales", shift: "กะบ่าย", period: "01/02/2569 - 28/02/2569", days: 18, hours: "144:00", status: "ปฏิบัติงาน" },
-  { id: "EMP-004", name: "นภา สดใส", dept: "Marketing", shift: "กะดึก", period: "01/02/2569 - 28/02/2569", days: 22, hours: "176:00", status: "ปฏิบัติงาน" },
-  { id: "EMP-005", name: "ประภาส มั่นคง", dept: "Finance", shift: "กะบ่าย", period: "01/02/2569 - 28/02/2569", days: 19, hours: "152:00", status: "ปฏิบัติงาน" },
-  { id: "EMP-006", name: "จันทร์เพ็ญ วงษ์สวัสดิ์", dept: "Sales", shift: "กะดึก", period: "15/02/2569 - 28/02/2569", days: 10, hours: "80:00", status: "เปลี่ยนกะ" },
-];
-
-const shiftChangeLog = [
-  { id: "EMP-003", name: "วิชัย เก่งกาจ", fromShift: "กะเช้า", toShift: "กะบ่าย", date: "05/02/2569", reason: "ความจำเป็นส่วนตัว", approver: "ผู้จัดการฝ่ายขาย" },
-  { id: "EMP-006", name: "จันทร์เพ็ญ วงษ์สวัสดิ์", fromShift: "กะบ่าย", toShift: "กะดึก", date: "15/02/2569", reason: "สลับกับเพื่อนร่วมงาน", approver: "ผู้จัดการฝ่ายขาย" },
-  { id: "EMP-004", name: "นภา สดใส", fromShift: "กะเช้า", toShift: "กะดึก", date: "01/02/2569", reason: "กำหนดตามนโยบายบริษัท", approver: "ฝ่ายบุคคล" },
-];
-
-const shiftCoverageData = [
-  { time: "00:00-06:00", จำนวนพนักงาน: 12 },
-  { time: "06:00-08:00", จำนวนพนักงาน: 25 },
-  { time: "08:00-12:00", จำนวนพนักงาน: 45 },
-  { time: "12:00-14:00", จำนวนพนักงาน: 40 },
-  { time: "14:00-17:00", จำนวนพนักงาน: 42 },
-  { time: "17:00-22:00", จำนวนพนักงาน: 30 },
-  { time: "22:00-00:00", จำนวนพนักงาน: 15 },
-];
+// Shift mock data removed - now fetched from database
 
 // --- Fiscal year options ---
 const taxCumulativeData = [
@@ -269,6 +230,14 @@ const Reports = () => {
   const [otLoading, setOtLoading] = useState(false);
   const [otPieData, setOtPieData] = useState<{ name: string; value: number; color: string }[]>([]);
   const [otMonthlyChartData, setOtMonthlyChartData] = useState<any[]>([]);
+
+  // --- Real Shift data ---
+  const [shiftData, setShiftData] = useState<any[]>([]);
+  const [shiftLoading, setShiftLoading] = useState(false);
+  const [shiftDistribution, setShiftDistribution] = useState<any[]>([]);
+  const [shiftPieData, setShiftPieData] = useState<{ name: string; value: number; color: string }[]>([]);
+  const [shiftCoverageData, setShiftCoverageData] = useState<any[]>([]);
+  const [shiftChangeLog, setShiftChangeLog] = useState<any[]>([]);
 
   const monthIndexMap: Record<string, number> = {
     "มกราคม": 1, "กุมภาพันธ์": 2, "มีนาคม": 3, "เมษายน": 4,
@@ -564,13 +533,138 @@ const Reports = () => {
     }
   }, [filterYear]);
 
+  // --- Fetch Shift data ---
+  const fetchShiftData = useCallback(async () => {
+    setShiftLoading(true);
+    try {
+      const ceYear = parseInt(filterYear) - 543;
+      const monthNum = monthIndexMap[filterMonth] || 1;
+
+      const [shiftsRes, assignmentsRes, empsRes] = await Promise.all([
+        supabase.from("shifts").select("*").order("sort_order"),
+        supabase.from("shift_assignments").select("*"),
+        supabase.from("employees").select("id, first_name, last_name, username, dept, shift").eq("status", "active"),
+      ]);
+
+      const shifts = shiftsRes.data || [];
+      const assignments = assignmentsRes.data || [];
+      const emps = empsRes.data || [];
+
+      const empMap = new Map(emps.map((e: any) => [e.id, e]));
+      const shiftMap = new Map(shifts.map((s: any) => [s.id, s]));
+
+      // Filter assignments by selected month/year
+      const filteredAssignments = assignments.filter((a: any) => {
+        const parsed = parseThaiDate(a.start_date);
+        if (!parsed) return false;
+        return parsed.ceYear === ceYear && parsed.month === monthNum;
+      });
+
+      // Build table data
+      const tableRows = filteredAssignments.map((a: any) => {
+        const emp = empMap.get(a.employee_id);
+        const shift = shiftMap.get(a.shift_id);
+        return {
+          id: emp?.username || "-",
+          name: emp ? `${emp.first_name} ${emp.last_name}` : "ไม่ทราบ",
+          dept: emp?.dept || "-",
+          shift: shift?.name || "-",
+          shiftColor: shift?.color || "#6B7280",
+          period: `${a.start_date} - ${a.end_date}`,
+          assignmentType: a.assignment_type,
+          status: "ปฏิบัติงาน",
+        };
+      });
+      setShiftData(tableRows);
+
+      // Pie: count employees per shift
+      const shiftCounts: Record<string, { count: number; color: string }> = {};
+      tableRows.forEach((r: any) => {
+        if (!shiftCounts[r.shift]) shiftCounts[r.shift] = { count: 0, color: r.shiftColor };
+        shiftCounts[r.shift].count++;
+      });
+      setShiftPieData(Object.entries(shiftCounts).map(([name, v]) => ({
+        name, value: v.count, color: v.color,
+      })));
+
+      // Monthly distribution chart (all year)
+      const yearAssignments = assignments.filter((a: any) => {
+        const parsed = parseThaiDate(a.start_date);
+        return parsed && parsed.ceYear === ceYear;
+      });
+
+      const monthlyShiftMap: Record<number, Record<string, number>> = {};
+      for (let m = 1; m <= 12; m++) monthlyShiftMap[m] = {};
+
+      yearAssignments.forEach((a: any) => {
+        const parsed = parseThaiDate(a.start_date);
+        if (!parsed) return;
+        const shift = shiftMap.get(a.shift_id);
+        const shiftName = shift?.name || "อื่นๆ";
+        monthlyShiftMap[parsed.month][shiftName] = (monthlyShiftMap[parsed.month][shiftName] || 0) + 1;
+      });
+
+      const shiftNames = shifts.map((s: any) => s.name);
+      setShiftDistribution(monthShortNames.map((label, i) => {
+        const row: any = { month: label };
+        shiftNames.forEach((sn: string) => { row[sn] = monthlyShiftMap[i + 1][sn] || 0; });
+        return row;
+      }));
+
+      // Coverage data: group by shift time ranges
+      const coverageMap: Record<string, number> = {};
+      const timeSlots = ["00:00-06:00", "06:00-08:00", "08:00-12:00", "12:00-14:00", "14:00-17:00", "17:00-22:00", "22:00-00:00"];
+      timeSlots.forEach(t => { coverageMap[t] = 0; });
+
+      filteredAssignments.forEach((a: any) => {
+        const shift = shiftMap.get(a.shift_id);
+        if (!shift) return;
+        const startH = parseInt(shift.start_time?.split(":")[0] || "0");
+        const endH = parseInt(shift.end_time?.split(":")[0] || "0");
+        timeSlots.forEach(slot => {
+          const slotStart = parseInt(slot.split("-")[0].split(":")[0]);
+          const slotEnd = parseInt(slot.split("-")[1].split(":")[0]) || 24;
+          if (endH > startH) {
+            if (startH < slotEnd && endH > slotStart) coverageMap[slot]++;
+          } else {
+            // Overnight shift
+            if (startH < slotEnd || endH > slotStart) coverageMap[slot]++;
+          }
+        });
+      });
+      setShiftCoverageData(timeSlots.map(t => ({ time: t, จำนวนพนักงาน: coverageMap[t] })));
+
+      // Change log: find "day" type assignments (individual overrides)
+      const dayAssignments = filteredAssignments.filter((a: any) => a.assignment_type === "day");
+      setShiftChangeLog(dayAssignments.map((a: any) => {
+        const emp = empMap.get(a.employee_id);
+        const shift = shiftMap.get(a.shift_id);
+        return {
+          id: emp?.username || "-",
+          name: emp ? `${emp.first_name} ${emp.last_name}` : "ไม่ทราบ",
+          fromShift: emp?.shift || "-",
+          toShift: shift?.name || "-",
+          toShiftColor: shift?.color || "#6B7280",
+          date: a.start_date,
+          reason: "มอบหมายกะรายวัน",
+        };
+      }));
+
+    } catch (err) {
+      console.error("Error fetching shift data:", err);
+    } finally {
+      setShiftLoading(false);
+    }
+  }, [filterYear, filterMonth]);
+
   useEffect(() => {
     if (selectedReport === "leave-summary") fetchLeaveData();
     else if (selectedReport === "leave-balance") fetchLeaveBalance();
     else if (selectedReport === "leave-yearly") fetchLeaveYearly();
     else if (selectedReport === "ot-summary" || selectedReport === "ot-by-type") fetchOtData();
     else if (selectedReport === "ot-trend") fetchOtTrend();
-  }, [selectedReport, fetchLeaveData, fetchLeaveBalance, fetchLeaveYearly, fetchOtData, fetchOtTrend]);
+    else if (selectedReport?.startsWith("shift-")) fetchShiftData();
+  }, [selectedReport, fetchLeaveData, fetchLeaveBalance, fetchLeaveYearly, fetchOtData, fetchOtTrend, fetchShiftData]);
 
   const toggleCat = (cat: string) => setExpandedCats((p) => ({ ...p, [cat]: !p[cat] }));
 
@@ -892,31 +986,39 @@ const Reports = () => {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <div className="rounded-2xl border border-border bg-card p-5">
               <h3 className="text-sm font-bold mb-4">จำนวนพนักงานแยกตามกะรายเดือน</h3>
-              <ResponsiveContainer width="100%" height={260}>
-                <BarChart data={shiftDistribution}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis dataKey="month" fontSize={12} />
-                  <YAxis fontSize={12} />
-                  <Tooltip />
-                  <Legend />
-                  <Bar dataKey="กะเช้า" fill="#22c55e" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="กะบ่าย" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="กะดึก" fill="#a855f7" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+              {shiftDistribution.length > 0 ? (
+                <ResponsiveContainer width="100%" height={260}>
+                  <BarChart data={shiftDistribution}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis dataKey="month" fontSize={12} />
+                    <YAxis fontSize={12} />
+                    <Tooltip />
+                    <Legend />
+                    {shiftPieData.map((s) => (
+                      <Bar key={s.name} dataKey={s.name} fill={s.color} radius={[4, 4, 0, 0]} />
+                    ))}
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-[260px] flex items-center justify-center text-muted-foreground text-sm">{shiftLoading ? "กำลังโหลด..." : "ไม่มีข้อมูล"}</div>
+              )}
             </div>
             <div className="rounded-2xl border border-border bg-card p-5">
               <h3 className="text-sm font-bold mb-4">สัดส่วนพนักงานตามกะ</h3>
-              <ResponsiveContainer width="100%" height={260}>
-                <RechartsPie>
-                  <Pie data={shiftPieData} cx="50%" cy="50%" innerRadius={60} outerRadius={100} paddingAngle={3} dataKey="value" label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
-                    {shiftPieData.map((entry, i) => (
-                      <Cell key={i} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </RechartsPie>
-              </ResponsiveContainer>
+              {shiftPieData.length > 0 ? (
+                <ResponsiveContainer width="100%" height={260}>
+                  <RechartsPie>
+                    <Pie data={shiftPieData} cx="50%" cy="50%" innerRadius={60} outerRadius={100} paddingAngle={3} dataKey="value" label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
+                      {shiftPieData.map((entry, i) => (
+                        <Cell key={i} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </RechartsPie>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-[260px] flex items-center justify-center text-muted-foreground text-sm">{shiftLoading ? "กำลังโหลด..." : "ไม่มีข้อมูล"}</div>
+              )}
             </div>
             {(currentReport?.id === "shift-coverage") && (
               <div className="rounded-2xl border border-border bg-card p-5 lg:col-span-2">
@@ -1260,7 +1362,7 @@ const Reports = () => {
                 </table>
               );
             })()}
-            {cat === "shifts" && (
+            {cat === "shifts" && currentReport?.id !== "shift-change" && (
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-muted/50">
@@ -1269,31 +1371,29 @@ const Reports = () => {
                     <th className="text-left px-4 py-3 font-semibold">แผนก</th>
                     <th className="text-left px-4 py-3 font-semibold">กะ</th>
                     <th className="text-left px-4 py-3 font-semibold">ช่วงเวลา</th>
-                    <th className="text-left px-4 py-3 font-semibold">วันทำงาน</th>
-                    <th className="text-left px-4 py-3 font-semibold">ชั่วโมง</th>
+                    <th className="text-left px-4 py-3 font-semibold">ประเภท</th>
                     <th className="text-left px-4 py-3 font-semibold">สถานะ</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {(currentReport?.id === "shift-change" ? [] : mockShiftTable).map((row) => (
-                    <tr key={row.id} className="border-t border-border hover:bg-muted/30 transition-colors">
+                  {shiftData.length === 0 ? (
+                    <tr><td colSpan={7} className="text-center py-8 text-muted-foreground">{shiftLoading ? "กำลังโหลด..." : "ไม่มีข้อมูล"}</td></tr>
+                  ) : shiftData.map((row: any, i: number) => (
+                    <tr key={i} className="border-t border-border hover:bg-muted/30 transition-colors">
                       <td className="px-4 py-3 font-mono text-xs">{row.id}</td>
                       <td className="px-4 py-3 font-medium">{row.name}</td>
                       <td className="px-4 py-3">{row.dept}</td>
                       <td className="px-4 py-3">
-                        <span className="px-2 py-0.5 rounded-full text-xs font-bold text-white" style={{
-                          background: row.shift === "กะเช้า" ? "#22c55e" : row.shift === "กะบ่าย" ? "#3b82f6" : "#a855f7"
-                        }}>
+                        <span className="px-2 py-0.5 rounded-full text-xs font-bold text-white" style={{ background: row.shiftColor }}>
                           {row.shift}
                         </span>
                       </td>
                       <td className="px-4 py-3">{row.period}</td>
-                      <td className="px-4 py-3">{row.days} วัน</td>
-                      <td className="px-4 py-3">{row.hours}</td>
+                      <td className="px-4 py-3">{row.assignmentType === "day" ? "รายวัน" : "ประจำ"}</td>
                       <td className="px-4 py-3">
                         <span className="px-2 py-0.5 rounded-full text-xs font-medium" style={{
-                          background: row.status === "ปฏิบัติงาน" ? "hsl(var(--accent-green) / 0.15)" : "hsl(31 100% 95%)",
-                          color: row.status === "ปฏิบัติงาน" ? "#4CAF50" : "#FF870F",
+                          background: "hsl(var(--accent-green) / 0.15)",
+                          color: "#4CAF50",
                         }}>
                           {row.status}
                         </span>
@@ -1309,35 +1409,27 @@ const Reports = () => {
                   <tr className="bg-muted/50">
                     <th className="text-left px-4 py-3 font-semibold">รหัส</th>
                     <th className="text-left px-4 py-3 font-semibold">ชื่อ-สกุล</th>
-                    <th className="text-left px-4 py-3 font-semibold">จากกะ</th>
-                    <th className="text-left px-4 py-3 font-semibold">เป็นกะ</th>
+                    <th className="text-left px-4 py-3 font-semibold">กะเดิม</th>
+                    <th className="text-left px-4 py-3 font-semibold">กะใหม่</th>
                     <th className="text-left px-4 py-3 font-semibold">วันที่</th>
-                    <th className="text-left px-4 py-3 font-semibold">เหตุผล</th>
-                    <th className="text-left px-4 py-3 font-semibold">ผู้อนุมัติ</th>
+                    <th className="text-left px-4 py-3 font-semibold">หมายเหตุ</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {shiftChangeLog.map((row, i) => (
+                  {shiftChangeLog.length === 0 ? (
+                    <tr><td colSpan={6} className="text-center py-8 text-muted-foreground">{shiftLoading ? "กำลังโหลด..." : "ไม่มีข้อมูลการเปลี่ยนกะ"}</td></tr>
+                  ) : shiftChangeLog.map((row: any, i: number) => (
                     <tr key={i} className="border-t border-border hover:bg-muted/30 transition-colors">
                       <td className="px-4 py-3 font-mono text-xs">{row.id}</td>
                       <td className="px-4 py-3 font-medium">{row.name}</td>
+                      <td className="px-4 py-3">{row.fromShift}</td>
                       <td className="px-4 py-3">
-                        <span className="px-2 py-0.5 rounded-full text-xs font-bold text-white" style={{
-                          background: row.fromShift === "กะเช้า" ? "#22c55e" : row.fromShift === "กะบ่าย" ? "#3b82f6" : "#a855f7"
-                        }}>
-                          {row.fromShift}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className="px-2 py-0.5 rounded-full text-xs font-bold text-white" style={{
-                          background: row.toShift === "กะเช้า" ? "#22c55e" : row.toShift === "กะบ่าย" ? "#3b82f6" : "#a855f7"
-                        }}>
+                        <span className="px-2 py-0.5 rounded-full text-xs font-bold text-white" style={{ background: row.toShiftColor }}>
                           {row.toShift}
                         </span>
                       </td>
                       <td className="px-4 py-3">{row.date}</td>
                       <td className="px-4 py-3">{row.reason}</td>
-                      <td className="px-4 py-3">{row.approver}</td>
                     </tr>
                   ))}
                 </tbody>
