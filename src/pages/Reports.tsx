@@ -218,15 +218,41 @@ const payrollSummaryData = [
   { month: "มิ.ย.", เงินเดือน: 458000, OT: 41000, เบี้ยขยัน: 12000, ประกันสังคม: 5250, ภาษี: 28500 },
 ];
 
-const fiscalYears = ["2569", "2568", "2567", "2566"];
+const fiscalYears = Array.from({ length: 4 }, (_, i) => String(new Date().getFullYear() + 543 - i));
 const months = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
+
+// Parse Thai date "DD/MM/YYYY(BE)" to { ceYear, month, day }
+const parseThaiDate = (dateStr: string): { ceYear: number; month: number; day: number } | null => {
+  if (!dateStr) return null;
+  // Handle DD/MM/YYYY format (Thai BE or CE)
+  const slashParts = dateStr.split("/");
+  if (slashParts.length === 3) {
+    const day = parseInt(slashParts[0]);
+    const month = parseInt(slashParts[1]);
+    let year = parseInt(slashParts[2]);
+    if (year > 2400) year -= 543; // Convert BE to CE
+    return { ceYear: year, month, day };
+  }
+  // Handle YYYY-MM-DD format (ISO)
+  const isoParts = dateStr.split("-");
+  if (isoParts.length === 3) {
+    let year = parseInt(isoParts[0]);
+    if (year > 2400) year -= 543;
+    return { ceYear: year, month: parseInt(isoParts[1]), day: parseInt(isoParts[2]) };
+  }
+  return null;
+};
+
+const currentDate = new Date();
+const currentThaiYear = String(currentDate.getFullYear() + 543);
+const currentMonthName = months[currentDate.getMonth()];
 
 const Reports = () => {
   const { employees } = useEmployees();
   const [activeCategory, setActiveCategory] = useState<ReportCategory | null>(null);
   const [selectedReport, setSelectedReport] = useState<string | null>(null);
-  const [filterYear, setFilterYear] = useState("2569");
-  const [filterMonth, setFilterMonth] = useState("กุมภาพันธ์");
+  const [filterYear, setFilterYear] = useState(currentThaiYear);
+  const [filterMonth, setFilterMonth] = useState(currentMonthName);
   const [expandedCats, setExpandedCats] = useState<Record<string, boolean>>({ employees: true, overtime: true, attendance: true, leave: true, shifts: true, payroll: true });
 
   // --- Real leave data ---
@@ -257,20 +283,22 @@ const Reports = () => {
     try {
       const ceYear = parseInt(filterYear) - 543;
       const monthNum = monthIndexMap[filterMonth] || 1;
-      const startDate = `${ceYear}-${String(monthNum).padStart(2, '0')}-01`;
-      const endDay = new Date(ceYear, monthNum, 0).getDate();
-      const endDate = `${ceYear}-${String(monthNum).padStart(2, '0')}-${String(endDay).padStart(2, '0')}`;
 
       const { data, error } = await supabase
         .from("leave_requests")
         .select("*, employees!leave_requests_employee_id_fkey(first_name, last_name, username)")
-        .gte("date_from", startDate)
-        .lte("date_from", endDate)
-        .order("date_from", { ascending: false });
+        .order("created_at", { ascending: false });
 
       if (error) throw error;
 
-      const rows = (data || []).map((r: any) => ({
+      // Filter client-side by parsing dates
+      const filtered = (data || []).filter((r: any) => {
+        const parsed = parseThaiDate(r.date_from);
+        if (!parsed) return false;
+        return parsed.ceYear === ceYear && parsed.month === monthNum;
+      });
+
+      const rows = filtered.map((r: any) => ({
         name: r.employees ? `${r.employees.first_name} ${r.employees.last_name}` : "ไม่ทราบ",
         empId: r.employees?.username || "-",
         type: r.leave_type_name || "-",
@@ -304,20 +332,23 @@ const Reports = () => {
     setLeaveLoading(true);
     try {
       const ceYear = parseInt(filterYear) - 543;
-      const yearStart = `${ceYear}-01-01`;
-      const yearEnd = `${ceYear}-12-31`;
 
       const [typesRes, requestsRes, empsRes] = await Promise.all([
         supabase.from("leave_types").select("*").order("sort_order"),
-        supabase.from("leave_requests").select("employee_id, leave_type_id, leave_type_name, days, status")
-          .gte("date_from", yearStart).lte("date_from", yearEnd)
+        supabase.from("leave_requests").select("employee_id, leave_type_id, leave_type_name, date_from, days, status")
           .neq("status", "rejected"),
         supabase.from("employees").select("id, first_name, last_name, username").eq("status", "active"),
       ]);
 
       const leaveTypes = typesRes.data || [];
-      const requests = requestsRes.data || [];
+      const allRequests = requestsRes.data || [];
       const emps = empsRes.data || [];
+
+      // Filter by year client-side
+      const requests = allRequests.filter((r: any) => {
+        const parsed = parseThaiDate(r.date_from);
+        return parsed && parsed.ceYear === ceYear;
+      });
 
       // Group used days per employee per leave type
       const usedMap: Record<string, Record<string, number>> = {};
@@ -373,28 +404,32 @@ const Reports = () => {
     setLeaveLoading(true);
     try {
       const ceYear = parseInt(filterYear) - 543;
-      const yearStart = `${ceYear}-01-01`;
-      const yearEnd = `${ceYear}-12-31`;
 
       const [requestsRes, typesRes] = await Promise.all([
         supabase.from("leave_requests").select("date_from, leave_type_name, days, status")
-          .gte("date_from", yearStart).lte("date_from", yearEnd)
           .neq("status", "rejected"),
         supabase.from("leave_types").select("name, color").order("sort_order"),
       ]);
 
-      const requests = requestsRes.data || [];
+      const allRequests = requestsRes.data || [];
       const leaveTypes = typesRes.data || [];
       const typeNames = leaveTypes.map((lt: any) => lt.name);
+
+      // Filter by year client-side
+      const requests = allRequests.filter((r: any) => {
+        const parsed = parseThaiDate(r.date_from);
+        return parsed && parsed.ceYear === ceYear;
+      });
 
       // Aggregate by month
       const monthlyMap: Record<number, Record<string, number>> = {};
       for (let m = 1; m <= 12; m++) monthlyMap[m] = {};
 
       requests.forEach((r: any) => {
-        const month = parseInt(r.date_from.split("-")[1]);
+        const parsed = parseThaiDate(r.date_from);
+        if (!parsed) return;
         const name = r.leave_type_name || "อื่นๆ";
-        monthlyMap[month][name] = (monthlyMap[month][name] || 0) + Number(r.days);
+        monthlyMap[parsed.month][name] = (monthlyMap[parsed.month][name] || 0) + Number(r.days);
       });
 
       const chartData = monthShortNames.map((label, i) => {
