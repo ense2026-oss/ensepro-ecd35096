@@ -121,32 +121,7 @@ const attendanceMonthly = [
 
 const defaultLeavePieColors = ["#FF870F", "#9CA3AF", "#87FF0F", "#E5E5E5", "#3b82f6", "#a855f7", "#ef4444", "#14b8a6"];
 
-const headcountData = [
-  { dept: "IT", count: 45 },
-  { dept: "HR", count: 12 },
-  { dept: "Sales", count: 38 },
-  { dept: "Marketing", count: 15 },
-  { dept: "Finance", count: 20 },
-  { dept: "Operations", count: 30 },
-];
-
-const hiringTrend = [
-  { month: "ม.ค.", เข้าใหม่: 5, ลาออก: 2 },
-  { month: "ก.พ.", เข้าใหม่: 3, ลาออก: 1 },
-  { month: "มี.ค.", เข้าใหม่: 8, ลาออก: 3 },
-  { month: "เม.ย.", เข้าใหม่: 4, ลาออก: 2 },
-  { month: "พ.ค.", เข้าใหม่: 6, ลาออก: 1 },
-  { month: "มิ.ย.", เข้าใหม่: 7, ลาออก: 4 },
-];
-
-// --- Mock table data ---
-const mockEmployeeTable = [
-  { id: "EMP-001", name: "สมชาย ใจดี", dept: "IT", position: "Senior Developer", type: "พนักงานประจำ", startDate: "01/03/2565", status: "ทำงาน" },
-  { id: "EMP-002", name: "สมหญิง รักงาน", dept: "HR", position: "HR Manager", type: "พนักงานประจำ", startDate: "15/06/2563", status: "ทำงาน" },
-  { id: "EMP-003", name: "วิชัย เก่งกาจ", dept: "Sales", position: "Sales Lead", type: "พนักงานประจำ", startDate: "01/01/2564", status: "ทำงาน" },
-  { id: "EMP-004", name: "นภา สดใส", dept: "Marketing", position: "Designer", type: "สัญญาจ้าง", startDate: "10/08/2566", status: "ทำงาน" },
-  { id: "EMP-005", name: "ประภาส มั่นคง", dept: "Finance", position: "Accountant", type: "พนักงานประจำ", startDate: "20/04/2562", status: "ทำงาน" },
-];
+// Mock data removed - employee data now fetched from database
 
 const mockAttendanceTable = [
   { id: "EMP-001", name: "สมชาย ใจดี", date: "20/02/2569", checkIn: "08:02", checkOut: "17:15", status: "ปกติ", hours: "9:13" },
