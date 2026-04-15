@@ -991,7 +991,7 @@ const Reports = () => {
             <div className="rounded-2xl border border-border bg-card p-5">
               <h3 className="text-sm font-bold mb-4">แนวโน้มการรับ-ออก พนักงาน</h3>
               <ResponsiveContainer width="100%" height={260}>
-                <LineChart data={hiringTrend}>
+                <LineChart data={empHiringTrend}>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                   <XAxis dataKey="month" fontSize={12} />
                   <YAxis fontSize={12} />
