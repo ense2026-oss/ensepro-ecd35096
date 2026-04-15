@@ -214,6 +214,12 @@ const Reports = () => {
   const [shiftCoverageData, setShiftCoverageData] = useState<any[]>([]);
   const [shiftChangeLog, setShiftChangeLog] = useState<any[]>([]);
 
+  // --- Real Employee data ---
+  const [empTableData, setEmpTableData] = useState<any[]>([]);
+  const [empHeadcountData, setEmpHeadcountData] = useState<{ dept: string; count: number }[]>([]);
+  const [empHiringTrend, setEmpHiringTrend] = useState<any[]>([]);
+  const [empLoading, setEmpLoading] = useState(false);
+
   const monthIndexMap: Record<string, number> = {
     "มกราคม": 1, "กุมภาพันธ์": 2, "มีนาคม": 3, "เมษายน": 4,
     "พฤษภาคม": 5, "มิถุนายน": 6, "กรกฎาคม": 7, "สิงหาคม": 8,
