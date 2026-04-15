@@ -1005,7 +1005,7 @@ const Reports = () => {
             <div className="rounded-2xl border border-border bg-card p-5">
               <h3 className="text-sm font-bold mb-4">จำนวนพนักงานตามแผนก</h3>
               <ResponsiveContainer width="100%" height={260}>
-                <BarChart data={headcountData} layout="vertical">
+                <BarChart data={empHeadcountData} layout="vertical">
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                   <XAxis type="number" fontSize={12} />
                   <YAxis dataKey="dept" type="category" fontSize={12} width={80} />
@@ -1187,7 +1187,7 @@ const Reports = () => {
         <div className="rounded-2xl border border-border bg-card overflow-hidden">
           <div className="p-4 border-b border-border flex items-center justify-between">
             <h3 className="text-sm font-bold">ข้อมูลรายละเอียด</h3>
-            <span className="text-xs text-muted-foreground">{(cat === "leave" || cat === "overtime") ? "ข้อมูลจริงจากระบบ" : "แสดง Mock Data"}</span>
+            <span className="text-xs text-muted-foreground">{(cat === "leave" || cat === "overtime" || cat === "employees" || cat === "shifts") ? "ข้อมูลจริงจากระบบ" : "แสดง Mock Data"}</span>
           </div>
           <div className="overflow-x-auto">
             {cat === "employees" && (
@@ -1204,20 +1204,36 @@ const Reports = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {mockEmployeeTable.map((emp) => (
-                    <tr key={emp.id} className="border-t border-border hover:bg-muted/30 transition-colors">
-                      <td className="px-4 py-3 font-mono text-xs">{emp.id}</td>
-                      <td className="px-4 py-3 font-medium">{emp.name}</td>
-                      <td className="px-4 py-3">{emp.dept}</td>
-                      <td className="px-4 py-3">{emp.position}</td>
-                      <td className="px-4 py-3">{emp.type}</td>
-                      <td className="px-4 py-3">{emp.startDate}</td>
-                      <td className="px-4 py-3">
-                        <span className="px-2 py-0.5 rounded-full text-xs font-medium" style={{ background: "hsl(var(--accent-green) / 0.15)", color: "#4CAF50" }}>{emp.status}</span>
-                      </td>
-                    </tr>
-                  ))}
+                  {empLoading ? (
+                    <tr><td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">กำลังโหลดข้อมูล...</td></tr>
+                  ) : empTableData.length === 0 ? (
+                    <tr><td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">ไม่พบข้อมูลพนักงาน</td></tr>
+                  ) : (
+                    empTableData.map((emp, i) => (
+                      <tr key={i} className="border-t border-border hover:bg-muted/30 transition-colors">
+                        <td className="px-4 py-3 font-mono text-xs">{emp.id}</td>
+                        <td className="px-4 py-3 font-medium">{emp.name}</td>
+                        <td className="px-4 py-3">{emp.dept}</td>
+                        <td className="px-4 py-3">{emp.position}</td>
+                        <td className="px-4 py-3">{emp.type}</td>
+                        <td className="px-4 py-3">{emp.startDate}</td>
+                        <td className="px-4 py-3">
+                          <span className="px-2 py-0.5 rounded-full text-xs font-medium" style={{
+                            background: emp.rawStatus === "active" || emp.rawStatus === "new" ? "hsl(var(--accent-green) / 0.15)" : "hsl(0 80% 95%)",
+                            color: emp.rawStatus === "active" || emp.rawStatus === "new" ? "#4CAF50" : "#ef4444",
+                          }}>{emp.status}</span>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
+                {empTableData.length > 0 && (
+                  <tfoot>
+                    <tr className="border-t-2 font-semibold" style={{ background: "hsl(var(--muted) / 0.5)" }}>
+                      <td className="px-4 py-3" colSpan={7}>รวมทั้งหมด {empTableData.length} คน</td>
+                    </tr>
+                  </tfoot>
+                )}
               </table>
             )}
             {cat === "attendance" && (
