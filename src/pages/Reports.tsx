@@ -740,6 +740,104 @@ const Reports = () => {
     }
   }, [filterYear, filterMonth, selectedReport]);
 
+  // --- Fetch Payroll data ---
+  const fetchPayrollData = useCallback(async () => {
+    setPayrollLoading(true);
+    try {
+      const ceYear = parseInt(filterYear) - 543;
+      const taxConfig: TaxConfig = { enabled: true, method: "progressive", flatRate: 5 };
+
+      // Fetch active employees with salary
+      const { data: empsData } = await supabase
+        .from("employees")
+        .select("id, first_name, last_name, salary, tax_deductions, pvd_rate, children, children_after_2018, status")
+        .eq("status", "active");
+
+      // Fetch approved OT for the year
+      const { data: otDataRaw } = await supabase
+        .from("overtime_requests")
+        .select("date, hours, status")
+        .eq("status", "approved");
+
+      // Fetch custom payroll items
+      const { data: customItems } = await supabase
+        .from("employee_custom_payroll_items")
+        .select("employee_id, amount, type, enabled")
+        .eq("enabled", true);
+
+      const activeEmps = empsData || [];
+      const allOt = (otDataRaw || []).filter((o: any) => {
+        const parsed = parseThaiDate(o.date);
+        return parsed && parsed.ceYear === ceYear;
+      });
+
+      // Calculate total salary per month
+      const totalMonthlySalary = activeEmps.reduce((s, e: any) => s + (Number(e.salary) || 0), 0);
+
+      // Calculate total monthly tax
+      const totalMonthlyTax = activeEmps.reduce((s, e: any) => {
+        const salary = Number(e.salary) || 0;
+        const annualIncome = calculateAnnualIncome(salary);
+        const deductions = e.tax_deductions || DEFAULT_TAX_DEDUCTION;
+        return s + calculateMonthlyTax(taxConfig, annualIncome, deductions);
+      }, 0);
+
+      // Social security: 5% of salary, max 750 per person per month
+      const totalSocialSecurity = activeEmps.reduce((s, e: any) => {
+        const salary = Number(e.salary) || 0;
+        return s + Math.min(salary * 0.05, 750);
+      }, 0);
+
+      // Custom payroll items aggregation (เบี้ยขยัน, etc.)
+      const totalCustomIncome = (customItems || [])
+        .filter((ci: any) => ci.type === "income")
+        .reduce((s, ci: any) => s + (Number(ci.amount) || 0), 0);
+
+      // Build monthly summary data
+      const summaryData = monthShortNames.map((mName, idx) => {
+        const mNum = idx + 1;
+        // OT hours for this month
+        const monthOt = allOt.filter((o: any) => {
+          const parsed = parseThaiDate(o.date);
+          return parsed && parsed.month === mNum;
+        });
+        const otHours = monthOt.reduce((s: number, o: any) => s + (Number(o.hours) || 0), 0);
+        // Approximate OT pay: otHours * average hourly rate * 1.5
+        const avgHourlyRate = totalMonthlySalary > 0 && activeEmps.length > 0
+          ? (totalMonthlySalary / activeEmps.length) / (30 * 8)
+          : 0;
+        const otPay = Math.round(otHours * avgHourlyRate * 1.5);
+
+        return {
+          month: mName,
+          เงินเดือน: totalMonthlySalary,
+          OT: otPay,
+          เบี้ยขยัน: totalCustomIncome,
+          ประกันสังคม: Math.round(totalSocialSecurity),
+          ภาษี: Math.round(totalMonthlyTax),
+        };
+      });
+      setPayrollSummaryData(summaryData);
+
+      // Build tax cumulative data
+      let cumulative = 0;
+      const taxCumData = summaryData.map((row) => {
+        cumulative += row.ภาษี;
+        return {
+          month: row.month,
+          ภาษีสะสม: cumulative,
+          ภาษีเดือนนี้: row.ภาษี,
+        };
+      });
+      setTaxCumulativeData(taxCumData);
+
+    } catch (err) {
+      console.error("Error fetching payroll data:", err);
+    } finally {
+      setPayrollLoading(false);
+    }
+  }, [filterYear]);
+
   useEffect(() => {
     if (selectedReport === "leave-summary") fetchLeaveData();
     else if (selectedReport === "leave-balance") fetchLeaveBalance();
@@ -748,7 +846,8 @@ const Reports = () => {
     else if (selectedReport === "ot-trend") fetchOtTrend();
     else if (selectedReport?.startsWith("shift-")) fetchShiftData();
     else if (selectedReport?.startsWith("emp-")) fetchEmployeeData();
-  }, [selectedReport, fetchLeaveData, fetchLeaveBalance, fetchLeaveYearly, fetchOtData, fetchOtTrend, fetchShiftData, fetchEmployeeData]);
+    else if (selectedReport?.startsWith("payroll-")) fetchPayrollData();
+  }, [selectedReport, fetchLeaveData, fetchLeaveBalance, fetchLeaveYearly, fetchOtData, fetchOtTrend, fetchShiftData, fetchEmployeeData, fetchPayrollData]);
 
   const toggleCat = (cat: string) => setExpandedCats((p) => ({ ...p, [cat]: !p[cat] }));
 
