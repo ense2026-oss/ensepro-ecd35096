@@ -135,24 +135,7 @@ const mockAttendanceTable = [
 
 // Shift mock data removed - now fetched from database
 
-// --- Fiscal year options ---
-const taxCumulativeData = [
-  { month: "ม.ค.", ภาษีสะสม: 28500, ภาษีเดือนนี้: 28500 },
-  { month: "ก.พ.", ภาษีสะสม: 57000, ภาษีเดือนนี้: 28500 },
-  { month: "มี.ค.", ภาษีสะสม: 86200, ภาษีเดือนนี้: 29200 },
-  { month: "เม.ย.", ภาษีสะสม: 114700, ภาษีเดือนนี้: 28500 },
-  { month: "พ.ค.", ภาษีสะสม: 143900, ภาษีเดือนนี้: 29200 },
-  { month: "มิ.ย.", ภาษีสะสม: 172400, ภาษีเดือนนี้: 28500 },
-];
-
-const payrollSummaryData = [
-  { month: "ม.ค.", เงินเดือน: 458000, OT: 42500, เบี้ยขยัน: 14000, ประกันสังคม: 5250, ภาษี: 28500 },
-  { month: "ก.พ.", เงินเดือน: 458000, OT: 45200, เบี้ยขยัน: 12000, ประกันสังคม: 5250, ภาษี: 28500 },
-  { month: "มี.ค.", เงินเดือน: 458000, OT: 50800, เบี้ยขยัน: 16000, ประกันสังคม: 5250, ภาษี: 29200 },
-  { month: "เม.ย.", เงินเดือน: 458000, OT: 38000, เบี้ยขยัน: 10000, ประกันสังคม: 5250, ภาษี: 28500 },
-  { month: "พ.ค.", เงินเดือน: 458000, OT: 48600, เบี้ยขยัน: 14000, ประกันสังคม: 5250, ภาษี: 29200 },
-  { month: "มิ.ย.", เงินเดือน: 458000, OT: 41000, เบี้ยขยัน: 12000, ประกันสังคม: 5250, ภาษี: 28500 },
-];
+// --- Payroll mock data removed - now computed from database ---
 
 const fiscalYears = Array.from({ length: 4 }, (_, i) => String(new Date().getFullYear() + 543 - i));
 const months = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
@@ -219,6 +202,11 @@ const Reports = () => {
   const [empHeadcountData, setEmpHeadcountData] = useState<{ dept: string; count: number }[]>([]);
   const [empHiringTrend, setEmpHiringTrend] = useState<any[]>([]);
   const [empLoading, setEmpLoading] = useState(false);
+
+  // --- Real Payroll data ---
+  const [payrollSummaryData, setPayrollSummaryData] = useState<any[]>([]);
+  const [taxCumulativeData, setTaxCumulativeData] = useState<any[]>([]);
+  const [payrollLoading, setPayrollLoading] = useState(false);
 
   const monthIndexMap: Record<string, number> = {
     "มกราคม": 1, "กุมภาพันธ์": 2, "มีนาคม": 3, "เมษายน": 4,
@@ -752,6 +740,104 @@ const Reports = () => {
     }
   }, [filterYear, filterMonth, selectedReport]);
 
+  // --- Fetch Payroll data ---
+  const fetchPayrollData = useCallback(async () => {
+    setPayrollLoading(true);
+    try {
+      const ceYear = parseInt(filterYear) - 543;
+      const taxConfig: TaxConfig = { enabled: true, method: "progressive", flatRate: 5 };
+
+      // Fetch active employees with salary
+      const { data: empsData } = await supabase
+        .from("employees")
+        .select("id, first_name, last_name, salary, tax_deductions, pvd_rate, children, children_after_2018, status")
+        .eq("status", "active");
+
+      // Fetch approved OT for the year
+      const { data: otDataRaw } = await supabase
+        .from("overtime_requests")
+        .select("date, hours, status")
+        .eq("status", "approved");
+
+      // Fetch custom payroll items
+      const { data: customItems } = await supabase
+        .from("employee_custom_payroll_items")
+        .select("employee_id, amount, type, enabled")
+        .eq("enabled", true);
+
+      const activeEmps = empsData || [];
+      const allOt = (otDataRaw || []).filter((o: any) => {
+        const parsed = parseThaiDate(o.date);
+        return parsed && parsed.ceYear === ceYear;
+      });
+
+      // Calculate total salary per month
+      const totalMonthlySalary = activeEmps.reduce((s, e: any) => s + (Number(e.salary) || 0), 0);
+
+      // Calculate total monthly tax
+      const totalMonthlyTax = activeEmps.reduce((s, e: any) => {
+        const salary = Number(e.salary) || 0;
+        const annualIncome = calculateAnnualIncome(salary);
+        const deductions = e.tax_deductions || DEFAULT_TAX_DEDUCTION;
+        return s + calculateMonthlyTax(taxConfig, annualIncome, deductions);
+      }, 0);
+
+      // Social security: 5% of salary, max 750 per person per month
+      const totalSocialSecurity = activeEmps.reduce((s, e: any) => {
+        const salary = Number(e.salary) || 0;
+        return s + Math.min(salary * 0.05, 750);
+      }, 0);
+
+      // Custom payroll items aggregation (เบี้ยขยัน, etc.)
+      const totalCustomIncome = (customItems || [])
+        .filter((ci: any) => ci.type === "income")
+        .reduce((s, ci: any) => s + (Number(ci.amount) || 0), 0);
+
+      // Build monthly summary data
+      const summaryData = monthShortNames.map((mName, idx) => {
+        const mNum = idx + 1;
+        // OT hours for this month
+        const monthOt = allOt.filter((o: any) => {
+          const parsed = parseThaiDate(o.date);
+          return parsed && parsed.month === mNum;
+        });
+        const otHours = monthOt.reduce((s: number, o: any) => s + (Number(o.hours) || 0), 0);
+        // Approximate OT pay: otHours * average hourly rate * 1.5
+        const avgHourlyRate = totalMonthlySalary > 0 && activeEmps.length > 0
+          ? (totalMonthlySalary / activeEmps.length) / (30 * 8)
+          : 0;
+        const otPay = Math.round(otHours * avgHourlyRate * 1.5);
+
+        return {
+          month: mName,
+          เงินเดือน: totalMonthlySalary,
+          OT: otPay,
+          เบี้ยขยัน: totalCustomIncome,
+          ประกันสังคม: Math.round(totalSocialSecurity),
+          ภาษี: Math.round(totalMonthlyTax),
+        };
+      });
+      setPayrollSummaryData(summaryData);
+
+      // Build tax cumulative data
+      let cumulative = 0;
+      const taxCumData = summaryData.map((row) => {
+        cumulative += row.ภาษี;
+        return {
+          month: row.month,
+          ภาษีสะสม: cumulative,
+          ภาษีเดือนนี้: row.ภาษี,
+        };
+      });
+      setTaxCumulativeData(taxCumData);
+
+    } catch (err) {
+      console.error("Error fetching payroll data:", err);
+    } finally {
+      setPayrollLoading(false);
+    }
+  }, [filterYear]);
+
   useEffect(() => {
     if (selectedReport === "leave-summary") fetchLeaveData();
     else if (selectedReport === "leave-balance") fetchLeaveBalance();
@@ -760,7 +846,8 @@ const Reports = () => {
     else if (selectedReport === "ot-trend") fetchOtTrend();
     else if (selectedReport?.startsWith("shift-")) fetchShiftData();
     else if (selectedReport?.startsWith("emp-")) fetchEmployeeData();
-  }, [selectedReport, fetchLeaveData, fetchLeaveBalance, fetchLeaveYearly, fetchOtData, fetchOtTrend, fetchShiftData, fetchEmployeeData]);
+    else if (selectedReport?.startsWith("payroll-")) fetchPayrollData();
+  }, [selectedReport, fetchLeaveData, fetchLeaveBalance, fetchLeaveYearly, fetchOtData, fetchOtTrend, fetchShiftData, fetchEmployeeData, fetchPayrollData]);
 
   const toggleCat = (cat: string) => setExpandedCats((p) => ({ ...p, [cat]: !p[cat] }));
 
@@ -899,6 +986,7 @@ const Reports = () => {
             else if (selectedReport === 'ot-trend') fetchOtTrend();
             else if (selectedReport?.startsWith('shift-')) fetchShiftData();
             else if (selectedReport?.startsWith('emp-')) fetchEmployeeData();
+            else if (selectedReport?.startsWith('payroll-')) fetchPayrollData();
           }} className="ml-auto flex items-center gap-1.5 text-sm font-medium px-3 py-2 rounded-lg hover:bg-muted transition-colors" style={{ color: "#FF870F" }}>
             <RefreshCw className="w-3.5 h-3.5" />
             รีเฟรช
@@ -1189,7 +1277,7 @@ const Reports = () => {
         <div className="rounded-2xl border border-border bg-card overflow-hidden">
           <div className="p-4 border-b border-border flex items-center justify-between">
             <h3 className="text-sm font-bold">ข้อมูลรายละเอียด</h3>
-            <span className="text-xs text-muted-foreground">{(cat === "leave" || cat === "overtime" || cat === "employees" || cat === "shifts") ? "ข้อมูลจริงจากระบบ" : "แสดง Mock Data"}</span>
+            <span className="text-xs text-muted-foreground">ข้อมูลจริงจากระบบ</span>
           </div>
           <div className="overflow-x-auto">
             {cat === "employees" && (
@@ -1646,16 +1734,22 @@ const Reports = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {payrollSummaryData.map((row) => (
-                        <tr key={row.month} className="border-t border-border hover:bg-muted/30 transition-colors">
-                          <td className="px-4 py-3 font-medium">{row.month}</td>
-                          <td className="px-4 py-3 text-right tabular-nums">{row.เงินเดือน.toLocaleString("th-TH")}</td>
-                          <td className="px-4 py-3 text-right tabular-nums">{row.OT.toLocaleString("th-TH")}</td>
-                          <td className="px-4 py-3 text-right tabular-nums">{row.เบี้ยขยัน.toLocaleString("th-TH")}</td>
-                          <td className="px-4 py-3 text-right tabular-nums">{row.ประกันสังคม.toLocaleString("th-TH")}</td>
-                          <td className="px-4 py-3 text-right tabular-nums">{row.ภาษี.toLocaleString("th-TH")}</td>
-                        </tr>
-                      ))}
+                      {payrollLoading ? (
+                        <tr><td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">กำลังโหลดข้อมูล...</td></tr>
+                      ) : payrollSummaryData.length === 0 ? (
+                        <tr><td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">ไม่พบข้อมูล</td></tr>
+                      ) : (
+                        payrollSummaryData.map((row: any) => (
+                          <tr key={row.month} className="border-t border-border hover:bg-muted/30 transition-colors">
+                            <td className="px-4 py-3 font-medium">{row.month}</td>
+                            <td className="px-4 py-3 text-right tabular-nums">{(row.เงินเดือน || 0).toLocaleString("th-TH")}</td>
+                            <td className="px-4 py-3 text-right tabular-nums">{(row.OT || 0).toLocaleString("th-TH")}</td>
+                            <td className="px-4 py-3 text-right tabular-nums">{(row.เบี้ยขยัน || 0).toLocaleString("th-TH")}</td>
+                            <td className="px-4 py-3 text-right tabular-nums">{(row.ประกันสังคม || 0).toLocaleString("th-TH")}</td>
+                            <td className="px-4 py-3 text-right tabular-nums">{(row.ภาษี || 0).toLocaleString("th-TH")}</td>
+                          </tr>
+                        ))
+                      )}
                     </tbody>
                   </table>
                 );
