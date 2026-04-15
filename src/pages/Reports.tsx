@@ -121,32 +121,7 @@ const attendanceMonthly = [
 
 const defaultLeavePieColors = ["#FF870F", "#9CA3AF", "#87FF0F", "#E5E5E5", "#3b82f6", "#a855f7", "#ef4444", "#14b8a6"];
 
-const headcountData = [
-  { dept: "IT", count: 45 },
-  { dept: "HR", count: 12 },
-  { dept: "Sales", count: 38 },
-  { dept: "Marketing", count: 15 },
-  { dept: "Finance", count: 20 },
-  { dept: "Operations", count: 30 },
-];
-
-const hiringTrend = [
-  { month: "ม.ค.", เข้าใหม่: 5, ลาออก: 2 },
-  { month: "ก.พ.", เข้าใหม่: 3, ลาออก: 1 },
-  { month: "มี.ค.", เข้าใหม่: 8, ลาออก: 3 },
-  { month: "เม.ย.", เข้าใหม่: 4, ลาออก: 2 },
-  { month: "พ.ค.", เข้าใหม่: 6, ลาออก: 1 },
-  { month: "มิ.ย.", เข้าใหม่: 7, ลาออก: 4 },
-];
-
-// --- Mock table data ---
-const mockEmployeeTable = [
-  { id: "EMP-001", name: "สมชาย ใจดี", dept: "IT", position: "Senior Developer", type: "พนักงานประจำ", startDate: "01/03/2565", status: "ทำงาน" },
-  { id: "EMP-002", name: "สมหญิง รักงาน", dept: "HR", position: "HR Manager", type: "พนักงานประจำ", startDate: "15/06/2563", status: "ทำงาน" },
-  { id: "EMP-003", name: "วิชัย เก่งกาจ", dept: "Sales", position: "Sales Lead", type: "พนักงานประจำ", startDate: "01/01/2564", status: "ทำงาน" },
-  { id: "EMP-004", name: "นภา สดใส", dept: "Marketing", position: "Designer", type: "สัญญาจ้าง", startDate: "10/08/2566", status: "ทำงาน" },
-  { id: "EMP-005", name: "ประภาส มั่นคง", dept: "Finance", position: "Accountant", type: "พนักงานประจำ", startDate: "20/04/2562", status: "ทำงาน" },
-];
+// Mock data removed - employee data now fetched from database
 
 const mockAttendanceTable = [
   { id: "EMP-001", name: "สมชาย ใจดี", date: "20/02/2569", checkIn: "08:02", checkOut: "17:15", status: "ปกติ", hours: "9:13" },
@@ -238,6 +213,12 @@ const Reports = () => {
   const [shiftPieData, setShiftPieData] = useState<{ name: string; value: number; color: string }[]>([]);
   const [shiftCoverageData, setShiftCoverageData] = useState<any[]>([]);
   const [shiftChangeLog, setShiftChangeLog] = useState<any[]>([]);
+
+  // --- Real Employee data ---
+  const [empTableData, setEmpTableData] = useState<any[]>([]);
+  const [empHeadcountData, setEmpHeadcountData] = useState<{ dept: string; count: number }[]>([]);
+  const [empHiringTrend, setEmpHiringTrend] = useState<any[]>([]);
+  const [empLoading, setEmpLoading] = useState(false);
 
   const monthIndexMap: Record<string, number> = {
     "มกราคม": 1, "กุมภาพันธ์": 2, "มีนาคม": 3, "เมษายน": 4,
@@ -657,6 +638,120 @@ const Reports = () => {
     }
   }, [filterYear, filterMonth]);
 
+  // --- Fetch Employee data ---
+  const fetchEmployeeData = useCallback(async () => {
+    setEmpLoading(true);
+    try {
+      const ceYear = parseInt(filterYear) - 543;
+      const monthNum = monthIndexMap[filterMonth] || 1;
+
+      const { data: allEmps, error } = await supabase
+        .from("employees")
+        .select("id, username, first_name, last_name, dept, position, employee_type, start_date, status")
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      const emps = allEmps || [];
+
+      // Determine which employees to show based on report type
+      if (selectedReport === "emp-all") {
+        setEmpTableData(emps.map((e: any) => ({
+          id: e.username || "-",
+          name: `${e.first_name} ${e.last_name}`,
+          dept: e.dept || "-",
+          position: e.position || "-",
+          type: e.employee_type || "-",
+          startDate: e.start_date || "-",
+          status: e.status === "active" ? "ทำงาน" : e.status === "resigned" ? "ลาออก" : e.status || "-",
+          rawStatus: e.status,
+        })));
+      } else if (selectedReport === "emp-new") {
+        // New employees in the selected month/year
+        const newEmps = emps.filter((e: any) => {
+          const parsed = parseThaiDate(e.start_date);
+          return parsed && parsed.ceYear === ceYear && parsed.month === monthNum;
+        });
+        setEmpTableData(newEmps.map((e: any) => ({
+          id: e.username || "-",
+          name: `${e.first_name} ${e.last_name}`,
+          dept: e.dept || "-",
+          position: e.position || "-",
+          type: e.employee_type || "-",
+          startDate: e.start_date || "-",
+          status: "เข้าใหม่",
+          rawStatus: "new",
+        })));
+      } else if (selectedReport === "emp-resign") {
+        const resigned = emps.filter((e: any) => e.status === "resigned" || e.status === "inactive");
+        setEmpTableData(resigned.map((e: any) => ({
+          id: e.username || "-",
+          name: `${e.first_name} ${e.last_name}`,
+          dept: e.dept || "-",
+          position: e.position || "-",
+          type: e.employee_type || "-",
+          startDate: e.start_date || "-",
+          status: e.status === "resigned" ? "ลาออก" : "พ้นสภาพ",
+          rawStatus: e.status,
+        })));
+      } else if (selectedReport === "emp-birthday") {
+        const birthdayEmps = emps.filter((e: any) => {
+          if (!e.status || e.status !== "active") return false;
+          // Need birth_date - refetch with it
+          return true;
+        });
+        // We need birth_date, so re-fetch
+        const { data: bdEmps } = await supabase
+          .from("employees")
+          .select("username, first_name, last_name, dept, position, birth_date, status")
+          .eq("status", "active");
+        const filtered = (bdEmps || []).filter((e: any) => {
+          const parsed = parseThaiDate(e.birth_date);
+          return parsed && parsed.month === monthNum;
+        });
+        setEmpTableData(filtered.map((e: any) => ({
+          id: e.username || "-",
+          name: `${e.first_name} ${e.last_name}`,
+          dept: e.dept || "-",
+          position: e.position || "-",
+          type: "-",
+          startDate: e.birth_date || "-",
+          status: "ทำงาน",
+          rawStatus: "active",
+        })));
+      }
+
+      // Headcount by department (active only)
+      const activeEmps = emps.filter((e: any) => e.status === "active");
+      const deptMap: Record<string, number> = {};
+      activeEmps.forEach((e: any) => {
+        const d = e.dept || "ไม่ระบุ";
+        deptMap[d] = (deptMap[d] || 0) + 1;
+      });
+      setEmpHeadcountData(Object.entries(deptMap).map(([dept, count]) => ({ dept, count })).sort((a, b) => b.count - a.count));
+
+      // Hiring trend: count new employees by month for the selected year
+      const trendData = monthShortNames.map((mName, idx) => {
+        const mNum = idx + 1;
+        const newCount = emps.filter((e: any) => {
+          const parsed = parseThaiDate(e.start_date);
+          return parsed && parsed.ceYear === ceYear && parsed.month === mNum;
+        }).length;
+        const resignCount = emps.filter((e: any) => {
+          // Approximate: resigned employees whose start was in this month
+          // Since we don't have resign_date, we show 0 for resign trend
+          return false;
+        }).length;
+        return { month: mName, เข้าใหม่: newCount, ลาออก: resignCount };
+      });
+      setEmpHiringTrend(trendData);
+
+    } catch (err) {
+      console.error("Error fetching employee data:", err);
+    } finally {
+      setEmpLoading(false);
+    }
+  }, [filterYear, filterMonth, selectedReport]);
+
   useEffect(() => {
     if (selectedReport === "leave-summary") fetchLeaveData();
     else if (selectedReport === "leave-balance") fetchLeaveBalance();
@@ -664,7 +759,8 @@ const Reports = () => {
     else if (selectedReport === "ot-summary" || selectedReport === "ot-by-type") fetchOtData();
     else if (selectedReport === "ot-trend") fetchOtTrend();
     else if (selectedReport?.startsWith("shift-")) fetchShiftData();
-  }, [selectedReport, fetchLeaveData, fetchLeaveBalance, fetchLeaveYearly, fetchOtData, fetchOtTrend, fetchShiftData]);
+    else if (selectedReport?.startsWith("emp-")) fetchEmployeeData();
+  }, [selectedReport, fetchLeaveData, fetchLeaveBalance, fetchLeaveYearly, fetchOtData, fetchOtTrend, fetchShiftData, fetchEmployeeData]);
 
   const toggleCat = (cat: string) => setExpandedCats((p) => ({ ...p, [cat]: !p[cat] }));
 
@@ -801,6 +897,8 @@ const Reports = () => {
             else if (selectedReport === 'leave-yearly') fetchLeaveYearly();
             else if (selectedReport === 'ot-summary' || selectedReport === 'ot-by-type') fetchOtData();
             else if (selectedReport === 'ot-trend') fetchOtTrend();
+            else if (selectedReport?.startsWith('shift-')) fetchShiftData();
+            else if (selectedReport?.startsWith('emp-')) fetchEmployeeData();
           }} className="ml-auto flex items-center gap-1.5 text-sm font-medium px-3 py-2 rounded-lg hover:bg-muted transition-colors" style={{ color: "#FF870F" }}>
             <RefreshCw className="w-3.5 h-3.5" />
             รีเฟรช
@@ -895,7 +993,7 @@ const Reports = () => {
             <div className="rounded-2xl border border-border bg-card p-5">
               <h3 className="text-sm font-bold mb-4">แนวโน้มการรับ-ออก พนักงาน</h3>
               <ResponsiveContainer width="100%" height={260}>
-                <LineChart data={hiringTrend}>
+                <LineChart data={empHiringTrend}>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                   <XAxis dataKey="month" fontSize={12} />
                   <YAxis fontSize={12} />
@@ -909,7 +1007,7 @@ const Reports = () => {
             <div className="rounded-2xl border border-border bg-card p-5">
               <h3 className="text-sm font-bold mb-4">จำนวนพนักงานตามแผนก</h3>
               <ResponsiveContainer width="100%" height={260}>
-                <BarChart data={headcountData} layout="vertical">
+                <BarChart data={empHeadcountData} layout="vertical">
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                   <XAxis type="number" fontSize={12} />
                   <YAxis dataKey="dept" type="category" fontSize={12} width={80} />
@@ -1091,7 +1189,7 @@ const Reports = () => {
         <div className="rounded-2xl border border-border bg-card overflow-hidden">
           <div className="p-4 border-b border-border flex items-center justify-between">
             <h3 className="text-sm font-bold">ข้อมูลรายละเอียด</h3>
-            <span className="text-xs text-muted-foreground">{(cat === "leave" || cat === "overtime") ? "ข้อมูลจริงจากระบบ" : "แสดง Mock Data"}</span>
+            <span className="text-xs text-muted-foreground">{(cat === "leave" || cat === "overtime" || cat === "employees" || cat === "shifts") ? "ข้อมูลจริงจากระบบ" : "แสดง Mock Data"}</span>
           </div>
           <div className="overflow-x-auto">
             {cat === "employees" && (
@@ -1108,20 +1206,36 @@ const Reports = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {mockEmployeeTable.map((emp) => (
-                    <tr key={emp.id} className="border-t border-border hover:bg-muted/30 transition-colors">
-                      <td className="px-4 py-3 font-mono text-xs">{emp.id}</td>
-                      <td className="px-4 py-3 font-medium">{emp.name}</td>
-                      <td className="px-4 py-3">{emp.dept}</td>
-                      <td className="px-4 py-3">{emp.position}</td>
-                      <td className="px-4 py-3">{emp.type}</td>
-                      <td className="px-4 py-3">{emp.startDate}</td>
-                      <td className="px-4 py-3">
-                        <span className="px-2 py-0.5 rounded-full text-xs font-medium" style={{ background: "hsl(var(--accent-green) / 0.15)", color: "#4CAF50" }}>{emp.status}</span>
-                      </td>
-                    </tr>
-                  ))}
+                  {empLoading ? (
+                    <tr><td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">กำลังโหลดข้อมูล...</td></tr>
+                  ) : empTableData.length === 0 ? (
+                    <tr><td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">ไม่พบข้อมูลพนักงาน</td></tr>
+                  ) : (
+                    empTableData.map((emp, i) => (
+                      <tr key={i} className="border-t border-border hover:bg-muted/30 transition-colors">
+                        <td className="px-4 py-3 font-mono text-xs">{emp.id}</td>
+                        <td className="px-4 py-3 font-medium">{emp.name}</td>
+                        <td className="px-4 py-3">{emp.dept}</td>
+                        <td className="px-4 py-3">{emp.position}</td>
+                        <td className="px-4 py-3">{emp.type}</td>
+                        <td className="px-4 py-3">{emp.startDate}</td>
+                        <td className="px-4 py-3">
+                          <span className="px-2 py-0.5 rounded-full text-xs font-medium" style={{
+                            background: emp.rawStatus === "active" || emp.rawStatus === "new" ? "hsl(var(--accent-green) / 0.15)" : "hsl(0 80% 95%)",
+                            color: emp.rawStatus === "active" || emp.rawStatus === "new" ? "#4CAF50" : "#ef4444",
+                          }}>{emp.status}</span>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
+                {empTableData.length > 0 && (
+                  <tfoot>
+                    <tr className="border-t-2 font-semibold" style={{ background: "hsl(var(--muted) / 0.5)" }}>
+                      <td className="px-4 py-3" colSpan={7}>รวมทั้งหมด {empTableData.length} คน</td>
+                    </tr>
+                  </tfoot>
+                )}
               </table>
             )}
             {cat === "attendance" && (
