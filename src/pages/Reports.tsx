@@ -203,6 +203,11 @@ const Reports = () => {
   const [empHiringTrend, setEmpHiringTrend] = useState<any[]>([]);
   const [empLoading, setEmpLoading] = useState(false);
 
+  // --- Real Payroll data ---
+  const [payrollSummaryData, setPayrollSummaryData] = useState<any[]>([]);
+  const [taxCumulativeData, setTaxCumulativeData] = useState<any[]>([]);
+  const [payrollLoading, setPayrollLoading] = useState(false);
+
   const monthIndexMap: Record<string, number> = {
     "มกราคม": 1, "กุมภาพันธ์": 2, "มีนาคม": 3, "เมษายน": 4,
     "พฤษภาคม": 5, "มิถุนายน": 6, "กรกฎาคม": 7, "สิงหาคม": 8,
