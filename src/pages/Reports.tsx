@@ -986,6 +986,7 @@ const Reports = () => {
             else if (selectedReport === 'ot-trend') fetchOtTrend();
             else if (selectedReport?.startsWith('shift-')) fetchShiftData();
             else if (selectedReport?.startsWith('emp-')) fetchEmployeeData();
+            else if (selectedReport?.startsWith('payroll-')) fetchPayrollData();
           }} className="ml-auto flex items-center gap-1.5 text-sm font-medium px-3 py-2 rounded-lg hover:bg-muted transition-colors" style={{ color: "#FF870F" }}>
             <RefreshCw className="w-3.5 h-3.5" />
             รีเฟรช
@@ -1276,7 +1277,7 @@ const Reports = () => {
         <div className="rounded-2xl border border-border bg-card overflow-hidden">
           <div className="p-4 border-b border-border flex items-center justify-between">
             <h3 className="text-sm font-bold">ข้อมูลรายละเอียด</h3>
-            <span className="text-xs text-muted-foreground">{(cat === "leave" || cat === "overtime" || cat === "employees" || cat === "shifts") ? "ข้อมูลจริงจากระบบ" : "แสดง Mock Data"}</span>
+            <span className="text-xs text-muted-foreground">ข้อมูลจริงจากระบบ</span>
           </div>
           <div className="overflow-x-auto">
             {cat === "employees" && (
@@ -1733,16 +1734,22 @@ const Reports = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {payrollSummaryData.map((row) => (
-                        <tr key={row.month} className="border-t border-border hover:bg-muted/30 transition-colors">
-                          <td className="px-4 py-3 font-medium">{row.month}</td>
-                          <td className="px-4 py-3 text-right tabular-nums">{row.เงินเดือน.toLocaleString("th-TH")}</td>
-                          <td className="px-4 py-3 text-right tabular-nums">{row.OT.toLocaleString("th-TH")}</td>
-                          <td className="px-4 py-3 text-right tabular-nums">{row.เบี้ยขยัน.toLocaleString("th-TH")}</td>
-                          <td className="px-4 py-3 text-right tabular-nums">{row.ประกันสังคม.toLocaleString("th-TH")}</td>
-                          <td className="px-4 py-3 text-right tabular-nums">{row.ภาษี.toLocaleString("th-TH")}</td>
-                        </tr>
-                      ))}
+                      {payrollLoading ? (
+                        <tr><td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">กำลังโหลดข้อมูล...</td></tr>
+                      ) : payrollSummaryData.length === 0 ? (
+                        <tr><td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">ไม่พบข้อมูล</td></tr>
+                      ) : (
+                        payrollSummaryData.map((row: any) => (
+                          <tr key={row.month} className="border-t border-border hover:bg-muted/30 transition-colors">
+                            <td className="px-4 py-3 font-medium">{row.month}</td>
+                            <td className="px-4 py-3 text-right tabular-nums">{(row.เงินเดือน || 0).toLocaleString("th-TH")}</td>
+                            <td className="px-4 py-3 text-right tabular-nums">{(row.OT || 0).toLocaleString("th-TH")}</td>
+                            <td className="px-4 py-3 text-right tabular-nums">{(row.เบี้ยขยัน || 0).toLocaleString("th-TH")}</td>
+                            <td className="px-4 py-3 text-right tabular-nums">{(row.ประกันสังคม || 0).toLocaleString("th-TH")}</td>
+                            <td className="px-4 py-3 text-right tabular-nums">{(row.ภาษี || 0).toLocaleString("th-TH")}</td>
+                          </tr>
+                        ))
+                      )}
                     </tbody>
                   </table>
                 );
