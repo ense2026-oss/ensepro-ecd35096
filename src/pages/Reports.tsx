@@ -638,6 +638,120 @@ const Reports = () => {
     }
   }, [filterYear, filterMonth]);
 
+  // --- Fetch Employee data ---
+  const fetchEmployeeData = useCallback(async () => {
+    setEmpLoading(true);
+    try {
+      const ceYear = parseInt(filterYear) - 543;
+      const monthNum = monthIndexMap[filterMonth] || 1;
+
+      const { data: allEmps, error } = await supabase
+        .from("employees")
+        .select("id, username, first_name, last_name, dept, position, employee_type, start_date, status")
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      const emps = allEmps || [];
+
+      // Determine which employees to show based on report type
+      if (selectedReport === "emp-all") {
+        setEmpTableData(emps.map((e: any) => ({
+          id: e.username || "-",
+          name: `${e.first_name} ${e.last_name}`,
+          dept: e.dept || "-",
+          position: e.position || "-",
+          type: e.employee_type || "-",
+          startDate: e.start_date || "-",
+          status: e.status === "active" ? "ทำงาน" : e.status === "resigned" ? "ลาออก" : e.status || "-",
+          rawStatus: e.status,
+        })));
+      } else if (selectedReport === "emp-new") {
+        // New employees in the selected month/year
+        const newEmps = emps.filter((e: any) => {
+          const parsed = parseThaiDate(e.start_date);
+          return parsed && parsed.ceYear === ceYear && parsed.month === monthNum;
+        });
+        setEmpTableData(newEmps.map((e: any) => ({
+          id: e.username || "-",
+          name: `${e.first_name} ${e.last_name}`,
+          dept: e.dept || "-",
+          position: e.position || "-",
+          type: e.employee_type || "-",
+          startDate: e.start_date || "-",
+          status: "เข้าใหม่",
+          rawStatus: "new",
+        })));
+      } else if (selectedReport === "emp-resign") {
+        const resigned = emps.filter((e: any) => e.status === "resigned" || e.status === "inactive");
+        setEmpTableData(resigned.map((e: any) => ({
+          id: e.username || "-",
+          name: `${e.first_name} ${e.last_name}`,
+          dept: e.dept || "-",
+          position: e.position || "-",
+          type: e.employee_type || "-",
+          startDate: e.start_date || "-",
+          status: e.status === "resigned" ? "ลาออก" : "พ้นสภาพ",
+          rawStatus: e.status,
+        })));
+      } else if (selectedReport === "emp-birthday") {
+        const birthdayEmps = emps.filter((e: any) => {
+          if (!e.status || e.status !== "active") return false;
+          // Need birth_date - refetch with it
+          return true;
+        });
+        // We need birth_date, so re-fetch
+        const { data: bdEmps } = await supabase
+          .from("employees")
+          .select("username, first_name, last_name, dept, position, birth_date, status")
+          .eq("status", "active");
+        const filtered = (bdEmps || []).filter((e: any) => {
+          const parsed = parseThaiDate(e.birth_date);
+          return parsed && parsed.month === monthNum;
+        });
+        setEmpTableData(filtered.map((e: any) => ({
+          id: e.username || "-",
+          name: `${e.first_name} ${e.last_name}`,
+          dept: e.dept || "-",
+          position: e.position || "-",
+          type: "-",
+          startDate: e.birth_date || "-",
+          status: "ทำงาน",
+          rawStatus: "active",
+        })));
+      }
+
+      // Headcount by department (active only)
+      const activeEmps = emps.filter((e: any) => e.status === "active");
+      const deptMap: Record<string, number> = {};
+      activeEmps.forEach((e: any) => {
+        const d = e.dept || "ไม่ระบุ";
+        deptMap[d] = (deptMap[d] || 0) + 1;
+      });
+      setEmpHeadcountData(Object.entries(deptMap).map(([dept, count]) => ({ dept, count })).sort((a, b) => b.count - a.count));
+
+      // Hiring trend: count new employees by month for the selected year
+      const trendData = monthShortNames.map((mName, idx) => {
+        const mNum = idx + 1;
+        const newCount = emps.filter((e: any) => {
+          const parsed = parseThaiDate(e.start_date);
+          return parsed && parsed.ceYear === ceYear && parsed.month === mNum;
+        }).length;
+        const resignCount = emps.filter((e: any) => {
+          // Approximate: resigned employees whose start was in this month
+          // Since we don't have resign_date, we show 0 for resign trend
+          return false;
+        }).length;
+        return { month: mName, เข้าใหม่: newCount, ลาออก: resignCount };
+      });
+      setEmpHiringTrend(trendData);
+
+    } catch (err) {
+      console.error("Error fetching employee data:", err);
+    } finally {
+      setEmpLoading(false);
+    }
+  }, [filterYear, filterMonth, selectedReport]);
+
   useEffect(() => {
     if (selectedReport === "leave-summary") fetchLeaveData();
     else if (selectedReport === "leave-balance") fetchLeaveBalance();
@@ -645,7 +759,8 @@ const Reports = () => {
     else if (selectedReport === "ot-summary" || selectedReport === "ot-by-type") fetchOtData();
     else if (selectedReport === "ot-trend") fetchOtTrend();
     else if (selectedReport?.startsWith("shift-")) fetchShiftData();
-  }, [selectedReport, fetchLeaveData, fetchLeaveBalance, fetchLeaveYearly, fetchOtData, fetchOtTrend, fetchShiftData]);
+    else if (selectedReport?.startsWith("emp-")) fetchEmployeeData();
+  }, [selectedReport, fetchLeaveData, fetchLeaveBalance, fetchLeaveYearly, fetchOtData, fetchOtTrend, fetchShiftData, fetchEmployeeData]);
 
   const toggleCat = (cat: string) => setExpandedCats((p) => ({ ...p, [cat]: !p[cat] }));
 
