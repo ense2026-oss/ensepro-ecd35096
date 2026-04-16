@@ -3,6 +3,7 @@ import * as XLSX from "xlsx";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogBody, DialogFooter,
 } from "@/components/ui/dialog";
+import { createExcelWithHeader } from "@/utils/excelHeader";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Download } from "lucide-react";
@@ -64,19 +65,19 @@ export default function ExportEmployeesDialog({ open, onOpenChange, employees }:
       return;
     }
 
-    const rows = employees.map((emp) => {
-      const row: Record<string, string> = {};
-      selected.forEach((col) => {
-        row[col.label] = col.getValue(emp);
-      });
-      return row;
-    });
+    const headers = selected.map((col) => col.label);
+    const rows = employees.map((emp) => selected.map((col) => col.getValue(emp)));
 
-    const ws = XLSX.utils.json_to_sheet(rows);
-    ws["!cols"] = selected.map((col) => ({ wch: Math.max(col.label.length * 2, 12) }));
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "พนักงาน");
-    XLSX.writeFile(wb, `Employees_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    createExcelWithHeader({
+      sheetName: "พนักงาน",
+      title: "รายงานข้อมูลพนักงาน",
+      subtitle: `จำนวนพนักงาน ${employees.length} คน`,
+      dateRange: `วันที่ออกรายงาน: ${new Date().toLocaleDateString("th-TH")}`,
+      headers,
+      rows,
+      colWidths: selected.map((col) => Math.max(col.label.length * 2, 12)),
+      fileName: `Employees_${new Date().toISOString().slice(0, 10)}.xlsx`,
+    });
 
     toast.success(`ส่งออกข้อมูลพนักงาน ${employees.length} คน สำเร็จ`);
     onOpenChange(false);
