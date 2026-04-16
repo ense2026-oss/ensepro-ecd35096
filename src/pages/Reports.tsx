@@ -1284,7 +1284,7 @@ const Reports = () => {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-muted/50">
-                    <th className="text-left px-4 py-3 font-semibold">รหัส</th>
+                    <th className="text-left px-4 py-3 font-semibold">ลำดับที่</th>
                     <th className="text-left px-4 py-3 font-semibold">ชื่อ-สกุล</th>
                     <th className="text-left px-4 py-3 font-semibold">แผนก</th>
                     <th className="text-left px-4 py-3 font-semibold">ตำแหน่ง</th>
@@ -1301,7 +1301,7 @@ const Reports = () => {
                   ) : (
                     empTableData.map((emp, i) => (
                       <tr key={i} className="border-t border-border hover:bg-muted/30 transition-colors">
-                        <td className="px-4 py-3 font-mono text-xs">{emp.id}</td>
+                        <td className="px-4 py-3 text-center">{empTableData.length - i}</td>
                         <td className="px-4 py-3 font-medium">{emp.name}</td>
                         <td className="px-4 py-3">{emp.dept}</td>
                         <td className="px-4 py-3">{emp.position}</td>
@@ -1330,7 +1330,7 @@ const Reports = () => {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-muted/50">
-                    <th className="text-left px-4 py-3 font-semibold">รหัส</th>
+                    <th className="text-left px-4 py-3 font-semibold">ลำดับที่</th>
                     <th className="text-left px-4 py-3 font-semibold">ชื่อ-สกุล</th>
                     <th className="text-left px-4 py-3 font-semibold">วันที่</th>
                     <th className="text-left px-4 py-3 font-semibold">เข้างาน</th>
@@ -1340,9 +1340,9 @@ const Reports = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {mockAttendanceTable.map((row) => (
+                  {mockAttendanceTable.map((row, i) => (
                     <tr key={row.id} className="border-t border-border hover:bg-muted/30 transition-colors">
-                      <td className="px-4 py-3 font-mono text-xs">{row.id}</td>
+                      <td className="px-4 py-3 text-center">{mockAttendanceTable.length - i}</td>
                       <td className="px-4 py-3 font-medium">{row.name}</td>
                       <td className="px-4 py-3">{row.date}</td>
                       <td className="px-4 py-3">{row.checkIn}</td>
@@ -1368,7 +1368,7 @@ const Reports = () => {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-muted/50">
-                    <th className="text-left px-4 py-3 font-semibold">รหัส</th>
+                    <th className="text-left px-4 py-3 font-semibold">ลำดับที่</th>
                     <th className="text-left px-4 py-3 font-semibold">ชื่อ-สกุล</th>
                     <th className="text-left px-4 py-3 font-semibold">แผนก</th>
                     <th className="text-left px-4 py-3 font-semibold">วันที่</th>
@@ -1385,9 +1385,9 @@ const Reports = () => {
                   ) : otData.length === 0 ? (
                     <tr><td colSpan={9} className="px-4 py-8 text-center text-muted-foreground">ไม่พบข้อมูล OT ในเดือนที่เลือก</td></tr>
                   ) : (
-                    otData.map((row: any) => (
+                    otData.map((row: any, i: number) => (
                       <tr key={row.id} className="border-t border-border hover:bg-muted/30 transition-colors">
-                        <td className="px-4 py-3 font-mono text-xs">{row.empId}</td>
+                        <td className="px-4 py-3 text-center">{otData.length - i}</td>
                         <td className="px-4 py-3 font-medium">{row.name}</td>
                         <td className="px-4 py-3">{row.dept}</td>
                         <td className="px-4 py-3">{row.date}</td>
@@ -1429,7 +1429,7 @@ const Reports = () => {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-muted/50">
-                    <th className="text-left px-4 py-3 font-semibold">รหัส</th>
+                    <th className="text-left px-4 py-3 font-semibold">ลำดับที่</th>
                     <th className="text-left px-4 py-3 font-semibold">ชื่อ-สกุล</th>
                     <th className="text-left px-4 py-3 font-semibold">ประเภท</th>
                     <th className="text-left px-4 py-3 font-semibold">จาก</th>
@@ -1446,7 +1446,7 @@ const Reports = () => {
                   ) : (
                     leaveData.map((row, i) => (
                       <tr key={i} className="border-t border-border hover:bg-muted/30 transition-colors">
-                        <td className="px-4 py-3 font-mono text-xs">{row.empId}</td>
+                        <td className="px-4 py-3 text-center">{leaveData.length - i}</td>
                         <td className="px-4 py-3 font-medium">{row.name}</td>
                         <td className="px-4 py-3">{row.type}</td>
                         <td className="px-4 py-3">{row.from}</td>
@@ -1477,7 +1477,7 @@ const Reports = () => {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="bg-muted/50">
-                      <th className="text-left px-4 py-3 font-semibold">รหัส</th>
+                      <th className="text-left px-4 py-3 font-semibold">ลำดับที่</th>
                       <th className="text-left px-4 py-3 font-semibold">ชื่อ-สกุล</th>
                       {leaveTypeNames.map(tn => (
                         <th key={tn} className="text-center px-3 py-3 font-semibold" colSpan={1}>{tn}<br/><span className="text-xs font-normal text-muted-foreground">คงเหลือ/โควต้า</span></th>
@@ -1493,7 +1493,7 @@ const Reports = () => {
                     ) : (
                       leaveBalanceData.map((row: any, i: number) => (
                         <tr key={i} className="border-t border-border hover:bg-muted/30 transition-colors">
-                          <td className="px-4 py-3 font-mono text-xs">{row.empId}</td>
+                          <td className="px-4 py-3 text-center">{leaveBalanceData.length - i}</td>
                           <td className="px-4 py-3 font-medium">{row.name}</td>
                           {leaveTypeNames.map(tn => (
                             <td key={tn} className="px-3 py-3 text-center">
@@ -1568,7 +1568,7 @@ const Reports = () => {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-muted/50">
-                    <th className="text-left px-4 py-3 font-semibold">รหัส</th>
+                    <th className="text-left px-4 py-3 font-semibold">ลำดับที่</th>
                     <th className="text-left px-4 py-3 font-semibold">ชื่อ-สกุล</th>
                     <th className="text-left px-4 py-3 font-semibold">แผนก</th>
                     <th className="text-left px-4 py-3 font-semibold">กะ</th>
@@ -1582,7 +1582,7 @@ const Reports = () => {
                     <tr><td colSpan={7} className="text-center py-8 text-muted-foreground">{shiftLoading ? "กำลังโหลด..." : "ไม่มีข้อมูล"}</td></tr>
                   ) : shiftData.map((row: any, i: number) => (
                     <tr key={i} className="border-t border-border hover:bg-muted/30 transition-colors">
-                      <td className="px-4 py-3 font-mono text-xs">{row.id}</td>
+                      <td className="px-4 py-3 text-center">{shiftData.length - i}</td>
                       <td className="px-4 py-3 font-medium">{row.name}</td>
                       <td className="px-4 py-3">{row.dept}</td>
                       <td className="px-4 py-3">
@@ -1609,7 +1609,7 @@ const Reports = () => {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-muted/50">
-                    <th className="text-left px-4 py-3 font-semibold">รหัส</th>
+                    <th className="text-left px-4 py-3 font-semibold">ลำดับที่</th>
                     <th className="text-left px-4 py-3 font-semibold">ชื่อ-สกุล</th>
                     <th className="text-left px-4 py-3 font-semibold">กะเดิม</th>
                     <th className="text-left px-4 py-3 font-semibold">กะใหม่</th>
@@ -1622,7 +1622,7 @@ const Reports = () => {
                     <tr><td colSpan={6} className="text-center py-8 text-muted-foreground">{shiftLoading ? "กำลังโหลด..." : "ไม่มีข้อมูลการเปลี่ยนกะ"}</td></tr>
                   ) : shiftChangeLog.map((row: any, i: number) => (
                     <tr key={i} className="border-t border-border hover:bg-muted/30 transition-colors">
-                      <td className="px-4 py-3 font-mono text-xs">{row.id}</td>
+                      <td className="px-4 py-3 text-center">{shiftChangeLog.length - i}</td>
                       <td className="px-4 py-3 font-medium">{row.name}</td>
                       <td className="px-4 py-3">{row.fromShift}</td>
                       <td className="px-4 py-3">
