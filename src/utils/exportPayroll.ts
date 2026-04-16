@@ -3,6 +3,7 @@ import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { registerThaiFont } from "@/utils/thaiFontLoader";
+import { createExcelWithHeader, addExcelHeader } from "@/utils/excelHeader";
 import type { Employee } from "@/contexts/EmployeeContext";
 import {
   calculateAnnualIncome, calculateMonthlyTax, calculateExpenseDeduction,
@@ -40,7 +41,6 @@ function calcPayrollForExport(emp: Employee) {
   const otPay = Math.round(att.otHours * hourlyRate * PAYROLL_CONFIG.otRateWorkday);
   const diligence = PAYROLL_CONFIG.diligenceEnabled && att.lateDays === 0 && att.absentDays === 0 ? PAYROLL_CONFIG.diligenceAmount : 0;
 
-  // Custom items
   const customItems = (emp.customPayrollItems || []).filter((i) => i.enabled);
   const customIncome = customItems.filter((i) => i.type === "income").reduce((s, i) => s + i.amount, 0);
   const customDeductions = customItems.filter((i) => i.type === "deduction").reduce((s, i) => s + i.amount, 0);
@@ -57,108 +57,96 @@ function calcPayrollForExport(emp: Employee) {
 
 /* ═══════════════════════ EXCEL EXPORTS ═══════════════════════ */
 
-/** Export ภ.ง.ด.1 to Excel */
 export function exportPnd1Excel(employees: Employee[], month: string, year: string) {
   const activeEmps = employees.filter((e) => e.status === "active");
-  const taxConfig: TaxConfig = { enabled: true, method: "progressive", flatRate: 5 };
 
-  const rows = activeEmps.map((emp, i) => {
+  const headers = ["ลำดับ", "ชื่อ-สกุล", "เลขบัตรประชาชน", "เงินได้ (บาท)", "ภาษีหัก ณ ที่จ่าย (บาท)"];
+  const rows: (string | number)[][] = activeEmps.map((emp, i) => {
     const p = calcPayrollForExport(emp);
-    return {
-      "ลำดับ": i + 1,
-      "ชื่อ-สกุล": `${emp.prefix}${emp.firstName} ${emp.lastName}`,
-      "เลขบัตรประชาชน": emp.nationalId,
-      "เงินได้ (บาท)": p.grossPay,
-      "ภาษีหัก ณ ที่จ่าย (บาท)": p.monthlyTax,
-    };
+    return [i + 1, `${emp.prefix}${emp.firstName} ${emp.lastName}`, emp.nationalId, p.grossPay, p.monthlyTax];
   });
 
-  const totalIncome = rows.reduce((s, r) => s + (r["เงินได้ (บาท)"] as number), 0);
-  const totalTax = rows.reduce((s, r) => s + (r["ภาษีหัก ณ ที่จ่าย (บาท)"] as number), 0);
-  rows.push({
-    "ลำดับ": "" as any,
-    "ชื่อ-สกุล": `รวมทั้งหมด (${activeEmps.length} คน)`,
-    "เลขบัตรประชาชน": "",
-    "เงินได้ (บาท)": totalIncome,
-    "ภาษีหัก ณ ที่จ่าย (บาท)": totalTax,
-  });
+  const totalIncome = activeEmps.reduce((s, e) => s + calcPayrollForExport(e).grossPay, 0);
+  const totalTax = activeEmps.reduce((s, e) => s + calcPayrollForExport(e).monthlyTax, 0);
+  rows.push(["", `รวมทั้งหมด (${activeEmps.length} คน)`, "", totalIncome, totalTax]);
 
-  const ws = XLSX.utils.json_to_sheet(rows);
-  ws["!cols"] = [{ wch: 6 }, { wch: 25 }, { wch: 18 }, { wch: 15 }, { wch: 20 }];
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "ภ.ง.ด.1");
-  XLSX.writeFile(wb, `PND1_${month}_${year}.xlsx`);
+  createExcelWithHeader({
+    sheetName: "ภ.ง.ด.1",
+    title: "รายงานภาษีหัก ณ ที่จ่าย (ภ.ง.ด.1)",
+    subtitle: `ประจำเดือน ${month} พ.ศ. ${year}`,
+    dateRange: `วันที่ออกรายงาน: ${new Date().toLocaleDateString("th-TH")}`,
+    headers,
+    rows,
+    colWidths: [8, 25, 18, 15, 20],
+    fileName: `PND1_${month}_${year}.xlsx`,
+  });
 }
 
-/** Export payslip to Excel */
 export function exportPayslipExcel(emp: Employee) {
   const p = calcPayrollForExport(emp);
-  const rows: { "รายการ": string; "จำนวน (บาท)": number | string }[] = [
-    { "รายการ": "เงินเดือน", "จำนวน (บาท)": p.salary },
-    { "รายการ": `ค่าล่วงเวลา (${p.otHours} ชม.)`, "จำนวน (บาท)": p.otPay },
-    { "รายการ": "เบี้ยขยัน", "จำนวน (บาท)": p.diligence },
+  const headers = ["รายการ", "จำนวน (บาท)"];
+  const rows: (string | number)[][] = [
+    ["เงินเดือน", p.salary],
+    [`ค่าล่วงเวลา (${p.otHours} ชม.)`, p.otPay],
+    ["เบี้ยขยัน", p.diligence],
   ];
-  // Custom income
   p.customItems.filter((i) => i.type === "income").forEach((item) => {
-    rows.push({ "รายการ": item.name, "จำนวน (บาท)": item.amount });
+    rows.push([item.name, item.amount]);
   });
-  rows.push(
-    { "รายการ": "รวมรายได้", "จำนวน (บาท)": p.grossPay },
-    { "รายการ": "", "จำนวน (บาท)": "" },
-    { "รายการ": "หัก: ประกันสังคม", "จำนวน (บาท)": -p.ssf },
-    { "รายการ": "หัก: ภาษีหัก ณ ที่จ่าย", "จำนวน (บาท)": -p.monthlyTax },
-  );
-  // Custom deductions
+  rows.push(["รวมรายได้", p.grossPay], ["", ""], ["หัก: ประกันสังคม", -p.ssf], ["หัก: ภาษีหัก ณ ที่จ่าย", -p.monthlyTax]);
   p.customItems.filter((i) => i.type === "deduction").forEach((item) => {
-    rows.push({ "รายการ": `หัก: ${item.name}`, "จำนวน (บาท)": -item.amount });
+    rows.push([`หัก: ${item.name}`, -item.amount]);
   });
-  rows.push(
-    { "รายการ": "รวมหัก", "จำนวน (บาท)": -p.totalDeduct },
-    { "รายการ": "", "จำนวน (บาท)": "" },
-    { "รายการ": "เงินได้สุทธิ", "จำนวน (บาท)": p.netPay },
-  );
+  rows.push(["รวมหัก", -p.totalDeduct], ["", ""], ["เงินได้สุทธิ", p.netPay]);
 
-  const ws = XLSX.utils.json_to_sheet(rows);
-  ws["!cols"] = [{ wch: 30 }, { wch: 18 }];
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "สลิปเงินเดือน");
-  XLSX.writeFile(wb, `Payslip_${emp.firstName}_${emp.lastName}.xlsx`);
+  createExcelWithHeader({
+    sheetName: "สลิปเงินเดือน",
+    title: "สลิปเงินเดือน",
+    subtitle: `${emp.prefix}${emp.firstName} ${emp.lastName} | ${emp.position} (${emp.dept})`,
+    dateRange: `วันที่ออกรายงาน: ${new Date().toLocaleDateString("th-TH")}`,
+    headers,
+    rows,
+    colWidths: [30, 18],
+    fileName: `Payslip_${emp.firstName}_${emp.lastName}.xlsx`,
+  });
 }
 
-/** Export all payslips to Excel (one sheet per employee) */
 export function exportAllPayslipsExcel(employees: Employee[]) {
   const activeEmps = employees.filter((e) => e.status === "active");
   const wb = XLSX.utils.book_new();
 
   activeEmps.forEach((emp) => {
     const p = calcPayrollForExport(emp);
-    const rows: { "รายการ": string; "จำนวน (บาท)": number | string }[] = [
-      { "รายการ": `พนักงาน: ${emp.prefix}${emp.firstName} ${emp.lastName}`, "จำนวน (บาท)": "" },
-      { "รายการ": `ตำแหน่ง: ${emp.position} (${emp.dept})`, "จำนวน (บาท)": "" },
-      { "รายการ": "", "จำนวน (บาท)": "" },
-      { "รายการ": "เงินเดือน", "จำนวน (บาท)": p.salary },
-      { "รายการ": `ค่าล่วงเวลา (${p.otHours} ชม.)`, "จำนวน (บาท)": p.otPay },
-      { "รายการ": "เบี้ยขยัน", "จำนวน (บาท)": p.diligence },
+    const ws = XLSX.utils.aoa_to_sheet([]);
+    const headers = ["รายการ", "จำนวน (บาท)"];
+
+    const dataStartRow = addExcelHeader({
+      ws,
+      title: "สลิปเงินเดือน",
+      subtitle: `${emp.prefix}${emp.firstName} ${emp.lastName} | ${emp.position} (${emp.dept})`,
+      dateRange: `วันที่ออกรายงาน: ${new Date().toLocaleDateString("th-TH")}`,
+      columnCount: 2,
+    });
+
+    const rows: (string | number)[][] = [
+      ["เงินเดือน", p.salary],
+      [`ค่าล่วงเวลา (${p.otHours} ชม.)`, p.otPay],
+      ["เบี้ยขยัน", p.diligence],
     ];
     p.customItems.filter((i) => i.type === "income").forEach((item) => {
-      rows.push({ "รายการ": item.name, "จำนวน (บาท)": item.amount });
+      rows.push([item.name, item.amount]);
     });
-    rows.push(
-      { "รายการ": "รวมรายได้", "จำนวน (บาท)": p.grossPay },
-      { "รายการ": "", "จำนวน (บาท)": "" },
-      { "รายการ": "หัก: ประกันสังคม", "จำนวน (บาท)": -p.ssf },
-      { "รายการ": "หัก: ภาษีหัก ณ ที่จ่าย", "จำนวน (บาท)": -p.monthlyTax },
-    );
+    rows.push(["รวมรายได้", p.grossPay], ["", ""], ["หัก: ประกันสังคม", -p.ssf], ["หัก: ภาษีหัก ณ ที่จ่าย", -p.monthlyTax]);
     p.customItems.filter((i) => i.type === "deduction").forEach((item) => {
-      rows.push({ "รายการ": `หัก: ${item.name}`, "จำนวน (บาท)": -item.amount });
+      rows.push([`หัก: ${item.name}`, -item.amount]);
     });
-    rows.push(
-      { "รายการ": "รวมหัก", "จำนวน (บาท)": -p.totalDeduct },
-      { "รายการ": "", "จำนวน (บาท)": "" },
-      { "รายการ": "เงินได้สุทธิ", "จำนวน (บาท)": p.netPay },
-    );
-    const ws = XLSX.utils.json_to_sheet(rows);
+    rows.push(["รวมหัก", -p.totalDeduct], ["", ""], ["เงินได้สุทธิ", p.netPay]);
+
+    XLSX.utils.sheet_add_aoa(ws, [headers], { origin: { r: dataStartRow, c: 0 } });
+    XLSX.utils.sheet_add_aoa(ws, rows, { origin: { r: dataStartRow + 1, c: 0 } });
     ws["!cols"] = [{ wch: 35 }, { wch: 18 }];
+    ws["!rows"] = [{ hpt: 24 }, { hpt: 22 }, { hpt: 18 }, { hpt: 10 }];
+
     const sheetName = `${emp.firstName}`.substring(0, 31);
     XLSX.utils.book_append_sheet(wb, ws, sheetName);
   });
@@ -174,7 +162,6 @@ async function createPdf(landscape = false): Promise<jsPDF> {
   return doc;
 }
 
-/** Export ภ.ง.ด.1 to PDF */
 export async function exportPnd1Pdf(employees: Employee[], month: string, year: string) {
   const activeEmps = employees.filter((e) => e.status === "active");
   const doc = await createPdf(true);
@@ -188,18 +175,11 @@ export async function exportPnd1Pdf(employees: Employee[], month: string, year: 
 
   const rows = activeEmps.map((emp, i) => {
     const p = calcPayrollForExport(emp);
-    return [
-      i + 1,
-      `${emp.prefix}${emp.firstName} ${emp.lastName}`,
-      emp.nationalId,
-      formatCurrency(p.grossPay),
-      formatCurrency(p.monthlyTax),
-    ];
+    return [i + 1, `${emp.prefix}${emp.firstName} ${emp.lastName}`, emp.nationalId, formatCurrency(p.grossPay), formatCurrency(p.monthlyTax)];
   });
 
   const totalIncome = activeEmps.reduce((s, e) => s + calcPayrollForExport(e).grossPay, 0);
   const totalTax = activeEmps.reduce((s, e) => s + calcPayrollForExport(e).monthlyTax, 0);
-
   rows.push(["", `รวมทั้งหมด (${activeEmps.length} คน)`, "", formatCurrency(totalIncome), formatCurrency(totalTax)]);
 
   autoTable(doc, {
@@ -213,12 +193,10 @@ export async function exportPnd1Pdf(employees: Employee[], month: string, year: 
   doc.save(`PND1_${month}_${year}.pdf`);
 }
 
-/** Export single payslip to PDF */
 export async function exportPayslipPdf(emp: Employee) {
   const p = calcPayrollForExport(emp);
   const doc = await createPdf();
 
-  // Header
   doc.setFontSize(20);
   doc.setFont("THSarabunNew", "bold");
   doc.text("สลิปเงินเดือน", 14, 18);
@@ -228,7 +206,6 @@ export async function exportPayslipPdf(emp: Employee) {
   doc.text(`ตำแหน่ง: ${emp.position} | แผนก: ${emp.dept}`, 14, 34);
   doc.text(`เลขบัตรประชาชน: ${emp.nationalId}`, 14, 40);
 
-  // Income table
   const incomeRows: string[][] = [
     ["เงินเดือน", formatCurrency(p.salary)],
     [`ค่าล่วงเวลา (${p.otHours} ชม.)`, formatCurrency(p.otPay)],
@@ -247,7 +224,6 @@ export async function exportPayslipPdf(emp: Employee) {
     headStyles: { fillColor: [34, 197, 94], font: "THSarabunNew", fontStyle: "bold" },
   });
 
-  // Deductions table
   const finalY = (doc as any).lastAutoTable?.finalY || 90;
   const deductRows: string[][] = [
     ["ประกันสังคม", formatCurrency(p.ssf)],
@@ -266,7 +242,6 @@ export async function exportPayslipPdf(emp: Employee) {
     headStyles: { fillColor: [239, 68, 68], font: "THSarabunNew", fontStyle: "bold" },
   });
 
-  // Net pay
   const finalY2 = (doc as any).lastAutoTable?.finalY || 130;
   doc.setFontSize(16);
   doc.setFont("THSarabunNew", "bold");
