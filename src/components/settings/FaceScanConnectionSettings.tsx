@@ -553,15 +553,15 @@ console.log('Bridge service started');`;
             <div>
               <h4 className="font-semibold mb-2">📡 API Endpoints</h4>
               <div className="space-y-2 text-sm">
-                <div className="font-mono text-xs bg-muted p-2 rounded">
-                  <span className="text-green-600 dark:text-green-400">POST</span>{" "}
+              <div className="font-mono text-xs bg-muted p-2 rounded">
+                  <span className="font-semibold text-primary">POST</span>{" "}
                   {FN_BASE}/facescan-ingest
                   <div className="text-muted-foreground mt-1">
                     Body: <code>{`{ device_id, records: [{enroll_number, datetime, verify_mode, in_out}] }`}</code>
                   </div>
                 </div>
                 <div className="font-mono text-xs bg-muted p-2 rounded">
-                  <span className="text-blue-600 dark:text-blue-400">GET</span>{" "}
+                  <span className="font-semibold text-primary">GET</span>{" "}
                   {FN_BASE}/facescan-bridge-config
                   <div className="text-muted-foreground mt-1">
                     Returns: enabled devices + employee enroll list
