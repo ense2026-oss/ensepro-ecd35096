@@ -700,6 +700,131 @@ export type Database = {
           },
         ]
       }
+      face_scan_bridge_tokens: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          enabled: boolean
+          id: string
+          last_used_at: string | null
+          name: string
+          token_hash: string
+          token_prefix: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          enabled?: boolean
+          id?: string
+          last_used_at?: string | null
+          name?: string
+          token_hash: string
+          token_prefix?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          enabled?: boolean
+          id?: string
+          last_used_at?: string | null
+          name?: string
+          token_hash?: string
+          token_prefix?: string
+        }
+        Relationships: []
+      }
+      face_scan_devices: {
+        Row: {
+          comm_password: string
+          created_at: string
+          description: string
+          device_ip: string
+          enabled: boolean
+          id: string
+          last_status: string
+          last_sync_at: string | null
+          machine_number: number
+          name: string
+          server_ip: string
+          server_port: number
+          updated_at: string
+        }
+        Insert: {
+          comm_password?: string
+          created_at?: string
+          description?: string
+          device_ip?: string
+          enabled?: boolean
+          id?: string
+          last_status?: string
+          last_sync_at?: string | null
+          machine_number?: number
+          name?: string
+          server_ip?: string
+          server_port?: number
+          updated_at?: string
+        }
+        Update: {
+          comm_password?: string
+          created_at?: string
+          description?: string
+          device_ip?: string
+          enabled?: boolean
+          id?: string
+          last_status?: string
+          last_sync_at?: string | null
+          machine_number?: number
+          name?: string
+          server_ip?: string
+          server_port?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      face_scan_sync_logs: {
+        Row: {
+          created_at: string
+          device_id: string | null
+          finished_at: string | null
+          id: string
+          message: string
+          records_synced: number
+          started_at: string
+          status: string
+          sync_type: string
+        }
+        Insert: {
+          created_at?: string
+          device_id?: string | null
+          finished_at?: string | null
+          id?: string
+          message?: string
+          records_synced?: number
+          started_at?: string
+          status?: string
+          sync_type?: string
+        }
+        Update: {
+          created_at?: string
+          device_id?: string | null
+          finished_at?: string | null
+          id?: string
+          message?: string
+          records_synced?: number
+          started_at?: string
+          status?: string
+          sync_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "face_scan_sync_logs_device_id_fkey"
+            columns: ["device_id"]
+            isOneToOne: false
+            referencedRelation: "face_scan_devices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       leave_requests: {
         Row: {
           approved_tiers: number
