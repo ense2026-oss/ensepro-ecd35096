@@ -656,7 +656,7 @@ const Attendance = () => {
             <DialogDescription className="sr-only">รายละเอียดคำขอแก้ไขเวลา</DialogDescription>
           </DialogHeader>
           {detailReq && (
-            <div className="space-y-4 py-2">
+            <div className="space-y-4 py-2 mx-[24px]">
               <div className="grid grid-cols-2 gap-3">
                 <div><p className="text-xs text-muted-foreground">พนักงาน</p><p className="text-sm font-semibold mt-0.5">{detailReq.employeeName}</p></div>
                 <div><p className="text-xs text-muted-foreground">วันที่</p><p className="text-sm font-semibold mt-0.5">{detailReq.date}</p></div>
