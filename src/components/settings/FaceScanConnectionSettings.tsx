@@ -601,7 +601,7 @@ console.log('Bridge service started');`;
           </DialogHeader>
           <div className="space-y-3 flex-1 overflow-y-auto py-2">
             <div className="grid grid-cols-2 gap-3">
-              <div className="col-span-2">
+              <div className="col-span-2 mx-[20px]">
                 <Label>ชื่อเครื่อง *</Label>
                 <Input
                   value={deviceForm.name}
@@ -609,7 +609,7 @@ console.log('Bridge service started');`;
                   placeholder="เช่น Station"
                 />
               </div>
-              <div className="col-span-2">
+              <div className="col-span-2 mx-[20px]">
                 <Label>คำอธิบาย</Label>
                 <Input
                   value={deviceForm.description}
@@ -619,7 +619,7 @@ console.log('Bridge service started');`;
                   placeholder="เช่น รถไฟฟ้าขสมช"
                 />
               </div>
-              <div className="col-span-2">
+              <div className="col-span-2 mx-[20px]">
                 <Label>Device IP *</Label>
                 <Input
                   value={deviceForm.device_ip}
@@ -627,14 +627,14 @@ console.log('Bridge service started');`;
                   placeholder="192.168.2.201"
                 />
               </div>
-              <div>
+              <div className="mx-[20px] mr-0">
                 <Label>Server IP</Label>
                 <Input
                   value={deviceForm.server_ip}
                   onChange={(e) => setDeviceForm({ ...deviceForm, server_ip: e.target.value })}
                 />
               </div>
-              <div>
+              <div className="mr-[20px]">
                 <Label>Server Port</Label>
                 <Input
                   type="number"
@@ -644,7 +644,7 @@ console.log('Bridge service started');`;
                   }
                 />
               </div>
-              <div>
+              <div className="mr-0 ml-[20px]">
                 <Label>Machine No.</Label>
                 <Input
                   type="number"
@@ -657,7 +657,7 @@ console.log('Bridge service started');`;
                   }
                 />
               </div>
-              <div>
+              <div className="mr-[20px]">
                 <Label>Comm Password</Label>
                 <Input
                   value={deviceForm.comm_password}
@@ -666,7 +666,7 @@ console.log('Bridge service started');`;
                   }
                 />
               </div>
-              <div className="col-span-2 flex items-center justify-between border-t pt-3">
+              <div className="col-span-2 flex items-center justify-between border-t pt-3 mx-[20px]">
                 <Label>เปิดใช้งาน</Label>
                 <Switch
                   checked={deviceForm.enabled}
