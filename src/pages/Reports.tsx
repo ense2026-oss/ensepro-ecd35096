@@ -11,6 +11,14 @@ import {
   exportLeaveBalanceExcel, exportLeaveBalancePdf,
   exportLeaveYearlyExcel, exportLeaveYearlyPdf,
 } from "@/utils/exportLeaveReports";
+import {
+  exportEmployeeReportExcel,
+  exportOvertimeReportExcel,
+  exportShiftReportExcel,
+  exportShiftChangeLogExcel,
+  exportPayrollSummaryExcel,
+  exportTaxAnnualExcel,
+} from "@/utils/exportGenericReports";
 import { toast } from "sonner";
 import {
   Users,
@@ -899,15 +907,63 @@ const Reports = () => {
       }
       return;
     }
-    if (reportId === "payroll-summary" || reportId === "payroll-tax-annual") {
+    if (reportId === "payroll-summary") {
       if (format === "excel") {
-        exportAllPayslipsExcel(employees);
-        toast.success("ส่งออกสลิปเงินเดือนทั้งหมดเป็น Excel สำเร็จ");
+        exportPayrollSummaryExcel(payrollSummaryData, filterYear);
+        toast.success("ส่งออกสรุปเงินเดือนรายเดือนเป็น Excel สำเร็จ");
       } else {
         await exportPnd1Pdf(employees, filterMonth, filterYear);
         toast.success("ส่งออกรายงานเป็น PDF สำเร็จ");
       }
       return;
+    }
+    if (reportId === "payroll-tax-annual") {
+      if (format === "excel") {
+        const taxConfig: TaxConfig = { enabled: true, method: "progressive", flatRate: 5 };
+        const pnd1Rows = employees.filter((e) => e.status === "active").map((emp) => {
+          const salary = Number(emp.salary) || 0;
+          const annualIncome = calculateAnnualIncome(salary);
+          const monthlyTax = calculateMonthlyTax(taxConfig, annualIncome, emp.taxDeductions || DEFAULT_TAX_DEDUCTION);
+          return { name: `${emp.firstName} ${emp.lastName}`, salary, annualIncome, monthlyTax };
+        });
+        exportTaxAnnualExcel(pnd1Rows, filterYear);
+        toast.success("ส่งออกภาษีสะสมรายปีเป็น Excel สำเร็จ");
+      } else {
+        await exportPnd1Pdf(employees, filterMonth, filterYear);
+        toast.success("ส่งออกรายงานเป็น PDF สำเร็จ");
+      }
+      return;
+    }
+
+    // Employee reports
+    if (reportId?.startsWith("emp-")) {
+      if (format === "excel") {
+        exportEmployeeReportExcel(empTableData, currentReport?.name || "รายงานข้อมูลพนักงาน", filterMonth, filterYear);
+        toast.success("ส่งออกรายงานพนักงานเป็น Excel สำเร็จ");
+        return;
+      }
+    }
+
+    // Overtime reports
+    if (reportId?.startsWith("ot-")) {
+      if (format === "excel") {
+        exportOvertimeReportExcel(otData, currentReport?.name || "รายงาน OT", filterMonth, filterYear);
+        toast.success("ส่งออกรายงาน OT เป็น Excel สำเร็จ");
+        return;
+      }
+    }
+
+    // Shift reports
+    if (reportId?.startsWith("shift-")) {
+      if (format === "excel") {
+        if (reportId === "shift-change") {
+          exportShiftChangeLogExcel(shiftChangeLog, filterMonth, filterYear);
+        } else {
+          exportShiftReportExcel(shiftData, currentReport?.name || "รายงานกะ", filterMonth, filterYear);
+        }
+        toast.success("ส่งออกรายงานกะเป็น Excel สำเร็จ");
+        return;
+      }
     }
 
     // Generic fallback
