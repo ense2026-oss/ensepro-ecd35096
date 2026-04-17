@@ -11,6 +11,14 @@ import {
   exportLeaveBalanceExcel, exportLeaveBalancePdf,
   exportLeaveYearlyExcel, exportLeaveYearlyPdf,
 } from "@/utils/exportLeaveReports";
+import {
+  exportEmployeeReportExcel,
+  exportOvertimeReportExcel,
+  exportShiftReportExcel,
+  exportShiftChangeLogExcel,
+  exportPayrollSummaryExcel,
+  exportTaxAnnualExcel,
+} from "@/utils/exportGenericReports";
 import { toast } from "sonner";
 import {
   Users,
