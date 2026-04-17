@@ -28,6 +28,7 @@ const ALL_TABS = [
   { id: "contracts", label: "สัญญาจ้าง", icon: FileSignature },
   { id: "leave-types", label: "ประเภทการลา", icon: Calendar },
   { id: "approval", label: "ระบบอนุมัติ", icon: Workflow },
+  { id: "face-scan-connect", label: "เชื่อมต่อ FaceScan", icon: Wifi },
   { id: "face-scanner", label: "เครื่องสแกนหน้า", icon: ScanFace },
   { id: "display", label: "การแสดงผล", icon: Palette },
 ];
