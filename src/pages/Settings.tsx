@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Building2, MapPin, Shield, Clock, Calendar, Workflow, ScanFace, Palette, Banknote, FileSignature, ToggleRight, ChevronRight, Network } from "lucide-react";
+import { Building2, MapPin, Shield, Clock, Calendar, Workflow, ScanFace, Palette, Banknote, FileSignature, ToggleRight, ChevronRight, Network, Wifi } from "lucide-react";
 import { useModuleSettings } from "@/hooks/useModuleSettings";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -10,6 +10,7 @@ import LeaveTypesSettings from "@/components/settings/LeaveTypesSettings";
 import CompanySettings from "@/components/settings/CompanySettings";
 import ApprovalSettings from "@/components/settings/ApprovalSettings";
 import FaceScannerSettings from "@/components/settings/FaceScannerSettings";
+import FaceScanConnectionSettings from "@/components/settings/FaceScanConnectionSettings";
 import DisplaySettings from "@/components/settings/DisplaySettings";
 import PayrollSettings from "@/components/settings/PayrollSettings";
 import ContractSettings from "@/components/settings/ContractSettings";
