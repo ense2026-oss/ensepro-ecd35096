@@ -82,6 +82,9 @@ const Settings = () => {
       case "face-scanner":
         return <FaceScannerSettings />;
 
+      case "face-scan-connect":
+        return <FaceScanConnectionSettings />;
+
       case "display":
         return <DisplaySettings />;
 
