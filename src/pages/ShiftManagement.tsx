@@ -253,8 +253,6 @@ const ShiftManagement = () => {
                     return (
                       <th key={iso} className="sticky top-0 z-20 px-1 py-1 text-center font-semibold border-b min-w-[40px]" style={{
                         borderColor: "hsl(var(--border))",
-                        background: isHoliday ? "hsl(220 80% 95%)" : (isWeekend ? "hsl(0 0% 96%)" : undefined),
-                        color: isHoliday ? "hsl(220 80% 35%)" : undefined,
                         background: isHoliday ? "hsl(220 80% 95%)" : (isWeekend ? "hsl(0 0% 96%)" : "hsl(var(--muted) / 0.5)"),
                         color: isHoliday ? "hsl(220 80% 35%)" : undefined,
                       }}>
