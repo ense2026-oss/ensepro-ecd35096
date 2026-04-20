@@ -10,6 +10,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import SearchableSelect from "@/components/ui/searchable-select";
 import { ThaiDatePicker } from "@/components/ui/thai-date-picker";
 import EmployeeAvatar from "@/components/ui/employee-avatar";
+import { HoverCard, HoverCardTrigger, HoverCardContent } from "@/components/ui/hover-card";
 
 interface Pattern {
   id: string;
@@ -269,17 +270,47 @@ const DayOff = () => {
                       const status = computeDayoffStatus(emp.id, iso, dow, patterns, overrides, holidaySet);
                       const c = cellColor(status);
                       const hasOverride = overrides.some((o) => o.employee_id === emp.id && o.date === iso);
+                      const ov = overrides.find((o) => o.employee_id === emp.id && o.date === iso);
+                      const holidayName = holidays.find((h) => h.date === iso)?.name;
+                      const statusLabel = status === "work" ? "ทำงาน" : status === "pattern" ? "หยุดประจำ" : status === "extra" ? "หยุดเพิ่ม" : "วันหยุดบริษัท";
+                      const statusDot = status === "work" ? "hsl(var(--muted-foreground))" : status === "pattern" ? "hsl(0 70% 50%)" : status === "extra" ? "hsl(31 90% 50%)" : "hsl(220 80% 55%)";
                       return (
                         <td key={iso} className="p-0.5 text-center border-b" style={{borderColor:"hsl(var(--border))"}}>
-                          <button
-                            disabled={!canEdit}
-                            onClick={() => toggleOverride(emp.id, iso, status)}
-                            className={`w-full h-7 rounded text-[11px] font-bold transition-all ${canEdit ? "hover:scale-110 cursor-pointer" : "cursor-default"} ${hasOverride ? "ring-1 ring-offset-1 ring-orange-400" : ""}`}
-                            style={{ background: c.bg, color: c.color }}
-                            title={`${WEEKDAY_FULL[dow]} ${d.getDate()} · ${status === "work" ? "ทำงาน" : status === "pattern" ? "หยุดประจำ" : status === "extra" ? "หยุดเพิ่ม" : "วันหยุดบริษัท"}`}
-                          >
-                            {c.label}
-                          </button>
+                          <HoverCard openDelay={120} closeDelay={60}>
+                            <HoverCardTrigger asChild>
+                              <button
+                                disabled={!canEdit}
+                                onClick={() => toggleOverride(emp.id, iso, status)}
+                                className={`w-full h-7 rounded text-[11px] font-bold transition-all ${canEdit ? "hover:scale-110 cursor-pointer" : "cursor-default"} ${hasOverride ? "ring-1 ring-offset-1 ring-orange-400" : ""}`}
+                                style={{ background: c.bg, color: c.color }}
+                              >
+                                {c.label}
+                              </button>
+                            </HoverCardTrigger>
+                            <HoverCardContent className="w-64 p-3" align="center" side="top">
+                              <div className="text-[11px] text-muted-foreground border-b pb-1.5 mb-2">
+                                {d.getDate()}/{month + 1}/{year + 543} · {emp.prefix}{emp.firstName} {emp.lastName}
+                              </div>
+                              <div className="space-y-1.5 text-xs">
+                                <div className="flex items-center gap-2">
+                                  <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: statusDot }} />
+                                  <span className="font-semibold flex-1">{statusLabel}</span>
+                                  <span className="text-muted-foreground">{WEEKDAY_FULL[dow]}</span>
+                                </div>
+                                {status === "company" && holidayName && (
+                                  <div className="text-muted-foreground pl-4">{holidayName}</div>
+                                )}
+                                {ov?.reason && (
+                                  <div className="text-muted-foreground pl-4">เหตุผล: {ov.reason}</div>
+                                )}
+                                {canEdit && (
+                                  <div className="text-[10px] text-muted-foreground pt-1.5 border-t mt-2">
+                                    คลิกเพื่อ{status === "work" ? "ตั้งเป็นวันหยุด" : "เปลี่ยนสถานะ"}
+                                  </div>
+                                )}
+                              </div>
+                            </HoverCardContent>
+                          </HoverCard>
                         </td>
                       );
                     })}
