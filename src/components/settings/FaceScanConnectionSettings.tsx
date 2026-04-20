@@ -248,6 +248,31 @@ const FaceScanConnectionSettings = () => {
     toast.success("คัดลอกแล้ว");
   };
 
+  const testConnection = async (device: Device) => {
+    setTestingDeviceId(device.id);
+    try {
+      const { data, error } = await supabase.functions.invoke("facescan-test-connection", {
+        body: { device_id: device.id },
+      });
+      if (error) throw error;
+      if (data?.bridge_online) {
+        toast.success(
+          `✅ Bridge ออนไลน์ — คำสั่งทดสอบถูกส่งไปยัง ${device.name} แล้ว`,
+          { description: data.message, duration: 6000 }
+        );
+      } else {
+        toast.warning(`⚠️ Bridge offline`, {
+          description: data?.message ?? "ไม่พบการตอบสนองจาก Bridge Service",
+          duration: 8000,
+        });
+      }
+    } catch (e: any) {
+      toast.error("ทดสอบไม่สำเร็จ: " + (e?.message ?? "Unknown error"));
+    } finally {
+      setTestingDeviceId(null);
+    }
+  };
+
   const formatDateTime = (s: string | null) => {
     if (!s) return "—";
     const d = new Date(s);
