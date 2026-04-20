@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, CalendarDays, Users, Settings2, Loader2, Plus, Trash2, Save, Copy, Search, Clock, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useEmployees } from "@/contexts/EmployeeContext";
