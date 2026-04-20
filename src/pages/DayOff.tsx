@@ -197,7 +197,7 @@ const DayOff = () => {
 
         {/* ============ TAB 1: Calendar ============ */}
         <TabsContent value="calendar" className="space-y-4">
-          <div className="card-base p-4 space-y-3">
+          <div className="card-base p-4 space-y-3 sticky top-0 z-30 bg-card">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-2">
                 <button onClick={() => navMonth(-1)} className="p-2 rounded-xl hover:bg-muted"><ChevronLeft className="w-4 h-4" /></button>
@@ -230,11 +230,11 @@ const DayOff = () => {
             </div>
           </div>
 
-          <div className="card-base overflow-auto">
+          <div className="card-base overflow-x-auto overflow-y-visible">
             <table className="w-full text-xs border-collapse">
-              <thead>
+              <thead className="sticky top-[140px] z-20 bg-card">
                 <tr style={{ background: "hsl(var(--muted) / 0.5)" }}>
-                  <th className="sticky left-0 bg-card px-3 py-2 text-left font-semibold border-b border-r min-w-[180px]" style={{borderColor:"hsl(var(--border))"}}>พนักงาน</th>
+                  <th className="sticky left-0 bg-card px-3 py-2 text-left font-semibold border-b border-r min-w-[180px] z-10" style={{borderColor:"hsl(var(--border))"}}>พนักงาน</th>
                   {monthDays.map((d) => {
                     const dow = d.getDay();
                     const isWeekend = dow === 0 || dow === 6;
