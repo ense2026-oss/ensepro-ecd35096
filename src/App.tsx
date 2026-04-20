@@ -29,6 +29,7 @@ import ShiftManagement from "@/pages/ShiftManagement";
 import Payroll from "@/pages/Payroll";
 import Contracts from "@/pages/Contracts";
 import ContractDetail from "@/pages/ContractDetail";
+import DayOff from "@/pages/DayOff";
 import NotFound from "@/pages/NotFound";
 import { applyDisplaySettings } from "@/components/settings/DisplaySettings";
 
@@ -109,6 +110,7 @@ const AppRoutes = () => (
       <Route path="/check-in" element={<CheckIn />} />
       <Route path="/shift-management" element={<ShiftManagement />} />
       <Route path="/payroll" element={<Payroll />} />
+      <Route path="/day-off" element={<DayOff />} />
       <Route path="/reports" element={<Reports />} />
       <Route path="/notifications" element={<Notifications />} />
       <Route path="/settings" element={<Settings />} />

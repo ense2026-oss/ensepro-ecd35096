@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Building2, MapPin, Shield, Clock, Calendar, Workflow, ScanFace, Palette, Banknote, FileSignature, ToggleRight, ChevronRight, Network, Wifi } from "lucide-react";
+import { Building2, MapPin, Shield, Clock, Calendar, Workflow, ScanFace, Palette, Banknote, FileSignature, ToggleRight, ChevronRight, Network, Wifi, CalendarDays } from "lucide-react";
 import { useModuleSettings } from "@/hooks/useModuleSettings";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -16,6 +16,7 @@ import PayrollSettings from "@/components/settings/PayrollSettings";
 import ContractSettings from "@/components/settings/ContractSettings";
 import ModuleSettings from "@/components/settings/ModuleSettings";
 import AffiliationSettings from "@/components/settings/AffiliationSettings";
+import CompanyHolidaysSettings from "@/components/settings/CompanyHolidaysSettings";
 
 const ALL_TABS = [
   { id: "company", label: "ข้อมูลบริษัท", icon: Building2 },
@@ -27,6 +28,7 @@ const ALL_TABS = [
   { id: "modules", label: "ตั้งค่าโมดูล", icon: ToggleRight },
   { id: "contracts", label: "สัญญาจ้าง", icon: FileSignature },
   { id: "leave-types", label: "ประเภทการลา", icon: Calendar },
+  { id: "company-holidays", label: "วันหยุดบริษัท", icon: CalendarDays },
   { id: "approval", label: "ระบบอนุมัติ", icon: Workflow },
   { id: "face-scan-connect", label: "เชื่อมต่อ FaceScan", icon: Wifi },
   { id: "face-scanner", label: "เครื่องสแกนหน้า", icon: ScanFace },
@@ -75,6 +77,9 @@ const Settings = () => {
 
       case "leave-types":
         return <LeaveTypesSettings />;
+
+      case "company-holidays":
+        return <CompanyHolidaysSettings />;
 
       case "approval":
         return <ApprovalSettings />;

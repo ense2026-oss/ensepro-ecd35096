@@ -48,6 +48,7 @@ const allNavItems = [
       { path: "/overtime", label: "ทำงานโอที", icon: Clock },
       { path: "/check-in", label: "เช็คอิน", icon: MapPin },
       { path: "/shift-management", label: "จัดการกะ", icon: CalendarDays },
+      { path: "/day-off", label: "จัดการวันหยุด", icon: CalendarDays },
     ],
   },
   {
@@ -87,6 +88,7 @@ const Sidebar = ({ collapsed, onToggle, onNavigate }: SidebarProps) => {
     "/overtime": "overtime",
     "/check-in": "check-in",
     "/shift-management": "shift-management",
+    "/day-off": "day_off",
     "/payroll": "payroll",
     "/reports": "reports",
   };
