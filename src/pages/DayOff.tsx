@@ -85,8 +85,8 @@ const DayOff = () => {
   const [activeTab, setActiveTab] = useState(initialEmp ? "employee" : "calendar");
   const [selectedEmpId, setSelectedEmpId] = useState<string>(initialEmp);
 
-  const fetchAll = async () => {
-    setLoading(true);
+  const fetchAll = async (showLoading = false) => {
+    if (showLoading) setLoading(true);
     const [pr, or, hr] = await Promise.all([
       supabase.from("employee_dayoff_patterns").select("*"),
       supabase.from("employee_dayoff_overrides").select("*"),
@@ -95,10 +95,10 @@ const DayOff = () => {
     setPatterns((pr.data as Pattern[]) || []);
     setOverrides((or.data as Override[]) || []);
     setHolidays((hr.data as CompanyHoliday[]) || []);
-    setLoading(false);
+    if (showLoading) setLoading(false);
   };
 
-  useEffect(() => { fetchAll(); }, []);
+  useEffect(() => { fetchAll(true); }, []);
 
   // Realtime
   useEffect(() => {
