@@ -245,7 +245,7 @@ const DayOff = () => {
 
           <div className="card-base overflow-x-auto overflow-y-visible">
             <table className="w-full text-xs border-collapse">
-              <thead className="sticky top-[140px] z-20 bg-card">
+              <thead className="sticky z-20 bg-card" style={{ top: `${controlsHeight}px` }}>
                 <tr style={{ background: "hsl(var(--muted) / 0.5)" }}>
                   <th className="sticky left-0 bg-card px-3 py-2 text-left font-semibold border-b border-r min-w-[180px] z-10" style={{borderColor:"hsl(var(--border))"}}>พนักงาน</th>
                   {monthDays.map((d) => {
