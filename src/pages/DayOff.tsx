@@ -210,7 +210,7 @@ const DayOff = () => {
 
         {/* ============ TAB 1: Calendar ============ */}
         <TabsContent value="calendar" className="space-y-4">
-          <div className="card-base p-4 space-y-3 sticky top-0 z-30 bg-card">
+          <div ref={controlsRef} className="card-base p-4 space-y-3 sticky top-0 z-30 bg-card">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-2">
                 <button onClick={() => navMonth(-1)} className="p-2 rounded-xl hover:bg-muted"><ChevronLeft className="w-4 h-4" /></button>
