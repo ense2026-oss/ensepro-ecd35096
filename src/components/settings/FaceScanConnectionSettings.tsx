@@ -36,6 +36,8 @@ import {
   Copy,
   Check,
   RefreshCw,
+  Wifi,
+  Loader2,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -105,6 +107,9 @@ const FaceScanConnectionSettings = () => {
   const [tokenName, setTokenName] = useState("");
   const [newToken, setNewToken] = useState<string | null>(null);
   const [copiedToken, setCopiedToken] = useState(false);
+
+  // Test connection state
+  const [testingDeviceId, setTestingDeviceId] = useState<string | null>(null);
 
   const fetchAll = async () => {
     setLoading(true);
@@ -241,6 +246,31 @@ const FaceScanConnectionSettings = () => {
     setCopiedToken(true);
     setTimeout(() => setCopiedToken(false), 2000);
     toast.success("คัดลอกแล้ว");
+  };
+
+  const testConnection = async (device: Device) => {
+    setTestingDeviceId(device.id);
+    try {
+      const { data, error } = await supabase.functions.invoke("facescan-test-connection", {
+        body: { device_id: device.id },
+      });
+      if (error) throw error;
+      if (data?.bridge_online) {
+        toast.success(
+          `✅ Bridge ออนไลน์ — คำสั่งทดสอบถูกส่งไปยัง ${device.name} แล้ว`,
+          { description: data.message, duration: 6000 }
+        );
+      } else {
+        toast.warning(`⚠️ Bridge offline`, {
+          description: data?.message ?? "ไม่พบการตอบสนองจาก Bridge Service",
+          duration: 8000,
+        });
+      }
+    } catch (e: any) {
+      toast.error("ทดสอบไม่สำเร็จ: " + (e?.message ?? "Unknown error"));
+    } finally {
+      setTestingDeviceId(null);
+    }
   };
 
   const formatDateTime = (s: string | null) => {
@@ -385,6 +415,20 @@ console.log('Bridge service started');`;
                     </div>
                   </div>
                   <div className="flex gap-1">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => testConnection(d)}
+                      disabled={testingDeviceId === d.id || !d.enabled}
+                      className="gap-1.5"
+                    >
+                      {testingDeviceId === d.id ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <Wifi className="w-3.5 h-3.5" />
+                      )}
+                      Test
+                    </Button>
                     <Button variant="ghost" size="icon" onClick={() => openEditDevice(d)}>
                       <Pencil className="w-4 h-4" />
                     </Button>
