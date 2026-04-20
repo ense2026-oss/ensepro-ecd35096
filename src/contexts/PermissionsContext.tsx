@@ -32,6 +32,7 @@ const moduleToRoutes: Record<string, string[]> = {
   reports: ["/reports"],
   settings: ["/settings"],
   contracts: ["/contracts"],
+  day_off: ["/day-off"],
 };
 
 const routeToModule: Record<string, string> = {};
