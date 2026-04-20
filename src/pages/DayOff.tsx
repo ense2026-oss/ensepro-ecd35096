@@ -102,11 +102,12 @@ const DayOff = () => {
 
   // Realtime
   useEffect(() => {
+    const refetch = () => { fetchAll(false); };
     const channel = supabase
       .channel("dayoff-realtime")
-      .on("postgres_changes", { event: "*", schema: "public", table: "employee_dayoff_overrides" }, fetchAll)
-      .on("postgres_changes", { event: "*", schema: "public", table: "employee_dayoff_patterns" }, fetchAll)
-      .on("postgres_changes", { event: "*", schema: "public", table: "company_holidays" }, fetchAll)
+      .on("postgres_changes", { event: "*", schema: "public", table: "employee_dayoff_overrides" }, refetch)
+      .on("postgres_changes", { event: "*", schema: "public", table: "employee_dayoff_patterns" }, refetch)
+      .on("postgres_changes", { event: "*", schema: "public", table: "company_holidays" }, refetch)
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, []);
