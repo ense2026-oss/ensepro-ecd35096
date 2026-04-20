@@ -196,63 +196,6 @@ const ShiftManagement = () => {
         <p className="text-sm text-muted-foreground mt-0.5">กำหนดและจัดการกะการทำงานแบบยืดหยุ่น · คลิกเซลล์เพื่อเปลี่ยนกะรายวัน</p>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="card-base p-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "hsl(var(--primary) / 0.15)" }}>
-              <Users className="w-5 h-5" style={{ color: "hsl(var(--primary))" }} />
-            </div>
-            <div>
-              <p className="text-2xl font-bold font-display">{uniqueEmployees}</p>
-              <p className="text-xs text-muted-foreground">พนักงานที่มีกะ</p>
-            </div>
-          </div>
-        </div>
-        <div className="card-base p-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "hsl(var(--primary) / 0.15)" }}>
-              <CalendarDays className="w-5 h-5" style={{ color: "hsl(var(--primary))" }} />
-            </div>
-            <div>
-              <p className="text-2xl font-bold font-display">{totalAssigned}</p>
-              <p className="text-xs text-muted-foreground">การกำหนดกะทั้งหมด</p>
-            </div>
-          </div>
-        </div>
-        {shiftCounts.slice(0, 2).map((s) => (
-          <div key={s.id} className="card-base p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: `${s.color}20` }}>
-                <Clock className="w-5 h-5" style={{ color: s.color }} />
-              </div>
-              <div>
-                <p className="text-2xl font-bold font-display">{s.count}</p>
-                <p className="text-xs text-muted-foreground">{s.name}</p>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Shift Legend */}
-      <div className="card-base p-4">
-        <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
-          <Clock className="w-4 h-4 text-muted-foreground" />
-          กะการทำงานที่ใช้งาน
-        </h3>
-        <div className="flex flex-wrap gap-3">
-          {shifts.map((s) => (
-            <div key={s.id} className="flex items-center gap-2 px-3 py-2 rounded-xl border" style={{ borderColor: `${s.color}40`, background: `${s.color}08` }}>
-              <div className="w-3 h-3 rounded-full" style={{ background: s.color }} />
-              <span className="text-sm font-semibold">{s.name}</span>
-              <span className="text-xs text-muted-foreground">({s.start_time} - {s.end_time})</span>
-            </div>
-          ))}
-          {shifts.length === 0 && <p className="text-xs text-muted-foreground">ยังไม่มีกะ — เพิ่มได้ที่ตั้งค่าระบบ</p>}
-        </div>
-      </div>
-
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList>
           <TabsTrigger value="calendar"><CalendarDays className="w-4 h-4 mr-1.5" />ปฏิทินรายเดือน</TabsTrigger>
