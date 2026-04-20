@@ -96,6 +96,19 @@ const ShiftManagement = () => {
   const [activeTab, setActiveTab] = useState("calendar");
   const [selectedEmpId, setSelectedEmpId] = useState<string>("");
 
+  // Measure sticky control card height to position thead correctly
+  const controlsRef = useRef<HTMLDivElement>(null);
+  const [controlsHeight, setControlsHeight] = useState(0);
+  useEffect(() => {
+    if (!controlsRef.current) return;
+    const update = () => setControlsHeight(controlsRef.current?.offsetHeight ?? 0);
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(controlsRef.current);
+    window.addEventListener("resize", update);
+    return () => { ro.disconnect(); window.removeEventListener("resize", update); };
+  }, [activeTab]);
+
   const canEdit = canAction(role, "shift", "edit") || ["admin", "hr", "manager", "executive"].includes(role.toLowerCase());
 
   const fetchAll = async (showLoading = false) => {
