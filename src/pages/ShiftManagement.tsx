@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, CalendarDays, Users, Settings2, Loader2, Plus, Trash2, Save, Copy, Search, Clock, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useEmployees } from "@/contexts/EmployeeContext";
@@ -95,6 +95,19 @@ const ShiftManagement = () => {
   const [deptFilter, setDeptFilter] = useState("all");
   const [activeTab, setActiveTab] = useState("calendar");
   const [selectedEmpId, setSelectedEmpId] = useState<string>("");
+
+  // Measure sticky control card height to position thead correctly
+  const controlsRef = useRef<HTMLDivElement>(null);
+  const [controlsHeight, setControlsHeight] = useState(0);
+  useEffect(() => {
+    if (!controlsRef.current) return;
+    const update = () => setControlsHeight(controlsRef.current?.offsetHeight ?? 0);
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(controlsRef.current);
+    window.addEventListener("resize", update);
+    return () => { ro.disconnect(); window.removeEventListener("resize", update); };
+  }, [activeTab]);
 
   const canEdit = canAction(role, "shift", "edit") || ["admin", "hr", "manager", "executive"].includes(role.toLowerCase());
 
@@ -206,7 +219,7 @@ const ShiftManagement = () => {
 
         {/* ============ TAB 1: Calendar Grid ============ */}
         <TabsContent value="calendar" className="space-y-4">
-          <div className="card-base p-4 space-y-3 sticky top-0 z-30 bg-card">
+          <div ref={controlsRef} className="card-base p-4 space-y-3 sticky top-0 z-30 bg-card">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-2">
                 <button onClick={() => navMonth(-1)} className="p-2 rounded-xl hover:bg-muted"><ChevronLeft className="w-4 h-4" /></button>
@@ -242,7 +255,7 @@ const ShiftManagement = () => {
 
           <div className="card-base overflow-x-auto overflow-y-visible">
             <table className="w-full text-xs border-collapse">
-              <thead className="sticky top-[140px] z-20 bg-card">
+              <thead className="sticky z-20 bg-card" style={{ top: `${controlsHeight}px` }}>
                 <tr style={{ background: "hsl(var(--muted) / 0.5)" }}>
                   <th className="sticky left-0 bg-card px-3 py-2 text-left font-semibold border-b border-r min-w-[180px] z-10" style={{ borderColor: "hsl(var(--border))" }}>พนักงาน</th>
                   {monthDays.map((d) => {
