@@ -244,13 +244,18 @@ const OvertimeRequest = () => {
   const fetchRequests = useCallback(async () => {
     const { data } = await supabase
       .from("overtime_requests")
-      .select("*, employees(first_name, last_name, dept)")
+      .select("*, employees(first_name, last_name, dept, photo_url, avatar, avatar_color, avatar_text_color)")
       .order("created_at", { ascending: false });
     if (data) {
       setRequests(data.map((r: any) => ({
         id: r.id,
         employeeId: r.employee_id,
         employeeName: r.employees ? `${r.employees.first_name} ${r.employees.last_name}` : "",
+        employeePhotoUrl: r.employees?.photo_url || undefined,
+        employeeAvatar: r.employees?.avatar || undefined,
+        employeeAvatarColor: r.employees?.avatar_color || undefined,
+        employeeAvatarTextColor: r.employees?.avatar_text_color || undefined,
+        employeeFirstName: r.employees?.first_name || "",
         department: r.employees?.dept || "",
         date: r.date,
         startTime: r.start_time,
