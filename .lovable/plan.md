@@ -1,102 +1,54 @@
 
-## แผนการเชื่อมต่อเครื่องสแกนหน้า HIP CiF76S ผ่าน SDK
+## คำตอบ: ❌ ไม่สามารถเชื่อมต่อโดยตรงได้ครับ แม้จะมีข้อมูลครบ
 
-### สถาปัตยกรรม (สำคัญต้องเข้าใจก่อน)
+### เหตุผลทางเทคนิค
 
-เครื่อง HIP CiF76S ใช้ SDK เป็น **Windows DLL** (FK623Attend.dll, FKAttend.dll, FKViaDev.dll, FaceDataConv.dll) และเครื่องอยู่บน **Private LAN** (192.168.x.x) ซึ่งระบบเว็บ Lovable (cloud) **ไม่สามารถเรียก DLL หรือเข้าถึง LAN ได้โดยตรง** จึงต้องใช้รูปแบบ **Local Bridge Service**
+ปัญหาไม่ได้อยู่ที่ "ข้อมูล" แต่อยู่ที่ **ข้อจำกัดทางสถาปัตยกรรม** 3 ข้อ ที่ไม่สามารถข้ามได้จากฝั่ง Lovable Cloud:
 
 ```text
-┌──────────────────┐         ┌──────────────────────┐         ┌─────────────────┐
-│  Lovable Cloud   │ ◄─────► │  Bridge Service      │ ◄─────► │  HIP CiF76S #1  │
-│  (Web UI + DB)   │  HTTPS  │  (PC ใน office,      │   TCP   │  192.168.2.201  │
-│                  │  + JWT  │   Windows + .NET/    │         │                 │
-│  - Settings UI   │         │   Node.js + DLL)     │         ├─────────────────┤
-│  - Sync Logs     │         │                      │         │  HIP CiF76S #2  │
-│  - Push Events   │         │  - Poll devices      │         │  192.168.1.202  │
-│                  │         │  - Push to Cloud     │         └─────────────────┘
-└──────────────────┘         └──────────────────────┘
+[Lovable Cloud - Edge Functions รันบน Deno/Linux]
+       │
+       │  ❌ 1. Network: รัน cloud → เข้า LAN 192.168.x.x ไม่ได้
+       │  ❌ 2. Protocol: SDK เป็น TCP socket แบบ proprietary ไม่ใช่ HTTP
+       │  ❌ 3. Runtime: SDK เป็น Windows .DLL → Deno เรียกไม่ได้
+       ▼
+[เครื่อง HIP CiF76S — 192.168.2.201, 192.168.1.202]
 ```
 
-**หน้าที่ของ 2 ฝั่ง:**
-- **Lovable (เว็บ)**: เก็บ config เครื่อง, Face ID mapping, sync schedule, sync logs และรับข้อมูล check-in ที่ bridge ส่งเข้ามา
-- **Bridge Service (PC ในออฟฟิศ)**: เรียก DLL → ดึง log/enroll user/sync time → POST ไปยัง edge function ของเรา
-
-> ผมจะสร้าง **เฉพาะฝั่ง Lovable** (UI + DB + edge functions) ในรอบนี้ ส่วน bridge service จะมีคู่มือ + ตัวอย่างโค้ด Node.js (`edge.js` ใช้ `koffi`/`ffi-napi` เรียก DLL) แยกออกมาเป็น repo เล็กให้ทีม IT รัน
-
----
-
-### สิ่งที่จะสร้างในรอบนี้
-
-#### 1. เพิ่มเมนูย่อยใน "ตั้งค่า"
-เพิ่มแท็บใหม่ **"เชื่อมต่อ FaceScan"** (icon: `Network`) ใน `src/pages/Settings.tsx` ก่อน "เครื่องสแกนหน้า" เดิม
-
-#### 2. ตารางใหม่ในฐานข้อมูล (migration)
-
-| ตาราง | ใช้ทำอะไร |
+| ข้อจำกัด | รายละเอียด |
 |---|---|
-| `face_scan_devices` | เก็บข้อมูลเครื่อง (name, ip, server_ip, server_port, machine_number, comm_password, enabled) — รองรับเครื่อง #1 Station, #2 Furnace |
-| `face_scan_sync_logs` | บันทึกผลการ sync แต่ละครั้ง (device_id, started_at, finished_at, records_synced, status, message) |
-| `face_scan_bridge_tokens` | API token สำหรับให้ bridge service ใช้ยืนยันตัวตนตอน push ข้อมูล (hashed) |
+| **1. Network แยกกัน** | IP `192.168.2.201` / `192.168.1.202` เป็น Private LAN — เข้าถึงได้เฉพาะอุปกรณ์ในออฟฟิศเดียวกัน Edge Function รันบน cloud อยู่คนละ network |
+| **2. Server IP `203.154.4.201:8272`** | เป็น public IP ของ "ปลายทางที่เครื่องส่งข้อมูลเข้าหา" — ต้องมี **server ของลูกค้าเอง** เปิด TCP listener ที่ port นี้รับ ไม่ใช่ที่ Lovable เปิดให้ |
+| **3. SDK เป็น Windows DLL** | `FK623Attend.dll` ฯลฯ ใช้ได้เฉพาะ Windows + .NET/C++/Node-with-koffi — Deno (Edge Function) เรียก DLL ไม่ได้ |
 
-RLS: admin/hr จัดการได้, อ่านได้ทุก authenticated, edge function ใช้ service-role bypass
+### ทางเลือกที่ทำได้จริง (ต้องเลือก 1)
 
-#### 3. คอมโพเนนต์ใหม่: `FaceScanConnectionSettings.tsx`
-มี 4 sub-tabs:
-- **เครื่องสแกน** — CRUD ข้อมูลเครื่อง (Name, Device IP, Server IP, Server Port, Machine No., Comm Password, Enabled)
-- **Bridge Token** — สร้าง/revoke token + แสดง URL ของ edge function ที่ bridge ต้อง POST ไป
-- **Sync Logs** — แสดง real-time logs จากตาราง `face_scan_sync_logs`
-- **คู่มือ Bridge Service** — instructions + ตัวอย่างโค้ด snippet
+**ตัวเลือก A — Local Bridge Service (แผนเดิม, แนะนำ)**
+- ติดตั้งโปรแกรมเล็กๆ บน PC Windows ในออฟฟิศ ที่อยู่ LAN เดียวกับเครื่องสแกน
+- โปรแกรมนี้เรียก DLL → ดึง log → POST ขึ้น Lovable
+- **ผมสร้าง bridge service repo (Node.js + koffi) สำเร็จรูปให้ได้** พร้อม `.exe` installer + คู่มือไทย
+- ข้อดี: ปลอดภัย, ใช้ SDK ของจริง, รองรับ enroll/delete user ได้ครบ
 
-ใส่ค่า default ของเครื่องทั้ง 2 ตามที่แจ้งมา (Station, Furnace)
+**ตัวเลือก B — Server-Push Mode (ถ้าลูกค้ามี server กลาง)**
+- เครื่อง HIP ตั้ง Server IP=`203.154.4.201:8272` หมายความว่าเครื่องพยายาม push ข้อมูลไปที่ IP นี้อยู่แล้ว
+- ถ้า `203.154.4.201` คือ **server ที่ลูกค้าควบคุมและเปิด port 8272 รับได้** → เขียน TCP listener (ตาม HIP protocol) บน server นั้น แล้ว forward เข้า Lovable
+- ⚠️ ต้องยืนยันก่อนว่า server นี้คืออะไร, ใครดูแล, รันอะไรอยู่
+- ข้อดี: real-time, ไม่ต้องลง bridge ในออฟฟิศ
+- ข้อเสีย: ต้องมี dev backend แยกบน server นั้น
 
-#### 4. Edge Functions ใหม่
+**ตัวเลือก C — DDNS / Port Forward + HTTP Wrapper (ไม่แนะนำ)**
+- เปิด port forward จาก router → เครื่องสแกน + เขียน HTTP wrapper service
+- เสี่ยงต่อความปลอดภัยสูง, HIP ไม่มี HTTP API ในตัว, ยังต้องใช้ DLL อยู่ดี
 
-| Function | หน้าที่ |
-|---|---|
-| `facescan-ingest` | รับ POST จาก bridge: { device_id, token, records: [{user_id, datetime, verify_mode}] } → validate token → insert ลง `check_in_records` (trigger เดิมจะ aggregate เข้า `attendance_records` ให้อัตโนมัติ) |
-| `facescan-enroll-sync` | ส่ง command ให้ bridge ดึง enroll list ไปอัปเดตเครื่อง (push pattern via polling) |
-| `facescan-bridge-config` | bridge service เรียกตอน startup เพื่อดึงรายการเครื่อง + sync schedule |
+### สิ่งที่ผมต้องการให้ผู้ใช้ตอบ
 
-ทั้งหมดใช้ `verify_jwt = false` แต่ตรวจ token จากตาราง `face_scan_bridge_tokens` ด้วยตนเอง
+ผมจะถามคำถาม 1 ข้อเพื่อเลือกทิศทาง — หลังจากตอบแล้ว ผมจะสร้างของตามทางเลือกที่เลือกได้ทันที
 
-#### 5. Mapping กับ employees
-ใช้คอลัมน์ `face_scan_id` ใน `employees` ที่มีอยู่แล้ว (ไม่ต้องแก้ schema) — Sub-tab "จับคู่ Face Scan ID" ใน `FaceScannerSettings.tsx` เดิมยังใช้งานได้ และเชื่อมโยงกับ `enrollNumber` ของเครื่อง
+**คำถามที่จะถาม**: เลือกแนวทางไหน?
+1. **A — Bridge Service**: ผมสร้าง repo Node.js สำเร็จรูป + คู่มือ + ตัวอย่าง config ให้ทีม IT ลงเอง
+2. **B — Server-Push**: ผู้ใช้ต้องบอกผมก่อนว่า server `203.154.4.201` คืออะไร เป็นของลูกค้าจริงไหม รันอะไรอยู่
+3. **รอไว้ก่อน** — ใช้แค่หน้า UI เก็บข้อมูลตามที่ทำเสร็จแล้ว ค่อยเชื่อมจริงทีหลัง
 
-#### 6. Realtime
-เปิด realtime ที่ `face_scan_sync_logs` เพื่อให้ผู้ดูแลเห็น log ใหม่ทันทีโดยไม่ต้องรีเฟรช
+### สรุปสั้น
 
----
-
-### สิ่งที่ผู้ใช้/ทีม IT ต้องทำเอง (อยู่นอกขอบเขต Lovable)
-
-1. **ติดตั้ง Bridge Service** บน PC Windows ในออฟฟิศที่อยู่ LAN เดียวกับเครื่องสแกน
-2. **คัดลอกไฟล์ DLL ทั้ง 4 ไฟล์** (FK623Attend.dll, FKAttend.dll, FKViaDev.dll, FaceDataConv.dll) ไปวางในโฟลเดอร์ service
-3. **ใส่ Bridge Token** ที่สร้างจาก UI ลงใน config ของ service
-4. **ตั้ง Windows Task Scheduler / NSSM** ให้รัน service อัตโนมัติ
-
-ผมจะสร้างคู่มือ + sample Node.js script แสดงในแท็บ "คู่มือ Bridge Service" ของหน้าตั้งค่า
-
----
-
-### รายละเอียดเทคนิค
-
-- **DLL Functions ที่ bridge จะเรียก** (จากคู่มือ SDK):
-  - `ConnectNet(IP, port, password)` — เชื่อมต่อ
-  - `ReadAllGLogData / GetGeneralLogData` — ดึง check-in logs
-  - `PutEnrollData_StringID` — เพิ่ม/แก้ผู้ใช้
-  - `DeleteEnrollData` — ลบผู้ใช้
-  - `SetDeviceTime` — ตั้งเวลา
-  - `DisConnect` — ตัดการเชื่อมต่อ
-- **Real-time push**: bridge เปิด TCP listener ตาม Server IP/Port (203.154.4.201:8272) ที่เครื่องตั้งไว้แล้ว แต่เนื่องจาก IP นี้เป็น public ของลูกค้า bridge จะรันแบบ poll ทุก 30 วินาที + on-demand แทน (ปลอดภัยกว่า)
-- **ข้อมูล insert**: `check_in_records` มี trigger `sync_checkin_to_attendance` อยู่แล้วจะอัปเดต `attendance_records` ให้อัตโนมัติ
-
----
-
-### ลำดับการทำงาน
-
-1. Migration: สร้าง 3 ตารางใหม่ + RLS + realtime
-2. สร้างคอมโพเนนต์ `FaceScanConnectionSettings.tsx` (4 sub-tabs)
-3. เพิ่ม tab "เชื่อมต่อ FaceScan" ใน `Settings.tsx`
-4. สร้าง 3 edge functions (`facescan-ingest`, `facescan-enroll-sync`, `facescan-bridge-config`)
-5. Seed ข้อมูลเครื่อง 2 ตัว (Station, Furnace) ตามค่าที่ผู้ใช้แจ้ง
-6. เขียนคู่มือ Bridge Service + sample code ในแท็บคู่มือ
+ข้อมูลเพิ่มเติม (Serial Number, MAC, comm password ฯลฯ) จะ**มีประโยชน์เมื่อมี bridge service หรือ server-push พร้อมแล้ว** — ตัว Lovable Cloud เพียวๆ ไม่สามารถ "ยิงเข้า" เครื่องในออฟฟิศได้ ไม่ว่าจะมีข้อมูลครบแค่ไหนครับ
