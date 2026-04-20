@@ -327,7 +327,7 @@ const EmployeeDetailView = ({ employees, patterns, overrides, selectedEmpId, set
 
   const empOptions = employees
     .filter((e: any) => e.status === "active")
-    .map((e: any) => ({ value: e.id, label: `${e.prefix}${e.firstName} ${e.lastName}${e.nickname ? ` (${e.nickname})` : ""}`, sub: e.dept }));
+    .map((e: any) => ({ value: e.id, label: `${e.prefix}${e.firstName} ${e.lastName}${e.nickname ? ` (${e.nickname})` : ""}`, subtitle: e.dept }));
 
   const empPatterns = patterns.filter((p: Pattern) => p.employee_id === selectedEmpId);
   const empOverrides = overrides.filter((o: Override) => o.employee_id === selectedEmpId).sort((a: Override, b: Override) => b.date.localeCompare(a.date));
@@ -383,7 +383,7 @@ const EmployeeDetailView = ({ employees, patterns, overrides, selectedEmpId, set
       <div className="lg:col-span-1 space-y-4">
         <div className="card-base p-4 space-y-3">
           <label className="block text-sm font-semibold">เลือกพนักงาน</label>
-          <SearchableSelect value={selectedEmpId} onValueChange={setSelectedEmpId} options={empOptions} placeholder="-- เลือก --" />
+          <SearchableSelect value={selectedEmpId} onChange={setSelectedEmpId} options={empOptions} placeholder="-- เลือก --" />
         </div>
 
         {selectedEmpId && canEdit && (
@@ -603,7 +603,7 @@ const BulkActionsView = ({ employees, patterns, canEdit, userId, onChanged }: an
     return <div className="card-base p-12 text-center text-muted-foreground">คุณไม่มีสิทธิ์ใช้งานเครื่องมือกลุ่ม</div>;
   }
 
-  const empOptions = activeEmps.map((e: any) => ({ value: e.id, label: `${e.prefix}${e.firstName} ${e.lastName}`, sub: e.dept }));
+  const empOptions = activeEmps.map((e: any) => ({ value: e.id, label: `${e.prefix}${e.firstName} ${e.lastName}`, subtitle: e.dept }));
 
   return (
     <div className="grid lg:grid-cols-3 gap-4">
@@ -700,7 +700,7 @@ const BulkActionsView = ({ employees, patterns, canEdit, userId, onChanged }: an
           <h4 className="font-bold text-sm">③ คัดลอก Pattern จากต้นแบบ</h4>
           <div>
             <label className="block text-xs font-semibold mb-1.5 text-muted-foreground">เลือกต้นแบบ</label>
-            <SearchableSelect value={copyFromId} onValueChange={setCopyFromId} options={empOptions} placeholder="-- เลือกพนักงานต้นแบบ --" />
+            <SearchableSelect value={copyFromId} onChange={setCopyFromId} options={empOptions} placeholder="-- เลือกพนักงานต้นแบบ --" />
           </div>
           <p className="text-xs text-muted-foreground">จะคัดลอก pattern ทั้งหมดของต้นแบบไปยังพนักงานที่เลือก ({selectedIds.size} คน)</p>
           <button onClick={copyPattern} disabled={busy}
