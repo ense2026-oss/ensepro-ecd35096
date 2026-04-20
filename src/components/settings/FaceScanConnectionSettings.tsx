@@ -108,6 +108,9 @@ const FaceScanConnectionSettings = () => {
   const [newToken, setNewToken] = useState<string | null>(null);
   const [copiedToken, setCopiedToken] = useState(false);
 
+  // Test connection state
+  const [testingDeviceId, setTestingDeviceId] = useState<string | null>(null);
+
   const fetchAll = async () => {
     setLoading(true);
     const [d, t, l] = await Promise.all([
