@@ -240,20 +240,22 @@ const ShiftManagement = () => {
             </div>
           </div>
 
-          <div className="card-base overflow-auto">
+          <div className="card-base overflow-auto max-h-[calc(100vh-260px)]">
             <table className="w-full text-xs border-collapse">
               <thead>
-                <tr style={{ background: "hsl(var(--muted) / 0.5)" }}>
-                  <th className="sticky left-0 bg-card px-3 py-2 text-left font-semibold border-b border-r min-w-[180px] z-10" style={{ borderColor: "hsl(var(--border))" }}>พนักงาน</th>
+                <tr>
+                  <th className="sticky left-0 top-0 px-3 py-2 text-left font-semibold border-b border-r min-w-[180px] z-30" style={{ borderColor: "hsl(var(--border))", background: "hsl(var(--card))" }}>พนักงาน</th>
                   {monthDays.map((d) => {
                     const dow = d.getDay();
                     const isWeekend = dow === 0 || dow === 6;
                     const iso = isoDate(d);
                     const isHoliday = holidaySet.has(iso);
                     return (
-                      <th key={iso} className="px-1 py-1 text-center font-semibold border-b min-w-[40px]" style={{
+                      <th key={iso} className="sticky top-0 z-20 px-1 py-1 text-center font-semibold border-b min-w-[40px]" style={{
                         borderColor: "hsl(var(--border))",
                         background: isHoliday ? "hsl(220 80% 95%)" : (isWeekend ? "hsl(0 0% 96%)" : undefined),
+                        color: isHoliday ? "hsl(220 80% 35%)" : undefined,
+                        background: isHoliday ? "hsl(220 80% 95%)" : (isWeekend ? "hsl(0 0% 96%)" : "hsl(var(--muted) / 0.5)"),
                         color: isHoliday ? "hsl(220 80% 35%)" : undefined,
                       }}>
                         <div className="text-[9px] opacity-60">{WEEKDAY_LABELS[dow]}</div>
