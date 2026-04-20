@@ -98,8 +98,8 @@ const ShiftManagement = () => {
 
   const canEdit = canAction(role, "shift", "edit") || ["admin", "hr", "manager", "executive"].includes(role.toLowerCase());
 
-  const fetchAll = async () => {
-    setLoading(true);
+  const fetchAll = async (showLoading = false) => {
+    if (showLoading) setLoading(true);
     const [sh, asn, pr, or, hol] = await Promise.all([
       supabase.from("shifts").select("*").order("sort_order"),
       supabase.from("shift_assignments").select("*").order("created_at", { ascending: false }),
@@ -112,20 +112,21 @@ const ShiftManagement = () => {
     setPatterns((pr.data as Pattern[]) || []);
     setOverrides((or.data as Override[]) || []);
     setHolidays((hol.data as CompanyHoliday[]) || []);
-    setLoading(false);
+    if (showLoading) setLoading(false);
   };
 
-  useEffect(() => { fetchAll(); }, []);
+  useEffect(() => { fetchAll(true); }, []);
 
-  // Realtime
+  // Realtime — silent updates (no loading flash)
   useEffect(() => {
+    const refetch = () => { fetchAll(false); };
     const channel = supabase
       .channel("shift-mgmt-realtime")
-      .on("postgres_changes", { event: "*", schema: "public", table: "shift_assignments" }, fetchAll)
-      .on("postgres_changes", { event: "*", schema: "public", table: "shifts" }, fetchAll)
-      .on("postgres_changes", { event: "*", schema: "public", table: "employee_dayoff_overrides" }, fetchAll)
-      .on("postgres_changes", { event: "*", schema: "public", table: "employee_dayoff_patterns" }, fetchAll)
-      .on("postgres_changes", { event: "*", schema: "public", table: "company_holidays" }, fetchAll)
+      .on("postgres_changes", { event: "*", schema: "public", table: "shift_assignments" }, refetch)
+      .on("postgres_changes", { event: "*", schema: "public", table: "shifts" }, refetch)
+      .on("postgres_changes", { event: "*", schema: "public", table: "employee_dayoff_overrides" }, refetch)
+      .on("postgres_changes", { event: "*", schema: "public", table: "employee_dayoff_patterns" }, refetch)
+      .on("postgres_changes", { event: "*", schema: "public", table: "company_holidays" }, refetch)
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, []);
