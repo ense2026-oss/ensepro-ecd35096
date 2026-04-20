@@ -251,23 +251,30 @@ export const EmployeeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       setEmployees(quickMapped);
       setLoading(false);
 
-      // Then fetch related data in background
-      const [eduRes, whRes, piRes] = await Promise.all([
+      // Then fetch related data + photo_url in background
+      const [eduRes, whRes, piRes, photoRes] = await Promise.all([
         supabase.from("employee_education").select("*"),
         supabase.from("employee_work_history").select("*"),
         supabase.from("employee_custom_payroll_items").select("*"),
+        supabase.from("employees").select("id,photo_url"),
       ]);
 
       const eduData = eduRes.data || [];
       const whData = whRes.data || [];
       const piData = piRes.data || [];
+      const photoMap = new Map<string, string | null>(
+        (photoRes.data || []).map((r: any) => [r.id, r.photo_url])
+      );
 
-      if (eduData.length || whData.length || piData.length) {
-        const fullMapped = (empRes.data || []).map((row: any) =>
-          dbToEmployee(row, eduData, whData, piData)
-        );
-        setEmployees(fullMapped);
-      }
+      const enrichedRows = (empRes.data || []).map((row: any) => ({
+        ...row,
+        photo_url: photoMap.get(row.id) ?? null,
+      }));
+
+      const fullMapped = enrichedRows.map((row: any) =>
+        dbToEmployee(row, eduData, whData, piData)
+      );
+      setEmployees(fullMapped);
     } catch (err) {
       console.error("Failed to fetch employees:", err);
       setLoading(false);
