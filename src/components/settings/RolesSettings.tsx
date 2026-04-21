@@ -24,16 +24,19 @@ interface ModuleConfig {
 }
 
 const moduleConfigs: ModuleConfig[] = [
-  { key: "leave", label: "ระบบขอลางาน", actions: ["view", "add", "edit", "delete", "approve"], hasScope: true },
-  { key: "ot", label: "ระบบขอโอที", actions: ["view", "add", "edit", "delete", "approve"], hasScope: true },
-  { key: "attendance", label: "ระบบบันทึกเวลา", actions: ["view", "add", "edit", "delete", "approve"], hasScope: true },
-  { key: "employee", label: "ระบบข้อมูลพนักงาน", actions: ["view", "add", "edit", "delete"], hasScope: true },
-  { key: "organization", label: "ระบบโครงสร้างองค์กร", actions: ["view", "add", "edit", "delete"], hasScope: true },
-  { key: "shiftManagement", label: "ระบบกะการทำงาน", actions: ["view", "add", "edit", "delete"], hasScope: true },
-  { key: "payroll", label: "ระบบเงินเดือน", actions: ["view", "add", "edit", "delete"], hasScope: true },
-  { key: "reports", label: "ระบบรายงาน", actions: ["view"], hasScope: true },
-  { key: "settings", label: "การตั้งค่า", actions: ["view", "add", "edit", "delete"], hasScope: false },
-  { key: "contracts", label: "ระบบสัญญาจ้าง", actions: ["view", "add", "edit", "delete"], hasScope: true },
+  { key: "leave" as ModuleKey, label: "ระบบขอลางาน", actions: ["view", "add", "edit", "delete", "approve"], hasScope: true },
+  { key: "ot" as ModuleKey, label: "ระบบขอโอที", actions: ["view", "add", "edit", "delete", "approve"], hasScope: true },
+  { key: "attendance" as ModuleKey, label: "ระบบบันทึกเวลา", actions: ["view", "add", "edit", "delete", "approve"], hasScope: true },
+  { key: "check-in" as ModuleKey, label: "ระบบลงเวลา (Check-in)", actions: ["view", "add", "edit", "delete"], hasScope: true },
+  { key: "employee" as ModuleKey, label: "ระบบข้อมูลพนักงาน", actions: ["view", "add", "edit", "delete"], hasScope: true },
+  { key: "organization" as ModuleKey, label: "ระบบโครงสร้างองค์กร", actions: ["view", "add", "edit", "delete"], hasScope: true },
+  { key: "shiftManagement" as ModuleKey, label: "ระบบกะการทำงาน", actions: ["view", "add", "edit", "delete"], hasScope: true },
+  { key: "day_off" as ModuleKey, label: "ระบบจัดการวันหยุด", actions: ["view", "add", "edit", "delete"], hasScope: true },
+  { key: "payroll" as ModuleKey, label: "ระบบเงินเดือน", actions: ["view", "add", "edit", "delete"], hasScope: true },
+  { key: "reports" as ModuleKey, label: "ระบบรายงาน", actions: ["view"], hasScope: true },
+  { key: "contracts" as ModuleKey, label: "ระบบสัญญาจ้าง", actions: ["view", "add", "edit", "delete", "approve"], hasScope: true },
+  { key: "notifications" as ModuleKey, label: "ระบบแจ้งเตือน", actions: ["view", "delete"], hasScope: false },
+  { key: "settings" as ModuleKey, label: "การตั้งค่าระบบ", actions: ["view", "add", "edit", "delete"], hasScope: false },
 ];
 
 const actionLabels: Record<ActionKey, string> = {

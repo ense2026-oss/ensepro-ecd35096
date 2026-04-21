@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 
 // Types
-export type ModuleKey = "leave" | "ot" | "attendance" | "employee" | "organization" | "shiftManagement" | "payroll" | "reports" | "settings" | "contracts";
+export type ModuleKey = "leave" | "ot" | "attendance" | "check-in" | "employee" | "organization" | "shiftManagement" | "day_off" | "payroll" | "reports" | "settings" | "contracts" | "notifications";
 export type ActionKey = "view" | "add" | "edit" | "delete" | "approve";
 export type Scope = "self" | "department" | "all";
 
@@ -24,15 +24,17 @@ export interface RolePermission {
 const moduleToRoutes: Record<string, string[]> = {
   leave: ["/leave"],
   ot: ["/overtime"],
-  attendance: ["/attendance", "/check-in"],
+  attendance: ["/attendance"],
+  "check-in": ["/check-in"],
   employee: ["/employees"],
   organization: ["/organization"],
   shiftManagement: ["/shift-management"],
+  day_off: ["/day-off"],
   payroll: ["/payroll"],
   reports: ["/reports"],
   settings: ["/settings"],
   contracts: ["/contracts"],
-  day_off: ["/day-off"],
+  notifications: ["/notifications"],
 };
 
 const routeToModule: Record<string, string> = {};
