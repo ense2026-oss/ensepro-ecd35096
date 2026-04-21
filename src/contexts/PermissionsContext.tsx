@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 
 // Types
-export type ModuleKey = "leave" | "ot" | "attendance" | "employee" | "organization" | "shiftManagement" | "payroll" | "reports" | "settings" | "contracts";
+export type ModuleKey = "leave" | "ot" | "attendance" | "check-in" | "employee" | "organization" | "shiftManagement" | "day_off" | "payroll" | "reports" | "settings" | "contracts" | "notifications";
 export type ActionKey = "view" | "add" | "edit" | "delete" | "approve";
 export type Scope = "self" | "department" | "all";
 
