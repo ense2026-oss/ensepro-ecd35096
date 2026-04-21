@@ -24,15 +24,17 @@ export interface RolePermission {
 const moduleToRoutes: Record<string, string[]> = {
   leave: ["/leave"],
   ot: ["/overtime"],
-  attendance: ["/attendance", "/check-in"],
+  attendance: ["/attendance"],
+  "check-in": ["/check-in"],
   employee: ["/employees"],
   organization: ["/organization"],
   shiftManagement: ["/shift-management"],
+  day_off: ["/day-off"],
   payroll: ["/payroll"],
   reports: ["/reports"],
   settings: ["/settings"],
   contracts: ["/contracts"],
-  day_off: ["/day-off"],
+  notifications: ["/notifications"],
 };
 
 const routeToModule: Record<string, string> = {};
