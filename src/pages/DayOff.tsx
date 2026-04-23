@@ -89,9 +89,9 @@ const DayOff = () => {
 
   // Auto-select self for employee role and force employee tab
   useEffect(() => {
+  useEffect(() => {
     if (isEmployeeRole && employeeId) {
       setSelectedEmpId(employeeId);
-      setActiveTab("employee");
     }
   }, [isEmployeeRole, employeeId]);
 
