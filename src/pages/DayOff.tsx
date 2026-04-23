@@ -87,6 +87,14 @@ const DayOff = () => {
   const [activeTab, setActiveTab] = useState(initialEmp ? "employee" : "calendar");
   const [selectedEmpId, setSelectedEmpId] = useState<string>(initialEmp);
 
+  // Auto-select self for employee role and force employee tab
+  useEffect(() => {
+    if (isEmployeeRole && employeeId) {
+      setSelectedEmpId(employeeId);
+      setActiveTab("employee");
+    }
+  }, [isEmployeeRole, employeeId]);
+
   const fetchAll = async (showLoading = false) => {
     if (showLoading) setLoading(true);
     const [pr, or, hr] = await Promise.all([
