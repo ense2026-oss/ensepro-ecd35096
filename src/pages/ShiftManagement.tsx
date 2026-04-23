@@ -98,8 +98,7 @@ const ShiftManagement = () => {
   const [activeTab, setActiveTab] = useState("calendar");
   const [selectedEmpId, setSelectedEmpId] = useState<string>("");
 
-  // Auto-select self for employee role and force employee tab
-  useEffect(() => {
+  // Auto-select self for employee role
   useEffect(() => {
     if (isEmployeeRole && employeeId) {
       setSelectedEmpId(employeeId);
