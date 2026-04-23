@@ -381,6 +381,7 @@ const ShiftManagement = () => {
             canEdit={canEdit}
             onChanged={fetchAll}
             onSetShift={setShiftForDate}
+            lockEmployee={isEmployeeRole}
           />
         </TabsContent>
 
@@ -402,7 +403,7 @@ const ShiftManagement = () => {
 /* =================== TAB 2: Employee Detail =================== */
 const EmployeeShiftDetailView = ({
   employees, shifts, bulkAssignments, dayAssignments, patterns, overrides, holidaySet,
-  selectedEmpId, setSelectedEmpId, canEdit, onChanged, onSetShift,
+  selectedEmpId, setSelectedEmpId, canEdit, onChanged, onSetShift, lockEmployee,
 }: any) => {
   const { toast } = useToast();
   const today = new Date();
