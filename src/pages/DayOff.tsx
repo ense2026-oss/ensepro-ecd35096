@@ -86,8 +86,6 @@ const DayOff = () => {
   const initialEmp = params.get("employee") || "";
   const [activeTab, setActiveTab] = useState(initialEmp ? "employee" : "calendar");
   const [selectedEmpId, setSelectedEmpId] = useState<string>(initialEmp);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const _noop = null;
 
   // Auto-select self for employee role and force employee tab
   useEffect(() => {
