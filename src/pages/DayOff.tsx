@@ -345,6 +345,7 @@ const DayOff = () => {
             setSelectedEmpId={setSelectedEmpId}
             canEdit={canEdit}
             userId={user?.id}
+            lockEmployee={isEmployeeRole}
             onChanged={fetchAll}
           />
         </TabsContent>
@@ -359,7 +360,7 @@ const DayOff = () => {
 };
 
 // =================== Employee Detail View ===================
-const EmployeeDetailView = ({ employees, patterns, overrides, selectedEmpId, setSelectedEmpId, canEdit, userId, onChanged }: any) => {
+const EmployeeDetailView = ({ employees, patterns, overrides, selectedEmpId, setSelectedEmpId, canEdit, userId, onChanged, lockEmployee }: any) => {
   const { toast } = useToast();
   const [weekdays, setWeekdays] = useState<number[]>([]);
   const [effFrom, setEffFrom] = useState("");
