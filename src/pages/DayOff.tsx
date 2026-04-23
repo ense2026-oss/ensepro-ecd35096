@@ -87,11 +87,10 @@ const DayOff = () => {
   const [activeTab, setActiveTab] = useState(initialEmp ? "employee" : "calendar");
   const [selectedEmpId, setSelectedEmpId] = useState<string>(initialEmp);
 
-  // Auto-select self for employee role and force employee tab
+  // Auto-select self for employee role
   useEffect(() => {
     if (isEmployeeRole && employeeId) {
       setSelectedEmpId(employeeId);
-      setActiveTab("employee");
     }
   }, [isEmployeeRole, employeeId]);
 
