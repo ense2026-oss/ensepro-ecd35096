@@ -458,7 +458,7 @@ const EmployeeShiftDetailView = ({
       <div className="lg:col-span-1 space-y-4">
         <div className="card-base p-4 space-y-3">
           <label className="block text-sm font-semibold">เลือกพนักงาน</label>
-          <SearchableSelect value={selectedEmpId} onChange={setSelectedEmpId} options={empOptions} placeholder="-- เลือก --" />
+          <SearchableSelect value={selectedEmpId} onChange={setSelectedEmpId} options={empOptions} placeholder="-- เลือก --" disabled={lockEmployee} />
         </div>
 
         {selectedEmpId && canEdit && (
