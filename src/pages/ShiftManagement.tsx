@@ -78,7 +78,9 @@ const fmtThaiDate = (iso: string) => {
 const ShiftManagement = () => {
   const { toast } = useToast();
   const { employees } = useEmployees();
-  const { user, role } = useAuth();
+  const { user, role, currentUser } = useAuth();
+  const isEmployeeRole = role.toLowerCase() === "employee";
+  const employeeId = currentUser?.employeeId || null;
   const { canAction } = usePermissions();
 
   const [shifts, setShifts] = useState<Shift[]>([]);
@@ -95,6 +97,14 @@ const ShiftManagement = () => {
   const [deptFilter, setDeptFilter] = useState("all");
   const [activeTab, setActiveTab] = useState("calendar");
   const [selectedEmpId, setSelectedEmpId] = useState<string>("");
+
+  // Auto-select self for employee role and force employee tab
+  useEffect(() => {
+    if (isEmployeeRole && employeeId) {
+      setSelectedEmpId(employeeId);
+      setActiveTab("employee");
+    }
+  }, [isEmployeeRole, employeeId]);
 
   const canEdit = canAction(role, "shift", "edit") || ["admin", "hr", "manager", "executive"].includes(role.toLowerCase());
 
@@ -371,6 +381,7 @@ const ShiftManagement = () => {
             canEdit={canEdit}
             onChanged={fetchAll}
             onSetShift={setShiftForDate}
+            lockEmployee={isEmployeeRole}
           />
         </TabsContent>
 
@@ -392,7 +403,7 @@ const ShiftManagement = () => {
 /* =================== TAB 2: Employee Detail =================== */
 const EmployeeShiftDetailView = ({
   employees, shifts, bulkAssignments, dayAssignments, patterns, overrides, holidaySet,
-  selectedEmpId, setSelectedEmpId, canEdit, onChanged, onSetShift,
+  selectedEmpId, setSelectedEmpId, canEdit, onChanged, onSetShift, lockEmployee,
 }: any) => {
   const { toast } = useToast();
   const today = new Date();
@@ -447,7 +458,7 @@ const EmployeeShiftDetailView = ({
       <div className="lg:col-span-1 space-y-4">
         <div className="card-base p-4 space-y-3">
           <label className="block text-sm font-semibold">เลือกพนักงาน</label>
-          <SearchableSelect value={selectedEmpId} onChange={setSelectedEmpId} options={empOptions} placeholder="-- เลือก --" />
+          <SearchableSelect value={selectedEmpId} onChange={setSelectedEmpId} options={empOptions} placeholder="-- เลือก --" disabled={lockEmployee} />
         </div>
 
         {selectedEmpId && canEdit && (
