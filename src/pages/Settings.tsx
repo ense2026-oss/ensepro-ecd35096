@@ -82,9 +82,6 @@ const Settings = () => {
       case "approval":
         return <ApprovalSettings />;
 
-      case "face-scanner":
-        return <FaceScannerSettings />;
-
       case "face-scan-connect":
         return <FaceScanConnectionSettings />;
 
