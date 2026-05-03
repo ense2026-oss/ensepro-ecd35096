@@ -449,6 +449,16 @@ console.log('Bridge service started');`;
                       )}
                       Test
                     </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => pullLogs(d)}
+                      disabled={!d.enabled}
+                      className="gap-1.5"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      Pull
+                    </Button>
                     <Button variant="ghost" size="icon" onClick={() => openEditDevice(d)}>
                       <Pencil className="w-4 h-4" />
                     </Button>
