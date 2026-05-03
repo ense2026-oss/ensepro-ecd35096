@@ -219,13 +219,32 @@ const FaceScanConnectionSettings = () => {
       toast.error("กรุณาตั้งชื่อ Token");
       return;
     }
-    const { data, error } = await supabase.functions.invoke("facescan-token-create", {
-      body: { name: tokenName },
-    });
-    if (error) return toast.error("สร้าง Token ไม่สำเร็จ: " + error.message);
-    setNewToken(data.token);
-    setTokenName("");
-    fetchAll();
+    try {
+      const { data, error } = await supabase.functions.invoke("facescan-token-create", {
+        body: { name: tokenName },
+      });
+      console.log("[facescan-token-create] response", { data, error });
+      if (error) {
+        toast.error("สร้าง Token ไม่สำเร็จ: " + error.message);
+        return;
+      }
+      // Tolerate string/object response shapes
+      let payload: any = data;
+      if (typeof payload === "string") {
+        try { payload = JSON.parse(payload); } catch { /* ignore */ }
+      }
+      const token = payload?.token ?? payload?.data?.token;
+      if (!token) {
+        toast.error("ไม่พบ Token ใน response");
+        return;
+      }
+      setNewToken(token);
+      setTokenName("");
+      fetchAll();
+    } catch (e: any) {
+      console.error("createToken error", e);
+      toast.error("สร้าง Token ไม่สำเร็จ: " + (e?.message ?? "unknown"));
+    }
   };
 
   const toggleToken = async (t: BridgeToken) => {
