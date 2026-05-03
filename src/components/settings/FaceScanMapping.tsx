@@ -220,7 +220,7 @@ const FaceScanMapping = ({ devices }: { devices: Device[] }) => {
             return (
               <Card key={emp.id} className="p-3">
                 <div className="flex items-center gap-3 flex-wrap">
-                  <EmployeeAvatar employee={emp as any} className="w-10 h-10" />
+                  <EmployeeAvatar firstName={emp.first_name} size="lg" />
                   <div className="flex-1 min-w-0">
                     <div className="font-medium text-sm truncate">
                       {emp.prefix}
