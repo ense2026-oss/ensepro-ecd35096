@@ -893,8 +893,42 @@ export type Database = {
         }
         Relationships: []
       }
+      face_scan_enroll_status: {
+        Row: {
+          created_at: string
+          device_id: string
+          employee_id: string
+          error_message: string
+          id: string
+          status: string
+          synced_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          device_id: string
+          employee_id: string
+          error_message?: string
+          id?: string
+          status?: string
+          synced_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          device_id?: string
+          employee_id?: string
+          error_message?: string
+          id?: string
+          status?: string
+          synced_at?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       face_scan_sync_logs: {
         Row: {
+          command_payload: Json
           created_at: string
           device_id: string | null
           finished_at: string | null
@@ -906,6 +940,7 @@ export type Database = {
           sync_type: string
         }
         Insert: {
+          command_payload?: Json
           created_at?: string
           device_id?: string | null
           finished_at?: string | null
@@ -917,6 +952,7 @@ export type Database = {
           sync_type?: string
         }
         Update: {
+          command_payload?: Json
           created_at?: string
           device_id?: string | null
           finished_at?: string | null

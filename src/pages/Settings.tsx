@@ -9,7 +9,6 @@ import ShiftsSettings from "@/components/settings/ShiftsSettings";
 import LeaveTypesSettings from "@/components/settings/LeaveTypesSettings";
 import CompanySettings from "@/components/settings/CompanySettings";
 import ApprovalSettings from "@/components/settings/ApprovalSettings";
-import FaceScannerSettings from "@/components/settings/FaceScannerSettings";
 import FaceScanConnectionSettings from "@/components/settings/FaceScanConnectionSettings";
 import DisplaySettings from "@/components/settings/DisplaySettings";
 import PayrollSettings from "@/components/settings/PayrollSettings";
@@ -30,8 +29,7 @@ const ALL_TABS = [
   { id: "leave-types", label: "ประเภทการลา", icon: Calendar },
   { id: "company-holidays", label: "วันหยุดบริษัท", icon: CalendarDays },
   { id: "approval", label: "ระบบอนุมัติ", icon: Workflow },
-  { id: "face-scan-connect", label: "เชื่อมต่อ FaceScan", icon: Wifi },
-  { id: "face-scanner", label: "เครื่องสแกนหน้า", icon: ScanFace },
+  { id: "face-scan-connect", label: "เครื่องสแกนหน้า", icon: ScanFace },
   { id: "display", label: "การแสดงผล", icon: Palette },
 ];
 
@@ -83,9 +81,6 @@ const Settings = () => {
 
       case "approval":
         return <ApprovalSettings />;
-
-      case "face-scanner":
-        return <FaceScannerSettings />;
 
       case "face-scan-connect":
         return <FaceScanConnectionSettings />;

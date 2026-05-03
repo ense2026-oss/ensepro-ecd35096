@@ -38,9 +38,12 @@ import {
   RefreshCw,
   Wifi,
   Loader2,
+  Users,
+  Download,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import FaceScanMapping from "./FaceScanMapping";
 
 interface Device {
   id: string;
@@ -273,6 +276,16 @@ const FaceScanConnectionSettings = () => {
     }
   };
 
+  const pullLogs = async (device: Device) => {
+    const days = parseInt(prompt("ดึงข้อมูลย้อนหลังกี่วัน? (1-30)", "7") ?? "0", 10);
+    if (!days || days < 1 || days > 30) return;
+    const { error } = await supabase.functions.invoke("facescan-queue-command", {
+      body: { sync_type: "pull_logs", device_id: device.id, payload: { days } },
+    });
+    if (error) return toast.error("สั่งดึงข้อมูลไม่สำเร็จ: " + error.message);
+    toast.success(`สั่งดึงข้อมูล ${days} วันย้อนหลังจาก ${device.name} แล้ว`);
+  };
+
   const formatDateTime = (s: string | null) => {
     if (!s) return "—";
     const d = new Date(s);
@@ -357,9 +370,12 @@ console.log('Bridge service started');`;
       </div>
 
       <Tabs defaultValue="devices" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-2 lg:grid-cols-4 h-auto">
+        <TabsList className="grid w-full grid-cols-2 lg:grid-cols-5 h-auto">
           <TabsTrigger value="devices" className="gap-2">
             <Server className="w-4 h-4" /> เครื่องสแกน
+          </TabsTrigger>
+          <TabsTrigger value="mapping" className="gap-2">
+            <Users className="w-4 h-4" /> จับคู่ Face ID
           </TabsTrigger>
           <TabsTrigger value="tokens" className="gap-2">
             <KeyRound className="w-4 h-4" /> Bridge Token
@@ -371,6 +387,10 @@ console.log('Bridge service started');`;
             <BookOpen className="w-4 h-4" /> คู่มือ Bridge
           </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="mapping">
+          <FaceScanMapping devices={devices} />
+        </TabsContent>
 
         {/* DEVICES */}
         <TabsContent value="devices" className="space-y-3">
@@ -428,6 +448,16 @@ console.log('Bridge service started');`;
                         <Wifi className="w-3.5 h-3.5" />
                       )}
                       Test
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => pullLogs(d)}
+                      disabled={!d.enabled}
+                      className="gap-1.5"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      Pull
                     </Button>
                     <Button variant="ghost" size="icon" onClick={() => openEditDevice(d)}>
                       <Pencil className="w-4 h-4" />
