@@ -1,73 +1,38 @@
+# แก้ไข `src/hip-sdk.js` ให้ตรงกับ Export ของ FK623Attend.dll
 
+## สาเหตุของ error เดิม
+โค้ดเดิมเรียก `ConnectNet`, `DisConnect`, `ReadAllGLogData`, `GetGeneralLogData` แต่ DLL จริงทุกฟังก์ชัน**ขึ้นต้นด้วย `FK_`** จึงหาไม่เจอ
 
-# แผนการ Sync ข้อมูลกับเครื่องสแกนหน้าที่มีอยู่เดิม
+## Mapping ชื่อฟังก์ชัน (จากภาพ Export)
 
-## สถานการณ์ปัจจุบัน
-
-ระบบของคุณมีโครงสร้างพื้นฐานสำหรับเชื่อมต่อเครื่องสแกนหน้าอยู่แล้ว แต่ยังทำงานเฉพาะ **ขาเข้า** (รับข้อมูลเวลาเข้า-ออกจากเครื่อง) เท่านั้น ยังไม่มี **ขาออก** (ส่งข้อมูลพนักงานไปเครื่อง) ที่สมบูรณ์
-
-```text
-[เครื่องสแกนหน้า HIP CiF76S]  ←─  [Bridge Service บน PC ออฟฟิศ]  ←─→  [Lovable Cloud]
-         (LAN/Local)                  (Node.js + DLL)              (Edge Functions + DB)
-```
-
-**เหตุผลที่ต้องมี Bridge Service:** เครื่องสแกนหน้าอยู่ใน LAN ของออฟฟิศ และใช้ DLL (FK623Attend.dll) ที่ Cloud เรียกตรงไม่ได้ จึงต้องมีโปรแกรมตัวกลางรันบน PC
-
----
-
-## แผนการดำเนินงาน
-
-### ส่วนที่ 1: ปรับปรุง UI การตั้งค่า
-
-1. **ลบ `FaceScannerSettings.tsx` (mock เก่า)** — เก็บเฉพาะ `FaceScanConnectionSettings.tsx` ที่ต่อ DB จริง เพื่อไม่ให้สับสน
-2. **เพิ่มแท็บ "จับคู่ Face Scan ID"** ใน `FaceScanConnectionSettings.tsx`
-   - แสดงรายชื่อพนักงานทั้งหมด พร้อมช่องกรอก `face_scan_id` (Enroll Number บนเครื่อง)
-   - ปุ่ม "ซิงค์รายชื่อไปเครื่อง" → เรียก edge function `facescan-enroll-sync` ที่มีอยู่แล้ว
-   - แสดงสถานะการ sync ล่าสุด (synced/pending/failed) ของแต่ละคน
-3. **เพิ่มปุ่ม "Pull ข้อมูลย้อนหลัง"** บนการ์ดเครื่อง — สั่งให้ Bridge ดึง log ตามช่วงวันที่ (เช่น 7 วันล่าสุด) เพื่อ backfill
-
-### ส่วนที่ 2: เพิ่ม Edge Functions ที่ขาด
-
-เพิ่ม 2 ฟังก์ชันใหม่:
-
-| ฟังก์ชัน | หน้าที่ |
+| โค้ดเดิม | ชื่อจริงใน DLL |
 |---|---|
-| `facescan-bridge-poll` | Bridge เรียกทุก 30 วิ — คืน "command queue" (test_connection, enroll_push, pull_logs, delete_user) ที่ค้างอยู่ในตาราง `face_scan_sync_logs` (status='queued') |
-| `facescan-bridge-ack` | Bridge รายงานผลการทำคำสั่ง — อัปเดต log row จาก queued → success/error |
+| `ConnectNet` | `FK_ConnectNet` |
+| `DisConnect` | `FK_DisConnect` |
+| `ReadAllGLogData` | `FK_LoadGeneralLogData` |
+| `GetGeneralLogData` | `FK_GetGeneralLogData` |
+| (เพิ่ม) | `FK_EmptyGeneralLogData` — ใช้ถ้าต้องการล้าง log หลังอ่าน |
+| (สำรอง) | `FK_GetLastError` — ใช้ debug error code |
 
-**ปรับ `facescan-bridge-config`:** เพิ่มข้อมูลคำสั่งล่วงหน้า (pending commands) ในรอบ poll เดียวกัน เพื่อลดจำนวน HTTP call
+> หมายเหตุ: koffi บน Windows x86 จัดการ `__stdcall` decoration ให้อัตโนมัติเมื่อใช้ชื่อ undecorated เหล่านี้ — ไม่ต้องใส่ `_FK_ConnectNet@N`
 
-### ส่วนที่ 3: ขยายฐานข้อมูล
+## การเปลี่ยนแปลงในไฟล์ `src/hip-sdk.js`
 
-เพิ่ม migration:
+1. แก้ binding ทั้ง 4 ตัวให้ใช้ชื่อ `FK_*`
+2. เพิ่ม `FK_GetLastError` เพื่อรายงาน error code เมื่อ connect ไม่สำเร็จ
+3. ในฟังก์ชัน `connect()` — เรียก `FK_ConnectNet(ip, port, password)` (signature เดิมใช้ได้)
+4. ในฟังก์ชัน `disconnect()` — เรียก `FK_DisConnect(handle)`
+5. ในฟังก์ชัน `fetchAttendanceLogs()`:
+   - เรียก `FK_LoadGeneralLogData(handle)` แทน `ReadAllGLogData`
+   - loop เรียก `FK_GetGeneralLogData(...)` จนกว่าจะ return ค่าที่ไม่ใช่ 0 (หมด record)
+6. export `clearLogs()` เพิ่ม (optional) ที่เรียก `FK_EmptyGeneralLogData(handle)` — ให้ผู้ใช้เลือกเองว่าจะล้าง log บนเครื่องสแกนหลังดึงสำเร็จหรือไม่
 
-- ตาราง `face_scan_enroll_status` — เก็บสถานะการ sync รายพนักงาน × รายเครื่อง (employee_id, device_id, synced_at, status)
-- เพิ่มคอลัมน์ `command_payload jsonb` ใน `face_scan_sync_logs` — สำหรับเก็บ argument ของคำสั่ง (เช่น ช่วงวันที่ pull, employee_id ที่จะลบ)
+## หลังจากแก้
+รัน:
+```
+cd /d C:\hip-bridge
+npm start
+```
+ควรจะ connect ได้และดึง log ออกมาเป็น JSON ปกติ ถ้ายัง error จะมี error code จาก `FK_GetLastError` ให้ดูต่อ
 
-### ส่วนที่ 4: คู่มือ Bridge Service ที่ผู้ใช้ต้องติดตั้ง
-
-อัปเดตแท็บ "คู่มือ Bridge" ให้มี:
-- โค้ดตัวอย่าง Node.js ที่สมบูรณ์ (รองรับทั้ง pull logs และ push enroll)
-- คำสั่ง `npm install` ครบ (`@supabase/supabase-js`, `koffi`, `node-cron`)
-- ตัวอย่างการรันเป็น Windows Service ด้วย `nssm` หรือ `pm2`
-- ดาวน์โหลด `bridge-service.zip` พร้อมไฟล์ `.env.example`
-
----
-
-## ขั้นตอนติดตั้งฝั่งลูกค้า (ที่ผู้ใช้ต้องทำเอง)
-
-1. ติดตั้ง Node.js 20+ บน PC ออฟฟิศที่อยู่ LAN เดียวกับเครื่องสแกน
-2. ดาวน์โหลด Bridge Service จากแท็บคู่มือ
-3. คัดลอก `FK623Attend.dll` (จาก SDK ของ HIP) ไว้ในโฟลเดอร์ Bridge
-4. สร้าง Bridge Token จากหน้าตั้งค่า → วางใน `.env`
-5. รันด้วย `npm start` หรือติดตั้งเป็น Windows Service
-6. กลับมาที่แอป → กรอก `face_scan_id` ของพนักงานแต่ละคน → กด "ซิงค์รายชื่อไปเครื่อง"
-
----
-
-## ข้อควรพิจารณา
-
-- **face_scan_id ต้องตรงกับ Enroll Number บนเครื่อง** — ระบบไม่สามารถ "สร้าง" enrollment ใหม่จาก cloud ได้ (ต้องลงทะเบียนใบหน้าที่ตัวเครื่องอยู่แล้ว) เราเพียง map ID เท่านั้น
-- **Bridge Service ต้องรันตลอดเวลา** — ถ้าปิด PC จะไม่มีการ sync ข้อมูล (สถานะจะแสดง "Bridge offline" ในหน้า Test)
-- **ความปลอดภัย:** Bridge Token ใช้ SHA-256 hash, ส่งผ่าน HTTPS, มีระบบ enable/disable และ revoke ได้
-
+หลังคุณกด Approve ผมจะเขียนไฟล์ `src/hip-sdk.js` ฉบับสมบูรณ์ให้ copy ไปวางทับได้ทันที
