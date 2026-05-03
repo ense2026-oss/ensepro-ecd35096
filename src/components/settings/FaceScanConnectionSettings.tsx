@@ -360,9 +360,12 @@ console.log('Bridge service started');`;
       </div>
 
       <Tabs defaultValue="devices" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-2 lg:grid-cols-4 h-auto">
+        <TabsList className="grid w-full grid-cols-2 lg:grid-cols-5 h-auto">
           <TabsTrigger value="devices" className="gap-2">
             <Server className="w-4 h-4" /> เครื่องสแกน
+          </TabsTrigger>
+          <TabsTrigger value="mapping" className="gap-2">
+            <Users className="w-4 h-4" /> จับคู่ Face ID
           </TabsTrigger>
           <TabsTrigger value="tokens" className="gap-2">
             <KeyRound className="w-4 h-4" /> Bridge Token
@@ -374,6 +377,10 @@ console.log('Bridge service started');`;
             <BookOpen className="w-4 h-4" /> คู่มือ Bridge
           </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="mapping">
+          <FaceScanMapping devices={devices} />
+        </TabsContent>
 
         {/* DEVICES */}
         <TabsContent value="devices" className="space-y-3">
