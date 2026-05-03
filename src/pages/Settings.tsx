@@ -29,8 +29,7 @@ const ALL_TABS = [
   { id: "leave-types", label: "ประเภทการลา", icon: Calendar },
   { id: "company-holidays", label: "วันหยุดบริษัท", icon: CalendarDays },
   { id: "approval", label: "ระบบอนุมัติ", icon: Workflow },
-  { id: "face-scan-connect", label: "เชื่อมต่อ FaceScan", icon: Wifi },
-  { id: "face-scanner", label: "เครื่องสแกนหน้า", icon: ScanFace },
+  { id: "face-scan-connect", label: "เครื่องสแกนหน้า", icon: ScanFace },
   { id: "display", label: "การแสดงผล", icon: Palette },
 ];
 
