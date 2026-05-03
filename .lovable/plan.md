@@ -1,38 +1,31 @@
-# แก้ไข `src/hip-sdk.js` ให้ตรงกับ Export ของ FK623Attend.dll
 
-## สาเหตุของ error เดิม
-โค้ดเดิมเรียก `ConnectNet`, `DisConnect`, `ReadAllGLogData`, `GetGeneralLogData` แต่ DLL จริงทุกฟังก์ชัน**ขึ้นต้นด้วย `FK_`** จึงหาไม่เจอ
+## เขียน `index.js` แบบสมบูรณ์ ใช้ Bridge Token
 
-## Mapping ชื่อฟังก์ชัน (จากภาพ Export)
+จะเขียนใหม่ให้เรียกผ่าน **edge functions** (`facescan-bridge-poll` + `facescan-bridge-ack`) ด้วย Bridge Token `fsbt_9708...8eda` แทนการเชื่อม Supabase ตรง — ปลอดภัยกว่า ไม่ต้องใช้ service_role key
 
-| โค้ดเดิม | ชื่อจริงใน DLL |
-|---|---|
-| `ConnectNet` | `FK_ConnectNet` |
-| `DisConnect` | `FK_DisConnect` |
-| `ReadAllGLogData` | `FK_LoadGeneralLogData` |
-| `GetGeneralLogData` | `FK_GetGeneralLogData` |
-| (เพิ่ม) | `FK_EmptyGeneralLogData` — ใช้ถ้าต้องการล้าง log หลังอ่าน |
-| (สำรอง) | `FK_GetLastError` — ใช้ debug error code |
-
-> หมายเหตุ: koffi บน Windows x86 จัดการ `__stdcall` decoration ให้อัตโนมัติเมื่อใช้ชื่อ undecorated เหล่านี้ — ไม่ต้องใส่ `_FK_ConnectNet@N`
-
-## การเปลี่ยนแปลงในไฟล์ `src/hip-sdk.js`
-
-1. แก้ binding ทั้ง 4 ตัวให้ใช้ชื่อ `FK_*`
-2. เพิ่ม `FK_GetLastError` เพื่อรายงาน error code เมื่อ connect ไม่สำเร็จ
-3. ในฟังก์ชัน `connect()` — เรียก `FK_ConnectNet(ip, port, password)` (signature เดิมใช้ได้)
-4. ในฟังก์ชัน `disconnect()` — เรียก `FK_DisConnect(handle)`
-5. ในฟังก์ชัน `fetchAttendanceLogs()`:
-   - เรียก `FK_LoadGeneralLogData(handle)` แทน `ReadAllGLogData`
-   - loop เรียก `FK_GetGeneralLogData(...)` จนกว่าจะ return ค่าที่ไม่ใช่ 0 (หมด record)
-6. export `clearLogs()` เพิ่ม (optional) ที่เรียก `FK_EmptyGeneralLogData(handle)` — ให้ผู้ใช้เลือกเองว่าจะล้าง log บนเครื่องสแกนหลังดึงสำเร็จหรือไม่
-
-## หลังจากแก้
-รัน:
+### โครงสร้างการทำงาน
 ```
-cd /d C:\hip-bridge
-npm start
+loop ทุก 30s:
+  1. POST /facescan-bridge-poll  (header: x-bridge-token)
+     → ได้ devices, enroll_list, commands (queued jobs)
+  2. สำหรับแต่ละ command:
+     - ถ้า sync_type = 'test_connection' → เรียก DLL Connect()
+     - ส่งผลกลับ POST /facescan-bridge-ack {log_id, status, message}
 ```
-ควรจะ connect ได้และดึง log ออกมาเป็น JSON ปกติ ถ้ายัง error จะมี error code จาก `FK_GetLastError` ให้ดูต่อ
 
-หลังคุณกด Approve ผมจะเขียนไฟล์ `src/hip-sdk.js` ฉบับสมบูรณ์ให้ copy ไปวางทับได้ทันที
+### ไฟล์ที่จะเขียน: `C:\hip-bridge\src\index.js`
+
+ครอบคลุม:
+- โหลด `plcommpro.dll` ด้วย koffi (async + timeout 5s)
+- Bridge Token hard-coded: `fsbt_9708ca27c9ec9465987ee4c39042318fa65a34b0ac8c57855f8b7f7423b48eda`
+- Endpoints:
+  - `https://typckluzuzpxznrlrprq.supabase.co/functions/v1/facescan-bridge-poll`
+  - `https://typckluzuzpxznrlrprq.supabase.co/functions/v1/facescan-bridge-ack`
+- Header ที่ต้องส่ง: `x-bridge-token` + `apikey` (anon) + `Authorization: Bearer <anon>` (Supabase gateway บังคับ)
+- รองรับ command: `test_connection` (ทำจริง), อื่น ๆ ack กลับเป็น error "not implemented yet"
+- Logging ภาษาไทย/อังกฤษ พร้อม timestamp
+- Loop infinite + try/catch ทุกชั้น ไม่ให้ process ตาย
+
+### หลังจากผู้ใช้อนุมัติ
+1. เขียน `C:\hip-bridge\src\index.js` ใหม่ทั้งไฟล์ (ผู้ใช้จะ copy ไปใช้)
+2. ผู้ใช้ `npm start` แล้วส่ง log มาดู
