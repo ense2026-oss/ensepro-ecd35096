@@ -276,6 +276,16 @@ const FaceScanConnectionSettings = () => {
     }
   };
 
+  const pullLogs = async (device: Device) => {
+    const days = parseInt(prompt("ดึงข้อมูลย้อนหลังกี่วัน? (1-30)", "7") ?? "0", 10);
+    if (!days || days < 1 || days > 30) return;
+    const { error } = await supabase.functions.invoke("facescan-queue-command", {
+      body: { sync_type: "pull_logs", device_id: device.id, payload: { days } },
+    });
+    if (error) return toast.error("สั่งดึงข้อมูลไม่สำเร็จ: " + error.message);
+    toast.success(`สั่งดึงข้อมูล ${days} วันย้อนหลังจาก ${device.name} แล้ว`);
+  };
+
   const formatDateTime = (s: string | null) => {
     if (!s) return "—";
     const d = new Date(s);
