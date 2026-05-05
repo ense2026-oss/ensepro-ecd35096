@@ -131,7 +131,7 @@ const Employees = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-xl font-bold font-display">รายชื่อพนักงาน</h2>
-          <p className="text-sm text-muted-foreground mt-0.5">พนักงานทั้งหมด {employees.length} คน</p>
+          <p className="text-sm text-muted-foreground mt-0.5">พนักงานทั้งหมด {nonAdmins.length} คน</p>
         </div>
         <div className="flex items-center gap-2">
           <button onClick={() => setImportOpen(true)} className="flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-medium hover:bg-muted transition-colors">
