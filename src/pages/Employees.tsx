@@ -42,12 +42,17 @@ const Employees = () => {
   const [importOpen, setImportOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
 
-  const depts = ["all", ...Array.from(new Set(employees.map((e) => e.dept).filter(Boolean)))];
+  // Exclude admins — they are managed in Settings → ผู้ดูแลระบบ
+  const nonAdmins = useMemo(
+    () => employees.filter((e) => (e.role || "").toLowerCase() !== "admin"),
+    [employees]
+  );
+  const depts = ["all", ...Array.from(new Set(nonAdmins.map((e) => e.dept).filter(Boolean)))];
   const positions = useMemo(() => {
-    const src = selectedDept === "all" ? employees : employees.filter((e) => e.dept === selectedDept);
+    const src = selectedDept === "all" ? nonAdmins : nonAdmins.filter((e) => e.dept === selectedDept);
     return ["all", ...Array.from(new Set(src.map((e) => e.position).filter(Boolean)))];
-  }, [employees, selectedDept]);
-  const filtered = useMemo(() => employees.filter((e) => {
+  }, [nonAdmins, selectedDept]);
+  const filtered = useMemo(() => nonAdmins.filter((e) => {
     const name = `${e.prefix}${e.firstName} ${e.lastName}`;
     const matchSearch =
       name.includes(search) ||
@@ -56,16 +61,16 @@ const Employees = () => {
     const matchDept = selectedDept === "all" || e.dept === selectedDept;
     const matchPos = selectedPosition === "all" || e.position === selectedPosition;
     return matchSearch && matchDept && matchPos;
-  }), [employees, search, selectedDept, selectedPosition]);
+  }), [nonAdmins, search, selectedDept, selectedPosition]);
 
   // Stats
   const stats = useMemo(() => ({
-    total: employees.length,
-    active: employees.filter((e) => e.status === "active").length,
-    onLeave: employees.filter((e) => e.status === "leave").length,
-    inactive: employees.filter((e) => e.status === "inactive").length,
-    departments: new Set(employees.map((e) => e.dept).filter(Boolean)).size,
-  }), [employees]);
+    total: nonAdmins.length,
+    active: nonAdmins.filter((e) => e.status === "active").length,
+    onLeave: nonAdmins.filter((e) => e.status === "leave").length,
+    inactive: nonAdmins.filter((e) => e.status === "inactive").length,
+    departments: new Set(nonAdmins.map((e) => e.dept).filter(Boolean)).size,
+  }), [nonAdmins]);
 
   // Pagination
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
@@ -126,7 +131,7 @@ const Employees = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-xl font-bold font-display">รายชื่อพนักงาน</h2>
-          <p className="text-sm text-muted-foreground mt-0.5">พนักงานทั้งหมด {employees.length} คน</p>
+          <p className="text-sm text-muted-foreground mt-0.5">พนักงานทั้งหมด {nonAdmins.length} คน</p>
         </div>
         <div className="flex items-center gap-2">
           <button onClick={() => setImportOpen(true)} className="flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-medium hover:bg-muted transition-colors">

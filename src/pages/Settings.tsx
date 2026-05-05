@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
-import { Building2, MapPin, Shield, Clock, Calendar, Workflow, ScanFace, Palette, Banknote, FileSignature, ToggleRight, ChevronRight, Network, Wifi, CalendarDays } from "lucide-react";
+import { Building2, MapPin, Shield, Clock, Calendar, Workflow, ScanFace, Palette, Banknote, FileSignature, ToggleRight, ChevronRight, Network, Wifi, CalendarDays, ShieldCheck } from "lucide-react";
 import { useModuleSettings } from "@/hooks/useModuleSettings";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import LocationsSettings from "@/components/settings/LocationsSettings";
 import RolesSettings from "@/components/settings/RolesSettings";
+import AdminsSettings from "@/components/settings/AdminsSettings";
 import ShiftsSettings from "@/components/settings/ShiftsSettings";
 import LeaveTypesSettings from "@/components/settings/LeaveTypesSettings";
 import CompanySettings from "@/components/settings/CompanySettings";
@@ -22,6 +23,7 @@ const ALL_TABS = [
   { id: "affiliations", label: "จัดการสังกัด", icon: Network },
   { id: "locations", label: "พื้นที่เข้างาน", icon: MapPin, requireModule: "check-in" },
   { id: "roles", label: "สิทธิ์ผู้ใช้งาน", icon: Shield },
+  { id: "admins", label: "ผู้ดูแลระบบ", icon: ShieldCheck },
   { id: "shifts", label: "กะการทำงาน", icon: Clock },
   { id: "payroll", label: "ตั้งค่าเงินเดือน", icon: Banknote },
   { id: "modules", label: "ตั้งค่าโมดูล", icon: ToggleRight },
@@ -69,6 +71,9 @@ const Settings = () => {
 
       case "roles":
         return <RolesSettings />;
+
+      case "admins":
+        return <AdminsSettings />;
 
       case "shifts":
         return <ShiftsSettings />;
