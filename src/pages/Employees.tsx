@@ -61,16 +61,16 @@ const Employees = () => {
     const matchDept = selectedDept === "all" || e.dept === selectedDept;
     const matchPos = selectedPosition === "all" || e.position === selectedPosition;
     return matchSearch && matchDept && matchPos;
-  }), [employees, search, selectedDept, selectedPosition]);
+  }), [nonAdmins, search, selectedDept, selectedPosition]);
 
   // Stats
   const stats = useMemo(() => ({
-    total: employees.length,
-    active: employees.filter((e) => e.status === "active").length,
-    onLeave: employees.filter((e) => e.status === "leave").length,
-    inactive: employees.filter((e) => e.status === "inactive").length,
-    departments: new Set(employees.map((e) => e.dept).filter(Boolean)).size,
-  }), [employees]);
+    total: nonAdmins.length,
+    active: nonAdmins.filter((e) => e.status === "active").length,
+    onLeave: nonAdmins.filter((e) => e.status === "leave").length,
+    inactive: nonAdmins.filter((e) => e.status === "inactive").length,
+    departments: new Set(nonAdmins.map((e) => e.dept).filter(Boolean)).size,
+  }), [nonAdmins]);
 
   // Pagination
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
