@@ -42,12 +42,17 @@ const Employees = () => {
   const [importOpen, setImportOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
 
-  const depts = ["all", ...Array.from(new Set(employees.map((e) => e.dept).filter(Boolean)))];
+  // Exclude admins — they are managed in Settings → ผู้ดูแลระบบ
+  const nonAdmins = useMemo(
+    () => employees.filter((e) => (e.role || "").toLowerCase() !== "admin"),
+    [employees]
+  );
+  const depts = ["all", ...Array.from(new Set(nonAdmins.map((e) => e.dept).filter(Boolean)))];
   const positions = useMemo(() => {
-    const src = selectedDept === "all" ? employees : employees.filter((e) => e.dept === selectedDept);
+    const src = selectedDept === "all" ? nonAdmins : nonAdmins.filter((e) => e.dept === selectedDept);
     return ["all", ...Array.from(new Set(src.map((e) => e.position).filter(Boolean)))];
-  }, [employees, selectedDept]);
-  const filtered = useMemo(() => employees.filter((e) => {
+  }, [nonAdmins, selectedDept]);
+  const filtered = useMemo(() => nonAdmins.filter((e) => {
     const name = `${e.prefix}${e.firstName} ${e.lastName}`;
     const matchSearch =
       name.includes(search) ||
