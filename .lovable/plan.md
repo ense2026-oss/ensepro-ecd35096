@@ -1,31 +1,46 @@
+## เป้าหมาย
+แก้ไขค่า port ของเครื่องสแกนทั้ง 2 เครื่องให้ตรงกับมาตรฐานของ HIP CiF76S เพื่อให้ Bridge เชื่อมต่อกับเครื่องได้สำเร็จ
 
-## เขียน `index.js` แบบสมบูรณ์ ใช้ Bridge Token
+## ข้อมูลรุ่นเครื่อง: HIP CiF76S
+- เป็นเครื่องสแกนใบหน้า + นิ้วมือ + บัตร + รหัส รองรับ Cloud
+- ใช้ชิปฐาน ZKTeco → คุยผ่าน **PullSDK** ทาง TCP **port 4370** (ค่ามาตรฐานโรงงาน)
+- Port 5005 เดิมเป็น port ของ HIP Cloud ปลายทาง ไม่ใช่ port ที่เครื่องเปิดรับ
 
-จะเขียนใหม่ให้เรียกผ่าน **edge functions** (`facescan-bridge-poll` + `facescan-bridge-ack`) ด้วย Bridge Token `fsbt_9708...8eda` แทนการเชื่อม Supabase ตรง — ปลอดภัยกว่า ไม่ต้องใช้ service_role key
+## สิ่งที่จะเปลี่ยน
 
-### โครงสร้างการทำงาน
-```
-loop ทุก 30s:
-  1. POST /facescan-bridge-poll  (header: x-bridge-token)
-     → ได้ devices, enroll_list, commands (queued jobs)
-  2. สำหรับแต่ละ command:
-     - ถ้า sync_type = 'test_connection' → เรียก DLL Connect()
-     - ส่งผลกลับ POST /facescan-bridge-ack {log_id, status, message}
-```
+### 1. อัปเดตค่า port ใน database (table `face_scan_devices`)
 
-### ไฟล์ที่จะเขียน: `C:\hip-bridge\src\index.js`
+| เครื่อง | device_ip (คงเดิม) | server_port (เก่า → ใหม่) |
+|---|---|---|
+| Station | 192.168.2.201 | 8272 → **4370** |
+| Furnace | 192.168.1.202 | 5005 → **4370** |
 
-ครอบคลุม:
-- โหลด `plcommpro.dll` ด้วย koffi (async + timeout 5s)
-- Bridge Token hard-coded: `fsbt_9708ca27c9ec9465987ee4c39042318fa65a34b0ac8c57855f8b7f7423b48eda`
-- Endpoints:
-  - `https://typckluzuzpxznrlrprq.supabase.co/functions/v1/facescan-bridge-poll`
-  - `https://typckluzuzpxznrlrprq.supabase.co/functions/v1/facescan-bridge-ack`
-- Header ที่ต้องส่ง: `x-bridge-token` + `apikey` (anon) + `Authorization: Bearer <anon>` (Supabase gateway บังคับ)
-- รองรับ command: `test_connection` (ทำจริง), อื่น ๆ ack กลับเป็น error "not implemented yet"
-- Logging ภาษาไทย/อังกฤษ พร้อม timestamp
-- Loop infinite + try/catch ทุกชั้น ไม่ให้ process ตาย
+(`server_ip` คงไว้ที่ 203.154.4.201 — ใช้สำหรับ ADMS push เท่านั้น ไม่กระทบ bridge)
 
-### หลังจากผู้ใช้อนุมัติ
-1. เขียน `C:\hip-bridge\src\index.js` ใหม่ทั้งไฟล์ (ผู้ใช้จะ copy ไปใช้)
-2. ผู้ใช้ `npm start` แล้วส่ง log มาดู
+### 2. ทดสอบทันทีหลังบันทึก
+- กดปุ่ม **"ทดสอบการเชื่อมต่อ"** ที่หน้าตั้งค่าทั้ง 2 เครื่อง
+- รอ ~30 วินาที (Bridge poll รอบถัดไป)
+- ตรวจผลที่ตาราง sync logs
+
+## ผลลัพธ์ที่คาดว่าจะเกิด
+
+**กรณี A (น่าจะเกิดที่สุด — สำเร็จ ✅)**
+- Bridge ต่อ TCP 4370 ได้ → `last_status = success`
+- ไป enroll พนักงาน + pull logs ได้
+
+**กรณี B (เครื่องอยู่โหมด Cloud-only ❌)**
+- ยัง error เหมือนเดิม — เพราะ HIP บางตัวเมื่อเปิด Cloud จะปิด PullSDK
+- ทางแก้: ต้องไปกดที่เครื่อง Menu → Comm → Cloud Server → ปิด แล้วเปิด PullSDK กลับมา
+- ผมจะแนะนำขั้นตอนกดปุ่มให้ทีละขั้นถ้าเจอกรณีนี้
+
+**กรณี C (firewall บล็อก ❌)**
+- Bridge อยู่คนละ subnet กับเครื่อง (Bridge อยู่ network ไหนก็ได้ที่ ping เครื่องเจอ)
+- Station อยู่ 192.168.**2**.x, Furnace อยู่ 192.168.**1**.x — ถ้า Bridge อยู่แค่ subnet เดียวอาจต่อ subnet อื่นไม่ถึง
+
+## ขั้นตอนการทำงาน
+1. รัน migration อัปเดต `server_port = 4370` ทั้ง 2 แถวใน `face_scan_devices`
+2. แจ้งให้คุณกดทดสอบที่หน้า Settings
+3. รอผล แล้วจะวิเคราะห์ตาม กรณี A/B/C ต่อ
+
+## หมายเหตุ
+ไม่ต้องแก้โค้ด edge function ใดๆ — แก้แค่ค่าใน database เท่านั้น
