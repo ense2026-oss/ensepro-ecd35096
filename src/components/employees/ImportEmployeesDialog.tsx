@@ -235,7 +235,7 @@ const ImportEmployeesDialog = ({ open, onOpenChange }: ImportEmployeesDialogProp
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-3xl max-h-[90vh] p-0">
         <DialogHeader className="px-6 pt-6 pb-0">
-          <DialogTitle className="text-lg font-bold flex items-center gap-2">
+          <DialogTitle className="text-lg font-bold flex items-center gap-2 pb-[10px]">
             <FileSpreadsheet className="w-5 h-5 text-primary" />
             นำเข้าข้อมูลพนักงาน
           </DialogTitle>
