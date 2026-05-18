@@ -102,7 +102,7 @@ export async function exportLeaveBalancePdf(data: any[], year: string) {
     head: [head],
     body,
     styles: { font: "THSarabunNew", fontSize: 9, cellPadding: 2 },
-    headStyles: { fillColor: [255, 135, 15], fontSize: 8 },
+    headStyles: { fillColor: [255, 135, 15], font: "THSarabunNew", fontStyle: "bold", fontSize: 8 },
     columnStyles: { 0: { cellWidth: 14 }, 1: { cellWidth: 35 } },
   });
 
