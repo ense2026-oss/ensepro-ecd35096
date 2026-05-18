@@ -172,7 +172,7 @@ function CustomItemsDialog({
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+          <DialogTitle className="flex items-center gap-2 pb-[10px]">
             <Settings2 className="w-5 h-5" style={{ color: "hsl(var(--primary))" }} />
             แก้ไขรายการ - {emp.firstName} {emp.lastName}
           </DialogTitle>
