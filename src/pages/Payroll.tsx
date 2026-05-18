@@ -603,6 +603,24 @@ const Payroll = () => {
           <option value="all">ทุกแผนก</option>
           {depts.map((d) => <option key={d} value={d}>{d}</option>)}
         </select>
+        <select
+          value={selectedMonth}
+          onChange={(e) => setSelectedMonth(Number(e.target.value))}
+          className="flex-1 min-w-[120px] px-3 py-2 text-sm rounded-xl border bg-muted/30 outline-none cursor-pointer"
+        >
+          {THAI_MONTHS.map((m, i) => (
+            <option key={i} value={i + 1}>{m}</option>
+          ))}
+        </select>
+        <select
+          value={selectedYear}
+          onChange={(e) => setSelectedYear(Number(e.target.value))}
+          className="min-w-[100px] px-3 py-2 text-sm rounded-xl border bg-muted/30 outline-none cursor-pointer"
+        >
+          {Array.from({ length: 5 }, (_, i) => now.getFullYear() - 2 + i).map((y) => (
+            <option key={y} value={y}>{y + 543}</option>
+          ))}
+        </select>
       </div>
 
       {/* Table */}
