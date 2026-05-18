@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { useEmployees } from "@/contexts/EmployeeContext";
 import { Receipt, FileText, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -14,11 +13,28 @@ const THAI_MONTHS = ["มกราคม","กุมภาพันธ์","ม�
 
 interface PeriodInfo { id: string; year: number; month: number; published_at: string | null; }
 interface PayslipWithPeriod extends PayslipRow { period: PeriodInfo; }
+interface EmployeeInfo { id: string; prefix: string; first_name: string; last_name: string; position: string; dept: string; national_id: string; }
 
 const MyPayslips = () => {
   const { user } = useAuth();
-  const { employees } = useEmployees();
-  const me = useMemo(() => employees.find((e) => e.userId === user?.id), [employees, user?.id]);
+  const [me, setMe] = useState<EmployeeInfo | null>(null);
+
+  const [rows, setRows] = useState<PayslipWithPeriod[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selected, setSelected] = useState<PayslipWithPeriod | null>(null);
+
+  // Resolve my employee record
+  useEffect(() => {
+    if (!user?.id) return;
+    (async () => {
+      const { data } = await supabase
+        .from("employees")
+        .select("id, prefix, first_name, last_name, position, dept, national_id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      setMe((data as any) || null);
+    })();
+  }, [user?.id]);
 
   const [rows, setRows] = useState<PayslipWithPeriod[]>([]);
   const [loading, setLoading] = useState(true);
