@@ -4,7 +4,38 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { registerThaiFont } from "@/utils/thaiFontLoader";
 import { createExcelWithHeader, addExcelHeader } from "@/utils/excelHeader";
+import { supabase } from "@/integrations/supabase/client";
 import type { Employee } from "@/contexts/EmployeeContext";
+
+async function fetchCompanyLogo(): Promise<string | null> {
+  try {
+    const { data } = await supabase
+      .from("company_settings")
+      .select("value")
+      .eq("key", "branding")
+      .maybeSingle();
+    const v = data?.value as any;
+    return v?.logoOnlyUrl || v?.logoUrl || null;
+  } catch {
+    return null;
+  }
+}
+
+async function urlToDataUrl(url: string): Promise<{ dataUrl: string; format: string } | null> {
+  try {
+    const res = await fetch(url);
+    const blob = await res.blob();
+    const format = blob.type.includes("png") ? "PNG" : blob.type.includes("jpeg") || blob.type.includes("jpg") ? "JPEG" : "PNG";
+    return await new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve({ dataUrl: reader.result as string, format });
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return null;
+  }
+}
 import {
   calculateAnnualIncome, calculateMonthlyTax, calculateExpenseDeduction,
   calculateTotalDeductions, calculateProgressiveTax, formatCurrency,
