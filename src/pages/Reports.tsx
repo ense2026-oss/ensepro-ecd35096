@@ -41,7 +41,7 @@ import {
   ChevronDown,
   ChevronRight,
   Eye,
-  Printer,
+  
   RefreshCw,
   Banknote,
   Receipt,
