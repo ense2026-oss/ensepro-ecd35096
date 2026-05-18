@@ -251,5 +251,6 @@ export async function exportPayslipPdf(emp: Employee, month?: string, year?: str
   doc.setFont("THSarabunNew", "bold");
   doc.text(`เงินได้สุทธิ: ${formatCurrency(p.netPay)} บาท`, 14, finalY2 + 14);
 
-  doc.save(`Payslip_${emp.firstName}_${emp.lastName}.pdf`);
+  const suffix = month && year ? `_${month}_${year}` : "";
+  doc.save(`Payslip_${emp.firstName}_${emp.lastName}${suffix}.pdf`);
 }
