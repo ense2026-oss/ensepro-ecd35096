@@ -22,40 +22,12 @@ const Topbar = ({ onMenuToggle, pageTitle = "Dashboard", pageSubtitle = "ภา�
   const { setNotificationCount } = usePendingCounts();
   const [showProfile, setShowProfile] = useState(false);
   const [showNotif, setShowNotif] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [showSearch, setShowSearch] = useState(false);
   const notifRef = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
-  const searchRef = useRef<HTMLDivElement>(null);
 
   // Module settings for check-in visibility (from DB via hook)
   const { modules: moduleSettings } = useModuleSettings();
   const isCheckInEnabled = moduleSettings['check-in'] !== false;
-
-  // Demo searchable items
-  const searchableItems = [
-    { label: "Dashboard", description: "ภาพรวมระบบ HR", path: "/dashboard", category: "เมนู", icon: LayoutDashboard },
-    { label: "พนักงาน", description: "จัดการข้อมูลพนักงาน", path: "/employees", category: "เมนู", icon: Users },
-    { label: "โครงสร้างองค์กร", description: "แผนผังแผนกและตำแหน่ง", path: "/organization", category: "เมนู", icon: GitBranch },
-    { label: "เวลาเข้าออกงาน", description: "บันทึกเวลาทำงาน", path: "/attendance", category: "เมนู", icon: Clock },
-    { label: "ลางาน", description: "จัดการคำขอลาและโควต้า", path: "/leave", category: "เมนู", icon: CalendarDays },
-    { label: "โอที", description: "คำขอทำงานล่วงเวลา", path: "/overtime", category: "เมนู", icon: Clock },
-    { label: "รายงาน", description: "สรุปและส่งออกรายงาน", path: "/reports", category: "เมนู", icon: FileText },
-    { label: "ตั้งค่าระบบ", description: "กำหนดค่าระบบ บริษัท สิทธิ์", path: "/settings", category: "เมนู", icon: Settings },
-    { label: "สมชาย ใจดี", description: "พนักงาน · แผนก IT", path: "/employees", category: "พนักงาน", icon: User },
-    { label: "นภา สดใส", description: "พนักงาน · แผนก HR", path: "/employees", category: "พนักงาน", icon: User },
-    { label: "วิชัย เก่งกาจ", description: "พนักงาน · แผนก Sales", path: "/employees", category: "พนักงาน", icon: User },
-    { label: "ประภาส มั่นคง", description: "พนักงาน · แผนก Finance", path: "/employees", category: "พนักงาน", icon: User },
-    { label: "สมหญิง รักงาน", description: "พนักงาน · แผนก HR", path: "/employees", category: "พนักงาน", icon: User },
-  ];
-
-  const searchResults = useMemo(() => {
-    if (!searchQuery.trim()) return [];
-    const q = searchQuery.toLowerCase();
-    return searchableItems.filter(
-      (item) => item.label.toLowerCase().includes(q) || item.description.toLowerCase().includes(q) || item.category.toLowerCase().includes(q)
-    ).slice(0, 8);
-  }, [searchQuery]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -64,9 +36,6 @@ const Topbar = ({ onMenuToggle, pageTitle = "Dashboard", pageSubtitle = "ภา�
       }
       if (profileRef.current && !profileRef.current.contains(e.target as Node)) {
         setShowProfile(false);
-      }
-      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
-        setShowSearch(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
