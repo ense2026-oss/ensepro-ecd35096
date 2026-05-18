@@ -14,11 +14,13 @@ import {
   DEFAULT_TAX_DEDUCTION, type TaxConfig, type TaxDeduction,
 } from "@/utils/taxCalculation";
 import { toast } from "sonner";
-import { exportPnd1Excel, exportPnd1Pdf, exportPayslipExcel, exportPayslipPdf, exportAllPayslipsExcel } from "@/utils/exportPayroll";
+import { exportPnd1Excel, exportPnd1Pdf, exportPayslipExcel, exportPayslipPdf, exportPayslipPdfFromSnapshot, exportAllPayslipsExcel } from "@/utils/exportPayroll";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { usePayrollPeriod, type PayslipRow } from "@/hooks/usePayrollPeriod";
+import { useAuth } from "@/contexts/AuthContext";
 
 /* ─── Payroll config ─── */
 const PAYROLL_CONFIG = {
@@ -437,12 +439,50 @@ const Payroll = () => {
     return Array.from(s).sort();
   }, [activeEmployees]);
 
+  // Period & snapshot integration
+  const { period, payslips: snapshotRows, loading: periodLoading, refetch: refetchPeriod } = usePayrollPeriod(selectedYear, selectedMonth);
+  const { user } = useAuth();
+  const isPublished = period?.status === "published";
+  const hasPeriod = !!period;
+
+  const snapshotMap = useMemo(() => {
+    const m: Record<string, PayslipRow> = {};
+    snapshotRows.forEach((r) => { m[r.employee_id] = r; });
+    return m;
+  }, [snapshotRows]);
+
   const payrollData = useMemo(() => {
     return activeEmployees.map((emp) => {
+      // If a period exists, prefer the frozen snapshot
+      const snap = snapshotMap[emp.id];
+      if (snap) {
+        const att: AttendanceStats = snap.attendance || { workDays: 0, otHours: 0, lateDays: 0, absentDays: 0, leaveDays: 0 };
+        return {
+          emp,
+          payroll: {
+            salary: Number(snap.base_salary) || 0,
+            otPay: Number(snap.ot_pay) || 0,
+            otHours: Number(snap.ot_hours) || 0,
+            diligence: Number(snap.diligence) || 0,
+            grossPay: Number(snap.gross_pay) || 0,
+            ssf: Number(snap.ssf) || 0,
+            monthlyTax: Number(snap.tax) || 0,
+            totalDeduct: Number(snap.total_deduct) || 0,
+            netPay: Number(snap.net_pay) || 0,
+            att,
+            annualIncome: snap.tax_breakdown?.annualIncome || 0,
+            deductions: emp.taxDeductions || { ...DEFAULT_TAX_DEDUCTION },
+            customIncome: Number(snap.custom_income) || 0,
+            customDeductions: Number(snap.custom_deduction) || 0,
+            customItems: (snap.custom_items || []).map((i) => ({ ...i, enabled: true })) as CustomPayrollItem[],
+          },
+          fromSnapshot: true as const,
+        };
+      }
       const att = attendanceMap[emp.id] || { workDays: 0, otHours: 0, lateDays: 0, absentDays: 0, leaveDays: 0 };
-      return { emp, payroll: calcPayroll(emp, PAYROLL_CONFIG, att) };
+      return { emp, payroll: calcPayroll(emp, PAYROLL_CONFIG, att), fromSnapshot: false as const };
     });
-  }, [activeEmployees, attendanceMap]);
+  }, [activeEmployees, attendanceMap, snapshotMap]);
 
   /* ─── Collect all unique custom item names across employees ─── */
   const dynamicColumns = useMemo(() => {
@@ -542,6 +582,130 @@ const Payroll = () => {
 
   const thaiYear = selectedYear + 543;
 
+  /* ─── Period actions: calculate, publish, unpublish ─── */
+  const [savingPeriod, setSavingPeriod] = useState(false);
+
+  const computeAndSavePayslips = useCallback(async () => {
+    setSavingPeriod(true);
+    try {
+      // Ensure period exists
+      let periodId = period?.id;
+      if (!periodId) {
+        const { data: newPer, error } = await supabase
+          .from("payroll_periods")
+          .insert({ year: selectedYear, month: selectedMonth, status: "draft" })
+          .select()
+          .single();
+        if (error) throw error;
+        periodId = newPer.id;
+      } else if (isPublished) {
+        toast.error("รอบนี้เผยแพร่แล้ว — ต้องยกเลิกการเผยแพร่ก่อนคำนวณใหม่");
+        setSavingPeriod(false);
+        return;
+      }
+
+      // Compute snapshots for all active employees
+      const rows = activeEmployees.map((emp) => {
+        const att = attendanceMap[emp.id] || { workDays: 0, otHours: 0, lateDays: 0, absentDays: 0, leaveDays: 0 };
+        const p = calcPayroll(emp, PAYROLL_CONFIG, att);
+        const expenseDeduction = calculateExpenseDeduction(p.annualIncome);
+        const totalDeductions = calculateTotalDeductions(p.deductions);
+        const netIncome = Math.max(0, p.annualIncome - expenseDeduction - totalDeductions);
+        const annualTax = calculateProgressiveTax(netIncome);
+        return {
+          period_id: periodId,
+          employee_id: emp.id,
+          base_salary: p.salary,
+          ot_pay: p.otPay,
+          ot_hours: p.otHours,
+          diligence: p.diligence,
+          custom_income: p.customIncome,
+          custom_deduction: p.customDeductions,
+          gross_pay: p.grossPay,
+          ssf: p.ssf,
+          tax: p.monthlyTax,
+          total_deduct: p.totalDeduct,
+          net_pay: p.netPay,
+          attendance: att as any,
+          custom_items: p.customItems as any,
+          tax_breakdown: { annualIncome: p.annualIncome, expenseDeduction, totalDeductions, netIncome, annualTax } as any,
+        };
+      });
+
+      // Wipe existing snapshots for this period, then re-insert (simple recompute strategy)
+      await supabase.from("payslips").delete().eq("period_id", periodId);
+      const { error: insErr } = await supabase.from("payslips").insert(rows);
+      if (insErr) throw insErr;
+
+      await refetchPeriod();
+      toast.success(`บันทึกสลิปเดือน ${THAI_MONTHS[selectedMonth - 1]} ${thaiYear} แล้ว (${rows.length} คน)`);
+    } catch (e: any) {
+      console.error(e);
+      toast.error(e?.message || "บันทึกสลิปไม่สำเร็จ");
+    } finally {
+      setSavingPeriod(false);
+    }
+  }, [period?.id, isPublished, selectedYear, selectedMonth, activeEmployees, attendanceMap, refetchPeriod, thaiYear]);
+
+  const publishPeriod = useCallback(async () => {
+    if (!period) return;
+    setSavingPeriod(true);
+    try {
+      const { error } = await supabase
+        .from("payroll_periods")
+        .update({ status: "published", published_at: new Date().toISOString(), published_by: user?.id || null })
+        .eq("id", period.id);
+      if (error) throw error;
+
+      // Notify employees with a payslip in this period
+      const empIds = snapshotRows.map((r) => r.employee_id);
+      if (empIds.length > 0) {
+        const { data: empUsers } = await supabase
+          .from("employees")
+          .select("id, user_id")
+          .in("id", empIds);
+        const notes = (empUsers || [])
+          .filter((e: any) => e.user_id)
+          .map((e: any) => ({
+            user_id: e.user_id,
+            title: `สลิปเงินเดือนเดือน ${THAI_MONTHS[selectedMonth - 1]} ${thaiYear}`,
+            description: "พร้อมให้ดาวน์โหลดแล้วในเมนู 'สลิปเงินเดือนของฉัน'",
+            type: "system",
+            action_label: "เปิดดู",
+          }));
+        if (notes.length > 0) await supabase.from("app_notifications").insert(notes);
+      }
+
+      await refetchPeriod();
+      toast.success("เผยแพร่สลิปให้พนักงานเรียบร้อย");
+    } catch (e: any) {
+      console.error(e);
+      toast.error(e?.message || "เผยแพร่ไม่สำเร็จ");
+    } finally {
+      setSavingPeriod(false);
+    }
+  }, [period, snapshotRows, selectedMonth, thaiYear, refetchPeriod, user?.id]);
+
+  const unpublishPeriod = useCallback(async () => {
+    if (!period) return;
+    if (!confirm("ยกเลิกการเผยแพร่สลิปเดือนนี้?")) return;
+    setSavingPeriod(true);
+    try {
+      const { error } = await supabase
+        .from("payroll_periods")
+        .update({ status: "draft", published_at: null, published_by: null })
+        .eq("id", period.id);
+      if (error) throw error;
+      await refetchPeriod();
+      toast.success("ยกเลิกการเผยแพร่แล้ว");
+    } catch (e: any) {
+      toast.error(e?.message || "ยกเลิกไม่สำเร็จ");
+    } finally {
+      setSavingPeriod(false);
+    }
+  }, [period, refetchPeriod]);
+
+
   return (
     <div className="space-y-5">
       {/* Header */}
@@ -579,7 +743,60 @@ const Payroll = () => {
         </div>
       </div>
 
+      {/* Period status banner */}
+      <div
+        className="card-base p-4 flex flex-col md:flex-row md:items-center gap-3 justify-between"
+        style={{
+          borderLeft: `4px solid ${isPublished ? "hsl(142 70% 40%)" : hasPeriod ? "hsl(31 100% 53%)" : "hsl(var(--muted-foreground))"}`,
+        }}
+      >
+        <div className="flex items-center gap-3">
+          <Receipt className="w-5 h-5 text-muted-foreground" />
+          <div>
+            <p className="font-semibold">
+              รอบเงินเดือน {THAI_MONTHS[selectedMonth - 1]} {thaiYear}
+              <span
+                className="ml-2 inline-block px-2 py-0.5 rounded-full text-xs font-medium"
+                style={{
+                  background: isPublished ? "hsl(142 70% 90%)" : hasPeriod ? "hsl(31 100% 93%)" : "hsl(var(--muted))",
+                  color: isPublished ? "hsl(142 70% 30%)" : hasPeriod ? "hsl(31 100% 40%)" : "hsl(var(--muted-foreground))",
+                }}
+              >
+                {isPublished ? "เผยแพร่แล้ว" : hasPeriod ? "ฉบับร่าง" : "ยังไม่ได้คำนวณ"}
+              </span>
+            </p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {isPublished
+                ? `เผยแพร่เมื่อ ${period?.published_at ? new Date(period.published_at).toLocaleString("th-TH") : "-"} • พนักงานเห็นสลิปของตัวเองได้แล้ว`
+                : hasPeriod
+                ? `บันทึกสลิป ${snapshotRows.length} คน — ตรวจสอบและกด 'เผยแพร่' เพื่อส่งให้พนักงาน`
+                : "ตัวเลขด้านล่างคำนวณจากข้อมูลล่าสุด กดปุ่มเพื่อบันทึกเป็นสลิปประจำเดือนนี้"}
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 flex-wrap">
+          {!isPublished && (
+            <Button onClick={computeAndSavePayslips} disabled={savingPeriod || loadingData} size="sm">
+              <Calculator className="w-4 h-4 mr-1.5" />
+              {hasPeriod ? "คำนวณใหม่" : "คำนวณและบันทึกสลิปเดือนนี้"}
+            </Button>
+          )}
+          {hasPeriod && !isPublished && (
+            <Button onClick={publishPeriod} disabled={savingPeriod || snapshotRows.length === 0} size="sm" variant="default">
+              <FileText className="w-4 h-4 mr-1.5" />
+              เผยแพร่ให้พนักงาน
+            </Button>
+          )}
+          {isPublished && (
+            <Button onClick={unpublishPeriod} disabled={savingPeriod} size="sm" variant="outline">
+              ยกเลิกการเผยแพร่
+            </Button>
+          )}
+        </div>
+      </div>
+
       {/* Summary Cards */}
+
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <SummaryCard icon={Banknote} label="รายได้รวม" value={`฿${formatCurrency(totals.gross)}`} color="hsl(var(--primary))" bg="hsl(var(--primary) / 0.1)" />
         <SummaryCard icon={Calculator} label="ภาษีหัก ณ ที่จ่าย" value={`฿${formatCurrency(totals.tax)}`} color="hsl(31 100% 53%)" bg="hsl(31 100% 93%)" />
@@ -687,7 +904,15 @@ const Payroll = () => {
                     <div className="flex items-center justify-center gap-1">
                       <button onClick={() => openPayslip(emp)} className="p-1.5 rounded-lg hover:bg-muted transition-colors" title="ดูสลิปเงินเดือน"><Eye className="w-4 h-4 text-muted-foreground" /></button>
                       <button onClick={() => openCustomItems(emp)} className="p-1.5 rounded-lg hover:bg-muted transition-colors" title="แก้ไขรายการเพิ่มเติม"><Settings2 className="w-4 h-4 text-muted-foreground" /></button>
-                      <button onClick={async () => { await exportPayslipPdf(emp, THAI_MONTHS[selectedMonth - 1], thaiYear); toast.success(`ส่งออกสลิป PDF: ${emp.firstName}`); }} className="p-1.5 rounded-lg hover:bg-muted transition-colors" title="ส่งออก PDF"><FileText className="w-3.5 h-3.5 text-muted-foreground" /></button>
+                      <button onClick={async () => {
+                        const snap = snapshotMap[emp.id];
+                        if (snap) {
+                          await exportPayslipPdfFromSnapshot(emp, snap, THAI_MONTHS[selectedMonth - 1], thaiYear);
+                        } else {
+                          await exportPayslipPdf(emp, THAI_MONTHS[selectedMonth - 1], thaiYear);
+                        }
+                        toast.success(`ส่งออกสลิป PDF: ${emp.firstName}`);
+                      }} className="p-1.5 rounded-lg hover:bg-muted transition-colors" title="ส่งออก PDF"><FileText className="w-3.5 h-3.5 text-muted-foreground" /></button>
                     </div>
                   </td>
                 </tr>

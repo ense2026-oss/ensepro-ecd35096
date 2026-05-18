@@ -27,6 +27,7 @@ import OvertimeRequest from "@/pages/OvertimeRequest";
 import CheckIn from "@/pages/CheckIn";
 import ShiftManagement from "@/pages/ShiftManagement";
 import Payroll from "@/pages/Payroll";
+import MyPayslips from "@/pages/MyPayslips";
 import Contracts from "@/pages/Contracts";
 import ContractDetail from "@/pages/ContractDetail";
 import DayOff from "@/pages/DayOff";
@@ -110,6 +111,7 @@ const AppRoutes = () => (
       <Route path="/check-in" element={<CheckIn />} />
       <Route path="/shift-management" element={<ShiftManagement />} />
       <Route path="/payroll" element={<Payroll />} />
+      <Route path="/my-payslips" element={<MyPayslips />} />
       <Route path="/day-off" element={<DayOff />} />
       <Route path="/reports" element={<Reports />} />
       <Route path="/notifications" element={<Notifications />} />

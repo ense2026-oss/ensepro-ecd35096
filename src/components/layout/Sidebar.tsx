@@ -22,6 +22,7 @@ import {
   MapPin,
   Banknote,
   FileSignature,
+  Receipt,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -55,6 +56,7 @@ const allNavItems = [
     section: "การเงิน",
     items: [
       { path: "/payroll", label: "เงินเดือน", icon: Banknote },
+      { path: "/my-payslips", label: "สลิปเงินเดือนของฉัน", icon: Receipt },
     ],
   },
   {

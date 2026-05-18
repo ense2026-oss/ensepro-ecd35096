@@ -1205,6 +1205,116 @@ export type Database = {
           },
         ]
       }
+      payroll_periods: {
+        Row: {
+          created_at: string
+          id: string
+          month: number
+          note: string
+          published_at: string | null
+          published_by: string | null
+          status: string
+          updated_at: string
+          year: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          month: number
+          note?: string
+          published_at?: string | null
+          published_by?: string | null
+          status?: string
+          updated_at?: string
+          year: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          month?: number
+          note?: string
+          published_at?: string | null
+          published_by?: string | null
+          status?: string
+          updated_at?: string
+          year?: number
+        }
+        Relationships: []
+      }
+      payslips: {
+        Row: {
+          attendance: Json
+          base_salary: number
+          created_at: string
+          custom_deduction: number
+          custom_income: number
+          custom_items: Json
+          diligence: number
+          employee_id: string
+          gross_pay: number
+          id: string
+          net_pay: number
+          ot_hours: number
+          ot_pay: number
+          period_id: string
+          ssf: number
+          tax: number
+          tax_breakdown: Json
+          total_deduct: number
+          updated_at: string
+        }
+        Insert: {
+          attendance?: Json
+          base_salary?: number
+          created_at?: string
+          custom_deduction?: number
+          custom_income?: number
+          custom_items?: Json
+          diligence?: number
+          employee_id: string
+          gross_pay?: number
+          id?: string
+          net_pay?: number
+          ot_hours?: number
+          ot_pay?: number
+          period_id: string
+          ssf?: number
+          tax?: number
+          tax_breakdown?: Json
+          total_deduct?: number
+          updated_at?: string
+        }
+        Update: {
+          attendance?: Json
+          base_salary?: number
+          created_at?: string
+          custom_deduction?: number
+          custom_income?: number
+          custom_items?: Json
+          diligence?: number
+          employee_id?: string
+          gross_pay?: number
+          id?: string
+          net_pay?: number
+          ot_hours?: number
+          ot_pay?: number
+          period_id?: string
+          ssf?: number
+          tax?: number
+          tax_breakdown?: Json
+          total_deduct?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payslips_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "payroll_periods"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       positions: {
         Row: {
           affiliation_id: string
@@ -1519,6 +1629,7 @@ export type Database = {
         Args: { _date: string; _employee_id: string }
         Returns: boolean
       }
+      is_payslip_published: { Args: { _period_id: string }; Returns: boolean }
       notify_approvers: {
         Args: {
           p_action_label?: string

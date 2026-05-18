@@ -313,3 +313,107 @@ export async function exportPayslipPdf(emp: Employee, month?: string, year?: str
   const suffix = month && year ? `_${month}_${year}` : "";
   doc.save(`Payslip_${emp.firstName}_${emp.lastName}${suffix}.pdf`);
 }
+
+/* ─── Snapshot-based PDF (from frozen payslip row) ─── */
+interface PayslipSnapshotLike {
+  base_salary: number;
+  ot_pay: number;
+  ot_hours: number;
+  diligence: number;
+  gross_pay: number;
+  ssf: number;
+  tax: number;
+  total_deduct: number;
+  net_pay: number;
+  custom_items: Array<{ name: string; type: "income" | "deduction"; amount: number }>;
+}
+
+export async function exportPayslipPdfFromSnapshot(
+  emp: Pick<Employee, "prefix" | "firstName" | "lastName" | "position" | "dept" | "nationalId">,
+  snap: PayslipSnapshotLike,
+  month: string,
+  year: string | number,
+) {
+  const doc = await createPdf();
+
+  const logoUrl = await fetchCompanyLogo();
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const circleX = pageWidth - 25;
+  const circleY = 22;
+  const circleR = 14;
+  doc.setDrawColor(180, 180, 180);
+  doc.setLineWidth(0.4);
+  doc.circle(circleX, circleY, circleR, "S");
+  if (logoUrl) {
+    const img = await urlToDataUrl(logoUrl);
+    if (img) {
+      try {
+        const size = circleR * 1.6;
+        doc.addImage(img.dataUrl, img.format, circleX - size / 2, circleY - size / 2, size, size);
+      } catch { /* ignore */ }
+    }
+  }
+
+  doc.setFontSize(20);
+  doc.setFont("THSarabunNew", "bold");
+  doc.text("สลิปเงินเดือน", 14, 18);
+  doc.setFontSize(14);
+  doc.setFont("THSarabunNew", "normal");
+  doc.text(`ประจำเดือน ${month} ${year}`, 14, 26);
+  doc.setFontSize(12);
+  doc.text(`พนักงาน: ${emp.prefix}${emp.firstName} ${emp.lastName}`, 14, 34);
+  doc.text(`ตำแหน่ง: ${emp.position} | แผนก: ${emp.dept}`, 14, 40);
+  doc.text(`เลขบัตรประชาชน: ${emp.nationalId}`, 14, 46);
+
+  const headStyleGray = {
+    fillColor: [243, 244, 246] as [number, number, number],
+    textColor: [55, 65, 81] as [number, number, number],
+    font: "THSarabunNew",
+    fontStyle: "bold" as const,
+    lineColor: [209, 213, 219] as [number, number, number],
+    lineWidth: 0.2,
+  };
+
+  const incomeRows: string[][] = [
+    ["เงินเดือน", formatCurrency(snap.base_salary)],
+    [`ค่าล่วงเวลา (${snap.ot_hours} ชม.)`, formatCurrency(snap.ot_pay)],
+    ["เบี้ยขยัน", formatCurrency(snap.diligence)],
+  ];
+  (snap.custom_items || []).filter((i) => i.type === "income").forEach((item) => {
+    incomeRows.push([item.name, formatCurrency(item.amount)]);
+  });
+  incomeRows.push(["รวมรายได้", formatCurrency(snap.gross_pay)]);
+
+  autoTable(doc, {
+    startY: 54,
+    head: [["รายการรายได้", "จำนวน (บาท)"]],
+    body: incomeRows,
+    styles: { fontSize: 11, font: "THSarabunNew" },
+    headStyles: headStyleGray,
+  });
+
+  const finalY = (doc as any).lastAutoTable?.finalY || 90;
+  const deductRows: string[][] = [
+    ["ประกันสังคม", formatCurrency(snap.ssf)],
+    ["ภาษีหัก ณ ที่จ่าย", formatCurrency(snap.tax)],
+  ];
+  (snap.custom_items || []).filter((i) => i.type === "deduction").forEach((item) => {
+    deductRows.push([item.name, formatCurrency(item.amount)]);
+  });
+  deductRows.push(["รวมหัก", formatCurrency(snap.total_deduct)]);
+
+  autoTable(doc, {
+    startY: finalY + 6,
+    head: [["รายการหัก", "จำนวน (บาท)"]],
+    body: deductRows,
+    styles: { fontSize: 11, font: "THSarabunNew" },
+    headStyles: headStyleGray,
+  });
+
+  const finalY2 = (doc as any).lastAutoTable?.finalY || 130;
+  doc.setFontSize(16);
+  doc.setFont("THSarabunNew", "bold");
+  doc.text(`เงินได้สุทธิ: ${formatCurrency(snap.net_pay)} บาท`, 14, finalY2 + 14);
+
+  doc.save(`Payslip_${emp.firstName}_${emp.lastName}_${month}_${year}.pdf`);
+}
