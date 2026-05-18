@@ -439,12 +439,50 @@ const Payroll = () => {
     return Array.from(s).sort();
   }, [activeEmployees]);
 
+  // Period & snapshot integration
+  const { period, payslips: snapshotRows, loading: periodLoading, refetch: refetchPeriod } = usePayrollPeriod(selectedYear, selectedMonth);
+  const { user } = useAuth();
+  const isPublished = period?.status === "published";
+  const hasPeriod = !!period;
+
+  const snapshotMap = useMemo(() => {
+    const m: Record<string, PayslipRow> = {};
+    snapshotRows.forEach((r) => { m[r.employee_id] = r; });
+    return m;
+  }, [snapshotRows]);
+
   const payrollData = useMemo(() => {
     return activeEmployees.map((emp) => {
+      // If a period exists, prefer the frozen snapshot
+      const snap = snapshotMap[emp.id];
+      if (snap) {
+        const att: AttendanceStats = snap.attendance || { workDays: 0, otHours: 0, lateDays: 0, absentDays: 0, leaveDays: 0 };
+        return {
+          emp,
+          payroll: {
+            salary: Number(snap.base_salary) || 0,
+            otPay: Number(snap.ot_pay) || 0,
+            otHours: Number(snap.ot_hours) || 0,
+            diligence: Number(snap.diligence) || 0,
+            grossPay: Number(snap.gross_pay) || 0,
+            ssf: Number(snap.ssf) || 0,
+            monthlyTax: Number(snap.tax) || 0,
+            totalDeduct: Number(snap.total_deduct) || 0,
+            netPay: Number(snap.net_pay) || 0,
+            att,
+            annualIncome: snap.tax_breakdown?.annualIncome || 0,
+            deductions: emp.taxDeductions || { ...DEFAULT_TAX_DEDUCTION },
+            customIncome: Number(snap.custom_income) || 0,
+            customDeductions: Number(snap.custom_deduction) || 0,
+            customItems: (snap.custom_items || []).map((i) => ({ ...i, enabled: true })) as CustomPayrollItem[],
+          },
+          fromSnapshot: true as const,
+        };
+      }
       const att = attendanceMap[emp.id] || { workDays: 0, otHours: 0, lateDays: 0, absentDays: 0, leaveDays: 0 };
-      return { emp, payroll: calcPayroll(emp, PAYROLL_CONFIG, att) };
+      return { emp, payroll: calcPayroll(emp, PAYROLL_CONFIG, att), fromSnapshot: false as const };
     });
-  }, [activeEmployees, attendanceMap]);
+  }, [activeEmployees, attendanceMap, snapshotMap]);
 
   /* ─── Collect all unique custom item names across employees ─── */
   const dynamicColumns = useMemo(() => {
