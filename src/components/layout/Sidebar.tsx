@@ -22,6 +22,7 @@ import {
   MapPin,
   Banknote,
   FileSignature,
+  Receipt,
 } from "lucide-react";
 
 interface SidebarProps {
