@@ -971,7 +971,7 @@ const Reports = () => {
     toast.info(`ฟังก์ชันส่งออก ${label} สำหรับรายงานนี้จะเปิดใช้งานเร็วๆ นี้`);
   };
 
-  const handlePrint = () => window.print();
+  
 
   const currentReport = reportTypes.find((r) => r.id === selectedReport);
 
