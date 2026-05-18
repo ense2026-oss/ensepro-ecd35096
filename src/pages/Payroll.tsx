@@ -244,7 +244,7 @@ function PayslipDialog({ open, onClose, emp, payroll }: { open: boolean; onClose
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+          <DialogTitle className="flex items-center gap-2 pb-[10px]">
             <Receipt className="w-5 h-5" style={{ color: "hsl(var(--primary))" }} />
             สลิปเงินเดือน - {emp.firstName} {emp.lastName}
           </DialogTitle>
