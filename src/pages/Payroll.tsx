@@ -669,7 +669,7 @@ const Payroll = () => {
                     <div className="flex items-center justify-center gap-1">
                       <button onClick={() => openPayslip(emp)} className="p-1.5 rounded-lg hover:bg-muted transition-colors" title="ดูสลิปเงินเดือน"><Eye className="w-4 h-4 text-muted-foreground" /></button>
                       <button onClick={() => openCustomItems(emp)} className="p-1.5 rounded-lg hover:bg-muted transition-colors" title="แก้ไขรายการเพิ่มเติม"><Settings2 className="w-4 h-4 text-muted-foreground" /></button>
-                      <button onClick={async () => { await exportPayslipPdf(emp); toast.success(`ส่งออกสลิป PDF: ${emp.firstName}`); }} className="p-1.5 rounded-lg hover:bg-muted transition-colors" title="ส่งออก PDF"><FileText className="w-3.5 h-3.5 text-muted-foreground" /></button>
+                      <button onClick={async () => { await exportPayslipPdf(emp, THAI_MONTHS[selectedMonth - 1], thaiYear); toast.success(`ส่งออกสลิป PDF: ${emp.firstName}`); }} className="p-1.5 rounded-lg hover:bg-muted transition-colors" title="ส่งออก PDF"><FileText className="w-3.5 h-3.5 text-muted-foreground" /></button>
                     </div>
                   </td>
                 </tr>
