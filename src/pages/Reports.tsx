@@ -41,7 +41,7 @@ import {
   ChevronDown,
   ChevronRight,
   Eye,
-  Printer,
+  
   RefreshCw,
   Banknote,
   Receipt,
@@ -971,7 +971,7 @@ const Reports = () => {
     toast.info(`ฟังก์ชันส่งออก ${label} สำหรับรายงานนี้จะเปิดใช้งานเร็วๆ นี้`);
   };
 
-  const handlePrint = () => window.print();
+  
 
   const currentReport = reportTypes.find((r) => r.id === selectedReport);
 
@@ -1005,10 +1005,6 @@ const Reports = () => {
             <button onClick={() => handleExport("pdf")} className="report-export-btn">
               <FileText className="w-4 h-4" />
               <span>PDF</span>
-            </button>
-            <button onClick={handlePrint} className="report-export-btn">
-              <Printer className="w-4 h-4" />
-              <span>พิมพ์</span>
             </button>
           </div>
         </div>
