@@ -150,7 +150,7 @@ const LeaveTypesSettings = () => {
       </div>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md p-5">
           <DialogHeader>
             <DialogTitle>{editingId ? "แก้ไขประเภทการลา" : "เพิ่มประเภทการลา"}</DialogTitle>
             <DialogDescription className="sr-only">กรอกข้อมูลประเภทการลา</DialogDescription>
