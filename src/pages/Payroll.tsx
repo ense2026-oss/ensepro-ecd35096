@@ -607,11 +607,11 @@ const Payroll = () => {
 
       {/* Table */}
       <div className="card-base overflow-hidden">
-        <div className="overflow-x-auto">
+        <div className="overflow-auto max-h-[60vh]">
           <table className="w-full text-sm whitespace-nowrap">
-            <thead>
+            <thead className="sticky top-0 z-20">
               <tr style={{ background: "hsl(var(--muted))" }}>
-                <th className="text-left px-4 py-3 font-semibold sticky left-0 z-10" style={{ background: "hsl(var(--muted))" }}>พนักงาน</th>
+                <th className="text-left px-4 py-3 font-semibold sticky left-0 z-30" style={{ background: "hsl(var(--muted))" }}>พนักงาน</th>
                 <th className="text-right px-3 py-3 font-semibold cursor-pointer select-none" onClick={() => toggleSort("salary")}>
                   เงินเดือน <SortIcon field="salary" />
                 </th>
