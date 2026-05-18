@@ -111,6 +111,7 @@ const AppRoutes = () => (
       <Route path="/check-in" element={<CheckIn />} />
       <Route path="/shift-management" element={<ShiftManagement />} />
       <Route path="/payroll" element={<Payroll />} />
+      <Route path="/my-payslips" element={<MyPayslips />} />
       <Route path="/day-off" element={<DayOff />} />
       <Route path="/reports" element={<Reports />} />
       <Route path="/notifications" element={<Notifications />} />
