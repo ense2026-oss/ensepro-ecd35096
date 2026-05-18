@@ -14,11 +14,13 @@ import {
   DEFAULT_TAX_DEDUCTION, type TaxConfig, type TaxDeduction,
 } from "@/utils/taxCalculation";
 import { toast } from "sonner";
-import { exportPnd1Excel, exportPnd1Pdf, exportPayslipExcel, exportPayslipPdf, exportAllPayslipsExcel } from "@/utils/exportPayroll";
+import { exportPnd1Excel, exportPnd1Pdf, exportPayslipExcel, exportPayslipPdf, exportPayslipPdfFromSnapshot, exportAllPayslipsExcel } from "@/utils/exportPayroll";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { usePayrollPeriod, type PayslipRow } from "@/hooks/usePayrollPeriod";
+import { useAuth } from "@/contexts/AuthContext";
 
 /* ─── Payroll config ─── */
 const PAYROLL_CONFIG = {
