@@ -582,6 +582,130 @@ const Payroll = () => {
 
   const thaiYear = selectedYear + 543;
 
+  /* ─── Period actions: calculate, publish, unpublish ─── */
+  const [savingPeriod, setSavingPeriod] = useState(false);
+
+  const computeAndSavePayslips = useCallback(async () => {
+    setSavingPeriod(true);
+    try {
+      // Ensure period exists
+      let periodId = period?.id;
+      if (!periodId) {
+        const { data: newPer, error } = await supabase
+          .from("payroll_periods")
+          .insert({ year: selectedYear, month: selectedMonth, status: "draft" })
+          .select()
+          .single();
+        if (error) throw error;
+        periodId = newPer.id;
+      } else if (isPublished) {
+        toast.error("รอบนี้เผยแพร่แล้ว — ต้องยกเลิกการเผยแพร่ก่อนคำนวณใหม่");
+        setSavingPeriod(false);
+        return;
+      }
+
+      // Compute snapshots for all active employees
+      const rows = activeEmployees.map((emp) => {
+        const att = attendanceMap[emp.id] || { workDays: 0, otHours: 0, lateDays: 0, absentDays: 0, leaveDays: 0 };
+        const p = calcPayroll(emp, PAYROLL_CONFIG, att);
+        const expenseDeduction = calculateExpenseDeduction(p.annualIncome);
+        const totalDeductions = calculateTotalDeductions(p.deductions);
+        const netIncome = Math.max(0, p.annualIncome - expenseDeduction - totalDeductions);
+        const annualTax = calculateProgressiveTax(netIncome);
+        return {
+          period_id: periodId,
+          employee_id: emp.id,
+          base_salary: p.salary,
+          ot_pay: p.otPay,
+          ot_hours: p.otHours,
+          diligence: p.diligence,
+          custom_income: p.customIncome,
+          custom_deduction: p.customDeductions,
+          gross_pay: p.grossPay,
+          ssf: p.ssf,
+          tax: p.monthlyTax,
+          total_deduct: p.totalDeduct,
+          net_pay: p.netPay,
+          attendance: att as any,
+          custom_items: p.customItems as any,
+          tax_breakdown: { annualIncome: p.annualIncome, expenseDeduction, totalDeductions, netIncome, annualTax } as any,
+        };
+      });
+
+      // Wipe existing snapshots for this period, then re-insert (simple recompute strategy)
+      await supabase.from("payslips").delete().eq("period_id", periodId);
+      const { error: insErr } = await supabase.from("payslips").insert(rows);
+      if (insErr) throw insErr;
+
+      await refetchPeriod();
+      toast.success(`บันทึกสลิปเดือน ${THAI_MONTHS[selectedMonth - 1]} ${thaiYear} แล้ว (${rows.length} คน)`);
+    } catch (e: any) {
+      console.error(e);
+      toast.error(e?.message || "บันทึกสลิปไม่สำเร็จ");
+    } finally {
+      setSavingPeriod(false);
+    }
+  }, [period?.id, isPublished, selectedYear, selectedMonth, activeEmployees, attendanceMap, refetchPeriod, thaiYear]);
+
+  const publishPeriod = useCallback(async () => {
+    if (!period) return;
+    setSavingPeriod(true);
+    try {
+      const { error } = await supabase
+        .from("payroll_periods")
+        .update({ status: "published", published_at: new Date().toISOString(), published_by: user?.id || null })
+        .eq("id", period.id);
+      if (error) throw error;
+
+      // Notify employees with a payslip in this period
+      const empIds = snapshotRows.map((r) => r.employee_id);
+      if (empIds.length > 0) {
+        const { data: empUsers } = await supabase
+          .from("employees")
+          .select("id, user_id")
+          .in("id", empIds);
+        const notes = (empUsers || [])
+          .filter((e: any) => e.user_id)
+          .map((e: any) => ({
+            user_id: e.user_id,
+            title: `สลิปเงินเดือนเดือน ${THAI_MONTHS[selectedMonth - 1]} ${thaiYear}`,
+            description: "พร้อมให้ดาวน์โหลดแล้วในเมนู 'สลิปเงินเดือนของฉัน'",
+            type: "system",
+            action_label: "เปิดดู",
+          }));
+        if (notes.length > 0) await supabase.from("app_notifications").insert(notes);
+      }
+
+      await refetchPeriod();
+      toast.success("เผยแพร่สลิปให้พนักงานเรียบร้อย");
+    } catch (e: any) {
+      console.error(e);
+      toast.error(e?.message || "เผยแพร่ไม่สำเร็จ");
+    } finally {
+      setSavingPeriod(false);
+    }
+  }, [period, snapshotRows, selectedMonth, thaiYear, refetchPeriod, user?.id]);
+
+  const unpublishPeriod = useCallback(async () => {
+    if (!period) return;
+    if (!confirm("ยกเลิกการเผยแพร่สลิปเดือนนี้?")) return;
+    setSavingPeriod(true);
+    try {
+      const { error } = await supabase
+        .from("payroll_periods")
+        .update({ status: "draft", published_at: null, published_by: null })
+        .eq("id", period.id);
+      if (error) throw error;
+      await refetchPeriod();
+      toast.success("ยกเลิกการเผยแพร่แล้ว");
+    } catch (e: any) {
+      toast.error(e?.message || "ยกเลิกไม่สำเร็จ");
+    } finally {
+      setSavingPeriod(false);
+    }
+  }, [period, refetchPeriod]);
+
+
   return (
     <div className="space-y-5">
       {/* Header */}
