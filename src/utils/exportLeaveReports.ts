@@ -29,7 +29,7 @@ export function exportLeaveSummaryExcel(data: any[], month: string, year: string
 export async function exportLeaveSummaryPdf(data: any[], month: string, year: string) {
   const doc = new jsPDF({ orientation: "landscape" });
   await registerThaiFont(doc);
-  doc.setFont("Sarabun");
+  doc.setFont("THSarabunNew");
   doc.setFontSize(16);
   doc.text(`สรุปการลาประจำเดือน ${month} ${year}`, 14, 18);
 
@@ -37,8 +37,8 @@ export async function exportLeaveSummaryPdf(data: any[], month: string, year: st
     startY: 26,
     head: [["ลำดับที่", "ชื่อ-สกุล", "ประเภท", "จาก", "ถึง", "วัน", "สถานะ"]],
     body: data.map((r, i) => [data.length - i, r.name, r.type, r.from, r.to, r.days, r.status]),
-    styles: { font: "Sarabun", fontSize: 10 },
-    headStyles: { fillColor: [255, 135, 15] },
+    styles: { font: "THSarabunNew", fontSize: 10 },
+    headStyles: { fillColor: [255, 135, 15], font: "THSarabunNew", fontStyle: "bold" },
   });
 
   doc.save(`สรุปการลา_${month}_${year}.pdf`);
@@ -84,7 +84,7 @@ export async function exportLeaveBalancePdf(data: any[], year: string) {
 
   const doc = new jsPDF({ orientation: "landscape" });
   await registerThaiFont(doc);
-  doc.setFont("Sarabun");
+  doc.setFont("THSarabunNew");
   doc.setFontSize(16);
   doc.text(`โควต้าการลาคงเหลือ ปี ${year}`, 14, 18);
 
@@ -101,8 +101,8 @@ export async function exportLeaveBalancePdf(data: any[], year: string) {
     startY: 26,
     head: [head],
     body,
-    styles: { font: "Sarabun", fontSize: 9, cellPadding: 2 },
-    headStyles: { fillColor: [255, 135, 15], fontSize: 8 },
+    styles: { font: "THSarabunNew", fontSize: 9, cellPadding: 2 },
+    headStyles: { fillColor: [255, 135, 15], font: "THSarabunNew", fontStyle: "bold", fontSize: 8 },
     columnStyles: { 0: { cellWidth: 14 }, 1: { cellWidth: 35 } },
   });
 
@@ -142,7 +142,7 @@ export function exportLeaveYearlyExcel(data: any[], year: string) {
 export async function exportLeaveYearlyPdf(data: any[], year: string) {
   const doc = new jsPDF({ orientation: "landscape" });
   await registerThaiFont(doc);
-  doc.setFont("Sarabun");
+  doc.setFont("THSarabunNew");
   doc.setFontSize(16);
   doc.text(`สรุปการลาประจำปี ${year}`, 14, 18);
 
@@ -164,8 +164,8 @@ export async function exportLeaveYearlyPdf(data: any[], year: string) {
     startY: 26,
     head: [head],
     body,
-    styles: { font: "Sarabun", fontSize: 9, halign: "center" },
-    headStyles: { fillColor: [255, 135, 15], fontSize: 8 },
+    styles: { font: "THSarabunNew", fontSize: 9, halign: "center" },
+    headStyles: { fillColor: [255, 135, 15], font: "THSarabunNew", fontStyle: "bold", fontSize: 8 },
     columnStyles: { 0: { halign: "left", cellWidth: 30 } },
   });
 
