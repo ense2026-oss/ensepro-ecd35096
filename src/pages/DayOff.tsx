@@ -62,7 +62,8 @@ function computeDayoffStatus(empId: string, dateIso: string, dow: number, patter
 
 const DayOff = () => {
   const { toast } = useToast();
-  const { employees } = useEmployees();
+  const { employees: allEmployees } = useEmployees();
+  const employees = useMemo(() => allEmployees.filter((e: any) => (e.role || "").toLowerCase() !== "admin"), [allEmployees]);
   const { user, role, currentUser } = useAuth();
   const isEmployeeRole = role.toLowerCase() === "employee";
   const employeeId = currentUser?.employeeId || null;
