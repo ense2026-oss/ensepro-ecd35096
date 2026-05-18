@@ -193,18 +193,22 @@ export async function exportPnd1Pdf(employees: Employee[], month: string, year: 
   doc.save(`PND1_${month}_${year}.pdf`);
 }
 
-export async function exportPayslipPdf(emp: Employee) {
+export async function exportPayslipPdf(emp: Employee, month?: string, year?: string | number) {
   const p = calcPayrollForExport(emp);
   const doc = await createPdf();
 
   doc.setFontSize(20);
   doc.setFont("THSarabunNew", "bold");
   doc.text("สลิปเงินเดือน", 14, 18);
-  doc.setFontSize(12);
+  doc.setFontSize(14);
   doc.setFont("THSarabunNew", "normal");
-  doc.text(`พนักงาน: ${emp.prefix}${emp.firstName} ${emp.lastName}`, 14, 28);
-  doc.text(`ตำแหน่ง: ${emp.position} | แผนก: ${emp.dept}`, 14, 34);
-  doc.text(`เลขบัตรประชาชน: ${emp.nationalId}`, 14, 40);
+  if (month && year) {
+    doc.text(`ประจำเดือน ${month} ${year}`, 14, 26);
+  }
+  doc.setFontSize(12);
+  doc.text(`พนักงาน: ${emp.prefix}${emp.firstName} ${emp.lastName}`, 14, 34);
+  doc.text(`ตำแหน่ง: ${emp.position} | แผนก: ${emp.dept}`, 14, 40);
+  doc.text(`เลขบัตรประชาชน: ${emp.nationalId}`, 14, 46);
 
   const incomeRows: string[][] = [
     ["เงินเดือน", formatCurrency(p.salary)],
@@ -217,7 +221,7 @@ export async function exportPayslipPdf(emp: Employee) {
   incomeRows.push(["รวมรายได้", formatCurrency(p.grossPay)]);
 
   autoTable(doc, {
-    startY: 48,
+    startY: 54,
     head: [["รายการรายได้", "จำนวน (บาท)"]],
     body: incomeRows,
     styles: { fontSize: 11, font: "THSarabunNew" },
@@ -247,5 +251,6 @@ export async function exportPayslipPdf(emp: Employee) {
   doc.setFont("THSarabunNew", "bold");
   doc.text(`เงินได้สุทธิ: ${formatCurrency(p.netPay)} บาท`, 14, finalY2 + 14);
 
-  doc.save(`Payslip_${emp.firstName}_${emp.lastName}.pdf`);
+  const suffix = month && year ? `_${month}_${year}` : "";
+  doc.save(`Payslip_${emp.firstName}_${emp.lastName}${suffix}.pdf`);
 }
