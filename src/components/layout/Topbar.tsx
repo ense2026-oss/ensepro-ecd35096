@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useModuleSettings } from "@/hooks/useModuleSettings";
-import { Search, Bell, ChevronDown, Settings, User, LogOut, Menu, MapPin, Clock, CalendarDays, Users, FileText, LayoutDashboard, GitBranch } from "lucide-react";
+import { Bell, ChevronDown, Settings, User, LogOut, Menu, MapPin } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/contexts/PermissionsContext";
@@ -22,40 +22,12 @@ const Topbar = ({ onMenuToggle, pageTitle = "Dashboard", pageSubtitle = "ภา�
   const { setNotificationCount } = usePendingCounts();
   const [showProfile, setShowProfile] = useState(false);
   const [showNotif, setShowNotif] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [showSearch, setShowSearch] = useState(false);
   const notifRef = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
-  const searchRef = useRef<HTMLDivElement>(null);
 
   // Module settings for check-in visibility (from DB via hook)
   const { modules: moduleSettings } = useModuleSettings();
   const isCheckInEnabled = moduleSettings['check-in'] !== false;
-
-  // Demo searchable items
-  const searchableItems = [
-    { label: "Dashboard", description: "ภาพรวมระบบ HR", path: "/dashboard", category: "เมนู", icon: LayoutDashboard },
-    { label: "พนักงาน", description: "จัดการข้อมูลพนักงาน", path: "/employees", category: "เมนู", icon: Users },
-    { label: "โครงสร้างองค์กร", description: "แผนผังแผนกและตำแหน่ง", path: "/organization", category: "เมนู", icon: GitBranch },
-    { label: "เวลาเข้าออกงาน", description: "บันทึกเวลาทำงาน", path: "/attendance", category: "เมนู", icon: Clock },
-    { label: "ลางาน", description: "จัดการคำขอลาและโควต้า", path: "/leave", category: "เมนู", icon: CalendarDays },
-    { label: "โอที", description: "คำขอทำงานล่วงเวลา", path: "/overtime", category: "เมนู", icon: Clock },
-    { label: "รายงาน", description: "สรุปและส่งออกรายงาน", path: "/reports", category: "เมนู", icon: FileText },
-    { label: "ตั้งค่าระบบ", description: "กำหนดค่าระบบ บริษัท สิทธิ์", path: "/settings", category: "เมนู", icon: Settings },
-    { label: "สมชาย ใจดี", description: "พนักงาน · แผนก IT", path: "/employees", category: "พนักงาน", icon: User },
-    { label: "นภา สดใส", description: "พนักงาน · แผนก HR", path: "/employees", category: "พนักงาน", icon: User },
-    { label: "วิชัย เก่งกาจ", description: "พนักงาน · แผนก Sales", path: "/employees", category: "พนักงาน", icon: User },
-    { label: "ประภาส มั่นคง", description: "พนักงาน · แผนก Finance", path: "/employees", category: "พนักงาน", icon: User },
-    { label: "สมหญิง รักงาน", description: "พนักงาน · แผนก HR", path: "/employees", category: "พนักงาน", icon: User },
-  ];
-
-  const searchResults = useMemo(() => {
-    if (!searchQuery.trim()) return [];
-    const q = searchQuery.toLowerCase();
-    return searchableItems.filter(
-      (item) => item.label.toLowerCase().includes(q) || item.description.toLowerCase().includes(q) || item.category.toLowerCase().includes(q)
-    ).slice(0, 8);
-  }, [searchQuery]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -64,9 +36,6 @@ const Topbar = ({ onMenuToggle, pageTitle = "Dashboard", pageSubtitle = "ภา�
       }
       if (profileRef.current && !profileRef.current.contains(e.target as Node)) {
         setShowProfile(false);
-      }
-      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
-        setShowSearch(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -116,66 +85,6 @@ const Topbar = ({ onMenuToggle, pageTitle = "Dashboard", pageSubtitle = "ภา�
         <div>
           <h1 className="text-base font-bold font-display leading-tight">{pageTitle}</h1>
           <p className="text-xs text-muted-foreground leading-tight hidden sm:block">{pageSubtitle}</p>
-        </div>
-      </div>
-
-      {/* Center: Search - hidden on mobile/iPad */}
-      <div className="hidden lg:flex items-center flex-1 max-w-md mx-6">
-        <div className="relative w-full">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <input
-            type="text"
-            placeholder="ค้นหาพนักงาน, แผนก, รายการ..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            onFocus={() => setShowSearch(true)}
-            className="w-full pl-10 pr-4 py-2 text-sm rounded-xl border bg-muted/50 outline-none focus:ring-2 transition-all"
-            style={{
-              borderColor: "hsl(var(--border))",
-            }}
-          />
-          <kbd className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded font-mono">
-            ⌘K
-          </kbd>
-          {/* Search results dropdown */}
-          {showSearch && searchQuery.trim().length > 0 && (
-            <div
-              ref={searchRef}
-              className="absolute left-0 right-0 top-full mt-2 rounded-xl border overflow-hidden z-50"
-              style={{
-                background: "hsl(var(--card))",
-                border: "1px solid hsl(var(--border))",
-                boxShadow: "0 20px 60px rgba(0,0,0,0.15)",
-              }}
-            >
-              <div className="max-h-72 overflow-y-auto">
-                {searchResults.length === 0 ? (
-                  <div className="p-4 text-center text-sm text-muted-foreground">ไม่พบผลลัพธ์</div>
-                ) : (
-                  searchResults.map((r) => (
-                    <button
-                      key={r.path}
-                      onClick={() => { navigate(r.path); setShowSearch(false); setSearchQuery(""); }}
-                      className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted/50 transition-colors text-left border-b last:border-b-0"
-                      style={{ borderColor: "hsl(var(--border))" }}
-                    >
-                      <r.icon className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium truncate">{r.label}</p>
-                        <p className="text-xs text-muted-foreground truncate">{r.description}</p>
-                      </div>
-                      <span
-                        className="text-[10px] font-medium px-1.5 py-0.5 rounded flex-shrink-0 ml-auto"
-                        style={{ background: "hsl(var(--muted))" }}
-                      >
-                        {r.category}
-                      </span>
-                    </button>
-                  ))
-                )}
-              </div>
-            </div>
-          )}
         </div>
       </div>
 
