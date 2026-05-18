@@ -743,7 +743,60 @@ const Payroll = () => {
         </div>
       </div>
 
+      {/* Period status banner */}
+      <div
+        className="card-base p-4 flex flex-col md:flex-row md:items-center gap-3 justify-between"
+        style={{
+          borderLeft: `4px solid ${isPublished ? "hsl(142 70% 40%)" : hasPeriod ? "hsl(31 100% 53%)" : "hsl(var(--muted-foreground))"}`,
+        }}
+      >
+        <div className="flex items-center gap-3">
+          <Receipt className="w-5 h-5 text-muted-foreground" />
+          <div>
+            <p className="font-semibold">
+              รอบเงินเดือน {THAI_MONTHS[selectedMonth - 1]} {thaiYear}
+              <span
+                className="ml-2 inline-block px-2 py-0.5 rounded-full text-xs font-medium"
+                style={{
+                  background: isPublished ? "hsl(142 70% 90%)" : hasPeriod ? "hsl(31 100% 93%)" : "hsl(var(--muted))",
+                  color: isPublished ? "hsl(142 70% 30%)" : hasPeriod ? "hsl(31 100% 40%)" : "hsl(var(--muted-foreground))",
+                }}
+              >
+                {isPublished ? "เผยแพร่แล้ว" : hasPeriod ? "ฉบับร่าง" : "ยังไม่ได้คำนวณ"}
+              </span>
+            </p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {isPublished
+                ? `เผยแพร่เมื่อ ${period?.published_at ? new Date(period.published_at).toLocaleString("th-TH") : "-"} • พนักงานเห็นสลิปของตัวเองได้แล้ว`
+                : hasPeriod
+                ? `บันทึกสลิป ${snapshotRows.length} คน — ตรวจสอบและกด 'เผยแพร่' เพื่อส่งให้พนักงาน`
+                : "ตัวเลขด้านล่างคำนวณจากข้อมูลล่าสุด กดปุ่มเพื่อบันทึกเป็นสลิปประจำเดือนนี้"}
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 flex-wrap">
+          {!isPublished && (
+            <Button onClick={computeAndSavePayslips} disabled={savingPeriod || loadingData} size="sm">
+              <Calculator className="w-4 h-4 mr-1.5" />
+              {hasPeriod ? "คำนวณใหม่" : "คำนวณและบันทึกสลิปเดือนนี้"}
+            </Button>
+          )}
+          {hasPeriod && !isPublished && (
+            <Button onClick={publishPeriod} disabled={savingPeriod || snapshotRows.length === 0} size="sm" variant="default">
+              <FileText className="w-4 h-4 mr-1.5" />
+              เผยแพร่ให้พนักงาน
+            </Button>
+          )}
+          {isPublished && (
+            <Button onClick={unpublishPeriod} disabled={savingPeriod} size="sm" variant="outline">
+              ยกเลิกการเผยแพร่
+            </Button>
+          )}
+        </div>
+      </div>
+
       {/* Summary Cards */}
+
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <SummaryCard icon={Banknote} label="รายได้รวม" value={`฿${formatCurrency(totals.gross)}`} color="hsl(var(--primary))" bg="hsl(var(--primary) / 0.1)" />
         <SummaryCard icon={Calculator} label="ภาษีหัก ณ ที่จ่าย" value={`฿${formatCurrency(totals.tax)}`} color="hsl(31 100% 53%)" bg="hsl(31 100% 93%)" />
