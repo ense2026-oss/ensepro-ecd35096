@@ -165,7 +165,7 @@ export async function exportLeaveYearlyPdf(data: any[], year: string) {
     head: [head],
     body,
     styles: { font: "THSarabunNew", fontSize: 9, halign: "center" },
-    headStyles: { fillColor: [255, 135, 15], fontSize: 8 },
+    headStyles: { fillColor: [255, 135, 15], font: "THSarabunNew", fontStyle: "bold", fontSize: 8 },
     columnStyles: { 0: { halign: "left", cellWidth: 30 } },
   });
 
