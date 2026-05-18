@@ -27,6 +27,7 @@ import OvertimeRequest from "@/pages/OvertimeRequest";
 import CheckIn from "@/pages/CheckIn";
 import ShiftManagement from "@/pages/ShiftManagement";
 import Payroll from "@/pages/Payroll";
+import MyPayslips from "@/pages/MyPayslips";
 import Contracts from "@/pages/Contracts";
 import ContractDetail from "@/pages/ContractDetail";
 import DayOff from "@/pages/DayOff";
