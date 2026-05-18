@@ -119,66 +119,6 @@ const Topbar = ({ onMenuToggle, pageTitle = "Dashboard", pageSubtitle = "ภา�
         </div>
       </div>
 
-      {/* Center: Search - hidden on mobile/iPad */}
-      <div className="hidden lg:flex items-center flex-1 max-w-md mx-6">
-        <div className="relative w-full">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <input
-            type="text"
-            placeholder="ค้นหาพนักงาน, แผนก, รายการ..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            onFocus={() => setShowSearch(true)}
-            className="w-full pl-10 pr-4 py-2 text-sm rounded-xl border bg-muted/50 outline-none focus:ring-2 transition-all"
-            style={{
-              borderColor: "hsl(var(--border))",
-            }}
-          />
-          <kbd className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded font-mono">
-            ⌘K
-          </kbd>
-          {/* Search results dropdown */}
-          {showSearch && searchQuery.trim().length > 0 && (
-            <div
-              ref={searchRef}
-              className="absolute left-0 right-0 top-full mt-2 rounded-xl border overflow-hidden z-50"
-              style={{
-                background: "hsl(var(--card))",
-                border: "1px solid hsl(var(--border))",
-                boxShadow: "0 20px 60px rgba(0,0,0,0.15)",
-              }}
-            >
-              <div className="max-h-72 overflow-y-auto">
-                {searchResults.length === 0 ? (
-                  <div className="p-4 text-center text-sm text-muted-foreground">ไม่พบผลลัพธ์</div>
-                ) : (
-                  searchResults.map((r) => (
-                    <button
-                      key={r.path}
-                      onClick={() => { navigate(r.path); setShowSearch(false); setSearchQuery(""); }}
-                      className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted/50 transition-colors text-left border-b last:border-b-0"
-                      style={{ borderColor: "hsl(var(--border))" }}
-                    >
-                      <r.icon className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium truncate">{r.label}</p>
-                        <p className="text-xs text-muted-foreground truncate">{r.description}</p>
-                      </div>
-                      <span
-                        className="text-[10px] font-medium px-1.5 py-0.5 rounded flex-shrink-0 ml-auto"
-                        style={{ background: "hsl(var(--muted))" }}
-                      >
-                        {r.category}
-                      </span>
-                    </button>
-                  ))
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-
       {/* Right: Actions */}
       <div className="flex items-center gap-2">
         {/* Check-in Button - hidden when check-in module is disabled */}
