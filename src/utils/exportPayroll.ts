@@ -221,7 +221,7 @@ export async function exportPayslipPdf(emp: Employee, month?: string, year?: str
   incomeRows.push(["รวมรายได้", formatCurrency(p.grossPay)]);
 
   autoTable(doc, {
-    startY: 48,
+    startY: 54,
     head: [["รายการรายได้", "จำนวน (บาท)"]],
     body: incomeRows,
     styles: { fontSize: 11, font: "THSarabunNew" },
