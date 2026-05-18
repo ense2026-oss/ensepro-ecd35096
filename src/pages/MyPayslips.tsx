@@ -123,8 +123,8 @@ const MyPayslips = () => {
                       </button>
                       <button
                         onClick={async () => {
-                          if (!me) return;
-                          await exportPayslipPdfFromSnapshot(me, r, THAI_MONTHS[r.period.month - 1], r.period.year + 543);
+                          if (!meForExport) return;
+                          await exportPayslipPdfFromSnapshot(meForExport!, r, THAI_MONTHS[r.period.month - 1], r.period.year + 543);
                           toast.success("ดาวน์โหลดสลิปแล้ว");
                         }}
                         className="p-1.5 rounded-lg hover:bg-muted"
@@ -174,8 +174,8 @@ const MyPayslips = () => {
               <Button
                 className="w-full"
                 onClick={async () => {
-                  if (!me) return;
-                  await exportPayslipPdfFromSnapshot(me, selected, THAI_MONTHS[selected.period.month - 1], selected.period.year + 543);
+                  if (!meForExport) return;
+                  await exportPayslipPdfFromSnapshot(meForExport!, selected, THAI_MONTHS[selected.period.month - 1], selected.period.year + 543);
                   toast.success("ดาวน์โหลดสลิปแล้ว");
                 }}
               >
