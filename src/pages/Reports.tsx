@@ -1006,10 +1006,6 @@ const Reports = () => {
               <FileText className="w-4 h-4" />
               <span>PDF</span>
             </button>
-            <button onClick={handlePrint} className="report-export-btn">
-              <Printer className="w-4 h-4" />
-              <span>พิมพ์</span>
-            </button>
           </div>
         </div>
 
