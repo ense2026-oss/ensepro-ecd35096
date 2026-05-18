@@ -4,7 +4,38 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { registerThaiFont } from "@/utils/thaiFontLoader";
 import { createExcelWithHeader, addExcelHeader } from "@/utils/excelHeader";
+import { supabase } from "@/integrations/supabase/client";
 import type { Employee } from "@/contexts/EmployeeContext";
+
+async function fetchCompanyLogo(): Promise<string | null> {
+  try {
+    const { data } = await supabase
+      .from("company_settings")
+      .select("value")
+      .eq("key", "branding")
+      .maybeSingle();
+    const v = data?.value as any;
+    return v?.logoOnlyUrl || v?.logoUrl || null;
+  } catch {
+    return null;
+  }
+}
+
+async function urlToDataUrl(url: string): Promise<{ dataUrl: string; format: string } | null> {
+  try {
+    const res = await fetch(url);
+    const blob = await res.blob();
+    const format = blob.type.includes("png") ? "PNG" : blob.type.includes("jpeg") || blob.type.includes("jpg") ? "JPEG" : "PNG";
+    return await new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve({ dataUrl: reader.result as string, format });
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return null;
+  }
+}
 import {
   calculateAnnualIncome, calculateMonthlyTax, calculateExpenseDeduction,
   calculateTotalDeductions, calculateProgressiveTax, formatCurrency,
@@ -197,6 +228,25 @@ export async function exportPayslipPdf(emp: Employee, month?: string, year?: str
   const p = calcPayrollForExport(emp);
   const doc = await createPdf();
 
+  // Company logo in top-right circle
+  const logoUrl = await fetchCompanyLogo();
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const circleX = pageWidth - 25;
+  const circleY = 22;
+  const circleR = 14;
+  doc.setDrawColor(180, 180, 180);
+  doc.setLineWidth(0.4);
+  doc.circle(circleX, circleY, circleR, "S");
+  if (logoUrl) {
+    const img = await urlToDataUrl(logoUrl);
+    if (img) {
+      try {
+        const size = circleR * 1.6;
+        doc.addImage(img.dataUrl, img.format, circleX - size / 2, circleY - size / 2, size, size);
+      } catch { /* ignore */ }
+    }
+  }
+
   doc.setFontSize(20);
   doc.setFont("THSarabunNew", "bold");
   doc.text("สลิปเงินเดือน", 14, 18);
@@ -220,12 +270,21 @@ export async function exportPayslipPdf(emp: Employee, month?: string, year?: str
   });
   incomeRows.push(["รวมรายได้", formatCurrency(p.grossPay)]);
 
+  const headStyleGray = {
+    fillColor: [243, 244, 246] as [number, number, number],
+    textColor: [55, 65, 81] as [number, number, number],
+    font: "THSarabunNew",
+    fontStyle: "bold" as const,
+    lineColor: [209, 213, 219] as [number, number, number],
+    lineWidth: 0.2,
+  };
+
   autoTable(doc, {
     startY: 54,
     head: [["รายการรายได้", "จำนวน (บาท)"]],
     body: incomeRows,
     styles: { fontSize: 11, font: "THSarabunNew" },
-    headStyles: { fillColor: [34, 197, 94], font: "THSarabunNew", fontStyle: "bold" },
+    headStyles: headStyleGray,
   });
 
   const finalY = (doc as any).lastAutoTable?.finalY || 90;
@@ -243,7 +302,7 @@ export async function exportPayslipPdf(emp: Employee, month?: string, year?: str
     head: [["รายการหัก", "จำนวน (บาท)"]],
     body: deductRows,
     styles: { fontSize: 11, font: "THSarabunNew" },
-    headStyles: { fillColor: [239, 68, 68], font: "THSarabunNew", fontStyle: "bold" },
+    headStyles: headStyleGray,
   });
 
   const finalY2 = (doc as any).lastAutoTable?.finalY || 130;
