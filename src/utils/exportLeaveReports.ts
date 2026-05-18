@@ -38,7 +38,7 @@ export async function exportLeaveSummaryPdf(data: any[], month: string, year: st
     head: [["ลำดับที่", "ชื่อ-สกุล", "ประเภท", "จาก", "ถึง", "วัน", "สถานะ"]],
     body: data.map((r, i) => [data.length - i, r.name, r.type, r.from, r.to, r.days, r.status]),
     styles: { font: "THSarabunNew", fontSize: 10 },
-    headStyles: { fillColor: [255, 135, 15] },
+    headStyles: { fillColor: [255, 135, 15], font: "THSarabunNew", fontStyle: "bold" },
   });
 
   doc.save(`สรุปการลา_${month}_${year}.pdf`);
