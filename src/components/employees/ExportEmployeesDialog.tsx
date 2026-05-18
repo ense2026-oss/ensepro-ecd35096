@@ -87,7 +87,7 @@ export default function ExportEmployeesDialog({ open, onOpenChange, employees }:
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+          <DialogTitle className="flex items-center gap-2 pb-[10px]">
             <Download className="w-5 h-5" />
             ส่งออกข้อมูลพนักงาน
           </DialogTitle>
