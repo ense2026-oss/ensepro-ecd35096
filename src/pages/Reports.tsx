@@ -283,12 +283,12 @@ const Reports = () => {
         supabase.from("leave_types").select("*").order("sort_order"),
         supabase.from("leave_requests").select("employee_id, leave_type_id, leave_type_name, date_from, days, status")
           .neq("status", "rejected"),
-        supabase.from("employees").select("id, first_name, last_name, username").eq("status", "active"),
+        supabase.from("employees").select("id, first_name, last_name, username, role").eq("status", "active"),
       ]);
 
       const leaveTypes = typesRes.data || [];
       const allRequests = requestsRes.data || [];
-      const emps = empsRes.data || [];
+      const emps = (empsRes.data || []).filter((e: any) => (e.role || "").toLowerCase() !== "admin");
 
       // Filter by year client-side
       const requests = allRequests.filter((r: any) => {
@@ -520,12 +520,12 @@ const Reports = () => {
       const [shiftsRes, assignmentsRes, empsRes] = await Promise.all([
         supabase.from("shifts").select("*").order("sort_order"),
         supabase.from("shift_assignments").select("*"),
-        supabase.from("employees").select("id, first_name, last_name, username, dept, shift").eq("status", "active"),
+        supabase.from("employees").select("id, first_name, last_name, username, dept, shift, role").eq("status", "active"),
       ]);
 
       const shifts = shiftsRes.data || [];
       const assignments = assignmentsRes.data || [];
-      const emps = empsRes.data || [];
+      const emps = (empsRes.data || []).filter((e: any) => (e.role || "").toLowerCase() !== "admin");
 
       const empMap = new Map(emps.map((e: any) => [e.id, e]));
       const shiftMap = new Map(shifts.map((s: any) => [s.id, s]));
@@ -643,11 +643,11 @@ const Reports = () => {
 
       const { data: allEmps, error } = await supabase
         .from("employees")
-        .select("id, username, first_name, last_name, dept, position, employee_type, start_date, status")
+        .select("id, username, first_name, last_name, dept, position, employee_type, start_date, status, role")
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      const emps = allEmps || [];
+      const emps = (allEmps || []).filter((e: any) => (e.role || "").toLowerCase() !== "admin");
 
       // Determine which employees to show based on report type
       if (selectedReport === "emp-all") {
@@ -698,9 +698,10 @@ const Reports = () => {
         // We need birth_date, so re-fetch
         const { data: bdEmps } = await supabase
           .from("employees")
-          .select("username, first_name, last_name, dept, position, birth_date, status")
+          .select("username, first_name, last_name, dept, position, birth_date, status, role")
           .eq("status", "active");
         const filtered = (bdEmps || []).filter((e: any) => {
+          if ((e.role || "").toLowerCase() === "admin") return false;
           const parsed = parseThaiDate(e.birth_date);
           return parsed && parsed.month === monthNum;
         });
@@ -756,10 +757,11 @@ const Reports = () => {
       const taxConfig: TaxConfig = { enabled: true, method: "progressive", flatRate: 5 };
 
       // Fetch active employees with salary
-      const { data: empsData } = await supabase
+      const { data: empsDataRaw } = await supabase
         .from("employees")
-        .select("id, first_name, last_name, salary, tax_deductions, pvd_rate, children, children_after_2018, status")
+        .select("id, first_name, last_name, salary, tax_deductions, pvd_rate, children, children_after_2018, status, role")
         .eq("status", "active");
+      const empsData = (empsDataRaw || []).filter((e: any) => (e.role || "").toLowerCase() !== "admin");
 
       // Fetch approved OT for the year
       const { data: otDataRaw } = await supabase
