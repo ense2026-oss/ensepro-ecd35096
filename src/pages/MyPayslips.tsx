@@ -36,9 +36,11 @@ const MyPayslips = () => {
     })();
   }, [user?.id]);
 
-  const [rows, setRows] = useState<PayslipWithPeriod[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [selected, setSelected] = useState<PayslipWithPeriod | null>(null);
+  const meForExport = useMemo(() => me ? {
+    prefix: me.prefix, firstName: me.first_name, lastName: me.last_name,
+    position: me.position, dept: me.dept, nationalId: me.national_id,
+  } : null, [me]);
+
 
   useEffect(() => {
     if (!me?.id) return;
