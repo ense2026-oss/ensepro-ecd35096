@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useRef, useCallback, forwardRef } from "react";
+import { useEffect, useState, useMemo, useRef, useCallback, forwardRef, Children, ReactNode } from "react";
 import {
   Users, UserCheck, UserX, Clock, TrendingUp, TrendingDown,
   Calendar, Briefcase, AlertCircle, CheckCircle, MapPin,
@@ -13,6 +13,28 @@ import { supabase } from "@/integrations/supabase/client";
 import { format, startOfMonth, endOfMonth } from "date-fns";
 import { th } from "date-fns/locale";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Carousel, CarouselContent, CarouselItem } from "@/components/ui/carousel";
+import { useIsMobile } from "@/hooks/use-mobile";
+
+/* ─── Mobile carousel wrapper for stat cards ─── */
+const StatCarousel = ({ children }: { children: ReactNode }) => {
+  const isMobile = useIsMobile();
+  const items = Children.toArray(children);
+  if (!isMobile) {
+    return <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">{children}</div>;
+  }
+  return (
+    <Carousel opts={{ align: "start", dragFree: true }} className="-mx-4 px-4">
+      <CarouselContent className="-ml-3">
+        {items.map((child, i) => (
+          <CarouselItem key={i} className="pl-3 basis-[70%]">
+            {child}
+          </CarouselItem>
+        ))}
+      </CarouselContent>
+    </Carousel>
+  );
+};
 
 /* ─── StatCard ─── */
 interface StatCardProps {
@@ -453,12 +475,12 @@ const Dashboard = () => {
           </div>
           <LiveClock />
         </div>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCarousel>
           {leaveQuotaCards.map((lq) => (
             <StatCard key={lq.name} title={`${lq.name}คงเหลือ`} value={loading ? "..." : Math.max(0, lq.quota - lq.used)} subtitle={`ใช้ไป ${lq.used} / ${lq.quota} วัน`} icon={Calendar} color={lq.color} bgColor={`${lq.color}20`} loading={loading} />
           ))}
           <StatCard title="OT เดือนนี้" value={loading ? "..." : myOtHoursMonth} subtitle="ชั่วโมง" icon={Clock} color="hsl(220 90% 50%)" bgColor="hsl(220 90% 93%)" loading={loading} />
-        </div>
+        </StatCarousel>
         <div className="card-base p-5">
           <h3 className="font-bold font-display mb-3">สถานะวันนี้</h3>
           <div className="grid grid-cols-2 gap-4">
@@ -517,19 +539,19 @@ const Dashboard = () => {
         </div>
       )}
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <StatCarousel>
         <StatCard title={`พนักงาน${viewType === "manager" ? "ในแผนก" : "ทั้งหมด"}`} value={totalEmployees} subtitle={`ใช้งานอยู่ ${activeEmployees} คน`} icon={Users} color="#FF870F" bgColor="hsl(31 100% 93%)" loading={loading} />
         <StatCard title="มาทำงานวันนี้" value={presentToday} subtitle={`${presentPercent}% ของพนักงาน${viewType === "manager" ? "ในแผนก" : "ทั้งหมด"}`} icon={UserCheck} color="hsl(90 100% 35%)" bgColor="hsl(90 100% 92%)" loading={loading} />
         <StatCard title="ลางานวันนี้" value={leaveToday} subtitle={`${leavePercent}%`} icon={Calendar} color="hsl(220 90% 50%)" bgColor="hsl(220 90% 93%)" loading={loading} />
         <StatCard title="มาสายวันนี้" value={lateToday} subtitle={`${latePercent}%`} icon={Clock} color="hsl(0 84% 55%)" bgColor="hsl(0 84% 95%)" loading={loading} />
-      </div>
+      </StatCarousel>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <StatCarousel>
         <StatCard title="OT เดือนนี้" value={`${monthOtHours} ชม.`} subtitle={`${otRequests.filter((o) => o.status === "approved" && o.date >= monthStart).length} รายการ`} icon={Briefcase} color="hsl(0 0% 45%)" bgColor="hsl(0 0% 92%)" loading={loading} />
         <StatCard title="รออนุมัติ" value={totalPending} subtitle={`ลา ${pendingLeaves} / OT ${pendingOT} / แก้เวลา ${pendingTimeEdits}`} icon={AlertCircle} color="#FF870F" bgColor="hsl(31 100% 93%)" loading={loading} />
         <StatCard title="อนุมัติแล้ว" value={approvedThisMonth} subtitle="เดือนนี้" icon={CheckCircle} color="hsl(90 100% 35%)" bgColor="hsl(90 100% 92%)" loading={loading} />
         <StatCard title="พนักงานใหม่" value={newEmployeesThisMonth} subtitle="เดือนนี้" icon={UserX} color="hsl(220 90% 50%)" bgColor="hsl(220 90% 93%)" loading={loading} />
-      </div>
+      </StatCarousel>
 
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
