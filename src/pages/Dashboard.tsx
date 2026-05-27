@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useRef, useCallback, forwardRef } from "react";
+import { useEffect, useState, useMemo, useRef, useCallback, forwardRef, Children, ReactNode } from "react";
 import {
   Users, UserCheck, UserX, Clock, TrendingUp, TrendingDown,
   Calendar, Briefcase, AlertCircle, CheckCircle, MapPin,
@@ -13,6 +13,28 @@ import { supabase } from "@/integrations/supabase/client";
 import { format, startOfMonth, endOfMonth } from "date-fns";
 import { th } from "date-fns/locale";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Carousel, CarouselContent, CarouselItem } from "@/components/ui/carousel";
+import { useIsMobile } from "@/hooks/use-mobile";
+
+/* ─── Mobile carousel wrapper for stat cards ─── */
+const StatCarousel = ({ children }: { children: ReactNode }) => {
+  const isMobile = useIsMobile();
+  const items = Children.toArray(children);
+  if (!isMobile) {
+    return <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">{children}</div>;
+  }
+  return (
+    <Carousel opts={{ align: "start", dragFree: true }} className="-mx-4 px-4">
+      <CarouselContent className="-ml-3">
+        {items.map((child, i) => (
+          <CarouselItem key={i} className="pl-3 basis-[70%]">
+            {child}
+          </CarouselItem>
+        ))}
+      </CarouselContent>
+    </Carousel>
+  );
+};
 
 /* ─── StatCard ─── */
 interface StatCardProps {
