@@ -475,12 +475,12 @@ const Dashboard = () => {
           </div>
           <LiveClock />
         </div>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCarousel>
           {leaveQuotaCards.map((lq) => (
             <StatCard key={lq.name} title={`${lq.name}คงเหลือ`} value={loading ? "..." : Math.max(0, lq.quota - lq.used)} subtitle={`ใช้ไป ${lq.used} / ${lq.quota} วัน`} icon={Calendar} color={lq.color} bgColor={`${lq.color}20`} loading={loading} />
           ))}
           <StatCard title="OT เดือนนี้" value={loading ? "..." : myOtHoursMonth} subtitle="ชั่วโมง" icon={Clock} color="hsl(220 90% 50%)" bgColor="hsl(220 90% 93%)" loading={loading} />
-        </div>
+        </StatCarousel>
         <div className="card-base p-5">
           <h3 className="font-bold font-display mb-3">สถานะวันนี้</h3>
           <div className="grid grid-cols-2 gap-4">
