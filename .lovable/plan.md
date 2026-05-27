@@ -1,75 +1,46 @@
-## ปัญหาปัจจุบัน
-
-1. หน้า `/payroll` คำนวณสลิปแบบ on-the-fly จาก `employees.salary` + attendance ของเดือนที่เลือก → เลือกเดือนไหนก็เห็นตัวเลขเดียวกัน เพราะไม่มี snapshot รายเดือน
-2. ไม่มีตาราง payslip ใน DB → ไม่มีประวัติ, แก้เงินเดือนวันนี้กระทบสลิปย้อนหลังทั้งหมด
-3. ไม่มีปุ่ม "ออกสลิป / เผยแพร่ให้พนักงาน" (publish workflow)
-4. พนักงานไม่มีหน้าดูสลิปของตัวเอง (icon ถูกซ่อนเฉพาะ accountant)
-5. ไม่มี RLS ที่ผูกสลิปกับพนักงานรายคน
-
 ## เป้าหมาย
+ในหน้า `/dashboard` เฉพาะมุมมองมือถือ (< 768px) ให้แสดงการ์ดสถิติ (StatCard widgets) เป็น **carousel แบบลากซ้าย-ขวาด้วยนิ้ว** แทน grid 2 คอลัมน์ปัจจุบัน บนเดสก์ท็อป/แท็บเล็ตคงเป็น grid เหมือนเดิม
 
-ระบบ Payslip ครบวงจร:
-- Accountant คำนวณ → บันทึก snapshot รายเดือน → กดเผยแพร่ → พนักงานได้รับแจ้งเตือนและดาวน์โหลด PDF ของตัวเองได้
+## ขอบเขต (เฉพาะ frontend)
+ไฟล์เดียว: `src/pages/Dashboard.tsx`
 
-## โครงสร้างที่จะสร้าง
+มีกลุ่มการ์ดสถิติ 3 จุดที่จะถูกแปลงเป็น carousel บนมือถือ:
+1. มุมมอง Employee — leave quota + OT card (บรรทัด ~456-461)
+2. มุมมอง Admin/HR/Manager แถวที่ 1 — พนักงาน/มาทำงาน/ลา/มาสาย (บรรทัด ~520-525)
+3. มุมมอง Admin/HR/Manager แถวที่ 2 — OT/รออนุมัติ/อนุมัติแล้ว/พนักงานใหม่ (บรรทัด ~527-532)
 
-### 1. ตารางใหม่ใน DB
+ส่วนอื่น (กราฟ, recent activity, dept status) ไม่เปลี่ยน
 
-**`payroll_periods`** (รอบเงินเดือนรายเดือน)
-- `year`, `month` (unique together)
-- `status`: `draft` | `published`
-- `published_at`, `published_by`
-- `note`
+## วิธีการ
+ใช้ shadcn `Carousel` component (`src/components/ui/carousel.tsx`) ซึ่งมาพร้อม embla-carousel-react อยู่แล้ว — รองรับ touch swipe ลื่นไหลในตัว
 
-**`payslips`** (สลิปต่อพนักงานต่อเดือน — snapshot ที่ freeze ไว้)
-- `period_id` → payroll_periods
-- `employee_id`
-- snapshot ทุกตัวเลข: `base_salary`, `ot_pay`, `ot_hours`, `diligence`, `gross_pay`, `ssf`, `tax`, `total_deduct`, `net_pay`
-- `attendance` (jsonb: workDays / lateDays / absentDays / leaveDays)
-- `custom_items` (jsonb: รายการ income/deduction พิเศษพร้อมยอด)
-- `tax_breakdown` (jsonb: annualIncome, deductions ฯลฯ สำหรับโชว์ในสลิป)
-- unique (`period_id`, `employee_id`)
+สร้าง wrapper component ภายในไฟล์:
 
-**RLS**:
-- Accountant / Admin / HR: จัดการได้ทุกอย่าง
-- Employee: SELECT ได้เฉพาะ `payslips` ของตัวเอง **และเฉพาะ period ที่ status = 'published'** เท่านั้น
-- ใช้ security definer function `is_payslip_visible(period_id)` เพื่อเช็ค status โดยไม่ recursion
+```tsx
+const StatCarousel = ({ children }: { children: React.ReactNode }) => {
+  const isMobile = useIsMobile();
+  if (!isMobile) {
+    return <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">{children}</div>;
+  }
+  return (
+    <Carousel opts={{ align: "start", dragFree: true }} className="-mx-4 px-4">
+      <CarouselContent className="-ml-3">
+        {React.Children.map(children, (child, i) => (
+          <CarouselItem key={i} className="pl-3 basis-[70%]">
+            {child}
+          </CarouselItem>
+        ))}
+      </CarouselContent>
+    </Carousel>
+  );
+};
+```
 
-### 2. หน้า `/payroll` (Accountant/Admin/HR)
+จากนั้นแทน `<div className="grid grid-cols-2 lg:grid-cols-4 gap-4">…</div>` ทั้ง 3 จุดด้วย `<StatCarousel>…</StatCarousel>`
 
-เพิ่มแถบสถานะรอบเดือน:
-- ถ้ายังไม่มีแถวใน `payroll_periods` ของเดือนที่เลือก → ปุ่ม **"คำนวณและบันทึกสลิปเดือนนี้"** (สร้าง period draft + insert payslips ทุกคนจาก calcPayroll ปัจจุบัน)
-- ถ้าเป็น draft → ตารางอ่านจาก `payslips` (snapshot), ปุ่ม **"คำนวณใหม่"** + ปุ่ม **"เผยแพร่ให้พนักงาน"**
-- ถ้า published → ตารางอ่านจาก snapshot อย่างเดียว, badge "เผยแพร่แล้ว", ปุ่ม **"ยกเลิกการเผยแพร่"** (กลับเป็น draft) สำหรับ admin
-- เมื่อเลือกเดือนที่ยังไม่มี snapshot → แสดง "ยังไม่ได้คำนวณ" แทนตัวเลขปัจจุบัน
-
-ตอนเผยแพร่:
-- update period.status = 'published'
-- insert `app_notifications` ให้พนักงานทุกคนที่มีสลิปในรอบนั้น ("สลิปเงินเดือนเดือน X พร้อมให้ดาวน์โหลดแล้ว")
-
-### 3. หน้าใหม่ `/my-payslips` (สำหรับพนักงานทุก role)
-
-- เปิด icon "สลิปเงินเดือนของฉัน" ใน sidebar/mobile nav ให้ทุก role (employee/hr/manager/executive/admin/accountant)
-- รายการสลิปของตัวเองเรียงตามเดือน (เฉพาะ published)
-- กดดูรายละเอียด → reuse `PayslipDialog` เดิม แต่ป้อนข้อมูลจาก snapshot
-- ปุ่มดาวน์โหลด PDF (เรียก `exportPayslipPdf` ด้วยข้อมูล snapshot + เดือน/ปี)
-
-### 4. ปรับ exportPayslipPdf
-
-รับ snapshot โดยตรงแทนการคำนวณจาก employee.salary ปัจจุบัน เพื่อให้ PDF ตรงกับสลิปที่ถูก freeze
-
-## รายละเอียดทางเทคนิค
-
-- Migration: สร้าง 2 ตาราง + RLS + function `is_payslip_published(period_id)` (security definer)
-- หน้า Payroll: เพิ่ม hook `usePayrollPeriod(year, month)` → คืน `{ period, payslips, status, refetch }`
-- การคำนวณ: เก็บ `calcPayroll` เดิมไว้สำหรับสร้าง snapshot, ไม่ใช้สำหรับแสดงผลโดยตรงอีกต่อไป
-- Realtime: subscribe `payroll_periods` เพื่อให้พนักงานเห็นสลิปทันทีหลังเผยแพร่
-- เมนู: เพิ่ม `/my-payslips` ใน Sidebar + MobileFooterNav, แสดงสำหรับทุก role
-
-## ขอบเขตงาน (เรียงลำดับ)
-
-1. Migration: `payroll_periods`, `payslips`, RLS, helper function
-2. ปรับ `Payroll.tsx`: โหลด snapshot, ปุ่มคำนวณ/เผยแพร่/ยกเลิก
-3. ปรับ `exportPayslipPdf` ให้รับ snapshot
-4. สร้าง `MyPayslips.tsx` + route + เมนู
-5. แจ้งเตือนพนักงานตอน publish
+## รายละเอียดเชิงเทคนิค
+- `basis-[70%]` ทำให้เห็นการ์ดถัดไปโผล่เป็น peek ~30% บอกใบ้ว่าลากต่อได้
+- `dragFree: true` ให้ลากอิสระเหมือน native scroll ไม่ snap แข็ง
+- ใช้ `useIsMobile()` (มีอยู่แล้วใน `src/hooks/use-mobile.tsx`, breakpoint 768px) ตัดสินใจ render
+- ไม่ต้องโชว์ปุ่ม Prev/Next (เพราะมือถือใช้ลากนิ้วอย่างเดียว)
+- ไม่กระทบ desktop layout, ไม่กระทบ data fetching, ไม่กระทบ logic อื่น
