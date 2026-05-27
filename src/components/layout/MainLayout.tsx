@@ -89,7 +89,7 @@ const MainLayout = () => {
           mobileSidebarOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        <Sidebar collapsed={false} onToggle={() => setMobileSidebarOpen(false)} onNavigate={() => setMobileSidebarOpen(false)} />
+        <Sidebar collapsed={false} onToggle={() => setMobileSidebarOpen(!mobileSidebarOpen)} onNavigate={() => setMobileSidebarOpen(false)} />
       </div>
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
         <Topbar
