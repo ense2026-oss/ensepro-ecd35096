@@ -544,9 +544,6 @@ const Dashboard = () => {
         <StatCard title="มาทำงานวันนี้" value={presentToday} subtitle={`${presentPercent}% ของพนักงาน${viewType === "manager" ? "ในแผนก" : "ทั้งหมด"}`} icon={UserCheck} color="hsl(90 100% 35%)" bgColor="hsl(90 100% 92%)" loading={loading} />
         <StatCard title="ลางานวันนี้" value={leaveToday} subtitle={`${leavePercent}%`} icon={Calendar} color="hsl(220 90% 50%)" bgColor="hsl(220 90% 93%)" loading={loading} />
         <StatCard title="มาสายวันนี้" value={lateToday} subtitle={`${latePercent}%`} icon={Clock} color="hsl(0 84% 55%)" bgColor="hsl(0 84% 95%)" loading={loading} />
-      </StatCarousel>
-
-      <StatCarousel>
         <StatCard title="OT เดือนนี้" value={`${monthOtHours} ชม.`} subtitle={`${otRequests.filter((o) => o.status === "approved" && o.date >= monthStart).length} รายการ`} icon={Briefcase} color="hsl(0 0% 45%)" bgColor="hsl(0 0% 92%)" loading={loading} />
         <StatCard title="รออนุมัติ" value={totalPending} subtitle={`ลา ${pendingLeaves} / OT ${pendingOT} / แก้เวลา ${pendingTimeEdits}`} icon={AlertCircle} color="#FF870F" bgColor="hsl(31 100% 93%)" loading={loading} />
         <StatCard title="อนุมัติแล้ว" value={approvedThisMonth} subtitle="เดือนนี้" icon={CheckCircle} color="hsl(90 100% 35%)" bgColor="hsl(90 100% 92%)" loading={loading} />
