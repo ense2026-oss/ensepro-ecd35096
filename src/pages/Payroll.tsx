@@ -680,7 +680,7 @@ const Payroll = () => {
       // Compute snapshots for all active employees
       const rows = activeEmployees.map((emp) => {
         const att = attendanceMap[emp.id] || { workDays: 0, otHours: 0, lateDays: 0, absentDays: 0, leaveDays: 0 };
-        const p = calcPayroll(emp, PAYROLL_CONFIG, att);
+        const p = calcPayroll(emp, PAYROLL_CONFIG, att, overrideMap[emp.id]);
         const expenseDeduction = calculateExpenseDeduction(p.annualIncome);
         const totalDeductions = calculateTotalDeductions(p.deductions);
         const netIncome = Math.max(0, p.annualIncome - expenseDeduction - totalDeductions);
