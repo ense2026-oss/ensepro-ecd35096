@@ -374,6 +374,7 @@ const Payroll = () => {
 
   // Real attendance data
   const [attendanceMap, setAttendanceMap] = useState<Record<string, AttendanceStats>>({});
+  const [overrideMap, setOverrideMap] = useState<Record<string, PayrollOverride>>({});
   const [loadingData, setLoadingData] = useState(true);
 
   const activeEmployees = useMemo(() => employees.filter((e) => e.status === "active"), [employees]);
