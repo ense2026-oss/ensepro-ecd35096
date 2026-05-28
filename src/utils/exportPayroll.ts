@@ -338,10 +338,14 @@ export async function exportPayslipPdfFromSnapshot(
   snap: PayslipSnapshotLike,
   month: string,
   year: string | number,
+  onProgress?: (pct: number) => void,
 ) {
+  onProgress?.(5);
   const doc = await createPdf();
+  onProgress?.(30);
 
   const logoUrl = await fetchCompanyLogo();
+  onProgress?.(50);
   const pageWidth = doc.internal.pageSize.getWidth();
   const circleX = pageWidth - 25;
   const circleY = 22;
