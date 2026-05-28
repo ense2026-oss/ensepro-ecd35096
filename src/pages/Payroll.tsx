@@ -448,6 +448,61 @@ const Payroll = () => {
     }
   }, [activeEmployees, selectedMonth, selectedYear]);
 
+  // Fetch overrides for the selected month
+  const fetchOverrides = useCallback(async () => {
+    const { data, error } = await supabase
+      .from("payroll_overrides")
+      .select("*")
+      .eq("year", selectedYear)
+      .eq("month", selectedMonth);
+    if (error) {
+      console.error("Failed to load payroll overrides", error);
+      return;
+    }
+    const m: Record<string, PayrollOverride> = {};
+    (data || []).forEach((row: any) => {
+      m[row.employee_id] = {
+        base_salary: row.base_salary,
+        ot_pay: row.ot_pay,
+        diligence: row.diligence,
+        ssf: row.ssf,
+        tax: row.tax,
+      };
+    });
+    setOverrideMap(m);
+  }, [selectedYear, selectedMonth]);
+
+  useEffect(() => { fetchOverrides(); }, [fetchOverrides]);
+
+  const setOverrideField = useCallback(async (
+    employeeId: string,
+    field: keyof PayrollOverride,
+    value: number,
+  ) => {
+    // Optimistic update
+    setOverrideMap((prev) => ({
+      ...prev,
+      [employeeId]: { ...(prev[employeeId] || {}), [field]: value },
+    }));
+    const existing = overrideMap[employeeId];
+    const payload: any = {
+      employee_id: employeeId,
+      year: selectedYear,
+      month: selectedMonth,
+      ...(existing || {}),
+      [field]: value,
+    };
+    const { error } = await supabase
+      .from("payroll_overrides")
+      .upsert(payload, { onConflict: "employee_id,year,month" });
+    if (error) {
+      console.error(error);
+      toast.error("บันทึกค่าไม่สำเร็จ: " + error.message);
+      fetchOverrides();
+    }
+  }, [overrideMap, selectedMonth, selectedYear, fetchOverrides]);
+
+
   const depts = useMemo(() => {
     const s = new Set(activeEmployees.map((e) => e.dept));
     return Array.from(s).sort();
