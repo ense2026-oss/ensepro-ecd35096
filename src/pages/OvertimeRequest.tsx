@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import {
   Clock, Plus, Search, Download, CheckCircle, CheckCircle2, XCircle,
-  Hourglass, TrendingUp, FileText, ChevronDown, X, AlertCircle
+  Hourglass, TrendingUp, FileText, ChevronDown, X, AlertCircle, Eye
 } from "lucide-react";
 import { useEmployees } from "@/contexts/EmployeeContext";
 import { usePendingCounts } from "@/contexts/PendingCountsContext";
