@@ -526,23 +526,27 @@ const Payroll = () => {
       const snap = snapshotMap[emp.id];
       if (snap) {
         const att: AttendanceStats = snap.attendance || { workDays: 0, otHours: 0, lateDays: 0, absentDays: 0, leaveDays: 0 };
+        const ov = overrideMap[emp.id];
+        const salary = ov?.base_salary != null ? Number(ov.base_salary) : Number(snap.base_salary) || 0;
+        const otPay = ov?.ot_pay != null ? Number(ov.ot_pay) : Number(snap.ot_pay) || 0;
+        const diligence = ov?.diligence != null ? Number(ov.diligence) : Number(snap.diligence) || 0;
+        const ssf = ov?.ssf != null ? Number(ov.ssf) : Number(snap.ssf) || 0;
+        const monthlyTax = ov?.tax != null ? Number(ov.tax) : Number(snap.tax) || 0;
+        const customIncome = Number(snap.custom_income) || 0;
+        const customDeductions = Number(snap.custom_deduction) || 0;
+        const grossPay = salary + otPay + diligence + customIncome;
+        const totalDeduct = ssf + monthlyTax + customDeductions;
+        const netPay = grossPay - totalDeduct;
         return {
           emp,
           payroll: {
-            salary: Number(snap.base_salary) || 0,
-            otPay: Number(snap.ot_pay) || 0,
+            salary, otPay,
             otHours: Number(snap.ot_hours) || 0,
-            diligence: Number(snap.diligence) || 0,
-            grossPay: Number(snap.gross_pay) || 0,
-            ssf: Number(snap.ssf) || 0,
-            monthlyTax: Number(snap.tax) || 0,
-            totalDeduct: Number(snap.total_deduct) || 0,
-            netPay: Number(snap.net_pay) || 0,
+            diligence, grossPay, ssf, monthlyTax, totalDeduct, netPay,
             att,
             annualIncome: snap.tax_breakdown?.annualIncome || 0,
             deductions: emp.taxDeductions || { ...DEFAULT_TAX_DEDUCTION },
-            customIncome: Number(snap.custom_income) || 0,
-            customDeductions: Number(snap.custom_deduction) || 0,
+            customIncome, customDeductions,
             customItems: (snap.custom_items || []).map((i) => ({ ...i, enabled: true })) as CustomPayrollItem[],
           },
           fromSnapshot: true as const,
