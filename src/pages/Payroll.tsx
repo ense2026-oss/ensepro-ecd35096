@@ -964,8 +964,12 @@ const Payroll = () => {
                       />
                     </td>
                   ))}
-                  <td className="text-right px-3 py-3 tabular-nums">{formatCurrency(payroll.ssf)}</td>
-                  <td className="text-right px-3 py-3 tabular-nums">{formatCurrency(payroll.monthlyTax)}</td>
+                  <td className="text-right px-3 py-3">
+                    <EditableCell value={payroll.ssf} onChange={(v) => setOverrideField(emp.id, "ssf", v)} />
+                  </td>
+                  <td className="text-right px-3 py-3">
+                    <EditableCell value={payroll.monthlyTax} onChange={(v) => setOverrideField(emp.id, "tax", v)} />
+                  </td>
                   {dynamicColumns.deduction.map((name) => (
                     <td key={`${emp.id}-ded-${name}`} className="text-right px-3 py-3">
                       <EditableCell
