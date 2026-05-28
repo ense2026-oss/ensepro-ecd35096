@@ -549,9 +549,9 @@ const Payroll = () => {
         };
       }
       const att = attendanceMap[emp.id] || { workDays: 0, otHours: 0, lateDays: 0, absentDays: 0, leaveDays: 0 };
-      return { emp, payroll: calcPayroll(emp, PAYROLL_CONFIG, att), fromSnapshot: false as const };
+      return { emp, payroll: calcPayroll(emp, PAYROLL_CONFIG, att, overrideMap[emp.id]), fromSnapshot: false as const };
     });
-  }, [activeEmployees, attendanceMap, snapshotMap]);
+  }, [activeEmployees, attendanceMap, snapshotMap, overrideMap]);
 
   /* ─── Collect all unique custom item names across employees ─── */
   const dynamicColumns = useMemo(() => {
