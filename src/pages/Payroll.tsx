@@ -947,9 +947,15 @@ const Payroll = () => {
                       </div>
                     </div>
                   </td>
-                  <td className="text-right px-3 py-3">{formatCurrency(payroll.salary)}</td>
-                  <td className="text-right px-3 py-3 tabular-nums">{formatCurrency(payroll.otPay)}</td>
-                  <td className="text-right px-3 py-3 tabular-nums">{formatCurrency(payroll.diligence)}</td>
+                  <td className="text-right px-3 py-3">
+                    <EditableCell value={payroll.salary} onChange={(v) => setOverrideField(emp.id, "base_salary", v)} />
+                  </td>
+                  <td className="text-right px-3 py-3">
+                    <EditableCell value={payroll.otPay} onChange={(v) => setOverrideField(emp.id, "ot_pay", v)} />
+                  </td>
+                  <td className="text-right px-3 py-3">
+                    <EditableCell value={payroll.diligence} onChange={(v) => setOverrideField(emp.id, "diligence", v)} />
+                  </td>
                   {dynamicColumns.income.map((name) => (
                     <td key={`${emp.id}-inc-${name}`} className="text-right px-3 py-3">
                       <EditableCell
