@@ -307,6 +307,7 @@ export async function exportPayslipPdf(emp: Employee, month?: string, year?: str
     styles: { fontSize: 11, font: "THSarabunNew" },
     headStyles: headStyleGray,
   });
+  onProgress?.(85);
 
   const finalY2 = (doc as any).lastAutoTable?.finalY || 130;
   doc.setFontSize(16);
@@ -315,6 +316,7 @@ export async function exportPayslipPdf(emp: Employee, month?: string, year?: str
 
   const suffix = month && year ? `_${month}_${year}` : "";
   doc.save(`Payslip_${emp.firstName}_${emp.lastName}${suffix}.pdf`);
+  onProgress?.(100);
 }
 
 /* ─── Snapshot-based PDF (from frozen payslip row) ─── */
