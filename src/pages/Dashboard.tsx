@@ -324,9 +324,28 @@ const Dashboard = () => {
   const presentToday = todayAttendance.filter((a) => a.status === "present" || a.status === "late").length;
   const lateToday = todayAttendance.filter((a) => a.late).length;
   // Count leave today from leave_requests where today falls within date range and status is approved or pending
+  // Dates are stored as Thai BE "dd/MM/yyyy"; convert to ISO "yyyy-MM-dd" for comparison
+  const toIso = (s: string): string => {
+    if (!s) return "";
+    if (s.includes("/")) {
+      const [d, m, y] = s.split("/");
+      let yr = parseInt(y);
+      if (yr > 2400) yr -= 543;
+      return `${yr}-${String(parseInt(m)).padStart(2, "0")}-${String(parseInt(d)).padStart(2, "0")}`;
+    }
+    if (s.includes("-")) {
+      const [y, m, d] = s.split("-");
+      let yr = parseInt(y);
+      if (yr > 2400) yr -= 543;
+      return `${yr}-${String(parseInt(m)).padStart(2, "0")}-${String(parseInt(d)).padStart(2, "0")}`;
+    }
+    return s;
+  };
   const leaveToday = leaveRequests.filter((l) => {
     if (l.status !== "approved" && l.status !== "pending") return false;
-    return l.date_from <= today && l.date_to >= today;
+    const from = toIso(l.date_from);
+    const to = toIso(l.date_to);
+    return from <= today && to >= today;
   }).length;
 
   const pendingLeaves = leaveRequests.filter((l) => l.status === "pending").length;
