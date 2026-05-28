@@ -109,7 +109,7 @@ const OTRequestDialog = ({ open, onClose, onSubmit }: {
 
   const resetForm = () => {
     setForm({
-      employeeId: shouldLockEmployee && currentUser ? currentUser.id : "",
+      employeeId: shouldLockEmployee && currentUser ? (currentUser.employeeId || currentUser.id) : "",
       dateFrom: "",
       dateTo: "",
       startTime: "18:00",
