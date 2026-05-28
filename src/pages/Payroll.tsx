@@ -45,24 +45,37 @@ interface AttendanceStats {
   leaveDays: number;
 }
 
+/* ─── Per-month inline overrides ─── */
+export interface PayrollOverride {
+  base_salary?: number | null;
+  ot_pay?: number | null;
+  diligence?: number | null;
+  ssf?: number | null;
+  tax?: number | null;
+}
+
 /* ─── Calculation helpers ─── */
-function calcPayroll(emp: Employee, config: typeof PAYROLL_CONFIG, att: AttendanceStats) {
-  const salary = Number(emp.salary) || 0;
+function calcPayroll(emp: Employee, config: typeof PAYROLL_CONFIG, att: AttendanceStats, override?: PayrollOverride) {
+  const salary = override?.base_salary != null ? Number(override.base_salary) : (Number(emp.salary) || 0);
 
   const hourlyRate = salary / 30 / 8;
-  const otPay = Math.round(att.otHours * hourlyRate * config.otRateWorkday);
-  const diligence = config.diligenceEnabled && att.lateDays === 0 && att.absentDays === 0 ? config.diligenceAmount : 0;
+  const computedOt = Math.round(att.otHours * hourlyRate * config.otRateWorkday);
+  const otPay = override?.ot_pay != null ? Number(override.ot_pay) : computedOt;
+  const computedDiligence = config.diligenceEnabled && att.lateDays === 0 && att.absentDays === 0 ? config.diligenceAmount : 0;
+  const diligence = override?.diligence != null ? Number(override.diligence) : computedDiligence;
 
   const customItems = (emp.customPayrollItems || []).filter((i) => i.enabled);
   const customIncome = customItems.filter((i) => i.type === "income").reduce((s, i) => s + i.amount, 0);
   const customDeductions = customItems.filter((i) => i.type === "deduction").reduce((s, i) => s + i.amount, 0);
 
   const grossPay = salary + otPay + diligence + customIncome;
-  const ssf = config.ssfEnabled ? Math.min(Math.round(salary * config.ssfRate / 100), config.ssfCeiling) : 0;
+  const computedSsf = config.ssfEnabled ? Math.min(Math.round(salary * config.ssfRate / 100), config.ssfCeiling) : 0;
+  const ssf = override?.ssf != null ? Number(override.ssf) : computedSsf;
 
   const deductions: TaxDeduction = emp.taxDeductions || { ...DEFAULT_TAX_DEDUCTION };
   const annualIncome = calculateAnnualIncome(salary, otPay, diligence + customIncome);
-  const monthlyTax = calculateMonthlyTax(config.taxConfig, annualIncome, deductions);
+  const computedTax = calculateMonthlyTax(config.taxConfig, annualIncome, deductions);
+  const monthlyTax = override?.tax != null ? Number(override.tax) : computedTax;
 
   const totalDeduct = ssf + monthlyTax + customDeductions;
   const netPay = grossPay - totalDeduct;
