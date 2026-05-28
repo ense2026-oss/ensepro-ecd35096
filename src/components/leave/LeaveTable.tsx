@@ -1,6 +1,16 @@
-import { CheckCircle, XCircle, FileText, Pencil, Trash2 } from "lucide-react";
+import { useState } from "react";
+import { CheckCircle, XCircle, FileText, Pencil, Trash2, Eye } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import EmployeeAvatar from "@/components/ui/employee-avatar";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogBody,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 export interface LeaveRecord {
   id: string;
@@ -39,7 +49,7 @@ interface LeaveTableProps {
 
 const LeaveTable = ({ records, onApprove, onReject, hideActions = false, currentEmployeeId, onEdit, onDelete }: LeaveTableProps) => {
   const hasPending = !hideActions && records.some((r) => r.status === "pending");
-  const hasOwnActions = !!currentEmployeeId && (!!onEdit || !!onDelete);
+  const [detail, setDetail] = useState<LeaveRecord | null>(null);
 
   const handleViewFile = async (fileUrl: string) => {
     if (!fileUrl) return;
@@ -49,15 +59,13 @@ const LeaveTable = ({ records, onApprove, onReject, hideActions = false, current
     }
   };
 
-  const showActionsCol = hasPending || hasOwnActions;
-
   return (
     <div className="card-base overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead>
             <tr className="border-b" style={{ borderColor: "hsl(var(--border))" }}>
-              {["พนักงาน", "ประเภท", "วันที่", "จำนวนวัน", "เหตุผล", "เอกสาร", "สถานะ", ...(showActionsCol ? ["จัดการ"] : [])].map((h) => (
+              {["พนักงาน", "ประเภท", "วันที่", "จำนวนวัน", "เหตุผล", "เอกสาร", "สถานะ", "จัดการ"].map((h) => (
                 <th key={h} className="text-left px-4 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">
                   {h}
                 </th>
@@ -122,40 +130,109 @@ const LeaveTable = ({ records, onApprove, onReject, hideActions = false, current
                       </span>
                     )}
                   </td>
-                  {showActionsCol && (
-                    <td className="px-4 py-3.5">
-                      <div className="flex gap-1">
-                        {/* Approve/Reject for managers */}
-                        {hasPending && row.status === "pending" && !hideActions && (
-                          <>
-                            <button onClick={() => onApprove(row.id)} className="p-1.5 rounded-lg hover:bg-muted transition-colors" style={{ color: "hsl(90 100% 30%)" }}>
-                              <CheckCircle className="w-4 h-4" />
-                            </button>
-                            <button onClick={() => onReject(row.id)} className="p-1.5 rounded-lg hover:bg-muted transition-colors text-destructive">
-                              <XCircle className="w-4 h-4" />
-                            </button>
-                          </>
-                        )}
-                        {/* Edit/Delete for own pending */}
-                        {isOwnPending && onEdit && (
-                          <button onClick={() => onEdit(row)} className="p-1.5 rounded-lg hover:bg-muted transition-colors text-primary" title="แก้ไข">
-                            <Pencil className="w-4 h-4" />
+                  <td className="px-4 py-3.5">
+                    <div className="flex gap-1">
+                      <button onClick={() => setDetail(row)} className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground" title="ดูรายละเอียด">
+                        <Eye className="w-4 h-4" />
+                      </button>
+                      {hasPending && row.status === "pending" && !hideActions && (
+                        <>
+                          <button onClick={() => onApprove(row.id)} className="p-1.5 rounded-lg hover:bg-muted transition-colors" style={{ color: "hsl(90 100% 30%)" }} title="อนุมัติ">
+                            <CheckCircle className="w-4 h-4" />
                           </button>
-                        )}
-                        {isOwnPending && onDelete && (
-                          <button onClick={() => onDelete(row.id)} className="p-1.5 rounded-lg hover:bg-muted transition-colors text-destructive" title="ลบ">
-                            <Trash2 className="w-4 h-4" />
+                          <button onClick={() => onReject(row.id)} className="p-1.5 rounded-lg hover:bg-muted transition-colors text-destructive" title="ไม่อนุมัติ">
+                            <XCircle className="w-4 h-4" />
                           </button>
-                        )}
-                      </div>
-                    </td>
-                  )}
+                        </>
+                      )}
+                      {isOwnPending && onEdit && (
+                        <button onClick={() => onEdit(row)} className="p-1.5 rounded-lg hover:bg-muted transition-colors text-primary" title="แก้ไข">
+                          <Pencil className="w-4 h-4" />
+                        </button>
+                      )}
+                      {isOwnPending && onDelete && (
+                        <button onClick={() => onDelete(row.id)} className="p-1.5 rounded-lg hover:bg-muted transition-colors text-destructive" title="ลบ">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                  </td>
                 </tr>
               );
             })}
           </tbody>
         </table>
       </div>
+
+      <Dialog open={!!detail} onOpenChange={(v) => { if (!v) setDetail(null); }}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-base font-bold pb-[10px]">
+              <FileText className="w-5 h-5 text-primary" />
+              รายละเอียดคำขอลา
+            </DialogTitle>
+            <DialogDescription className="sr-only">รายละเอียดคำขอลางาน</DialogDescription>
+          </DialogHeader>
+          {detail && (() => {
+            const c = statusConf[detail.status] || statusConf.pending;
+            return (
+              <DialogBody className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <EmployeeAvatar photoUrl={detail.photoUrl} firstName={detail.name} size="md" rounded="lg" />
+                  <div>
+                    <p className="text-sm font-semibold">{detail.name}</p>
+                    {detail.dept && <p className="text-xs text-muted-foreground">{detail.dept}</p>}
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div><p className="text-xs text-muted-foreground">ประเภทการลา</p><p className="text-sm font-semibold mt-0.5">{detail.type}</p></div>
+                  <div><p className="text-xs text-muted-foreground">จำนวนวัน</p><p className="text-sm font-bold mt-0.5" style={{ color: "#FF870F" }}>{detail.days} วัน</p></div>
+                </div>
+                <div className="grid grid-cols-2 gap-3 p-3 rounded-xl bg-muted/40">
+                  <div><p className="text-xs text-muted-foreground mb-1">วันที่เริ่ม</p><p className="text-sm font-semibold">{detail.from}</p></div>
+                  <div><p className="text-xs text-muted-foreground mb-1">วันที่สิ้นสุด</p><p className="text-sm font-semibold">{detail.to}</p></div>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">เหตุผล</p>
+                  <p className="text-sm p-3 rounded-xl bg-muted/40 whitespace-pre-wrap">{detail.reason || "-"}</p>
+                </div>
+                {detail.file && detail.fileUrl && (
+                  <button
+                    onClick={() => handleViewFile(detail.fileUrl!)}
+                    className="flex items-center gap-1.5 text-sm font-medium hover:underline"
+                    style={{ color: "#FF870F" }}
+                  >
+                    <FileText className="w-4 h-4" /> ดูเอกสารแนบ
+                  </button>
+                )}
+                <div className="flex items-center gap-2">
+                  <p className="text-xs text-muted-foreground">สถานะ:</p>
+                  <span className="text-xs font-semibold px-2.5 py-1 rounded-full" style={{ background: c.bg, color: c.color }}>
+                    {c.label}
+                  </span>
+                  {detail.status === "pending" && (detail.totalTiers || 1) > 1 && (
+                    <span className="text-xs text-muted-foreground">({detail.approvedTiers || 0}/{detail.totalTiers})</span>
+                  )}
+                </div>
+              </DialogBody>
+            );
+          })()}
+          <DialogFooter>
+            {detail?.status === "pending" && !hideActions ? (
+              <>
+                <button onClick={() => { if (detail) onReject(detail.id); setDetail(null); }} className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold text-white" style={{ background: "hsl(0 84% 50%)" }}>
+                  <XCircle className="w-4 h-4" /> ไม่อนุมัติ
+                </button>
+                <button onClick={() => { if (detail) onApprove(detail.id); setDetail(null); }} className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold text-white" style={{ background: "hsl(90 100% 30%)" }}>
+                  <CheckCircle className="w-4 h-4" /> อนุมัติ
+                </button>
+              </>
+            ) : (
+              <button onClick={() => setDetail(null)} className="px-4 py-2 rounded-xl border text-sm font-medium hover:bg-muted transition-colors">ปิด</button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

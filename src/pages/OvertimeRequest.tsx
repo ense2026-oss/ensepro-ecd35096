@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import {
   Clock, Plus, Search, Download, CheckCircle, CheckCircle2, XCircle,
-  Hourglass, TrendingUp, FileText, ChevronDown, X, AlertCircle
+  Hourglass, TrendingUp, FileText, ChevronDown, X, AlertCircle, Eye
 } from "lucide-react";
 import { useEmployees } from "@/contexts/EmployeeContext";
 import { usePendingCounts } from "@/contexts/PendingCountsContext";
@@ -224,6 +224,7 @@ const OTRequestDialog = ({ open, onClose, onSubmit }: {
 const OvertimeRequest = () => {
   const [requests, setRequests] = useState<OTRequest[]>([]);
   const [showForm, setShowForm] = useState(false);
+  const [detailReq, setDetailReq] = useState<OTRequest | null>(null);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<OTStatus | "all">("all");
   const [typeFilter, setTypeFilter] = useState<OTType | "all">("all");
@@ -564,7 +565,7 @@ const OvertimeRequest = () => {
                 <th className="text-center px-4 py-3 font-semibold text-muted-foreground">ชม.</th>
                 <th className="text-center px-4 py-3 font-semibold text-muted-foreground hidden sm:table-cell">ประเภท</th>
                 <th className="text-center px-4 py-3 font-semibold text-muted-foreground">สถานะ</th>
-                {canApprove && pendingCount > 0 && <th className="text-center px-4 py-3 font-semibold text-muted-foreground">จัดการ</th>}
+                <th className="text-center px-4 py-3 font-semibold text-muted-foreground">จัดการ</th>
               </tr>
             </thead>
             <tbody>
@@ -596,20 +597,23 @@ const OvertimeRequest = () => {
                         <StatusIcon className="w-3 h-3" /> {statusCfg.label}
                       </span>
                     </td>
-                    {canApprove && pendingCount > 0 && (
-                      <td className="px-4 py-3 text-center">
-                        {req.status === "pending" ? (
-                          <div className="flex items-center justify-center gap-1">
+                    <td className="px-4 py-3 text-center">
+                      <div className="flex items-center justify-center gap-1">
+                        <button onClick={() => setDetailReq(req)} className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground" title="ดูรายละเอียด">
+                          <Eye className="w-4 h-4" />
+                        </button>
+                        {canApprove && req.status === "pending" && (
+                          <>
                             <button onClick={() => handleApprove(req.id)} className="p-1.5 rounded-lg hover:bg-muted transition-colors" style={{ color: "hsl(90 100% 30%)" }} title="อนุมัติ">
                               <CheckCircle className="w-4 h-4" />
                             </button>
                             <button onClick={() => handleReject(req.id)} className="p-1.5 rounded-lg hover:bg-muted transition-colors text-destructive" title="ไม่อนุมัติ">
                               <XCircle className="w-4 h-4" />
                             </button>
-                          </div>
-                        ) : null}
-                      </td>
-                    )}
+                          </>
+                        )}
+                      </div>
+                    </td>
                   </tr>
                 );
               })}
@@ -623,6 +627,65 @@ const OvertimeRequest = () => {
       </div>
 
       <OTRequestDialog open={showForm} onClose={() => setShowForm(false)} onSubmit={handleAdd} />
+
+      <Dialog open={!!detailReq} onOpenChange={(v) => { if (!v) setDetailReq(null); }}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-base font-bold pb-[10px]">
+              <Clock className="w-5 h-5 text-primary" />
+              รายละเอียดคำขอ OT
+            </DialogTitle>
+            <DialogDescription className="sr-only">รายละเอียดคำขอทำงานล่วงเวลา</DialogDescription>
+          </DialogHeader>
+          {detailReq && (() => {
+            const sc = statusConfig[detailReq.status];
+            const tc = otTypeLabels[detailReq.type];
+            return (
+              <DialogBody className="space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <div><p className="text-xs text-muted-foreground">พนักงาน</p><p className="text-sm font-semibold mt-0.5">{detailReq.employeeName}</p></div>
+                  <div><p className="text-xs text-muted-foreground">แผนก</p><p className="text-sm font-semibold mt-0.5">{detailReq.department || "-"}</p></div>
+                </div>
+                <div className="grid grid-cols-2 gap-3 p-3 rounded-xl bg-muted/40">
+                  <div><p className="text-xs text-muted-foreground mb-1">วันที่</p><p className="text-sm font-semibold">{detailReq.date}</p></div>
+                  <div><p className="text-xs text-muted-foreground mb-1">เวลา</p><p className="text-sm font-semibold font-mono">{detailReq.startTime} - {detailReq.endTime}</p></div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div><p className="text-xs text-muted-foreground mb-1">ชั่วโมง OT</p><p className="text-base font-bold text-primary">{detailReq.hours} ชม.</p></div>
+                  <div><p className="text-xs text-muted-foreground mb-1">ประเภท OT</p><span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${tc.className}`}>{tc.label}</span></div>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">เหตุผล</p>
+                  <p className="text-sm p-3 rounded-xl bg-muted/40 whitespace-pre-wrap">{detailReq.reason || "-"}</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <p className="text-xs text-muted-foreground">สถานะ:</p>
+                  <span className={`${sc.className} inline-flex items-center gap-1`}>
+                    <sc.icon className="w-3 h-3" /> {sc.label}
+                  </span>
+                  {detailReq.status === "pending" && (detailReq.totalTiers || 1) > 1 && (
+                    <span className="text-xs text-muted-foreground">({detailReq.approvedTiers || 0}/{detailReq.totalTiers})</span>
+                  )}
+                </div>
+              </DialogBody>
+            );
+          })()}
+          <DialogFooter>
+            {detailReq?.status === "pending" && canApprove ? (
+              <>
+                <button onClick={() => { if (detailReq) handleReject(detailReq.id); setDetailReq(null); }} className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold text-white" style={{ background: "hsl(0 84% 50%)" }}>
+                  <X className="w-4 h-4" /> ไม่อนุมัติ
+                </button>
+                <button onClick={() => { if (detailReq) handleApprove(detailReq.id); setDetailReq(null); }} className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold text-white" style={{ background: "hsl(90 100% 30%)" }}>
+                  <CheckCircle className="w-4 h-4" /> อนุมัติ
+                </button>
+              </>
+            ) : (
+              <button onClick={() => setDetailReq(null)} className="px-4 py-2 rounded-xl border text-sm font-medium hover:bg-muted transition-colors">ปิด</button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

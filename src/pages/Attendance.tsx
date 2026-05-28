@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import { usePendingCounts } from "@/contexts/PendingCountsContext";
-import { Search, Download, CheckCircle, XCircle, Clock, AlertCircle, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Save, X, FileText, Check, RotateCcw, CalendarDays } from "lucide-react";
+import { Search, Download, CheckCircle, XCircle, Clock, AlertCircle, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Save, X, FileText, Check, RotateCcw, CalendarDays, Eye } from "lucide-react";
 import { ThaiDatePicker } from "@/components/ui/thai-date-picker";
 import { format } from "date-fns";
 import { useEmployees } from "@/contexts/EmployeeContext";
@@ -518,8 +518,8 @@ const Attendance = () => {
                         <span className="text-xs font-semibold px-2.5 py-1 rounded-full" style={{ background: rs.bg, color: rs.color }}>{rs.label}</span>
                       </td>
                       <td className="px-4 py-3">
-                        <button onClick={() => openDetail(req)} className="text-xs font-medium px-2.5 py-1.5 rounded-lg border hover:bg-muted transition-colors">
-                          ดูรายละเอียด
+                        <button onClick={() => openDetail(req)} className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground" title="ดูรายละเอียด">
+                          <Eye className="w-4 h-4" />
                         </button>
                       </td>
                     </tr>
