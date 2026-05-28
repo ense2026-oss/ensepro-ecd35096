@@ -126,7 +126,7 @@ function EditableCell({
       className={`cursor-pointer hover:bg-primary/10 rounded px-1 py-0.5 transition-colors tabular-nums ${className}`}
       title="คลิกเพื่อแก้ไข"
     >
-      {value > 0 ? formatCurrency(value) : "-"}
+      {formatCurrency(value)}
     </span>
   );
 }
