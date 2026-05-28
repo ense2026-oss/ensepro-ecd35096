@@ -224,7 +224,8 @@ export async function exportPnd1Pdf(employees: Employee[], month: string, year: 
   doc.save(`PND1_${month}_${year}.pdf`);
 }
 
-export async function exportPayslipPdf(emp: Employee, month?: string, year?: string | number) {
+export async function exportPayslipPdf(emp: Employee, month?: string, year?: string | number, onProgress?: (pct: number) => void) {
+  onProgress?.(5);
   const p = calcPayrollForExport(emp);
   const doc = await createPdf();
 
