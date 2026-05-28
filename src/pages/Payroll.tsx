@@ -45,24 +45,37 @@ interface AttendanceStats {
   leaveDays: number;
 }
 
+/* ─── Per-month inline overrides ─── */
+export interface PayrollOverride {
+  base_salary?: number | null;
+  ot_pay?: number | null;
+  diligence?: number | null;
+  ssf?: number | null;
+  tax?: number | null;
+}
+
 /* ─── Calculation helpers ─── */
-function calcPayroll(emp: Employee, config: typeof PAYROLL_CONFIG, att: AttendanceStats) {
-  const salary = Number(emp.salary) || 0;
+function calcPayroll(emp: Employee, config: typeof PAYROLL_CONFIG, att: AttendanceStats, override?: PayrollOverride) {
+  const salary = override?.base_salary != null ? Number(override.base_salary) : (Number(emp.salary) || 0);
 
   const hourlyRate = salary / 30 / 8;
-  const otPay = Math.round(att.otHours * hourlyRate * config.otRateWorkday);
-  const diligence = config.diligenceEnabled && att.lateDays === 0 && att.absentDays === 0 ? config.diligenceAmount : 0;
+  const computedOt = Math.round(att.otHours * hourlyRate * config.otRateWorkday);
+  const otPay = override?.ot_pay != null ? Number(override.ot_pay) : computedOt;
+  const computedDiligence = config.diligenceEnabled && att.lateDays === 0 && att.absentDays === 0 ? config.diligenceAmount : 0;
+  const diligence = override?.diligence != null ? Number(override.diligence) : computedDiligence;
 
   const customItems = (emp.customPayrollItems || []).filter((i) => i.enabled);
   const customIncome = customItems.filter((i) => i.type === "income").reduce((s, i) => s + i.amount, 0);
   const customDeductions = customItems.filter((i) => i.type === "deduction").reduce((s, i) => s + i.amount, 0);
 
   const grossPay = salary + otPay + diligence + customIncome;
-  const ssf = config.ssfEnabled ? Math.min(Math.round(salary * config.ssfRate / 100), config.ssfCeiling) : 0;
+  const computedSsf = config.ssfEnabled ? Math.min(Math.round(salary * config.ssfRate / 100), config.ssfCeiling) : 0;
+  const ssf = override?.ssf != null ? Number(override.ssf) : computedSsf;
 
   const deductions: TaxDeduction = emp.taxDeductions || { ...DEFAULT_TAX_DEDUCTION };
   const annualIncome = calculateAnnualIncome(salary, otPay, diligence + customIncome);
-  const monthlyTax = calculateMonthlyTax(config.taxConfig, annualIncome, deductions);
+  const computedTax = calculateMonthlyTax(config.taxConfig, annualIncome, deductions);
+  const monthlyTax = override?.tax != null ? Number(override.tax) : computedTax;
 
   const totalDeduct = ssf + monthlyTax + customDeductions;
   const netPay = grossPay - totalDeduct;
@@ -113,7 +126,7 @@ function EditableCell({
       className={`cursor-pointer hover:bg-primary/10 rounded px-1 py-0.5 transition-colors tabular-nums ${className}`}
       title="คลิกเพื่อแก้ไข"
     >
-      {value > 0 ? formatCurrency(value) : "-"}
+      {formatCurrency(value)}
     </span>
   );
 }
@@ -361,6 +374,7 @@ const Payroll = () => {
 
   // Real attendance data
   const [attendanceMap, setAttendanceMap] = useState<Record<string, AttendanceStats>>({});
+  const [overrideMap, setOverrideMap] = useState<Record<string, PayrollOverride>>({});
   const [loadingData, setLoadingData] = useState(true);
 
   const activeEmployees = useMemo(() => employees.filter((e) => e.status === "active"), [employees]);
@@ -434,6 +448,61 @@ const Payroll = () => {
     }
   }, [activeEmployees, selectedMonth, selectedYear]);
 
+  // Fetch overrides for the selected month
+  const fetchOverrides = useCallback(async () => {
+    const { data, error } = await supabase
+      .from("payroll_overrides")
+      .select("*")
+      .eq("year", selectedYear)
+      .eq("month", selectedMonth);
+    if (error) {
+      console.error("Failed to load payroll overrides", error);
+      return;
+    }
+    const m: Record<string, PayrollOverride> = {};
+    (data || []).forEach((row: any) => {
+      m[row.employee_id] = {
+        base_salary: row.base_salary,
+        ot_pay: row.ot_pay,
+        diligence: row.diligence,
+        ssf: row.ssf,
+        tax: row.tax,
+      };
+    });
+    setOverrideMap(m);
+  }, [selectedYear, selectedMonth]);
+
+  useEffect(() => { fetchOverrides(); }, [fetchOverrides]);
+
+  const setOverrideField = useCallback(async (
+    employeeId: string,
+    field: keyof PayrollOverride,
+    value: number,
+  ) => {
+    // Optimistic update
+    setOverrideMap((prev) => ({
+      ...prev,
+      [employeeId]: { ...(prev[employeeId] || {}), [field]: value },
+    }));
+    const existing = overrideMap[employeeId];
+    const payload: any = {
+      employee_id: employeeId,
+      year: selectedYear,
+      month: selectedMonth,
+      ...(existing || {}),
+      [field]: value,
+    };
+    const { error } = await supabase
+      .from("payroll_overrides")
+      .upsert(payload, { onConflict: "employee_id,year,month" });
+    if (error) {
+      console.error(error);
+      toast.error("บันทึกค่าไม่สำเร็จ: " + error.message);
+      fetchOverrides();
+    }
+  }, [overrideMap, selectedMonth, selectedYear, fetchOverrides]);
+
+
   const depts = useMemo(() => {
     const s = new Set(activeEmployees.map((e) => e.dept));
     return Array.from(s).sort();
@@ -457,32 +526,36 @@ const Payroll = () => {
       const snap = snapshotMap[emp.id];
       if (snap) {
         const att: AttendanceStats = snap.attendance || { workDays: 0, otHours: 0, lateDays: 0, absentDays: 0, leaveDays: 0 };
+        const ov = overrideMap[emp.id];
+        const salary = ov?.base_salary != null ? Number(ov.base_salary) : Number(snap.base_salary) || 0;
+        const otPay = ov?.ot_pay != null ? Number(ov.ot_pay) : Number(snap.ot_pay) || 0;
+        const diligence = ov?.diligence != null ? Number(ov.diligence) : Number(snap.diligence) || 0;
+        const ssf = ov?.ssf != null ? Number(ov.ssf) : Number(snap.ssf) || 0;
+        const monthlyTax = ov?.tax != null ? Number(ov.tax) : Number(snap.tax) || 0;
+        const customIncome = Number(snap.custom_income) || 0;
+        const customDeductions = Number(snap.custom_deduction) || 0;
+        const grossPay = salary + otPay + diligence + customIncome;
+        const totalDeduct = ssf + monthlyTax + customDeductions;
+        const netPay = grossPay - totalDeduct;
         return {
           emp,
           payroll: {
-            salary: Number(snap.base_salary) || 0,
-            otPay: Number(snap.ot_pay) || 0,
+            salary, otPay,
             otHours: Number(snap.ot_hours) || 0,
-            diligence: Number(snap.diligence) || 0,
-            grossPay: Number(snap.gross_pay) || 0,
-            ssf: Number(snap.ssf) || 0,
-            monthlyTax: Number(snap.tax) || 0,
-            totalDeduct: Number(snap.total_deduct) || 0,
-            netPay: Number(snap.net_pay) || 0,
+            diligence, grossPay, ssf, monthlyTax, totalDeduct, netPay,
             att,
             annualIncome: snap.tax_breakdown?.annualIncome || 0,
             deductions: emp.taxDeductions || { ...DEFAULT_TAX_DEDUCTION },
-            customIncome: Number(snap.custom_income) || 0,
-            customDeductions: Number(snap.custom_deduction) || 0,
+            customIncome, customDeductions,
             customItems: (snap.custom_items || []).map((i) => ({ ...i, enabled: true })) as CustomPayrollItem[],
           },
           fromSnapshot: true as const,
         };
       }
       const att = attendanceMap[emp.id] || { workDays: 0, otHours: 0, lateDays: 0, absentDays: 0, leaveDays: 0 };
-      return { emp, payroll: calcPayroll(emp, PAYROLL_CONFIG, att), fromSnapshot: false as const };
+      return { emp, payroll: calcPayroll(emp, PAYROLL_CONFIG, att, overrideMap[emp.id]), fromSnapshot: false as const };
     });
-  }, [activeEmployees, attendanceMap, snapshotMap]);
+  }, [activeEmployees, attendanceMap, snapshotMap, overrideMap]);
 
   /* ─── Collect all unique custom item names across employees ─── */
   const dynamicColumns = useMemo(() => {
@@ -607,7 +680,7 @@ const Payroll = () => {
       // Compute snapshots for all active employees
       const rows = activeEmployees.map((emp) => {
         const att = attendanceMap[emp.id] || { workDays: 0, otHours: 0, lateDays: 0, absentDays: 0, leaveDays: 0 };
-        const p = calcPayroll(emp, PAYROLL_CONFIG, att);
+        const p = calcPayroll(emp, PAYROLL_CONFIG, att, overrideMap[emp.id]);
         const expenseDeduction = calculateExpenseDeduction(p.annualIncome);
         const totalDeductions = calculateTotalDeductions(p.deductions);
         const netIncome = Math.max(0, p.annualIncome - expenseDeduction - totalDeductions);
@@ -645,7 +718,7 @@ const Payroll = () => {
     } finally {
       setSavingPeriod(false);
     }
-  }, [period?.id, isPublished, selectedYear, selectedMonth, activeEmployees, attendanceMap, refetchPeriod, thaiYear]);
+  }, [period?.id, isPublished, selectedYear, selectedMonth, activeEmployees, attendanceMap, overrideMap, refetchPeriod, thaiYear]);
 
   const publishPeriod = useCallback(async () => {
     if (!period) return;
@@ -878,9 +951,15 @@ const Payroll = () => {
                       </div>
                     </div>
                   </td>
-                  <td className="text-right px-3 py-3">{formatCurrency(payroll.salary)}</td>
-                  <td className="text-right px-3 py-3 tabular-nums">{formatCurrency(payroll.otPay)}</td>
-                  <td className="text-right px-3 py-3 tabular-nums">{formatCurrency(payroll.diligence)}</td>
+                  <td className="text-right px-3 py-3">
+                    <EditableCell value={payroll.salary} onChange={(v) => setOverrideField(emp.id, "base_salary", v)} />
+                  </td>
+                  <td className="text-right px-3 py-3">
+                    <EditableCell value={payroll.otPay} onChange={(v) => setOverrideField(emp.id, "ot_pay", v)} />
+                  </td>
+                  <td className="text-right px-3 py-3">
+                    <EditableCell value={payroll.diligence} onChange={(v) => setOverrideField(emp.id, "diligence", v)} />
+                  </td>
                   {dynamicColumns.income.map((name) => (
                     <td key={`${emp.id}-inc-${name}`} className="text-right px-3 py-3">
                       <EditableCell
@@ -889,8 +968,12 @@ const Payroll = () => {
                       />
                     </td>
                   ))}
-                  <td className="text-right px-3 py-3 tabular-nums">{formatCurrency(payroll.ssf)}</td>
-                  <td className="text-right px-3 py-3 tabular-nums">{formatCurrency(payroll.monthlyTax)}</td>
+                  <td className="text-right px-3 py-3">
+                    <EditableCell value={payroll.ssf} onChange={(v) => setOverrideField(emp.id, "ssf", v)} />
+                  </td>
+                  <td className="text-right px-3 py-3">
+                    <EditableCell value={payroll.monthlyTax} onChange={(v) => setOverrideField(emp.id, "tax", v)} />
+                  </td>
                   {dynamicColumns.deduction.map((name) => (
                     <td key={`${emp.id}-ded-${name}`} className="text-right px-3 py-3">
                       <EditableCell
