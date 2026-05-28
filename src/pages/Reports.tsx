@@ -538,20 +538,23 @@ const Reports = () => {
       });
 
       // Build table data
-      const tableRows = filteredAssignments.map((a: any) => {
-        const emp = empMap.get(a.employee_id);
-        const shift = shiftMap.get(a.shift_id);
-        return {
-          id: emp?.username || "-",
-          name: emp ? `${emp.first_name} ${emp.last_name}` : "ไม่ทราบ",
-          dept: emp?.dept || "-",
-          shift: shift?.name || "-",
-          shiftColor: shift?.color || "#6B7280",
-          period: `${a.start_date} - ${a.end_date}`,
-          assignmentType: a.assignment_type,
-          status: "ปฏิบัติงาน",
-        };
-      });
+      const tableRows = filteredAssignments
+        .map((a: any) => {
+          const emp = empMap.get(a.employee_id);
+          const shift = shiftMap.get(a.shift_id);
+          return {
+            id: emp?.username || "-",
+            name: emp ? `${emp.first_name} ${emp.last_name}` : "ไม่ทราบ",
+            dept: emp?.dept || "-",
+            shift: shift?.name || "-",
+            shiftColor: shift?.color || "#6B7280",
+            period: `${a.start_date} - ${a.end_date}`,
+            assignmentType: a.assignment_type,
+            status: "ปฏิบัติงาน",
+            _role: (emp?.role || "").toLowerCase(),
+          };
+        })
+        .filter((r: any) => r._role !== "admin");
       setShiftData(tableRows);
 
       // Pie: count employees per shift
