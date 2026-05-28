@@ -315,9 +315,29 @@ const OvertimeRequest = () => {
   };
 
   const handleAdd = async (req: Omit<OTRequest, "id" | "createdAt" | "status">) => {
+    // Resolve employee_id: if not a valid employees.id, look it up by auth user_id
+    let employeeId = req.employeeId;
+    const { data: empCheck } = await supabase
+      .from("employees")
+      .select("id")
+      .eq("id", employeeId)
+      .maybeSingle();
+    if (!empCheck && user?.id) {
+      const { data: empByUser } = await supabase
+        .from("employees")
+        .select("id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (empByUser?.id) employeeId = empByUser.id;
+    }
+    if (!employeeId) {
+      toast.error("ไม่พบข้อมูลพนักงานของคุณ กรุณาติดต่อผู้ดูแลระบบ");
+      return;
+    }
+
     const totalTiers = await getApprovalTiers("ot");
-    await supabase.from("overtime_requests").insert({
-      employee_id: req.employeeId,
+    const { error } = await supabase.from("overtime_requests").insert({
+      employee_id: employeeId,
       date: req.date,
       start_time: req.startTime,
       end_time: req.endTime,
@@ -328,6 +348,11 @@ const OvertimeRequest = () => {
       approved_tiers: 0,
       total_tiers: totalTiers,
     });
+    if (error) {
+      console.error("OT insert error:", error);
+      toast.error(`ยื่นคำขอ OT ไม่สำเร็จ: ${error.message}`);
+      return;
+    }
     fetchRequests();
     toast.success("ยื่นคำขอ OT เรียบร้อย");
     notifyTierApprover("ot", 0, {
