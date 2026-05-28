@@ -1205,6 +1205,56 @@ export type Database = {
           },
         ]
       }
+      payroll_overrides: {
+        Row: {
+          base_salary: number | null
+          created_at: string
+          diligence: number | null
+          employee_id: string
+          id: string
+          month: number
+          ot_pay: number | null
+          ssf: number | null
+          tax: number | null
+          updated_at: string
+          year: number
+        }
+        Insert: {
+          base_salary?: number | null
+          created_at?: string
+          diligence?: number | null
+          employee_id: string
+          id?: string
+          month: number
+          ot_pay?: number | null
+          ssf?: number | null
+          tax?: number | null
+          updated_at?: string
+          year: number
+        }
+        Update: {
+          base_salary?: number | null
+          created_at?: string
+          diligence?: number | null
+          employee_id?: string
+          id?: string
+          month?: number
+          ot_pay?: number | null
+          ssf?: number | null
+          tax?: number | null
+          updated_at?: string
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payroll_overrides_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payroll_periods: {
         Row: {
           created_at: string
