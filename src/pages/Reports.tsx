@@ -525,7 +525,7 @@ const Reports = () => {
 
       const shifts = shiftsRes.data || [];
       const assignments = assignmentsRes.data || [];
-      const emps = (empsRes.data || []).filter((e: any) => (e.role || "").toLowerCase() !== "admin");
+      const emps = (empsRes.data || []);
 
       const empMap = new Map(emps.map((e: any) => [e.id, e]));
       const shiftMap = new Map(shifts.map((s: any) => [s.id, s]));
