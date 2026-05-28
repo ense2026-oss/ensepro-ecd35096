@@ -418,6 +418,7 @@ export async function exportPayslipPdfFromSnapshot(
     styles: { fontSize: 11, font: "THSarabunNew" },
     headStyles: headStyleGray,
   });
+  onProgress?.(85);
 
   const finalY2 = (doc as any).lastAutoTable?.finalY || 130;
   doc.setFontSize(16);
@@ -425,4 +426,5 @@ export async function exportPayslipPdfFromSnapshot(
   doc.text(`เงินได้สุทธิ: ${formatCurrency(snap.net_pay)} บาท`, 14, finalY2 + 14);
 
   doc.save(`Payslip_${emp.firstName}_${emp.lastName}_${month}_${year}.pdf`);
+  onProgress?.(100);
 }
