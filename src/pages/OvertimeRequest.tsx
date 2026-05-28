@@ -224,6 +224,7 @@ const OTRequestDialog = ({ open, onClose, onSubmit }: {
 const OvertimeRequest = () => {
   const [requests, setRequests] = useState<OTRequest[]>([]);
   const [showForm, setShowForm] = useState(false);
+  const [detailReq, setDetailReq] = useState<OTRequest | null>(null);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<OTStatus | "all">("all");
   const [typeFilter, setTypeFilter] = useState<OTType | "all">("all");
