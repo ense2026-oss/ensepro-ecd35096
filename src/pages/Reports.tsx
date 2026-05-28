@@ -778,6 +778,14 @@ const Reports = () => {
         .select("employee_id, amount, type, enabled")
         .eq("enabled", true);
 
+      // Fetch published payroll periods for this year - only show months that have been published
+      const { data: periodsData } = await supabase
+        .from("payroll_periods")
+        .select("month, status")
+        .eq("year", ceYear)
+        .eq("status", "published");
+      const publishedMonths = new Set((periodsData || []).map((p: any) => p.month));
+
       const activeEmps = empsData || [];
       const allOt = (otDataRaw || []).filter((o: any) => {
         const parsed = parseThaiDate(o.date);
