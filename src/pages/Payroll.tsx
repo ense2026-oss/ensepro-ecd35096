@@ -842,7 +842,7 @@ const Payroll = () => {
 
       {/* Table */}
       <div className="card-base overflow-hidden">
-        <div className="overflow-auto max-h-[60vh]">
+        <div className="overflow-auto max-h-[85vh]">
           <table className="w-full text-sm whitespace-nowrap">
             <thead className="sticky top-0 z-20">
               <tr style={{ background: "hsl(var(--muted))" }}>
