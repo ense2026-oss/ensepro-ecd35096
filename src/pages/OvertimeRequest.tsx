@@ -597,20 +597,23 @@ const OvertimeRequest = () => {
                         <StatusIcon className="w-3 h-3" /> {statusCfg.label}
                       </span>
                     </td>
-                    {canApprove && pendingCount > 0 && (
-                      <td className="px-4 py-3 text-center">
-                        {req.status === "pending" ? (
-                          <div className="flex items-center justify-center gap-1">
+                    <td className="px-4 py-3 text-center">
+                      <div className="flex items-center justify-center gap-1">
+                        <button onClick={() => setDetailReq(req)} className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground" title="ดูรายละเอียด">
+                          <Eye className="w-4 h-4" />
+                        </button>
+                        {canApprove && req.status === "pending" && (
+                          <>
                             <button onClick={() => handleApprove(req.id)} className="p-1.5 rounded-lg hover:bg-muted transition-colors" style={{ color: "hsl(90 100% 30%)" }} title="อนุมัติ">
                               <CheckCircle className="w-4 h-4" />
                             </button>
                             <button onClick={() => handleReject(req.id)} className="p-1.5 rounded-lg hover:bg-muted transition-colors text-destructive" title="ไม่อนุมัติ">
                               <XCircle className="w-4 h-4" />
                             </button>
-                          </div>
-                        ) : null}
-                      </td>
-                    )}
+                          </>
+                        )}
+                      </div>
+                    </td>
                   </tr>
                 );
               })}
