@@ -15,6 +15,7 @@ import {
 } from "@/utils/taxCalculation";
 import { toast } from "sonner";
 import { exportPnd1Excel, exportPnd1Pdf, exportPayslipExcel, exportPayslipPdf, exportPayslipPdfFromSnapshot, exportAllPayslipsExcel } from "@/utils/exportPayroll";
+import { createDownloadProgressToast } from "@/utils/downloadToast";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -988,13 +989,17 @@ const Payroll = () => {
                       <button onClick={() => openPayslip(emp)} className="p-1.5 rounded-lg hover:bg-muted transition-colors" title="ดูสลิปเงินเดือน"><Eye className="w-4 h-4 text-muted-foreground" /></button>
                       <button onClick={() => openCustomItems(emp)} className="p-1.5 rounded-lg hover:bg-muted transition-colors" title="แก้ไขรายการเพิ่มเติม"><Settings2 className="w-4 h-4 text-muted-foreground" /></button>
                       <button onClick={async () => {
-                        const snap = snapshotMap[emp.id];
-                        if (snap) {
-                          await exportPayslipPdfFromSnapshot(emp, snap, THAI_MONTHS[selectedMonth - 1], thaiYear);
-                        } else {
-                          await exportPayslipPdf(emp, THAI_MONTHS[selectedMonth - 1], thaiYear);
+                        const { onProgress, onError } = createDownloadProgressToast(`กำลังดาวน์โหลดสลิปของ ${emp.firstName}`);
+                        try {
+                          const snap = snapshotMap[emp.id];
+                          if (snap) {
+                            await exportPayslipPdfFromSnapshot(emp, snap, THAI_MONTHS[selectedMonth - 1], thaiYear, onProgress);
+                          } else {
+                            await exportPayslipPdf(emp, THAI_MONTHS[selectedMonth - 1], thaiYear, onProgress);
+                          }
+                        } catch (e: any) {
+                          onError(e?.message || "ดาวน์โหลดไม่สำเร็จ");
                         }
-                        toast.success(`ส่งออกสลิป PDF: ${emp.firstName}`);
                       }} className="p-1.5 rounded-lg hover:bg-muted transition-colors" title="ส่งออก PDF"><FileText className="w-3.5 h-3.5 text-muted-foreground" /></button>
                     </div>
                   </td>

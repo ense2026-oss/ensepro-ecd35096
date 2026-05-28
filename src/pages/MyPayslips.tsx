@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { formatCurrency } from "@/utils/taxCalculation";
 import { exportPayslipPdfFromSnapshot } from "@/utils/exportPayroll";
+import { createDownloadProgressToast } from "@/utils/downloadToast";
 import type { PayslipRow } from "@/hooks/usePayrollPeriod";
 import { toast } from "sonner";
 
@@ -124,8 +125,12 @@ const MyPayslips = () => {
                       <button
                         onClick={async () => {
                           if (!meForExport) return;
-                          await exportPayslipPdfFromSnapshot(meForExport!, r, THAI_MONTHS[r.period.month - 1], r.period.year + 543);
-                          toast.success("ดาวน์โหลดสลิปแล้ว");
+                          const { onProgress, onError } = createDownloadProgressToast("กำลังดาวน์โหลดสลิป");
+                          try {
+                            await exportPayslipPdfFromSnapshot(meForExport!, r, THAI_MONTHS[r.period.month - 1], r.period.year + 543, onProgress);
+                          } catch (e: any) {
+                            onError(e?.message || "ดาวน์โหลดไม่สำเร็จ");
+                          }
                         }}
                         className="p-1.5 rounded-lg hover:bg-muted"
                         title="ดาวน์โหลด PDF"
@@ -175,8 +180,12 @@ const MyPayslips = () => {
                 className="w-full"
                 onClick={async () => {
                   if (!meForExport) return;
-                  await exportPayslipPdfFromSnapshot(meForExport!, selected, THAI_MONTHS[selected.period.month - 1], selected.period.year + 543);
-                  toast.success("ดาวน์โหลดสลิปแล้ว");
+                  const { onProgress, onError } = createDownloadProgressToast("กำลังดาวน์โหลดสลิป");
+                  try {
+                    await exportPayslipPdfFromSnapshot(meForExport!, selected, THAI_MONTHS[selected.period.month - 1], selected.period.year + 543, onProgress);
+                  } catch (e: any) {
+                    onError(e?.message || "ดาวน์โหลดไม่สำเร็จ");
+                  }
                 }}
               >
                 <FileText className="w-4 h-4 mr-1.5" /> ดาวน์โหลด PDF

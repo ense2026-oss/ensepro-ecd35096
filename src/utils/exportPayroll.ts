@@ -224,12 +224,15 @@ export async function exportPnd1Pdf(employees: Employee[], month: string, year: 
   doc.save(`PND1_${month}_${year}.pdf`);
 }
 
-export async function exportPayslipPdf(emp: Employee, month?: string, year?: string | number) {
+export async function exportPayslipPdf(emp: Employee, month?: string, year?: string | number, onProgress?: (pct: number) => void) {
+  onProgress?.(5);
   const p = calcPayrollForExport(emp);
   const doc = await createPdf();
+  onProgress?.(30);
 
   // Company logo in top-right circle
   const logoUrl = await fetchCompanyLogo();
+  onProgress?.(50);
   const pageWidth = doc.internal.pageSize.getWidth();
   const circleX = pageWidth - 25;
   const circleY = 22;
@@ -304,6 +307,7 @@ export async function exportPayslipPdf(emp: Employee, month?: string, year?: str
     styles: { fontSize: 11, font: "THSarabunNew" },
     headStyles: headStyleGray,
   });
+  onProgress?.(85);
 
   const finalY2 = (doc as any).lastAutoTable?.finalY || 130;
   doc.setFontSize(16);
@@ -312,6 +316,7 @@ export async function exportPayslipPdf(emp: Employee, month?: string, year?: str
 
   const suffix = month && year ? `_${month}_${year}` : "";
   doc.save(`Payslip_${emp.firstName}_${emp.lastName}${suffix}.pdf`);
+  onProgress?.(100);
 }
 
 /* ─── Snapshot-based PDF (from frozen payslip row) ─── */
@@ -333,10 +338,14 @@ export async function exportPayslipPdfFromSnapshot(
   snap: PayslipSnapshotLike,
   month: string,
   year: string | number,
+  onProgress?: (pct: number) => void,
 ) {
+  onProgress?.(5);
   const doc = await createPdf();
+  onProgress?.(30);
 
   const logoUrl = await fetchCompanyLogo();
+  onProgress?.(50);
   const pageWidth = doc.internal.pageSize.getWidth();
   const circleX = pageWidth - 25;
   const circleY = 22;
@@ -409,6 +418,7 @@ export async function exportPayslipPdfFromSnapshot(
     styles: { fontSize: 11, font: "THSarabunNew" },
     headStyles: headStyleGray,
   });
+  onProgress?.(85);
 
   const finalY2 = (doc as any).lastAutoTable?.finalY || 130;
   doc.setFontSize(16);
@@ -416,4 +426,5 @@ export async function exportPayslipPdfFromSnapshot(
   doc.text(`เงินได้สุทธิ: ${formatCurrency(snap.net_pay)} บาท`, 14, finalY2 + 14);
 
   doc.save(`Payslip_${emp.firstName}_${emp.lastName}_${month}_${year}.pdf`);
+  onProgress?.(100);
 }
