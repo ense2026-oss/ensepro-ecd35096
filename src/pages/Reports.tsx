@@ -778,6 +778,14 @@ const Reports = () => {
         .select("employee_id, amount, type, enabled")
         .eq("enabled", true);
 
+      // Fetch published payroll periods for this year - only show months that have been published
+      const { data: periodsData } = await supabase
+        .from("payroll_periods")
+        .select("month, status")
+        .eq("year", ceYear)
+        .eq("status", "published");
+      const publishedMonths = new Set((periodsData || []).map((p: any) => p.month));
+
       const activeEmps = empsData || [];
       const allOt = (otDataRaw || []).filter((o: any) => {
         const parsed = parseThaiDate(o.date);
@@ -806,9 +814,10 @@ const Reports = () => {
         .filter((ci: any) => ci.type === "income")
         .reduce((s, ci: any) => s + (Number(ci.amount) || 0), 0);
 
-      // Build monthly summary data
+      // Build monthly summary data - only for months that have been published
       const summaryData = monthShortNames.map((mName, idx) => {
         const mNum = idx + 1;
+        if (!publishedMonths.has(mNum)) return null;
         // OT hours for this month
         const monthOt = allOt.filter((o: any) => {
           const parsed = parseThaiDate(o.date);
@@ -829,7 +838,7 @@ const Reports = () => {
           ประกันสังคม: Math.round(totalSocialSecurity),
           ภาษี: Math.round(totalMonthlyTax),
         };
-      });
+      }).filter(Boolean) as any[];
       setPayrollSummaryData(summaryData);
 
       // Build tax cumulative data
