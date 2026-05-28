@@ -125,8 +125,12 @@ const MyPayslips = () => {
                       <button
                         onClick={async () => {
                           if (!meForExport) return;
-                          await exportPayslipPdfFromSnapshot(meForExport!, r, THAI_MONTHS[r.period.month - 1], r.period.year + 543);
-                          toast.success("ดาวน์โหลดสลิปแล้ว");
+                          const { onProgress, onError } = createDownloadProgressToast("กำลังดาวน์โหลดสลิป");
+                          try {
+                            await exportPayslipPdfFromSnapshot(meForExport!, r, THAI_MONTHS[r.period.month - 1], r.period.year + 543, onProgress);
+                          } catch (e: any) {
+                            onError(e?.message || "ดาวน์โหลดไม่สำเร็จ");
+                          }
                         }}
                         className="p-1.5 rounded-lg hover:bg-muted"
                         title="ดาวน์โหลด PDF"
