@@ -63,7 +63,7 @@ const OTRequestDialog = ({ open, onClose, onSubmit }: {
   const isAdmin = role === 'admin';
   const shouldLockEmployee = !isAdmin;
   const [form, setForm] = useState({
-    employeeId: shouldLockEmployee && currentUser ? currentUser.id : "",
+    employeeId: shouldLockEmployee && currentUser ? (currentUser.employeeId || currentUser.id) : "",
     dateFrom: "",
     dateTo: "",
     startTime: "18:00",
