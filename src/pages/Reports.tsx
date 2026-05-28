@@ -814,9 +814,10 @@ const Reports = () => {
         .filter((ci: any) => ci.type === "income")
         .reduce((s, ci: any) => s + (Number(ci.amount) || 0), 0);
 
-      // Build monthly summary data
+      // Build monthly summary data - only for months that have been published
       const summaryData = monthShortNames.map((mName, idx) => {
         const mNum = idx + 1;
+        if (!publishedMonths.has(mNum)) return null;
         // OT hours for this month
         const monthOt = allOt.filter((o: any) => {
           const parsed = parseThaiDate(o.date);
@@ -837,7 +838,7 @@ const Reports = () => {
           ประกันสังคม: Math.round(totalSocialSecurity),
           ภาษี: Math.round(totalMonthlyTax),
         };
-      });
+      }).filter(Boolean) as any[];
       setPayrollSummaryData(summaryData);
 
       // Build tax cumulative data
