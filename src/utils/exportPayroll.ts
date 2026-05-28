@@ -228,9 +228,11 @@ export async function exportPayslipPdf(emp: Employee, month?: string, year?: str
   onProgress?.(5);
   const p = calcPayrollForExport(emp);
   const doc = await createPdf();
+  onProgress?.(30);
 
   // Company logo in top-right circle
   const logoUrl = await fetchCompanyLogo();
+  onProgress?.(50);
   const pageWidth = doc.internal.pageSize.getWidth();
   const circleX = pageWidth - 25;
   const circleY = 22;
