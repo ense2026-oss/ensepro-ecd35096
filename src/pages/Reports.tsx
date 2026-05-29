@@ -615,7 +615,11 @@ const Reports = () => {
       setShiftCoverageData(timeSlots.map(t => ({ time: t, จำนวนพนักงาน: coverageMap[t] })));
 
       // Change log: find "day" type assignments (individual overrides)
-      const dayAssignments = filteredAssignments.filter((a: any) => a.assignment_type === "day");
+      const dayAssignments = filteredAssignments.filter((a: any) => {
+        if (a.assignment_type !== "day") return false;
+        const emp = empMap.get(a.employee_id);
+        return (emp?.role || "").toLowerCase() !== "admin";
+      });
       setShiftChangeLog(dayAssignments.map((a: any) => {
         const emp = empMap.get(a.employee_id);
         const shift = shiftMap.get(a.shift_id);
