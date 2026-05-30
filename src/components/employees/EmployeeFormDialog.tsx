@@ -16,15 +16,18 @@ interface EmployeeFormDialogProps {
 const EMPTY: Omit<Employee, "id" | "education" | "workHistory"> = {
   avatar: "", avatarColor: "", avatarTextColor: "", photoUrl: "",
   prefix: "นาย", firstName: "", lastName: "", nickname: "",
-  birthDate: "", nationalId: "", nationality: "ไทย", religion: "พุทธ", bloodGroup: "A",
+  birthDate: "", gender: "ชาย", nationalId: "", nationality: "ไทย", religion: "พุทธ", bloodGroup: "A",
   idIssueDate: "", idExpireDate: "",
   phone: "", email: "", address: "",
   dept: "", position: "", employeeType: "พนักงานประจำ",
-  startDate: "", shift: "กะเช้า 08:00-17:00", faceScanId: "", salary: "", status: "active",
+  startDate: "", trialEndDate: "", contractEndDate: "",
+  shift: "กะเช้า 08:00-17:00", faceScanId: "", salary: "", status: "active",
+  bankAccount: "", driverLicense: "",
   homeAddress: "", maritalStatus: "โสด",
   spouseName: "", spousePhone: "",
   fatherName: "", fatherPhone: "", motherName: "", motherPhone: "",
   emergencyName: "", emergencyRelation: "", emergencyPhone: "",
+  sons: 0, daughters: 0,
   username: "", role: "Employee",
 };
 
