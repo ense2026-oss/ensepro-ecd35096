@@ -18,8 +18,7 @@ interface ApprovalModule {
   tiers: TierApprover[];
 }
 
-const tierLabels = ["ผู้อนุมัติขั้นแรก", "ผู้อนุมัติขั้นสอง", "ผู้อนุมัติสุดท้าย"];
-const tierColors = ["#FF870F", "#87FF0F", "#FFFF0F"];
+const approverColors = ["#FF870F", "#87FF0F", "#0FA9FF"];
 
 const roleOptions = [
   { value: "admin", label: "Admin" },
