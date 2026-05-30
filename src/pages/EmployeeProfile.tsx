@@ -17,6 +17,7 @@ import { processFileUpload } from "@/utils/fileCompression";
 import LazyImage from "@/components/ui/lazy-image";
 import defaultAvatarImg from "@/assets/default-avatar.png";
 import { supabase } from "@/integrations/supabase/client";
+import DisplaySettings, { getPersonalDisplayKey } from "@/components/settings/DisplaySettings";
 
 const TAB_CONFIG = [
   { key: "personal",   label: "ข้อมูลส่วนตัว",   icon: User },
@@ -26,6 +27,7 @@ const TAB_CONFIG = [
   { key: "workhistory",label: "ประวัติการทำงาน",  icon: Clock },
   { key: "tax",        label: "ข้อมูลภาษี",      icon: Receipt },
   { key: "security",   label: "ความปลอดภัย",     icon: Shield },
+  { key: "display",    label: "การแสดงผล",       icon: Palette },
 ];
 
 /* ───────────────────── Helpers ───────────────────── */
