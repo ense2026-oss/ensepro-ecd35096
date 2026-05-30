@@ -406,6 +406,13 @@ const Leave = () => {
           <p className="text-sm text-muted-foreground mt-0.5">จัดการคำขอลาและโควต้าการลา</p>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => setCalendarOpen(true)}
+            className="flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-medium hover:bg-muted transition-colors"
+          >
+            <CalendarDays className="w-4 h-4" />
+            ปฏิทินวันลา
+          </button>
           {scope !== "self" && (
             <button className="flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-medium hover:bg-muted transition-colors">
               <Download className="w-4 h-4" />
