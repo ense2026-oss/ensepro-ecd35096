@@ -179,7 +179,8 @@ export const OrgProvider = ({ children }: { children: ReactNode }) => {
       .insert({ name, sort_order: maxOrder, parent_org_level_id: parentOrgLevelId || null })
       .select()
       .single();
-    if (error || !data) return null;
+    if (error) throw error;
+    if (!data) return null;
     await fetchAffiliations();
     return { id: data.id, name: data.name, sort_order: data.sort_order, parent_org_level_id: data.parent_org_level_id, positions: [] };
   }, [affiliations.length, fetchAffiliations]);
@@ -187,12 +188,14 @@ export const OrgProvider = ({ children }: { children: ReactNode }) => {
   const updateAffiliation = useCallback(async (id: string, name: string, parentOrgLevelId?: string | null) => {
     const update: any = { name };
     if (parentOrgLevelId !== undefined) update.parent_org_level_id = parentOrgLevelId;
-    await supabase.from("affiliations").update(update).eq("id", id);
+    const { error } = await supabase.from("affiliations").update(update).eq("id", id);
+    if (error) throw error;
     await fetchAffiliations();
   }, [fetchAffiliations]);
 
   const deleteAffiliation = useCallback(async (id: string) => {
-    await supabase.from("affiliations").delete().eq("id", id);
+    const { error } = await supabase.from("affiliations").delete().eq("id", id);
+    if (error) throw error;
     await fetchAffiliations();
   }, [fetchAffiliations]);
 
@@ -208,18 +211,21 @@ export const OrgProvider = ({ children }: { children: ReactNode }) => {
       .insert({ affiliation_id: affiliationId, parent_id: parentId, name, sort_order: maxOrder })
       .select()
       .single();
-    if (error || !data) return null;
+    if (error) throw error;
+    if (!data) return null;
     await fetchAffiliations();
     return { id: data.id, name: data.name, affiliation_id: data.affiliation_id, parent_id: data.parent_id, sort_order: data.sort_order };
   }, [fetchAffiliations]);
 
   const updatePosition = useCallback(async (id: string, name: string) => {
-    await supabase.from("positions").update({ name }).eq("id", id);
+    const { error } = await supabase.from("positions").update({ name }).eq("id", id);
+    if (error) throw error;
     await fetchAffiliations();
   }, [fetchAffiliations]);
 
   const deletePosition = useCallback(async (id: string) => {
-    await supabase.from("positions").delete().eq("id", id);
+    const { error } = await supabase.from("positions").delete().eq("id", id);
+    if (error) throw error;
     await fetchAffiliations();
   }, [fetchAffiliations]);
 
