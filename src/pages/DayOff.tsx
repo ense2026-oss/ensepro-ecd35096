@@ -81,7 +81,7 @@ const DayOff = () => {
   const [search, setSearch] = useState("");
   const [deptFilter, setDeptFilter] = useState("all");
 
-  const canEdit = canAction(role, "day_off", "edit") || ["admin","hr","manager"].includes(role.toLowerCase());
+  const canEdit = canAction(role, "day_off", "edit");
 
   // Tab state
   const initialEmp = params.get("employee") || "";

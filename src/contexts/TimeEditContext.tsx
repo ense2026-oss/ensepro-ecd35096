@@ -16,6 +16,9 @@ export interface TimeEditRequest {
   reason: string;
   status: "pending" | "approved" | "rejected";
   createdAt: string;
+  currentTier: number;
+  approvedTiers: number;
+  totalTiers: number;
 }
 
 export interface AppNotification {
@@ -31,7 +34,7 @@ export interface AppNotification {
 
 interface TimeEditContextType {
   editRequests: TimeEditRequest[];
-  addEditRequest: (req: Omit<TimeEditRequest, "id" | "status" | "createdAt">) => void;
+  addEditRequest: (req: Omit<TimeEditRequest, "id" | "status" | "createdAt" | "currentTier" | "approvedTiers" | "totalTiers">) => void;
   updateRequestStatus: (id: string, status: "approved" | "rejected") => void;
   notifications: AppNotification[];
   addNotification: (notif: Omit<AppNotification, "id">) => void;
@@ -101,6 +104,9 @@ export const TimeEditProvider = ({ children }: { children: ReactNode }) => {
         reason: r.reason,
         status: r.status as "pending" | "approved" | "rejected",
         createdAt: r.created_at,
+        currentTier: r.current_tier || 1,
+        approvedTiers: r.approved_tiers || 0,
+        totalTiers: r.total_tiers || 1,
       })));
     }
   }, []);

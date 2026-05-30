@@ -106,7 +106,7 @@ const ShiftManagement = () => {
     }
   }, [isEmployeeRole, employeeId]);
 
-  const canEdit = canAction(role, "shiftManagement", "edit") || ["admin", "hr", "manager", "executive"].includes(role.toLowerCase());
+  const canEdit = canAction(role, "shiftManagement", "edit");
 
   const fetchAll = async (showLoading = false) => {
     if (showLoading) setLoading(true);

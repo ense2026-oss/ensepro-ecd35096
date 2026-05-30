@@ -13,7 +13,7 @@ import { useTimeEditRequests, type TimeEditRequest } from "@/contexts/TimeEditCo
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/contexts/PermissionsContext";
-import { notifyRequester } from "@/utils/notifications";
+import { notifyRequester, notifyTierApprover } from "@/utils/notifications";
 
 interface AttendanceRecord {
   id: string;
@@ -43,7 +43,7 @@ const reqStatusConf: Record<string, { label: string; color: string; bg: string }
 
 const Attendance = () => {
   const { employees } = useEmployees();
-  const { role } = useAuth();
+  const { role, user } = useAuth();
   const { canAction } = usePermissions();
   const canApproveTime = canAction(role, 'attendance', 'approve');
   const { setAttendancePending } = usePendingCounts();
@@ -217,45 +217,117 @@ const Attendance = () => {
     toast.success("ส่งคำขอแก้ไขเวลาเรียบร้อย");
   };
 
+  const applyAttendanceChange = async (req: TimeEditRequest) => {
+    if (!req.attendanceId) return;
+    const newCheckIn = req.newCheckIn;
+    const isLate = newCheckIn > "08:30";
+    await supabase.from("attendance_records").update({
+      check_in: req.newCheckIn,
+      check_out: req.newCheckOut,
+      late: isLate,
+      status: newCheckIn === "-" ? "absent" : isLate ? "late" : "present",
+    }).eq("id", req.attendanceId);
+    fetchAttendance();
+  };
+
   const handleApprove = async (reqId: string) => {
     const req = editRequests.find((r) => r.id === reqId);
-    if (req && req.attendanceId) {
-      const newCheckIn = req.newCheckIn;
-      const isLate = newCheckIn > "08:30";
-      await supabase.from("attendance_records").update({
-        check_in: req.newCheckIn,
-        check_out: req.newCheckOut,
-        late: isLate,
-        status: newCheckIn === "-" ? "absent" : isLate ? "late" : "present",
-      }).eq("id", req.attendanceId);
-      fetchAttendance();
+    if (!req || !user?.id) return;
+
+    // Prevent the same approver from acting twice
+    const { data: existingLog } = await supabase
+      .from("approval_logs")
+      .select("id")
+      .eq("request_id", reqId)
+      .eq("request_type", "time_edit")
+      .eq("approver_user_id", user.id)
+      .maybeSingle();
+
+    if (existingLog) {
+      toast.error("คุณได้อนุมัติคำขอนี้ไปแล้ว");
+      return;
     }
-    updateRequestStatus(reqId, "approved");
-    toast.success("อนุมัติคำขอแก้ไขเวลาเรียบร้อย");
-    setDetailOpen(false);
-    if (req) {
+
+    const nextTier = (req.approvedTiers || 0) + 1;
+    const totalTiers = req.totalTiers || 1;
+
+    await supabase.from("approval_logs").insert({
+      request_id: reqId,
+      request_type: "time_edit",
+      tier: nextTier,
+      action: "approve",
+      approver_user_id: user.id,
+    });
+
+    if (nextTier >= totalTiers) {
+      // Final approval: apply the attendance change and mark approved
+      await applyAttendanceChange(req);
+      await supabase.from("time_edit_requests").update({
+        status: "approved",
+        approved_tiers: nextTier,
+        current_tier: nextTier,
+      }).eq("id", reqId);
+      updateRequestStatus(reqId, "approved");
+      toast.success("อนุมัติคำขอแก้ไขเวลาเรียบร้อย (ครบทุกระดับ)");
+      setDetailOpen(false);
       notifyRequester(req.employeeId, {
         type: "approval",
         title: "คำขอแก้ไขเวลาได้รับการอนุมัติ",
         description: `คำขอแก้ไขเวลา ${req.date} (เข้า ${req.newCheckIn} / ออก ${req.newCheckOut}) ได้รับการอนุมัติแล้ว`,
         targetEmployee: req.employeeName,
       });
-    }
-  };
-
-  const handleReject = (reqId: string) => {
-    const req = editRequests.find((r) => r.id === reqId);
-    updateRequestStatus(reqId, "rejected");
-    toast.success("ปฏิเสธคำขอแก้ไขเวลาเรียบร้อย");
-    setDetailOpen(false);
-    if (req) {
-      notifyRequester(req.employeeId, {
-        type: "approval",
-        title: "คำขอแก้ไขเวลาไม่ได้รับการอนุมัติ",
-        description: `คำขอแก้ไขเวลา ${req.date} (เข้า ${req.newCheckIn} / ออก ${req.newCheckOut}) ไม่ได้รับการอนุมัติ`,
+    } else {
+      // Intermediate tier: advance to the next approver
+      await supabase.from("time_edit_requests").update({
+        approved_tiers: nextTier,
+        current_tier: nextTier + 1,
+      }).eq("id", reqId);
+      toast.success(`อนุมัติระดับ ${nextTier}/${totalTiers} — รอระดับถัดไป`);
+      setDetailOpen(false);
+      notifyTierApprover("time_edit", nextTier, {
+        type: "attendance",
+        title: `คำขอแก้ไขเวลารอการอนุมัติ (ระดับ ${nextTier + 1}/${totalTiers})`,
+        description: `${req.employeeName} ขอแก้ไขเวลา ${req.date} — ผ่านระดับ ${nextTier} แล้ว`,
         targetEmployee: req.employeeName,
       });
     }
+  };
+
+  const handleReject = async (reqId: string) => {
+    const req = editRequests.find((r) => r.id === reqId);
+    if (!req || !user?.id) return;
+
+    const { data: existingLog } = await supabase
+      .from("approval_logs")
+      .select("id")
+      .eq("request_id", reqId)
+      .eq("request_type", "time_edit")
+      .eq("approver_user_id", user.id)
+      .maybeSingle();
+
+    if (existingLog) {
+      toast.error("คุณได้ดำเนินการกับคำขอนี้ไปแล้ว");
+      return;
+    }
+
+    await supabase.from("approval_logs").insert({
+      request_id: reqId,
+      request_type: "time_edit",
+      tier: (req.approvedTiers || 0) + 1,
+      action: "reject",
+      approver_user_id: user.id,
+    });
+
+    await supabase.from("time_edit_requests").update({ status: "rejected" }).eq("id", reqId);
+    updateRequestStatus(reqId, "rejected");
+    toast.success("ปฏิเสธคำขอแก้ไขเวลาเรียบร้อย");
+    setDetailOpen(false);
+    notifyRequester(req.employeeId, {
+      type: "approval",
+      title: "คำขอแก้ไขเวลาไม่ได้รับการอนุมัติ",
+      description: `คำขอแก้ไขเวลา ${req.date} (เข้า ${req.newCheckIn} / ออก ${req.newCheckOut}) ไม่ได้รับการอนุมัติ`,
+      targetEmployee: req.employeeName,
+    });
   };
 
   const openDetail = (req: TimeEditRequest) => {
