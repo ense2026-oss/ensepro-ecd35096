@@ -145,7 +145,7 @@ const LeaveCalendarDialog: React.FC<LeaveCalendarDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[96vw] w-[96vw] sm:max-w-[96vw] h-[94vh] max-h-[94vh] p-0">
+      <DialogContent className={`max-w-[96vw] w-[96vw] sm:max-w-[96vw] h-[94vh] max-h-[94vh] p-0 ${selectedDay ? "[&>button]:hidden" : ""}`}>
         <DialogHeader className="px-5 pt-5 pb-3 border-b">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div className="flex items-center gap-2">
