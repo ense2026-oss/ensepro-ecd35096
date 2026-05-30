@@ -22,20 +22,10 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { usePayrollPeriod, type PayslipRow } from "@/hooks/usePayrollPeriod";
 import { useAuth } from "@/contexts/AuthContext";
+import { usePayrollConfig, DEFAULT_PAYROLL_CONFIG, type PayrollConfig } from "@/utils/payrollConfig";
 
-/* ─── Payroll config ─── */
-const PAYROLL_CONFIG = {
-  otRateWorkday: 1.5,
-  otRateHoliday: 3.0,
-  diligenceEnabled: true,
-  diligenceAmount: 2000,
-  ssfEnabled: true,
-  ssfRate: 5,
-  ssfCeiling: 750,
-  taxConfig: { enabled: true, method: "progressive" as const, flatRate: 5 },
-  shiftAllowanceAfternoon: 50,
-  shiftAllowanceNight: 100,
-};
+/* ─── Payroll config (loaded from settings; default as fallback) ─── */
+const PAYROLL_CONFIG = DEFAULT_PAYROLL_CONFIG;
 
 /* ─── Attendance data type ─── */
 interface AttendanceStats {
@@ -56,13 +46,16 @@ export interface PayrollOverride {
 }
 
 /* ─── Calculation helpers ─── */
-function calcPayroll(emp: Employee, config: typeof PAYROLL_CONFIG, att: AttendanceStats, override?: PayrollOverride) {
+function calcPayroll(emp: Employee, config: PayrollConfig, att: AttendanceStats, override?: PayrollOverride) {
   const salary = override?.base_salary != null ? Number(override.base_salary) : (Number(emp.salary) || 0);
 
   const hourlyRate = salary / 30 / 8;
   const computedOt = Math.round(att.otHours * hourlyRate * config.otRateWorkday);
   const otPay = override?.ot_pay != null ? Number(override.ot_pay) : computedOt;
-  const computedDiligence = config.diligenceEnabled && att.lateDays === 0 && att.absentDays === 0 ? config.diligenceAmount : 0;
+  // Diligence is lost when late/absent exceeds the configured thresholds
+  const lostByLate = config.deductLate && att.lateDays > config.lateThreshold;
+  const lostByAbsent = config.deductAbsent && att.absentDays > config.absentThreshold;
+  const computedDiligence = config.diligenceEnabled && !lostByLate && !lostByAbsent ? config.diligenceAmount : 0;
   const diligence = override?.diligence != null ? Number(override.diligence) : computedDiligence;
 
   const customItems = (emp.customPayrollItems || []).filter((i) => i.enabled);
@@ -246,8 +239,8 @@ function CustomItemsDialog({
 }
 
 /* ─── Payslip Dialog ─── */
-function PayslipDialog({ open, onClose, emp, payroll }: { open: boolean; onClose: () => void; emp: Employee; payroll: ReturnType<typeof calcPayroll> }) {
-  const taxConfig = PAYROLL_CONFIG.taxConfig;
+function PayslipDialog({ open, onClose, emp, payroll, config }: { open: boolean; onClose: () => void; emp: Employee; payroll: ReturnType<typeof calcPayroll>; config: PayrollConfig }) {
+  const taxConfig = config.taxConfig;
   const expenseDeduction = calculateExpenseDeduction(payroll.annualIncome);
   const totalDeductions = calculateTotalDeductions(payroll.deductions);
   const netIncome = Math.max(0, payroll.annualIncome - expenseDeduction - totalDeductions);
@@ -294,7 +287,7 @@ function PayslipDialog({ open, onClose, emp, payroll }: { open: boolean; onClose
             <p className="font-semibold text-xs uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-1.5"><TrendingUp className="w-3.5 h-3.5" /> รายได้</p>
             <div className="space-y-1.5">
               <PayslipRow label="เงินเดือน" value={formatCurrency(payroll.salary)} />
-              <PayslipRow label={`ค่าล่วงเวลา (${payroll.otHours} ชม. x${PAYROLL_CONFIG.otRateWorkday})`} value={formatCurrency(payroll.otPay)} />
+              <PayslipRow label={`ค่าล่วงเวลา (${payroll.otHours} ชม. x${config.otRateWorkday})`} value={formatCurrency(payroll.otPay)} />
               <PayslipRow label="เบี้ยขยัน" value={formatCurrency(payroll.diligence)} />
               {customIncomeItems.map((item) => <PayslipRow key={item.id} label={item.name} value={formatCurrency(item.amount)} />)}
               <div className="border-t pt-1.5"><PayslipRow label="รวมรายได้" value={formatCurrency(payroll.grossPay)} bold /></div>
@@ -355,6 +348,7 @@ function getMonthDateRange(year: number, month: number) {
 /* ═══════════════════════ Main Page ═══════════════════════ */
 const Payroll = () => {
   const { employees, updateEmployee } = useEmployees();
+  const { config: payrollConfig } = usePayrollConfig();
   const [search, setSearch] = useState("");
   const [filterDept, setFilterDept] = useState("all");
   const [sortField, setSortField] = useState<"name" | "salary" | "net">("name");
@@ -554,9 +548,9 @@ const Payroll = () => {
         };
       }
       const att = attendanceMap[emp.id] || { workDays: 0, otHours: 0, lateDays: 0, absentDays: 0, leaveDays: 0 };
-      return { emp, payroll: calcPayroll(emp, PAYROLL_CONFIG, att, overrideMap[emp.id]), fromSnapshot: false as const };
+      return { emp, payroll: calcPayroll(emp, payrollConfig, att, overrideMap[emp.id]), fromSnapshot: false as const };
     });
-  }, [activeEmployees, attendanceMap, snapshotMap, overrideMap]);
+  }, [activeEmployees, attendanceMap, snapshotMap, overrideMap, payrollConfig]);
 
   /* ─── Collect all unique custom item names across employees ─── */
   const dynamicColumns = useMemo(() => {
@@ -681,7 +675,7 @@ const Payroll = () => {
       // Compute snapshots for all active employees
       const rows = activeEmployees.map((emp) => {
         const att = attendanceMap[emp.id] || { workDays: 0, otHours: 0, lateDays: 0, absentDays: 0, leaveDays: 0 };
-        const p = calcPayroll(emp, PAYROLL_CONFIG, att, overrideMap[emp.id]);
+        const p = calcPayroll(emp, payrollConfig, att, overrideMap[emp.id]);
         const expenseDeduction = calculateExpenseDeduction(p.annualIncome);
         const totalDeductions = calculateTotalDeductions(p.deductions);
         const netIncome = Math.max(0, p.annualIncome - expenseDeduction - totalDeductions);
@@ -719,7 +713,7 @@ const Payroll = () => {
     } finally {
       setSavingPeriod(false);
     }
-  }, [period?.id, isPublished, selectedYear, selectedMonth, activeEmployees, attendanceMap, overrideMap, refetchPeriod, thaiYear]);
+  }, [period?.id, isPublished, selectedYear, selectedMonth, activeEmployees, attendanceMap, overrideMap, refetchPeriod, thaiYear, payrollConfig]);
 
   const publishPeriod = useCallback(async () => {
     if (!period) return;
@@ -1097,7 +1091,7 @@ const Payroll = () => {
       </div>
 
       {selectedEmp && (
-        <PayslipDialog open={payslipOpen} onClose={() => setPayslipOpen(false)} emp={selectedEmp} payroll={calcPayroll(selectedEmp, PAYROLL_CONFIG, attendanceMap[selectedEmp.id] || { workDays: 0, otHours: 0, lateDays: 0, absentDays: 0, leaveDays: 0 })} />
+        <PayslipDialog open={payslipOpen} onClose={() => setPayslipOpen(false)} emp={selectedEmp} config={payrollConfig} payroll={calcPayroll(selectedEmp, payrollConfig, attendanceMap[selectedEmp.id] || { workDays: 0, otHours: 0, lateDays: 0, absentDays: 0, leaveDays: 0 })} />
       )}
 
       {customItemsEmp && (
