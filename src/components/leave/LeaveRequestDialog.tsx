@@ -219,10 +219,10 @@ const LeaveRequestDialog = ({ open, onOpenChange, leaveTypes, onSubmit, canSelec
             <label className="block text-sm font-semibold mb-1.5">เหตุผล <span className="text-destructive">*</span></label>
             <textarea rows={2} value={reason} onChange={(e) => setReason(e.target.value)} className={`w-full px-3 py-2.5 text-sm rounded-xl border outline-none bg-muted/30 resize-none ${errors.reason ? "border-destructive" : ""}`} placeholder="ระบุเหตุผลการลา..." />
           </div>
-          {requireDocSetting && (
+          {requireDoc && (
             <div className="sm:col-span-2">
               <label className="block text-sm font-semibold mb-1.5">
-                เอกสารแนบ {requireDoc && <span className="text-destructive">* (บังคับสำหรับ{leaveType} ตั้งแต่ {docMinDays} วันขึ้นไป)</span>}
+                เอกสารแนบ <span className="text-destructive">* (บังคับสำหรับ{leaveType} ตั้งแต่ {docMinDays} วันขึ้นไป)</span>
               </label>
 
               {showExistingFile && (
