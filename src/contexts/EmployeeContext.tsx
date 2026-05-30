@@ -40,6 +40,7 @@ export interface Employee {
   lastName: string;
   nickname: string;
   birthDate: string;
+  gender: string;
   nationalId: string;
   nationality: string;
   religion: string;
@@ -53,9 +54,13 @@ export interface Employee {
   position: string;
   employeeType: string;
   startDate: string;
+  trialEndDate: string;
+  contractEndDate: string;
   shift: string;
   faceScanId: string;
   salary: string;
+  bankAccount: string;
+  driverLicense: string;
   positionId?: string;
   status: "active" | "leave" | "inactive";
   homeAddress: string;
@@ -77,6 +82,8 @@ export interface Employee {
   taxDeductions?: TaxDeduction;
   children?: number;
   childrenAfter2018?: number;
+  sons?: number;
+  daughters?: number;
   pvdRate?: number;
   customPayrollItems?: CustomPayrollItem[];
 }
@@ -94,6 +101,7 @@ function dbToEmployee(row: any, education: any[], workHistory: any[], payrollIte
     lastName: row.last_name || '',
     nickname: row.nickname || '',
     birthDate: row.birth_date || '',
+    gender: row.gender || '',
     nationalId: row.national_id || '',
     nationality: row.nationality || 'ไทย',
     religion: row.religion || '',
@@ -107,9 +115,13 @@ function dbToEmployee(row: any, education: any[], workHistory: any[], payrollIte
     position: row.position || '',
     employeeType: row.employee_type || '',
     startDate: row.start_date || '',
+    trialEndDate: row.trial_end_date || '',
+    contractEndDate: row.contract_end_date || '',
     shift: row.shift || '',
     faceScanId: row.face_scan_id || '',
     salary: row.salary || '0',
+    bankAccount: row.bank_account || '',
+    driverLicense: row.driver_license || '',
     positionId: row.position_id || undefined,
     status: (row.status as "active" | "leave" | "inactive") || 'active',
     homeAddress: row.home_address || '',
@@ -128,6 +140,8 @@ function dbToEmployee(row: any, education: any[], workHistory: any[], payrollIte
     initialPassword: row.initial_password || '',
     children: row.children || 0,
     childrenAfter2018: row.children_after_2018 || 0,
+    sons: row.sons || 0,
+    daughters: row.daughters || 0,
     pvdRate: row.pvd_rate ? Number(row.pvd_rate) : 0,
     taxDeductions: row.tax_deductions && Object.keys(row.tax_deductions).length > 0
       ? { ...DEFAULT_TAX_DEDUCTION, ...row.tax_deductions }
@@ -176,6 +190,7 @@ function employeeToDb(emp: Partial<Employee>) {
   if (emp.lastName !== undefined) mapped.last_name = emp.lastName;
   if (emp.nickname !== undefined) mapped.nickname = emp.nickname;
   if (emp.birthDate !== undefined) mapped.birth_date = emp.birthDate;
+  if (emp.gender !== undefined) mapped.gender = emp.gender;
   if (emp.nationalId !== undefined) mapped.national_id = emp.nationalId;
   if (emp.nationality !== undefined) mapped.nationality = emp.nationality;
   if (emp.religion !== undefined) mapped.religion = emp.religion;
@@ -189,9 +204,13 @@ function employeeToDb(emp: Partial<Employee>) {
   if (emp.position !== undefined) mapped.position = emp.position;
   if (emp.employeeType !== undefined) mapped.employee_type = emp.employeeType;
   if (emp.startDate !== undefined) mapped.start_date = emp.startDate;
+  if (emp.trialEndDate !== undefined) mapped.trial_end_date = emp.trialEndDate;
+  if (emp.contractEndDate !== undefined) mapped.contract_end_date = emp.contractEndDate;
   if (emp.shift !== undefined) mapped.shift = emp.shift;
   if (emp.faceScanId !== undefined) mapped.face_scan_id = emp.faceScanId;
   if (emp.salary !== undefined) mapped.salary = emp.salary;
+  if (emp.bankAccount !== undefined) mapped.bank_account = emp.bankAccount;
+  if (emp.driverLicense !== undefined) mapped.driver_license = emp.driverLicense;
   if (emp.positionId !== undefined) mapped.position_id = emp.positionId || null;
   if (emp.status !== undefined) mapped.status = emp.status;
   if (emp.homeAddress !== undefined) mapped.home_address = emp.homeAddress;
@@ -209,6 +228,8 @@ function employeeToDb(emp: Partial<Employee>) {
   if (emp.role !== undefined) mapped.role = emp.role;
   if (emp.children !== undefined) mapped.children = emp.children;
   if (emp.childrenAfter2018 !== undefined) mapped.children_after_2018 = emp.childrenAfter2018;
+  if (emp.sons !== undefined) mapped.sons = emp.sons;
+  if (emp.daughters !== undefined) mapped.daughters = emp.daughters;
   if (emp.pvdRate !== undefined) mapped.pvd_rate = emp.pvdRate;
   if (emp.taxDeductions !== undefined) mapped.tax_deductions = emp.taxDeductions;
   if (emp.initialPassword !== undefined) mapped.initial_password = emp.initialPassword;
@@ -240,7 +261,7 @@ export const EmployeeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       // Fetch employees first (essential), then related data in parallel
       // Select specific columns excluding photo_url (base64 data is huge and slows down loading)
       const empRes = await supabase.from("employees").select(
-        "id,avatar,avatar_color,avatar_text_color,prefix,first_name,last_name,nickname,birth_date,national_id,nationality,religion,blood_group,id_issue_date,id_expire_date,phone,email,address,dept,position,employee_type,start_date,shift,face_scan_id,salary,position_id,status,home_address,marital_status,spouse_name,spouse_phone,father_name,father_phone,mother_name,mother_phone,emergency_name,emergency_relation,emergency_phone,username,role,initial_password,children,children_after_2018,pvd_rate,tax_deductions,user_id,created_at,updated_at"
+        "id,avatar,avatar_color,avatar_text_color,prefix,first_name,last_name,nickname,birth_date,gender,national_id,nationality,religion,blood_group,id_issue_date,id_expire_date,phone,email,address,dept,position,employee_type,start_date,trial_end_date,contract_end_date,shift,face_scan_id,salary,bank_account,driver_license,position_id,status,home_address,marital_status,spouse_name,spouse_phone,father_name,father_phone,mother_name,mother_phone,emergency_name,emergency_relation,emergency_phone,username,role,initial_password,children,children_after_2018,sons,daughters,pvd_rate,tax_deductions,user_id,created_at,updated_at"
       ).order("created_at");
       if (empRes.error) throw empRes.error;
 
