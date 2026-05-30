@@ -104,6 +104,9 @@ export const TimeEditProvider = ({ children }: { children: ReactNode }) => {
         reason: r.reason,
         status: r.status as "pending" | "approved" | "rejected",
         createdAt: r.created_at,
+        currentTier: r.current_tier || 1,
+        approvedTiers: r.approved_tiers || 0,
+        totalTiers: r.total_tiers || 1,
       })));
     }
   }, []);
