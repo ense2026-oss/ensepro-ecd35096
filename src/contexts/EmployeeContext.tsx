@@ -54,9 +54,13 @@ export interface Employee {
   position: string;
   employeeType: string;
   startDate: string;
+  trialEndDate: string;
+  contractEndDate: string;
   shift: string;
   faceScanId: string;
   salary: string;
+  bankAccount: string;
+  driverLicense: string;
   positionId?: string;
   status: "active" | "leave" | "inactive";
   homeAddress: string;
