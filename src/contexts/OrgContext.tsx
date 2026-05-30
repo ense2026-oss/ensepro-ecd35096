@@ -186,12 +186,26 @@ export const OrgProvider = ({ children }: { children: ReactNode }) => {
   }, [affiliations.length, fetchAffiliations]);
 
   const updateAffiliation = useCallback(async (id: string, name: string, parentOrgLevelId?: string | null) => {
+    // Capture the previous name so we can cascade the rename to employees' dept text
+    const prev = affiliations.find((a) => a.id === id);
+    const oldName = prev?.name;
+
     const update: any = { name };
     if (parentOrgLevelId !== undefined) update.parent_org_level_id = parentOrgLevelId;
     const { error } = await supabase.from("affiliations").update(update).eq("id", id);
     if (error) throw error;
+
+    // Propagate rename to existing employees so system filters stay in sync with settings
+    if (oldName && oldName !== name) {
+      const { error: empErr } = await supabase
+        .from("employees")
+        .update({ dept: name })
+        .eq("dept", oldName);
+      if (empErr) console.error("Failed to cascade affiliation rename to employees:", empErr);
+    }
+
     await fetchAffiliations();
-  }, [fetchAffiliations]);
+  }, [affiliations, fetchAffiliations]);
 
   const deleteAffiliation = useCallback(async (id: string) => {
     const { error } = await supabase.from("affiliations").delete().eq("id", id);
