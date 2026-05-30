@@ -654,12 +654,16 @@ export type Database = {
           avatar: string
           avatar_color: string
           avatar_text_color: string
+          bank_account: string
           birth_date: string
           blood_group: string
           children: number | null
           children_after_2018: number | null
+          contract_end_date: string
           created_at: string
+          daughters: number
           dept: string
+          driver_license: string
           email: string
           emergency_name: string
           emergency_phone: string
@@ -669,6 +673,7 @@ export type Database = {
           father_name: string
           father_phone: string
           first_name: string
+          gender: string
           home_address: string
           id: string
           id_expire_date: string
@@ -691,11 +696,13 @@ export type Database = {
           role: string
           salary: string
           shift: string
+          sons: number
           spouse_name: string
           spouse_phone: string
           start_date: string
           status: string
           tax_deductions: Json | null
+          trial_end_date: string
           updated_at: string
           user_id: string | null
           username: string
@@ -705,12 +712,16 @@ export type Database = {
           avatar?: string
           avatar_color?: string
           avatar_text_color?: string
+          bank_account?: string
           birth_date?: string
           blood_group?: string
           children?: number | null
           children_after_2018?: number | null
+          contract_end_date?: string
           created_at?: string
+          daughters?: number
           dept?: string
+          driver_license?: string
           email?: string
           emergency_name?: string
           emergency_phone?: string
@@ -720,6 +731,7 @@ export type Database = {
           father_name?: string
           father_phone?: string
           first_name?: string
+          gender?: string
           home_address?: string
           id?: string
           id_expire_date?: string
@@ -742,11 +754,13 @@ export type Database = {
           role?: string
           salary?: string
           shift?: string
+          sons?: number
           spouse_name?: string
           spouse_phone?: string
           start_date?: string
           status?: string
           tax_deductions?: Json | null
+          trial_end_date?: string
           updated_at?: string
           user_id?: string | null
           username?: string
@@ -756,12 +770,16 @@ export type Database = {
           avatar?: string
           avatar_color?: string
           avatar_text_color?: string
+          bank_account?: string
           birth_date?: string
           blood_group?: string
           children?: number | null
           children_after_2018?: number | null
+          contract_end_date?: string
           created_at?: string
+          daughters?: number
           dept?: string
+          driver_license?: string
           email?: string
           emergency_name?: string
           emergency_phone?: string
@@ -771,6 +789,7 @@ export type Database = {
           father_name?: string
           father_phone?: string
           first_name?: string
+          gender?: string
           home_address?: string
           id?: string
           id_expire_date?: string
@@ -793,11 +812,13 @@ export type Database = {
           role?: string
           salary?: string
           shift?: string
+          sons?: number
           spouse_name?: string
           spouse_phone?: string
           start_date?: string
           status?: string
           tax_deductions?: Json | null
+          trial_end_date?: string
           updated_at?: string
           user_id?: string | null
           username?: string

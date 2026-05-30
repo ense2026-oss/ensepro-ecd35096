@@ -1,0 +1,8 @@
+ALTER TABLE public.employees
+  ADD COLUMN IF NOT EXISTS gender text NOT NULL DEFAULT '',
+  ADD COLUMN IF NOT EXISTS trial_end_date text NOT NULL DEFAULT '',
+  ADD COLUMN IF NOT EXISTS contract_end_date text NOT NULL DEFAULT '',
+  ADD COLUMN IF NOT EXISTS bank_account text NOT NULL DEFAULT '',
+  ADD COLUMN IF NOT EXISTS driver_license text NOT NULL DEFAULT '',
+  ADD COLUMN IF NOT EXISTS sons integer NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS daughters integer NOT NULL DEFAULT 0;
