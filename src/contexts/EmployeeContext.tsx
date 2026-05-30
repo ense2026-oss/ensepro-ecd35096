@@ -40,6 +40,7 @@ export interface Employee {
   lastName: string;
   nickname: string;
   birthDate: string;
+  gender: string;
   nationalId: string;
   nationality: string;
   religion: string;
