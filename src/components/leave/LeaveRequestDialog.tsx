@@ -113,6 +113,8 @@ const LeaveRequestDialog = ({ open, onOpenChange, leaveTypes, onSubmit, canSelec
   };
 
   const hasFile = !!fileName || (!!existingFileUrl && !removeExisting);
+  const currentDays = durationType === "half" ? 0.5 : calculateDays(startDate, endDate);
+  const requireDoc = requireDocSetting && currentDays >= docMinDays;
 
   const handleSubmit = () => {
     const newErrors: Record<string, boolean> = {};
