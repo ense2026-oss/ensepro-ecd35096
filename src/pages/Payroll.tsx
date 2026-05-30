@@ -46,13 +46,16 @@ export interface PayrollOverride {
 }
 
 /* ─── Calculation helpers ─── */
-function calcPayroll(emp: Employee, config: typeof PAYROLL_CONFIG, att: AttendanceStats, override?: PayrollOverride) {
+function calcPayroll(emp: Employee, config: PayrollConfig, att: AttendanceStats, override?: PayrollOverride) {
   const salary = override?.base_salary != null ? Number(override.base_salary) : (Number(emp.salary) || 0);
 
   const hourlyRate = salary / 30 / 8;
   const computedOt = Math.round(att.otHours * hourlyRate * config.otRateWorkday);
   const otPay = override?.ot_pay != null ? Number(override.ot_pay) : computedOt;
-  const computedDiligence = config.diligenceEnabled && att.lateDays === 0 && att.absentDays === 0 ? config.diligenceAmount : 0;
+  // Diligence is lost when late/absent exceeds the configured thresholds
+  const lostByLate = config.deductLate && att.lateDays > config.lateThreshold;
+  const lostByAbsent = config.deductAbsent && att.absentDays > config.absentThreshold;
+  const computedDiligence = config.diligenceEnabled && !lostByLate && !lostByAbsent ? config.diligenceAmount : 0;
   const diligence = override?.diligence != null ? Number(override.diligence) : computedDiligence;
 
   const customItems = (emp.customPayrollItems || []).filter((i) => i.enabled);
