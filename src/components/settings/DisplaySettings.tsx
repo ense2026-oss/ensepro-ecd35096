@@ -223,7 +223,26 @@ export const applyDisplaySettings = (settings?: DisplaySettingsState) => {
   root.style.setProperty("--radius", radius.value);
 };
 
-// --- Component ---
+// Apply on startup: a logged-in user's personal preferences take precedence
+// over the global/main program theme (for that user's own view only).
+export const applyStartupDisplaySettings = () => {
+  try {
+    const raw = localStorage.getItem("auth_profile_cache");
+    if (raw) {
+      const userId = JSON.parse(raw)?.userId;
+      if (userId) {
+        const personalKey = getPersonalDisplayKey(userId);
+        if (localStorage.getItem(personalKey)) {
+          applyDisplaySettings(loadSettings(personalKey));
+          return;
+        }
+      }
+    }
+  } catch { /* ignore */ }
+  applyDisplaySettings(loadSettings());
+};
+
+
 const ColorPickerField = ({
   label,
   icon,
