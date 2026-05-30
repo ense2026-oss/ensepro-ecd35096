@@ -8,7 +8,9 @@ import { toast } from "sonner";
 const ContractSettings = () => {
   const { settings, updateSettings } = useContracts();
   const { employees } = useEmployees();
-  const managers = employees.filter((e) => ["Admin", "Manager", "HR"].includes(e.role));
+  const executives = employees.filter(
+    (e) => (e.role || "").toLowerCase() === "executive" && e.status === "active"
+  );
 
   return (
     <div className="space-y-6">
