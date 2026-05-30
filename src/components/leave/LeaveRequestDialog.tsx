@@ -219,40 +219,42 @@ const LeaveRequestDialog = ({ open, onOpenChange, leaveTypes, onSubmit, canSelec
             <label className="block text-sm font-semibold mb-1.5">เหตุผล <span className="text-destructive">*</span></label>
             <textarea rows={2} value={reason} onChange={(e) => setReason(e.target.value)} className={`w-full px-3 py-2.5 text-sm rounded-xl border outline-none bg-muted/30 resize-none ${errors.reason ? "border-destructive" : ""}`} placeholder="ระบุเหตุผลการลา..." />
           </div>
-          <div className="sm:col-span-2">
-            <label className="block text-sm font-semibold mb-1.5">
-              เอกสารแนบ {requireDoc && <span className="text-destructive">* (บังคับสำหรับ{leaveType} ตั้งแต่ {docMinDays} วันขึ้นไป)</span>}
-            </label>
-
-            {showExistingFile && (
-              <div className="flex items-center gap-3 p-3 rounded-xl border bg-muted/30 mb-3">
-                <FileText className="w-5 h-5 text-primary shrink-0" />
-                <span className="text-sm font-medium text-foreground flex-1 truncate">ไฟล์แนบเดิม</span>
-                <button type="button" onClick={handleRemoveExistingFile} className="p-1 rounded-full hover:bg-destructive/10 text-destructive transition-colors" title="ลบไฟล์แนบ">
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-            )}
-
-            {file && fileName && (
-              <div className="flex items-center gap-3 p-3 rounded-xl border bg-muted/30 mb-3">
-                <FileText className="w-5 h-5 text-primary shrink-0" />
-                <span className="text-sm font-medium text-primary flex-1 truncate">{fileName}</span>
-                <button type="button" onClick={handleRemoveNewFile} className="p-1 rounded-full hover:bg-destructive/10 text-destructive transition-colors" title="ลบไฟล์">
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-            )}
-
-            {!showExistingFile && !file && (
-              <label className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer hover:bg-muted/50 transition-colors block ${errors.file ? "border-destructive" : ""}`} style={{ borderColor: errors.file ? undefined : "hsl(var(--primary))" }}>
-                <input type="file" className="hidden" accept=".jpg,.jpeg,.png,.pdf,.docx" onChange={handleFileChange} />
-                <Upload className="w-8 h-8 mx-auto mb-2 text-primary" />
-                <p className="text-sm font-medium">คลิกเพื่ออัปโหลดไฟล์</p>
-                <p className="text-xs text-muted-foreground mt-1">รองรับ JPEG, JPG, PNG, PDF, DOCX (สูงสุด 10MB)</p>
+          {requireDocSetting && (
+            <div className="sm:col-span-2">
+              <label className="block text-sm font-semibold mb-1.5">
+                เอกสารแนบ {requireDoc && <span className="text-destructive">* (บังคับสำหรับ{leaveType} ตั้งแต่ {docMinDays} วันขึ้นไป)</span>}
               </label>
-            )}
-          </div>
+
+              {showExistingFile && (
+                <div className="flex items-center gap-3 p-3 rounded-xl border bg-muted/30 mb-3">
+                  <FileText className="w-5 h-5 text-primary shrink-0" />
+                  <span className="text-sm font-medium text-foreground flex-1 truncate">ไฟล์แนบเดิม</span>
+                  <button type="button" onClick={handleRemoveExistingFile} className="p-1 rounded-full hover:bg-destructive/10 text-destructive transition-colors" title="ลบไฟล์แนบ">
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+
+              {file && fileName && (
+                <div className="flex items-center gap-3 p-3 rounded-xl border bg-muted/30 mb-3">
+                  <FileText className="w-5 h-5 text-primary shrink-0" />
+                  <span className="text-sm font-medium text-primary flex-1 truncate">{fileName}</span>
+                  <button type="button" onClick={handleRemoveNewFile} className="p-1 rounded-full hover:bg-destructive/10 text-destructive transition-colors" title="ลบไฟล์">
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+
+              {!showExistingFile && !file && (
+                <label className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer hover:bg-muted/50 transition-colors block ${errors.file ? "border-destructive" : ""}`} style={{ borderColor: errors.file ? undefined : "hsl(var(--primary))" }}>
+                  <input type="file" className="hidden" accept=".jpg,.jpeg,.png,.pdf,.docx" onChange={handleFileChange} />
+                  <Upload className="w-8 h-8 mx-auto mb-2 text-primary" />
+                  <p className="text-sm font-medium">คลิกเพื่ออัปโหลดไฟล์</p>
+                  <p className="text-xs text-muted-foreground mt-1">รองรับ JPEG, JPG, PNG, PDF, DOCX (สูงสุด 10MB)</p>
+                </label>
+              )}
+            </div>
+          )}
           {Object.keys(errors).length > 0 && (
             <p className="text-sm text-destructive font-medium sm:col-span-2">กรุณากรอกข้อมูลที่จำเป็นให้ครบถ้วน</p>
           )}
