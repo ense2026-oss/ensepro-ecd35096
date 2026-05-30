@@ -355,7 +355,7 @@ const OvertimeRequest = () => {
     }
     fetchRequests();
     toast.success("ยื่นคำขอ OT เรียบร้อย");
-    notifyTierApprover("ot", 0, {
+    notifyApprovers({
       type: "ot",
       title: "คำขอ OT ใหม่",
       description: `${req.employeeName} ยื่นขอ OT ${req.date} (${req.startTime}-${req.endTime}) ${req.hours} ชม.`,

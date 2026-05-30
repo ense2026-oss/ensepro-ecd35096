@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useCallback, useEffect, useRef, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { notifyTierApprover, getApprovalTiers } from "@/utils/notifications";
+import { notifyApprovers, getApprovalTiers } from "@/utils/notifications";
 
 export interface TimeEditRequest {
   id: string;
@@ -180,8 +180,8 @@ export const TimeEditProvider = ({ children }: { children: ReactNode }) => {
       approved_tiers: 0,
       total_tiers: totalTiers,
     });
-    // Notify tier 1 approver
-    notifyTierApprover("time_edit", 0, {
+    // Notify all configured approvers (any one can approve)
+    notifyApprovers({
       type: "attendance",
       title: "คำขอแก้ไขเวลาใหม่",
       description: `${req.employeeName} ขอแก้ไขเวลา ${req.date} → เข้า ${req.newCheckIn} / ออก ${req.newCheckOut}`,

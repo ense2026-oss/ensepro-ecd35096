@@ -265,8 +265,8 @@ const Leave = () => {
       fetchLeaves();
       toast({ title: "สำเร็จ", description: "ยื่นคำขอลาเรียบร้อยแล้ว" });
 
-      // Notify tier 1 approver only
-      notifyTierApprover("leave", 0, {
+      // Notify all configured approvers (any one can approve)
+      notifyApprovers({
         type: "leave",
         title: "คำขอลางานใหม่",
         description: `${record.name} ยื่นขอลา ${record.type} ${record.days} วัน (${record.from} - ${record.to})`,

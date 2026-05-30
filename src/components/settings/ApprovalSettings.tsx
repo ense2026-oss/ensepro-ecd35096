@@ -18,8 +18,7 @@ interface ApprovalModule {
   tiers: TierApprover[];
 }
 
-const tierLabels = ["ผู้อนุมัติขั้นแรก", "ผู้อนุมัติขั้นสอง", "ผู้อนุมัติสุดท้าย"];
-const tierColors = ["#FF870F", "#87FF0F", "#FFFF0F"];
+const approverColors = ["#FF870F", "#87FF0F", "#0FA9FF"];
 
 const roleOptions = [
   { value: "admin", label: "Admin" },
@@ -142,26 +141,28 @@ const ApprovalSettings = () => {
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-muted-foreground">กำหนดกระบวนการอนุมัติแบบหลายระดับ (Multi-tier Approval)</p>
+      <p className="text-sm text-muted-foreground">
+        กำหนดผู้อนุมัติได้สูงสุด 3 คนต่อระบบ — เมื่อมีผู้อนุมัติเพียง <span className="font-semibold text-foreground">1 คน</span> อนุมัติ คำขอจะถูกอนุมัติทันที
+      </p>
 
       {modules.map((module, mi) => (
         <div key={module.key} className="card-base p-5">
           <div className="flex items-center justify-between mb-4">
             <h4 className="font-semibold">{module.name}</h4>
-            <span className="text-xs text-muted-foreground">{module.tiers.length} ระดับ</span>
+            <span className="text-xs text-muted-foreground">{module.tiers.length} ผู้อนุมัติ</span>
           </div>
           <div className="space-y-3">
             {module.tiers.map((tier, ti) => (
               <div key={ti} className="flex items-center gap-3 flex-wrap sm:flex-nowrap">
                 <div
                   className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
-                  style={{ background: tierColors[ti] || "#ccc", color: "#000" }}
+                  style={{ background: approverColors[ti] || "#ccc", color: "#000" }}
                 >
                   {ti + 1}
                 </div>
                 <div className="flex-shrink-0">
                   <p className="text-sm font-medium whitespace-nowrap">
-                    Tier {ti + 1} ({tierLabels[ti] || `ระดับที่ ${ti + 1}`})
+                    ผู้อนุมัติคนที่ {ti + 1}
                   </p>
                 </div>
 
@@ -213,7 +214,7 @@ const ApprovalSettings = () => {
               style={{ borderColor: "hsl(var(--border))" }}
             >
               <Plus className="w-4 h-4" />
-              เพิ่มระดับการอนุมัติ
+              เพิ่มผู้อนุมัติ
             </button>
           )}
         </div>

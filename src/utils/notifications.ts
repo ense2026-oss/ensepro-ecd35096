@@ -47,24 +47,12 @@ export async function notifyRequester(employeeId: string, params: NotifyParams) 
 }
 
 /**
- * Get the approval config for a module to determine total tiers
+ * Single-tier approval: only ONE approval is required regardless of how many
+ * approvers are configured. Any one of the configured approvers can approve and
+ * the request is immediately approved. Always returns 1.
  */
-export async function getApprovalTiers(moduleKey: string): Promise<number> {
-  const { data } = await supabase
-    .from("company_settings")
-    .select("value")
-    .eq("key", "approval_config")
-    .maybeSingle();
-
-  if (!data?.value) return 1;
-
-  try {
-    const modules = data.value as any[];
-    const mod = Array.isArray(modules) ? modules.find((m: any) => m.key === moduleKey) : null;
-    return mod?.tiers?.length || 1;
-  } catch {
-    return 1;
-  }
+export async function getApprovalTiers(_moduleKey: string): Promise<number> {
+  return 1;
 }
 
 /**
