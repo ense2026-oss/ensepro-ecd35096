@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { Plus, Download } from "lucide-react";
+import { Plus, Download, CalendarDays } from "lucide-react";
 import LeaveQuotaCards, { type LeaveType } from "@/components/leave/LeaveQuotaCards";
 import LeaveTable, { type LeaveRecord } from "@/components/leave/LeaveTable";
 import LeaveRequestDialog from "@/components/leave/LeaveRequestDialog";
+import LeaveCalendarDialog from "@/components/leave/LeaveCalendarDialog";
 import { useToast } from "@/hooks/use-toast";
 import { usePendingCounts } from "@/contexts/PendingCountsContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -67,6 +68,7 @@ const Leave = () => {
   const [leaves, setLeaves] = useState<LeaveRecord[]>([]);
   const [filterStatus, setFilterStatus] = useState("all");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [calendarOpen, setCalendarOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [editingRecord, setEditingRecord] = useState<LeaveRecord | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -404,6 +406,13 @@ const Leave = () => {
           <p className="text-sm text-muted-foreground mt-0.5">จัดการคำขอลาและโควต้าการลา</p>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => setCalendarOpen(true)}
+            className="flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-medium hover:bg-muted transition-colors"
+          >
+            <CalendarDays className="w-4 h-4" />
+            ปฏิทินวันลา
+          </button>
           {scope !== "self" && (
             <button className="flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-medium hover:bg-muted transition-colors">
               <Download className="w-4 h-4" />
@@ -479,6 +488,13 @@ const Leave = () => {
         employeeNames={employeeNames}
         allEmployeeNames={allEmployeeNames}
         editingRecord={editingRecord}
+      />
+
+      <LeaveCalendarDialog
+        open={calendarOpen}
+        onOpenChange={setCalendarOpen}
+        leaves={leaves}
+        leaveTypes={leaveTypes}
       />
 
       {/* Delete confirmation dialog */}
