@@ -140,6 +140,8 @@ function dbToEmployee(row: any, education: any[], workHistory: any[], payrollIte
     initialPassword: row.initial_password || '',
     children: row.children || 0,
     childrenAfter2018: row.children_after_2018 || 0,
+    sons: row.sons || 0,
+    daughters: row.daughters || 0,
     pvdRate: row.pvd_rate ? Number(row.pvd_rate) : 0,
     taxDeductions: row.tax_deductions && Object.keys(row.tax_deductions).length > 0
       ? { ...DEFAULT_TAX_DEDUCTION, ...row.tax_deductions }
