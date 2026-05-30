@@ -16,6 +16,9 @@ export interface TimeEditRequest {
   reason: string;
   status: "pending" | "approved" | "rejected";
   createdAt: string;
+  currentTier: number;
+  approvedTiers: number;
+  totalTiers: number;
 }
 
 export interface AppNotification {
