@@ -4,7 +4,7 @@ import {
   ArrowLeft, Camera, Edit, Save, X, Plus, Trash2,
   User, Briefcase, Users, GraduationCap, Clock, Shield, Receipt,
   Phone, Mail, MapPin, Calendar, CreditCard, Droplets,
-  Building, Star, Lock, Eye, EyeOff, AlertCircle
+  Building, Star, Lock, Eye, EyeOff, AlertCircle, Palette
 } from "lucide-react";
 
 import { ThaiDatePicker } from "@/components/ui/thai-date-picker";
@@ -17,6 +17,7 @@ import { processFileUpload } from "@/utils/fileCompression";
 import LazyImage from "@/components/ui/lazy-image";
 import defaultAvatarImg from "@/assets/default-avatar.png";
 import { supabase } from "@/integrations/supabase/client";
+import DisplaySettings, { getPersonalDisplayKey } from "@/components/settings/DisplaySettings";
 
 const TAB_CONFIG = [
   { key: "personal",   label: "ข้อมูลส่วนตัว",   icon: User },
@@ -26,6 +27,7 @@ const TAB_CONFIG = [
   { key: "workhistory",label: "ประวัติการทำงาน",  icon: Clock },
   { key: "tax",        label: "ข้อมูลภาษี",      icon: Receipt },
   { key: "security",   label: "ความปลอดภัย",     icon: Shield },
+  { key: "display",    label: "การแสดงผล",       icon: Palette },
 ];
 
 /* ───────────────────── Helpers ───────────────────── */
@@ -654,6 +656,15 @@ const EmployeeProfile = () => {
     </div>
   );
 
+  /* ─── TAB: Display (personal preferences) ─── */
+  const displayTab = currentUser?.id ? (
+    <DisplaySettings storageKey={getPersonalDisplayKey(currentUser.id)} personal />
+  ) : (
+    <div className="flex items-center gap-2 text-sm text-muted-foreground py-8">
+      <AlertCircle className="w-4 h-4" /> กรุณาเข้าสู่ระบบเพื่อตั้งค่าการแสดงผลส่วนตัว
+    </div>
+  );
+
   const tabContent: Record<string, React.ReactNode> = {
     personal: personalTab,
     work: workTab,
@@ -662,7 +673,9 @@ const EmployeeProfile = () => {
     workhistory: workHistoryTab,
     tax: taxTab,
     security: securityTab,
+    display: displayTab,
   };
+
 
   return (
     <div

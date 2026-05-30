@@ -125,6 +125,9 @@ const colorFields: { key: keyof CustomColors; label: string; icon: string }[] = 
 
 const STORAGE_KEY = "hrpro-display-settings";
 
+// Per-user personal display key (does not affect the global/main program theme)
+export const getPersonalDisplayKey = (userId: string) => `${STORAGE_KEY}::${userId}`;
+
 interface DisplaySettingsState {
   themeId: string;
   fontId: string;
@@ -141,9 +144,9 @@ const defaultSettings: DisplaySettingsState = {
   customColors: { ...defaultCustomColors },
 };
 
-const loadSettings = (): DisplaySettingsState => {
+const loadSettings = (key: string = STORAGE_KEY): DisplaySettingsState => {
   try {
-    const saved = localStorage.getItem(STORAGE_KEY);
+    const saved = localStorage.getItem(key);
     if (saved) {
       const parsed = JSON.parse(saved);
       return {
@@ -220,7 +223,26 @@ export const applyDisplaySettings = (settings?: DisplaySettingsState) => {
   root.style.setProperty("--radius", radius.value);
 };
 
-// --- Component ---
+// Apply on startup: a logged-in user's personal preferences take precedence
+// over the global/main program theme (for that user's own view only).
+export const applyStartupDisplaySettings = () => {
+  try {
+    const raw = localStorage.getItem("auth_profile_cache");
+    if (raw) {
+      const userId = JSON.parse(raw)?.userId;
+      if (userId) {
+        const personalKey = getPersonalDisplayKey(userId);
+        if (localStorage.getItem(personalKey)) {
+          applyDisplaySettings(loadSettings(personalKey));
+          return;
+        }
+      }
+    }
+  } catch { /* ignore */ }
+  applyDisplaySettings(loadSettings());
+};
+
+
 const ColorPickerField = ({
   label,
   icon,
@@ -256,14 +278,21 @@ const ColorPickerField = ({
   );
 };
 
-const DisplaySettings = () => {
-  const [settings, setSettings] = useState<DisplaySettingsState>(loadSettings);
+interface DisplaySettingsProps {
+  /** Override storage key to scope settings (e.g. per-user personal settings) */
+  storageKey?: string;
+  /** Personal mode: reset reverts to the main program theme instead of defaults */
+  personal?: boolean;
+}
+
+const DisplaySettings = ({ storageKey = STORAGE_KEY, personal = false }: DisplaySettingsProps) => {
+  const [settings, setSettings] = useState<DisplaySettingsState>(() => loadSettings(storageKey));
   const [showCustom, setShowCustom] = useState(settings.themeId === "custom");
 
   useEffect(() => {
     applyDisplaySettings(settings);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
-  }, [settings]);
+    localStorage.setItem(storageKey, JSON.stringify(settings));
+  }, [settings, storageKey]);
 
   const update = (key: keyof DisplaySettingsState, value: string) => {
     setSettings((prev) => ({ ...prev, [key]: value }));
@@ -279,8 +308,16 @@ const DisplaySettings = () => {
   };
 
   const reset = () => {
-    setSettings(defaultSettings);
-    setShowCustom(false);
+    if (personal) {
+      // Revert to the main program (global) theme for this user
+      localStorage.removeItem(storageKey);
+      const global = loadSettings(STORAGE_KEY);
+      setSettings(global);
+      setShowCustom(global.themeId === "custom");
+    } else {
+      setSettings(defaultSettings);
+      setShowCustom(false);
+    }
   };
 
   const selectTheme = (id: string) => {
@@ -299,10 +336,14 @@ const DisplaySettings = () => {
             <Palette className="w-5 h-5 text-primary" />
             การแสดงผล
           </h3>
-          <p className="text-sm text-muted-foreground mt-0.5">ปรับแต่งสีธีม ฟอนต์ และรูปแบบการแสดงผล</p>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            {personal
+              ? "ปรับแต่งการแสดงผลเฉพาะของคุณ — บันทึกอัตโนมัติและไม่กระทบกับการแสดงผลของโปรแกรมหลัก"
+              : "ปรับแต่งสีธีม ฟอนต์ และรูปแบบการแสดงผล"}
+          </p>
         </div>
         <button onClick={reset} className="flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-xl border border-border hover:bg-muted transition-colors">
-          <RotateCcw className="w-3.5 h-3.5" /> รีเซ็ต
+          <RotateCcw className="w-3.5 h-3.5" /> {personal ? "ใช้ค่าโปรแกรมหลัก" : "รีเซ็ต"}
         </button>
       </div>
 
