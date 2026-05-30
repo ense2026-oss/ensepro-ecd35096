@@ -84,6 +84,7 @@ const Leave = () => {
         used: 0,
         color: lt.color,
         requireDoc: lt.require_doc,
+        docRequiredMinDays: lt.doc_required_min_days ?? 1,
       })));
     }
   }, []);
