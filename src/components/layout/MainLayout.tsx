@@ -44,6 +44,7 @@ const MainLayout = () => {
   const location = useLocation();
   const { user, loading, profileReady, currentUser, role } = useAuth();
   const { canAccessRoute, isSelfOnly, loading: permLoading } = usePermissions();
+  const { modules: enabledModules, loading: modulesLoading } = useModuleSettings();
 
   // Still bootstrapping auth — show loader, don't redirect
   if (loading || !profileReady) {
