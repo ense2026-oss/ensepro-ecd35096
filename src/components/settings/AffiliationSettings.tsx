@@ -33,23 +33,34 @@ const AffiliationSettings = () => {
   const handleSaveAff = async () => {
     if (!affForm.name.trim()) { toast({ title: "กรุณากรอกชื่อสังกัด", variant: "destructive" }); return; }
     setSaving(true);
-    if (editingAffId) {
-      await updateAffiliation(editingAffId, affForm.name, affForm.parentOrgLevelId || null);
-      toast({ title: "แก้ไขสังกัดสำเร็จ", description: affForm.name });
-    } else {
-      await addAffiliation(affForm.name, affForm.parentOrgLevelId || null);
-      toast({ title: "เพิ่มสังกัดสำเร็จ", description: affForm.name });
+    try {
+      if (editingAffId) {
+        await updateAffiliation(editingAffId, affForm.name, affForm.parentOrgLevelId || null);
+        toast({ title: "แก้ไขสังกัดสำเร็จ", description: affForm.name });
+      } else {
+        await addAffiliation(affForm.name, affForm.parentOrgLevelId || null);
+        toast({ title: "เพิ่มสังกัดสำเร็จ", description: affForm.name });
+      }
+      setAffDialogOpen(false);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "ไม่สามารถบันทึกสังกัดได้";
+      toast({ title: "บันทึกสังกัดไม่สำเร็จ", description: message, variant: "destructive" });
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
-    setAffDialogOpen(false);
   };
 
   const handleDeleteAff = async () => {
     if (!deleteAffId) return;
     const aff = affiliations.find((a) => a.id === deleteAffId);
-    await deleteAffiliation(deleteAffId);
-    setDeleteAffId(null);
-    toast({ title: "ลบสังกัดสำเร็จ", description: aff?.name });
+    try {
+      await deleteAffiliation(deleteAffId);
+      toast({ title: "ลบสังกัดสำเร็จ", description: aff?.name });
+      setDeleteAffId(null);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "ไม่สามารถลบสังกัดได้";
+      toast({ title: "ลบสังกัดไม่สำเร็จ", description: message, variant: "destructive" });
+    }
   };
 
   // Position CRUD
@@ -61,23 +72,35 @@ const AffiliationSettings = () => {
 
   const handleSavePos = async () => {
     if (!posForm.name.trim()) { toast({ title: "กรุณากรอกชื่อตำแหน่ง", variant: "destructive" }); return; }
+    if (!posForm.affiliationId) { toast({ title: "กรุณาเลือกสังกัด", variant: "destructive" }); return; }
     setSaving(true);
-    if (editingPosId) {
-      await updatePosition(editingPosId, posForm.name);
-      toast({ title: "แก้ไขตำแหน่งสำเร็จ", description: posForm.name });
-    } else {
-      await addPosition(posForm.affiliationId, null, posForm.name);
-      toast({ title: "เพิ่มตำแหน่งสำเร็จ", description: posForm.name });
+    try {
+      if (editingPosId) {
+        await updatePosition(editingPosId, posForm.name);
+        toast({ title: "แก้ไขตำแหน่งสำเร็จ", description: posForm.name });
+      } else {
+        await addPosition(posForm.affiliationId, null, posForm.name);
+        toast({ title: "เพิ่มตำแหน่งสำเร็จ", description: posForm.name });
+      }
+      setPosDialogOpen(false);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "ไม่สามารถบันทึกตำแหน่งได้";
+      toast({ title: "บันทึกตำแหน่งไม่สำเร็จ", description: message, variant: "destructive" });
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
-    setPosDialogOpen(false);
   };
 
   const handleDeletePos = async () => {
     if (!deletePosId) return;
-    await deletePosition(deletePosId);
-    setDeletePosId(null);
-    toast({ title: "ลบตำแหน่งสำเร็จ" });
+    try {
+      await deletePosition(deletePosId);
+      toast({ title: "ลบตำแหน่งสำเร็จ" });
+      setDeletePosId(null);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "ไม่สามารถลบตำแหน่งได้";
+      toast({ title: "ลบตำแหน่งไม่สำเร็จ", description: message, variant: "destructive" });
+    }
   };
 
   const totalPositions = affiliations.reduce((sum, a) => sum + a.positions.length, 0);
