@@ -228,7 +228,7 @@ const Leave = () => {
       // Get total tiers from approval config
       const totalTiers = await getApprovalTiers("leave");
 
-      const { data: inserted } = await supabase.from("leave_requests").insert([{
+      const { data: inserted, error: insertError } = await supabase.from("leave_requests").insert([{
         employee_id: emp.id,
         leave_type_id: lt.id,
         leave_type_name: record.type,
@@ -242,6 +242,17 @@ const Leave = () => {
         approved_tiers: 0,
         total_tiers: totalTiers,
       }]).select("id").single();
+
+      if (insertError) {
+        toast({
+          title: "ไม่สามารถยื่นคำขอลาได้",
+          description: insertError.message?.includes("เกินโควต้า")
+            ? insertError.message
+            : "เกิดข้อผิดพลาดในการบันทึกคำขอลา กรุณาลองใหม่อีกครั้ง",
+          variant: "destructive",
+        });
+        return;
+      }
 
       if (inserted && file) {
         const fileUrl = await uploadFile(file, inserted.id);
