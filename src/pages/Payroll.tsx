@@ -348,6 +348,7 @@ function getMonthDateRange(year: number, month: number) {
 /* ═══════════════════════ Main Page ═══════════════════════ */
 const Payroll = () => {
   const { employees, updateEmployee } = useEmployees();
+  const { config: payrollConfig } = usePayrollConfig();
   const [search, setSearch] = useState("");
   const [filterDept, setFilterDept] = useState("all");
   const [sortField, setSortField] = useState<"name" | "salary" | "net">("name");
