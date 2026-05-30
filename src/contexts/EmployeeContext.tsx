@@ -204,9 +204,13 @@ function employeeToDb(emp: Partial<Employee>) {
   if (emp.position !== undefined) mapped.position = emp.position;
   if (emp.employeeType !== undefined) mapped.employee_type = emp.employeeType;
   if (emp.startDate !== undefined) mapped.start_date = emp.startDate;
+  if (emp.trialEndDate !== undefined) mapped.trial_end_date = emp.trialEndDate;
+  if (emp.contractEndDate !== undefined) mapped.contract_end_date = emp.contractEndDate;
   if (emp.shift !== undefined) mapped.shift = emp.shift;
   if (emp.faceScanId !== undefined) mapped.face_scan_id = emp.faceScanId;
   if (emp.salary !== undefined) mapped.salary = emp.salary;
+  if (emp.bankAccount !== undefined) mapped.bank_account = emp.bankAccount;
+  if (emp.driverLicense !== undefined) mapped.driver_license = emp.driverLicense;
   if (emp.positionId !== undefined) mapped.position_id = emp.positionId || null;
   if (emp.status !== undefined) mapped.status = emp.status;
   if (emp.homeAddress !== undefined) mapped.home_address = emp.homeAddress;
