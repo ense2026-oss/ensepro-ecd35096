@@ -7,6 +7,7 @@ export interface LeaveType {
   used: number;
   color: string;
   requireDoc: boolean;
+  docRequiredMinDays?: number;
 }
 
 interface LeaveQuotaCardsProps {

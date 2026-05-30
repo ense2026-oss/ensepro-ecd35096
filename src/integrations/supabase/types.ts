@@ -1049,6 +1049,7 @@ export type Database = {
         Row: {
           color: string
           created_at: string
+          doc_required_min_days: number
           id: string
           name: string
           quota: number
@@ -1058,6 +1059,7 @@ export type Database = {
         Insert: {
           color?: string
           created_at?: string
+          doc_required_min_days?: number
           id?: string
           name?: string
           quota?: number
@@ -1067,6 +1069,7 @@ export type Database = {
         Update: {
           color?: string
           created_at?: string
+          doc_required_min_days?: number
           id?: string
           name?: string
           quota?: number

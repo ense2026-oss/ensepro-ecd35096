@@ -33,7 +33,8 @@ const LeaveRequestDialog = ({ open, onOpenChange, leaveTypes, onSubmit, canSelec
   const [errors, setErrors] = useState<Record<string, boolean>>({});
 
   const selectedType = leaveTypes.find((lt) => lt.name === leaveType);
-  const requireDoc = selectedType?.requireDoc ?? false;
+  const requireDocSetting = selectedType?.requireDoc ?? false;
+  const docMinDays = selectedType?.docRequiredMinDays ?? 1;
   const substituteList = (allEmployeeNames.length > 0 ? allEmployeeNames : employeeNames).filter((n) => n !== (selectedEmployee || currentUserName));
 
   useEffect(() => {
@@ -112,6 +113,8 @@ const LeaveRequestDialog = ({ open, onOpenChange, leaveTypes, onSubmit, canSelec
   };
 
   const hasFile = !!fileName || (!!existingFileUrl && !removeExisting);
+  const currentDays = durationType === "half" ? 0.5 : calculateDays(startDate, endDate);
+  const requireDoc = requireDocSetting && currentDays >= docMinDays;
 
   const handleSubmit = () => {
     const newErrors: Record<string, boolean> = {};
@@ -218,7 +221,7 @@ const LeaveRequestDialog = ({ open, onOpenChange, leaveTypes, onSubmit, canSelec
           </div>
           <div className="sm:col-span-2">
             <label className="block text-sm font-semibold mb-1.5">
-              เอกสารแนบ {requireDoc && <span className="text-destructive">* (บังคับสำหรับ{leaveType})</span>}
+              เอกสารแนบ {requireDoc && <span className="text-destructive">* (บังคับสำหรับ{leaveType} ตั้งแต่ {docMinDays} วันขึ้นไป)</span>}
             </label>
 
             {showExistingFile && (

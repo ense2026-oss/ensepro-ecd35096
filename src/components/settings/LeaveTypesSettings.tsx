@@ -10,11 +10,12 @@ interface LeaveType {
   name: string;
   quota: number;
   require_doc: boolean;
+  doc_required_min_days: number;
   color: string;
   sort_order: number;
 }
 
-const emptyForm = { name: "", quota: 0, require_doc: false, color: "#6B7280" };
+const emptyForm = { name: "", quota: 0, require_doc: false, doc_required_min_days: 1, color: "#6B7280" };
 
 const LeaveTypesSettings = () => {
   const { toast } = useToast();
@@ -45,7 +46,7 @@ const LeaveTypesSettings = () => {
 
   const openEdit = (item: LeaveType) => {
     setEditingId(item.id);
-    setForm({ name: item.name, quota: item.quota, require_doc: item.require_doc, color: item.color });
+    setForm({ name: item.name, quota: item.quota, require_doc: item.require_doc, doc_required_min_days: item.doc_required_min_days ?? 1, color: item.color });
     setDialogOpen(true);
   };
 
@@ -55,7 +56,7 @@ const LeaveTypesSettings = () => {
     if (editingId) {
       const { error } = await supabase
         .from("leave_types")
-        .update({ name: form.name, quota: form.quota, require_doc: form.require_doc, color: form.color })
+        .update({ name: form.name, quota: form.quota, require_doc: form.require_doc, doc_required_min_days: form.require_doc ? Math.max(1, form.doc_required_min_days) : 1, color: form.color })
         .eq("id", editingId);
       if (error) {
         toast({ title: "เกิดข้อผิดพลาด", description: error.message, variant: "destructive" });
@@ -66,7 +67,7 @@ const LeaveTypesSettings = () => {
       const maxOrder = items.length > 0 ? Math.max(...items.map(i => i.sort_order)) + 1 : 0;
       const { error } = await supabase
         .from("leave_types")
-        .insert({ name: form.name, quota: form.quota, require_doc: form.require_doc, color: form.color, sort_order: maxOrder });
+        .insert({ name: form.name, quota: form.quota, require_doc: form.require_doc, doc_required_min_days: form.require_doc ? Math.max(1, form.doc_required_min_days) : 1, color: form.color, sort_order: maxOrder });
       if (error) {
         toast({ title: "เกิดข้อผิดพลาด", description: error.message, variant: "destructive" });
       } else {
@@ -127,7 +128,7 @@ const LeaveTypesSettings = () => {
                 </td>
                 <td className="px-4 py-3">
                   <span className={lt.require_doc ? "badge-late" : "badge-present"}>
-                    {lt.require_doc ? "บังคับ" : "ไม่บังคับ"}
+                    {lt.require_doc ? `บังคับ (ตั้งแต่ ${lt.doc_required_min_days ?? 1} วันขึ้นไป)` : "ไม่บังคับ"}
                   </span>
                 </td>
                 <td className="px-4 py-3">
@@ -185,6 +186,19 @@ const LeaveTypesSettings = () => {
               />
               <label htmlFor="requireDoc" className="text-sm font-semibold cursor-pointer">ต้องแนบเอกสารประกอบ</label>
             </div>
+            {form.require_doc && (
+              <div>
+                <label className="block text-sm font-semibold mb-1.5">บังคับแนบเอกสารตั้งแต่ (วันขึ้นไป)</label>
+                <input
+                  type="number"
+                  value={form.doc_required_min_days}
+                  onChange={(e) => setForm((f) => ({ ...f, doc_required_min_days: Number(e.target.value) }))}
+                  min={1}
+                  className="w-full px-3 py-2.5 text-sm rounded-xl border outline-none bg-muted/30"
+                />
+                <p className="text-xs text-muted-foreground mt-1">หากลาตั้งแต่จำนวนวันนี้ขึ้นไป จะต้องแนบเอกสารประกอบ</p>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <button onClick={() => setDialogOpen(false)} className="px-4 py-2 rounded-xl text-sm font-medium text-muted-foreground hover:bg-muted">
