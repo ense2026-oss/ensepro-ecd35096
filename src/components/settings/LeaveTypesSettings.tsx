@@ -56,7 +56,7 @@ const LeaveTypesSettings = () => {
     if (editingId) {
       const { error } = await supabase
         .from("leave_types")
-        .update({ name: form.name, quota: form.quota, require_doc: form.require_doc, color: form.color })
+        .update({ name: form.name, quota: form.quota, require_doc: form.require_doc, doc_required_min_days: form.require_doc ? Math.max(1, form.doc_required_min_days) : 1, color: form.color })
         .eq("id", editingId);
       if (error) {
         toast({ title: "เกิดข้อผิดพลาด", description: error.message, variant: "destructive" });
@@ -67,7 +67,7 @@ const LeaveTypesSettings = () => {
       const maxOrder = items.length > 0 ? Math.max(...items.map(i => i.sort_order)) + 1 : 0;
       const { error } = await supabase
         .from("leave_types")
-        .insert({ name: form.name, quota: form.quota, require_doc: form.require_doc, color: form.color, sort_order: maxOrder });
+        .insert({ name: form.name, quota: form.quota, require_doc: form.require_doc, doc_required_min_days: form.require_doc ? Math.max(1, form.doc_required_min_days) : 1, color: form.color, sort_order: maxOrder });
       if (error) {
         toast({ title: "เกิดข้อผิดพลาด", description: error.message, variant: "destructive" });
       } else {
