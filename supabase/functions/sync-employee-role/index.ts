@@ -42,14 +42,25 @@ Deno.serve(async (req) => {
 
     const userId = callingUser.id;
 
-    // Check caller has admin role
-    const { data: callerRole } = await supabaseAdmin
+    // Check caller is authorized: admin/hr role OR has edit access to the "settings" module
+    const { data: callerRoles } = await supabaseAdmin
       .from("user_roles")
       .select("role")
-      .eq("user_id", userId)
-      .single();
-    
-    if (!callerRole || !["admin", "hr"].includes(callerRole.role)) {
+      .eq("user_id", userId);
+
+    const roles = (callerRoles ?? []).map((r) => r.role);
+    let authorized = roles.some((r) => ["admin", "hr"].includes(r));
+
+    if (!authorized) {
+      const { data: canEditSettings } = await supabaseAdmin.rpc("can_access_module", {
+        _user_id: userId,
+        _module: "settings",
+        _action: "edit",
+      });
+      authorized = canEditSettings === true;
+    }
+
+    if (!authorized) {
       return new Response(JSON.stringify({ error: "Admin access required" }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
