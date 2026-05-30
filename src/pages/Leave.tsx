@@ -490,6 +490,13 @@ const Leave = () => {
         editingRecord={editingRecord}
       />
 
+      <LeaveCalendarDialog
+        open={calendarOpen}
+        onOpenChange={setCalendarOpen}
+        leaves={leaves}
+        leaveTypes={leaveTypes}
+      />
+
       {/* Delete confirmation dialog */}
       <AlertDialog open={!!deleteId} onOpenChange={(v) => { if (!v) setDeleteId(null); }}>
         <AlertDialogContent>
