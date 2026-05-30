@@ -1091,7 +1091,7 @@ const Payroll = () => {
       </div>
 
       {selectedEmp && (
-        <PayslipDialog open={payslipOpen} onClose={() => setPayslipOpen(false)} emp={selectedEmp} config={payrollConfig} payroll={calcPayroll(selectedEmp, payrollConfig, attendanceMap[selectedEmp.id] || { workDays: 0, otHours: 0, lateDays: 0, absentDays: 0, leaveDays: 0 })} />>
+        <PayslipDialog open={payslipOpen} onClose={() => setPayslipOpen(false)} emp={selectedEmp} config={payrollConfig} payroll={calcPayroll(selectedEmp, payrollConfig, attendanceMap[selectedEmp.id] || { workDays: 0, otHours: 0, lateDays: 0, absentDays: 0, leaveDays: 0 })} />
       )}
 
       {customItemsEmp && (
