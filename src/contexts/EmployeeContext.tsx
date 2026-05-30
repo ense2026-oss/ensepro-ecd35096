@@ -82,6 +82,8 @@ export interface Employee {
   taxDeductions?: TaxDeduction;
   children?: number;
   childrenAfter2018?: number;
+  sons?: number;
+  daughters?: number;
   pvdRate?: number;
   customPayrollItems?: CustomPayrollItem[];
 }
