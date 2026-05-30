@@ -56,7 +56,16 @@ Deno.serve(async (req) => {
       .select("role")
       .eq("user_id", userData.user.id)
       .maybeSingle();
-    if (!roleRow || !["admin", "hr"].includes(roleRow.role as string)) {
+    let allowed = !!roleRow && ["admin", "hr"].includes(roleRow.role as string);
+    if (!allowed) {
+      const { data: canEdit } = await supabaseAdmin.rpc("can_access_module", {
+        _user_id: userData.user.id,
+        _module: "settings",
+        _action: "edit",
+      });
+      allowed = canEdit === true;
+    }
+    if (!allowed) {
       return new Response(JSON.stringify({ error: "Forbidden" }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
