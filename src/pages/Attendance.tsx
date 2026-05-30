@@ -43,7 +43,7 @@ const reqStatusConf: Record<string, { label: string; color: string; bg: string }
 
 const Attendance = () => {
   const { employees } = useEmployees();
-  const { role } = useAuth();
+  const { role, user, currentUser } = useAuth();
   const { canAction } = usePermissions();
   const canApproveTime = canAction(role, 'attendance', 'approve');
   const { setAttendancePending } = usePendingCounts();
