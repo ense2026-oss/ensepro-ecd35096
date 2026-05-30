@@ -165,10 +165,42 @@ const ShiftsSettings = () => {
                 {SHIFT_COLORS.map((c) => (
                   <button key={c} type="button" onClick={() => setForm(f => ({ ...f, color: c }))}
                     className="w-8 h-8 rounded-full border-2 transition-all flex items-center justify-center"
-                    style={{ background: c, borderColor: form.color === c ? "hsl(var(--foreground))" : "transparent", transform: form.color === c ? "scale(1.15)" : "scale(1)" }}>
-                    {form.color === c && <Check className="w-4 h-4 text-white" />}
+                    style={{ background: c, borderColor: form.color.toLowerCase() === c ? "hsl(var(--foreground))" : "transparent", transform: form.color.toLowerCase() === c ? "scale(1.15)" : "scale(1)" }}>
+                    {form.color.toLowerCase() === c && <Check className="w-4 h-4 text-white" />}
                   </button>
                 ))}
+                {/* Custom color picker */}
+                <label
+                  className="relative w-8 h-8 rounded-full border-2 cursor-pointer overflow-hidden flex items-center justify-center"
+                  title="เลือกสีกำหนดเอง"
+                  style={{
+                    background: "conic-gradient(red, orange, yellow, lime, cyan, blue, magenta, red)",
+                    borderColor: !SHIFT_COLORS.includes(form.color.toLowerCase()) ? "hsl(var(--foreground))" : "transparent",
+                    transform: !SHIFT_COLORS.includes(form.color.toLowerCase()) ? "scale(1.15)" : "scale(1)",
+                  }}
+                >
+                  <Plus className="w-4 h-4 text-white drop-shadow" />
+                  <input
+                    type="color"
+                    value={form.color}
+                    onChange={(e) => setForm(f => ({ ...f, color: e.target.value }))}
+                    className="absolute inset-0 opacity-0 cursor-pointer"
+                  />
+                </label>
+              </div>
+              <div className="flex items-center gap-2 mt-3">
+                <span
+                  className="w-6 h-6 rounded-full border border-border shrink-0"
+                  style={{ background: form.color }}
+                />
+                <input
+                  type="text"
+                  value={form.color}
+                  onChange={(e) => setForm(f => ({ ...f, color: e.target.value }))}
+                  placeholder="#22c55e"
+                  className="w-32 px-3 py-2 text-sm rounded-xl border outline-none bg-muted/30 font-mono"
+                />
+                <span className="text-xs text-muted-foreground">เลือกได้ทุกสีด้วย Color Picker</span>
               </div>
             </div>
           </div>
