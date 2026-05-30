@@ -656,6 +656,15 @@ const EmployeeProfile = () => {
     </div>
   );
 
+  /* ─── TAB: Display (personal preferences) ─── */
+  const displayTab = currentUser?.id ? (
+    <DisplaySettings storageKey={getPersonalDisplayKey(currentUser.id)} personal />
+  ) : (
+    <div className="flex items-center gap-2 text-sm text-muted-foreground py-8">
+      <AlertCircle className="w-4 h-4" /> กรุณาเข้าสู่ระบบเพื่อตั้งค่าการแสดงผลส่วนตัว
+    </div>
+  );
+
   const tabContent: Record<string, React.ReactNode> = {
     personal: personalTab,
     work: workTab,
@@ -664,7 +673,9 @@ const EmployeeProfile = () => {
     workhistory: workHistoryTab,
     tax: taxTab,
     security: securityTab,
+    display: displayTab,
   };
+
 
   return (
     <div
