@@ -548,7 +548,7 @@ const Payroll = () => {
         };
       }
       const att = attendanceMap[emp.id] || { workDays: 0, otHours: 0, lateDays: 0, absentDays: 0, leaveDays: 0 };
-      return { emp, payroll: calcPayroll(emp, PAYROLL_CONFIG, att, overrideMap[emp.id]), fromSnapshot: false as const };
+      return { emp, payroll: calcPayroll(emp, payrollConfig, att, overrideMap[emp.id]), fromSnapshot: false as const };
     });
   }, [activeEmployees, attendanceMap, snapshotMap, overrideMap]);
 
@@ -675,7 +675,7 @@ const Payroll = () => {
       // Compute snapshots for all active employees
       const rows = activeEmployees.map((emp) => {
         const att = attendanceMap[emp.id] || { workDays: 0, otHours: 0, lateDays: 0, absentDays: 0, leaveDays: 0 };
-        const p = calcPayroll(emp, PAYROLL_CONFIG, att, overrideMap[emp.id]);
+        const p = calcPayroll(emp, payrollConfig, att, overrideMap[emp.id]);
         const expenseDeduction = calculateExpenseDeduction(p.annualIncome);
         const totalDeductions = calculateTotalDeductions(p.deductions);
         const netIncome = Math.max(0, p.annualIncome - expenseDeduction - totalDeductions);
@@ -1091,7 +1091,7 @@ const Payroll = () => {
       </div>
 
       {selectedEmp && (
-        <PayslipDialog open={payslipOpen} onClose={() => setPayslipOpen(false)} emp={selectedEmp} payroll={calcPayroll(selectedEmp, PAYROLL_CONFIG, attendanceMap[selectedEmp.id] || { workDays: 0, otHours: 0, lateDays: 0, absentDays: 0, leaveDays: 0 })} />
+        <PayslipDialog open={payslipOpen} onClose={() => setPayslipOpen(false)} emp={selectedEmp} config={payrollConfig} payroll={calcPayroll(selectedEmp, payrollConfig, attendanceMap[selectedEmp.id] || { workDays: 0, otHours: 0, lateDays: 0, absentDays: 0, leaveDays: 0 })} />>
       )}
 
       {customItemsEmp && (
