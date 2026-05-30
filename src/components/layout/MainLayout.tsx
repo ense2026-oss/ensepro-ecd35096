@@ -5,6 +5,21 @@ import Topbar from "./Topbar";
 import MobileFooterNav from "./MobileFooterNav";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/contexts/PermissionsContext";
+import { useModuleSettings } from "@/hooks/useModuleSettings";
+
+// Map a base route to its module_settings key (for enable/disable gating)
+const routeToModuleSetting: Record<string, string> = {
+  "/employees": "employees",
+  "/organization": "organization",
+  "/contracts": "contracts",
+  "/attendance": "attendance",
+  "/leave": "leave",
+  "/overtime": "overtime",
+  "/check-in": "check-in",
+  "/shift-management": "shift-management",
+  "/payroll": "payroll",
+  "/reports": "reports",
+};
 
 const pageTitles: Record<string, { title: string; subtitle: string }> = {
   "/dashboard": { title: "หน้าหลัก", subtitle: "ภาพรวมระบบบริหารจัดการพนักงาน" },
@@ -29,6 +44,7 @@ const MainLayout = () => {
   const location = useLocation();
   const { user, loading, profileReady, currentUser, role } = useAuth();
   const { canAccessRoute, isSelfOnly, loading: permLoading } = usePermissions();
+  const { modules: enabledModules, loading: modulesLoading } = useModuleSettings();
 
   // Still bootstrapping auth — show loader, don't redirect
   if (loading || !profileReady) {
@@ -57,6 +73,13 @@ const MainLayout = () => {
     const defaultPage = canAccessRoute(role, "/dashboard") ? "/dashboard" : "/notifications";
     return <Navigate to={defaultPage} replace />;
   }
+
+  // Block direct URL access to disabled modules (once settings are loaded)
+  const moduleSettingKey = routeToModuleSetting[currentPath];
+  if (!modulesLoading && moduleSettingKey && enabledModules[moduleSettingKey] === false) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
 
   // Redirect self-only users from list view to their own profile
   if (isSelfOnly(role, "/employees") && location.pathname === "/employees") {
