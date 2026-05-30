@@ -278,14 +278,21 @@ const ColorPickerField = ({
   );
 };
 
-const DisplaySettings = () => {
-  const [settings, setSettings] = useState<DisplaySettingsState>(loadSettings);
+interface DisplaySettingsProps {
+  /** Override storage key to scope settings (e.g. per-user personal settings) */
+  storageKey?: string;
+  /** Personal mode: reset reverts to the main program theme instead of defaults */
+  personal?: boolean;
+}
+
+const DisplaySettings = ({ storageKey = STORAGE_KEY, personal = false }: DisplaySettingsProps) => {
+  const [settings, setSettings] = useState<DisplaySettingsState>(() => loadSettings(storageKey));
   const [showCustom, setShowCustom] = useState(settings.themeId === "custom");
 
   useEffect(() => {
     applyDisplaySettings(settings);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
-  }, [settings]);
+    localStorage.setItem(storageKey, JSON.stringify(settings));
+  }, [settings, storageKey]);
 
   const update = (key: keyof DisplaySettingsState, value: string) => {
     setSettings((prev) => ({ ...prev, [key]: value }));
@@ -301,8 +308,16 @@ const DisplaySettings = () => {
   };
 
   const reset = () => {
-    setSettings(defaultSettings);
-    setShowCustom(false);
+    if (personal) {
+      // Revert to the main program (global) theme for this user
+      localStorage.removeItem(storageKey);
+      const global = loadSettings(STORAGE_KEY);
+      setSettings(global);
+      setShowCustom(global.themeId === "custom");
+    } else {
+      setSettings(defaultSettings);
+      setShowCustom(false);
+    }
   };
 
   const selectTheme = (id: string) => {
