@@ -5,6 +5,21 @@ import Topbar from "./Topbar";
 import MobileFooterNav from "./MobileFooterNav";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/contexts/PermissionsContext";
+import { useModuleSettings } from "@/hooks/useModuleSettings";
+
+// Map a base route to its module_settings key (for enable/disable gating)
+const routeToModuleSetting: Record<string, string> = {
+  "/employees": "employees",
+  "/organization": "organization",
+  "/contracts": "contracts",
+  "/attendance": "attendance",
+  "/leave": "leave",
+  "/overtime": "overtime",
+  "/check-in": "check-in",
+  "/shift-management": "shift-management",
+  "/payroll": "payroll",
+  "/reports": "reports",
+};
 
 const pageTitles: Record<string, { title: string; subtitle: string }> = {
   "/dashboard": { title: "หน้าหลัก", subtitle: "ภาพรวมระบบบริหารจัดการพนักงาน" },
