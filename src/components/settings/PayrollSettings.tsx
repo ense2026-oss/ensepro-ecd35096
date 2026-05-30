@@ -151,6 +151,15 @@ const PayrollSettings = () => {
   const incomeTemplates = templates.filter((t) => t.type === "income");
   const deductionTemplates = templates.filter((t) => t.type === "deduction");
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20 text-muted-foreground">
+        <Loader2 className="w-5 h-5 animate-spin mr-2" />
+        กำลังโหลดการตั้งค่า...
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-5">
       <p className="text-sm text-muted-foreground">กำหนดค่าการคำนวณเงินเดือน ค่าล่วงเวลา ภาษี และสวัสดิการ</p>
