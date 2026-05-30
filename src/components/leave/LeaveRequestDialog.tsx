@@ -221,7 +221,7 @@ const LeaveRequestDialog = ({ open, onOpenChange, leaveTypes, onSubmit, canSelec
           </div>
           <div className="sm:col-span-2">
             <label className="block text-sm font-semibold mb-1.5">
-              เอกสารแนบ {requireDoc && <span className="text-destructive">* (บังคับสำหรับ{leaveType})</span>}
+              เอกสารแนบ {requireDoc && <span className="text-destructive">* (บังคับสำหรับ{leaveType} ตั้งแต่ {docMinDays} วันขึ้นไป)</span>}
             </label>
 
             {showExistingFile && (
