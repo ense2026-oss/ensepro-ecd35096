@@ -32,6 +32,8 @@ interface PayrollTemplate {
 
 const PayrollSettings = () => {
   const { toast } = useToast();
+  const { config, loading, reload } = usePayrollConfig();
+  const [saving, setSaving] = useState(false);
 
   // OT
   const [otWeekdayRate, setOtWeekdayRate] = useState("1.5");
@@ -63,12 +65,34 @@ const PayrollSettings = () => {
   const [customPayDay, setCustomPayDay] = useState("28");
 
   // Custom Payroll Item Templates
-  const [templates, setTemplates] = useState<PayrollTemplate[]>([
-    { id: "t1", name: "ค่าตอบแทนวิชาชีพ", type: "income", defaultAmount: 1000 },
-    { id: "t2", name: "หักเงิน กยศ.", type: "deduction", defaultAmount: 500 },
-    { id: "t3", name: "หักผ่อนชำระหนี้", type: "deduction", defaultAmount: 1200 },
-    { id: "t4", name: "หักค่าประกันการทำงาน", type: "deduction", defaultAmount: 300 },
-  ]);
+  const [templates, setTemplates] = useState<PayrollTemplate[]>([]);
+
+  // Populate form when config loads
+  useEffect(() => {
+    if (loading) return;
+    setOtWeekdayRate(String(config.otRateWorkday));
+    setOtHolidayRate(String(config.otRateHoliday));
+    setOtPublicHolidayRate(String(config.otRatePublicHoliday));
+    setAllowHolidayOT(config.allowHolidayOT);
+    setMaxOTHours(String(config.maxOTHours));
+    setDiligenceEnabled(config.diligenceEnabled);
+    setDiligenceAmount(String(config.diligenceAmount));
+    setDeductLate(config.deductLate);
+    setLateThreshold(String(config.lateThreshold));
+    setDeductAbsent(config.deductAbsent);
+    setAbsentThreshold(String(config.absentThreshold));
+    setSsfEnabled(config.ssfEnabled);
+    setSsfRate(String(config.ssfRate));
+    setSsfCeiling(String(config.ssfCeiling));
+    setTaxEnabled(config.taxConfig.enabled);
+    setTaxMethod(config.taxConfig.method);
+    setFlatRate(String(config.taxConfig.flatRate));
+    setShiftAfternoon(String(config.shiftAllowanceAfternoon));
+    setShiftNight(String(config.shiftAllowanceNight));
+    setPayCycle(config.payCycle);
+    setCustomPayDay(String(config.customPayDay));
+    setTemplates(config.templates);
+  }, [loading, config]);
 
   const addTemplate = (type: "income" | "deduction") => {
     setTemplates([...templates, { id: crypto.randomUUID(), name: "", type, defaultAmount: 0 }]);
@@ -82,8 +106,38 @@ const PayrollSettings = () => {
     setTemplates(templates.filter((t) => t.id !== id));
   };
 
-  const handleSave = () => {
-    toast({ title: "บันทึกสำเร็จ", description: "การตั้งค่าเงินเดือนถูกอัปเดตแล้ว" });
+  const handleSave = async () => {
+    setSaving(true);
+    const payload: PayrollConfig = {
+      otRateWorkday: Number(otWeekdayRate),
+      otRateHoliday: Number(otHolidayRate),
+      otRatePublicHoliday: Number(otPublicHolidayRate),
+      allowHolidayOT,
+      maxOTHours: Number(maxOTHours),
+      diligenceEnabled,
+      diligenceAmount: Number(diligenceAmount),
+      deductLate,
+      lateThreshold: Number(lateThreshold),
+      deductAbsent,
+      absentThreshold: Number(absentThreshold),
+      ssfEnabled,
+      ssfRate: Number(ssfRate),
+      ssfCeiling: Number(ssfCeiling),
+      taxConfig: { enabled: taxEnabled, method: taxMethod, flatRate: Number(flatRate) },
+      shiftAllowanceAfternoon: Number(shiftAfternoon),
+      shiftAllowanceNight: Number(shiftNight),
+      payCycle,
+      customPayDay: Number(customPayDay),
+      templates,
+    };
+    const { error } = await savePayrollConfig(payload);
+    setSaving(false);
+    if (error) {
+      toast({ title: "เกิดข้อผิดพลาด", description: error.message, variant: "destructive" });
+    } else {
+      await reload();
+      toast({ title: "บันทึกสำเร็จ", description: "การตั้งค่าเงินเดือนถูกอัปเดตแล้ว และมีผลกับการคำนวณทันที" });
+    }
   };
 
   const inputClass = "w-full px-3 py-2 text-sm rounded-xl border border-border bg-muted/30 outline-none focus:ring-2 focus:ring-primary/30 transition-all";
