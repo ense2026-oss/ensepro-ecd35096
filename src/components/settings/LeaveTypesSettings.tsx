@@ -46,7 +46,7 @@ const LeaveTypesSettings = () => {
 
   const openEdit = (item: LeaveType) => {
     setEditingId(item.id);
-    setForm({ name: item.name, quota: item.quota, require_doc: item.require_doc, color: item.color });
+    setForm({ name: item.name, quota: item.quota, require_doc: item.require_doc, doc_required_min_days: item.doc_required_min_days ?? 1, color: item.color });
     setDialogOpen(true);
   };
 
