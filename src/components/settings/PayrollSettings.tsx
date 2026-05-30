@@ -395,9 +395,11 @@ const PayrollSettings = () => {
       {/* Save Button */}
       <button
         onClick={handleSave}
-        className="px-6 py-2.5 rounded-xl text-sm font-bold text-primary-foreground"
+        disabled={saving || loading}
+        className="px-6 py-2.5 rounded-xl text-sm font-bold text-primary-foreground disabled:opacity-50 flex items-center gap-2"
         style={{ background: "linear-gradient(135deg, hsl(var(--primary)), hsl(31 100% 60%))", boxShadow: "0 4px 12px hsl(var(--primary) / 0.3)" }}
       >
+        {saving && <Loader2 className="w-4 h-4 animate-spin" />}
         บันทึกการตั้งค่า
       </button>
     </div>
