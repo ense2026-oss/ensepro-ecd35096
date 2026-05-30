@@ -101,6 +101,7 @@ function dbToEmployee(row: any, education: any[], workHistory: any[], payrollIte
     lastName: row.last_name || '',
     nickname: row.nickname || '',
     birthDate: row.birth_date || '',
+    gender: row.gender || '',
     nationalId: row.national_id || '',
     nationality: row.nationality || 'ไทย',
     religion: row.religion || '',
