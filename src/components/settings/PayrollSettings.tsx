@@ -11,11 +11,16 @@ import { Plus, Trash2, Loader2 } from "lucide-react";
 import { usePayrollConfig, savePayrollConfig, type PayrollConfig } from "@/utils/payrollConfig";
 
 const otRateOptions = [
-  { value: "1.0", label: "1.0 เท่า" },
+  { value: "1", label: "1.0 เท่า" },
   { value: "1.5", label: "1.5 เท่า" },
-  { value: "2.0", label: "2.0 เท่า" },
-  { value: "3.0", label: "3.0 เท่า" },
+  { value: "2", label: "2.0 เท่า" },
+  { value: "3", label: "3.0 เท่า" },
 ];
+
+const normalizeOtRateValue = (value: number | string) => {
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? String(numeric) : "1";
+};
 
 const payCycleOptions = [
   { value: "end", label: "สิ้นเดือน" },
@@ -37,8 +42,8 @@ const PayrollSettings = () => {
 
   // OT
   const [otWeekdayRate, setOtWeekdayRate] = useState("1.5");
-  const [otHolidayRate, setOtHolidayRate] = useState("3.0");
-  const [otPublicHolidayRate, setOtPublicHolidayRate] = useState("3.0");
+  const [otHolidayRate, setOtHolidayRate] = useState("3");
+  const [otPublicHolidayRate, setOtPublicHolidayRate] = useState("3");
   const [allowHolidayOT, setAllowHolidayOT] = useState(true);
   const [maxOTHours, setMaxOTHours] = useState("36");
 
@@ -70,9 +75,9 @@ const PayrollSettings = () => {
   // Populate form when config loads
   useEffect(() => {
     if (loading) return;
-    setOtWeekdayRate(String(config.otRateWorkday));
-    setOtHolidayRate(String(config.otRateHoliday));
-    setOtPublicHolidayRate(String(config.otRatePublicHoliday));
+    setOtWeekdayRate(normalizeOtRateValue(config.otRateWorkday));
+    setOtHolidayRate(normalizeOtRateValue(config.otRateHoliday));
+    setOtPublicHolidayRate(normalizeOtRateValue(config.otRatePublicHoliday));
     setAllowHolidayOT(config.allowHolidayOT);
     setMaxOTHours(String(config.maxOTHours));
     setDiligenceEnabled(config.diligenceEnabled);
