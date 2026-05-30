@@ -190,6 +190,7 @@ function employeeToDb(emp: Partial<Employee>) {
   if (emp.lastName !== undefined) mapped.last_name = emp.lastName;
   if (emp.nickname !== undefined) mapped.nickname = emp.nickname;
   if (emp.birthDate !== undefined) mapped.birth_date = emp.birthDate;
+  if (emp.gender !== undefined) mapped.gender = emp.gender;
   if (emp.nationalId !== undefined) mapped.national_id = emp.nationalId;
   if (emp.nationality !== undefined) mapped.nationality = emp.nationality;
   if (emp.religion !== undefined) mapped.religion = emp.religion;
