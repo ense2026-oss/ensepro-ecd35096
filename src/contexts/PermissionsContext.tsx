@@ -29,6 +29,7 @@ const moduleToRoutes: Record<string, string[]> = {
   employee: ["/employees"],
   organization: ["/organization"],
   shiftManagement: ["/shift-management"],
+  ot_management: ["/overtime-management"],
   day_off: ["/day-off"],
   payroll: ["/payroll"],
   reports: ["/reports"],
