@@ -128,7 +128,7 @@ const LeaveTypesSettings = () => {
                 </td>
                 <td className="px-4 py-3">
                   <span className={lt.require_doc ? "badge-late" : "badge-present"}>
-                    {lt.require_doc ? "บังคับ" : "ไม่บังคับ"}
+                    {lt.require_doc ? `บังคับ (ตั้งแต่ ${lt.doc_required_min_days ?? 1} วันขึ้นไป)` : "ไม่บังคับ"}
                   </span>
                 </td>
                 <td className="px-4 py-3">
