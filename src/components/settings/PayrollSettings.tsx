@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Switch } from "@/components/ui/switch";
 import { TAX_BRACKETS } from "@/utils/taxCalculation";
@@ -7,7 +7,8 @@ import {
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Loader2 } from "lucide-react";
+import { usePayrollConfig, savePayrollConfig, type PayrollConfig } from "@/utils/payrollConfig";
 
 const otRateOptions = [
   { value: "1.0", label: "1.0 เท่า" },
