@@ -74,6 +74,13 @@ const MainLayout = () => {
     return <Navigate to={defaultPage} replace />;
   }
 
+  // Block direct URL access to disabled modules (once settings are loaded)
+  const moduleSettingKey = routeToModuleSetting[currentPath];
+  if (!modulesLoading && moduleSettingKey && enabledModules[moduleSettingKey] === false) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+
   // Redirect self-only users from list view to their own profile
   if (isSelfOnly(role, "/employees") && location.pathname === "/employees") {
     return <Navigate to={`/employees/${selfEmployeeId}`} replace />;
