@@ -1,0 +1,1 @@
+REVOKE ALL ON FUNCTION public.enforce_leave_quota() FROM PUBLIC, anon, authenticated;
