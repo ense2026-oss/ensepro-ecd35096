@@ -181,6 +181,7 @@ const ImportEmployeesDialog = ({ open, onOpenChange }: ImportEmployeesDialogProp
           lastName: d.lastName,
           nickname: d.nickname,
           birthDate: "",
+          gender: "",
           nationalId: "",
           nationality: "ไทย",
           religion: "",
