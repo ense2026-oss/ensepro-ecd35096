@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { Plus, Download } from "lucide-react";
+import { Plus, Download, CalendarDays } from "lucide-react";
 import LeaveQuotaCards, { type LeaveType } from "@/components/leave/LeaveQuotaCards";
 import LeaveTable, { type LeaveRecord } from "@/components/leave/LeaveTable";
 import LeaveRequestDialog from "@/components/leave/LeaveRequestDialog";
+import LeaveCalendarDialog from "@/components/leave/LeaveCalendarDialog";
 import { useToast } from "@/hooks/use-toast";
 import { usePendingCounts } from "@/contexts/PendingCountsContext";
 import { useAuth } from "@/contexts/AuthContext";
