@@ -36,12 +36,13 @@ const AdminsSettings = () => {
   const handleDeleteClick = (emp: Employee) => { setDeleting(emp); setDeleteOpen(true); };
 
   const handleFormSave = async (data: Omit<Employee, "id" | "education" | "workHistory">) => {
-    // Force role to Admin
-    const payload = { ...data, role: "Admin" };
     if (editing) {
-      await updateEmployee(editing.id, payload);
+      // Respect the role chosen in the form (allows demoting an admin to HR, etc.)
+      await updateEmployee(editing.id, data);
       toast.success("แก้ไขผู้ดูแลระบบสำเร็จ");
     } else {
+      // New entries in this tab default to Admin
+      const payload = { ...data, role: data.role || "Admin" };
       await addEmployee({ ...payload, education: [], workHistory: [] } as Omit<Employee, "id">);
       toast.success("เพิ่มผู้ดูแลระบบสำเร็จ");
     }
