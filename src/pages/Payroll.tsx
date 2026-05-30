@@ -23,19 +23,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { usePayrollPeriod, type PayslipRow } from "@/hooks/usePayrollPeriod";
 import { useAuth } from "@/contexts/AuthContext";
 
-/* ─── Payroll config ─── */
-const PAYROLL_CONFIG = {
-  otRateWorkday: 1.5,
-  otRateHoliday: 3.0,
-  diligenceEnabled: true,
-  diligenceAmount: 2000,
-  ssfEnabled: true,
-  ssfRate: 5,
-  ssfCeiling: 750,
-  taxConfig: { enabled: true, method: "progressive" as const, flatRate: 5 },
-  shiftAllowanceAfternoon: 50,
-  shiftAllowanceNight: 100,
-};
+/* ─── Payroll config (loaded from settings; default as fallback) ─── */
+const PAYROLL_CONFIG = DEFAULT_PAYROLL_CONFIG;
 
 /* ─── Attendance data type ─── */
 interface AttendanceStats {
