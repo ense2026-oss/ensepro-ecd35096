@@ -8,7 +8,9 @@ import { toast } from "sonner";
 const ContractSettings = () => {
   const { settings, updateSettings } = useContracts();
   const { employees } = useEmployees();
-  const managers = employees.filter((e) => ["Admin", "Manager", "HR"].includes(e.role));
+  const executives = employees.filter(
+    (e) => (e.role || "").toLowerCase() === "executive" && e.status === "active"
+  );
 
   return (
     <div className="space-y-6">
@@ -53,9 +55,13 @@ const ContractSettings = () => {
             <SelectValue placeholder="เลือกผู้บริหาร" />
           </SelectTrigger>
           <SelectContent>
-            {managers.map((e) => (
-              <SelectItem key={e.id} value={e.id}>{e.firstName} {e.lastName} — {e.position}</SelectItem>
-            ))}
+            {executives.length === 0 ? (
+              <div className="px-2 py-3 text-sm text-muted-foreground">ยังไม่มีรายชื่อผู้บริหาร</div>
+            ) : (
+              executives.map((e) => (
+                <SelectItem key={e.id} value={e.id}>{e.firstName} {e.lastName} — {e.position}</SelectItem>
+              ))
+            )}
           </SelectContent>
         </Select>
       </div>
