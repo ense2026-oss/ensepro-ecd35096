@@ -186,6 +186,19 @@ const LeaveTypesSettings = () => {
               />
               <label htmlFor="requireDoc" className="text-sm font-semibold cursor-pointer">ต้องแนบเอกสารประกอบ</label>
             </div>
+            {form.require_doc && (
+              <div>
+                <label className="block text-sm font-semibold mb-1.5">บังคับแนบเอกสารตั้งแต่ (วันขึ้นไป)</label>
+                <input
+                  type="number"
+                  value={form.doc_required_min_days}
+                  onChange={(e) => setForm((f) => ({ ...f, doc_required_min_days: Number(e.target.value) }))}
+                  min={1}
+                  className="w-full px-3 py-2.5 text-sm rounded-xl border outline-none bg-muted/30"
+                />
+                <p className="text-xs text-muted-foreground mt-1">หากลาตั้งแต่จำนวนวันนี้ขึ้นไป จะต้องแนบเอกสารประกอบ</p>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <button onClick={() => setDialogOpen(false)} className="px-4 py-2 rounded-xl text-sm font-medium text-muted-foreground hover:bg-muted">
