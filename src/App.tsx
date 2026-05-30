@@ -32,10 +32,10 @@ import Contracts from "@/pages/Contracts";
 import ContractDetail from "@/pages/ContractDetail";
 import DayOff from "@/pages/DayOff";
 import NotFound from "@/pages/NotFound";
-import { applyDisplaySettings } from "@/components/settings/DisplaySettings";
+import { applyStartupDisplaySettings } from "@/components/settings/DisplaySettings";
 
-// Apply saved display settings on load
-applyDisplaySettings();
+// Apply saved display settings on load (personal preferences take precedence)
+applyStartupDisplaySettings();
 
 const queryClient = new QueryClient();
 
