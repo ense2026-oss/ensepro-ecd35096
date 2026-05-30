@@ -34,7 +34,7 @@ export interface AppNotification {
 
 interface TimeEditContextType {
   editRequests: TimeEditRequest[];
-  addEditRequest: (req: Omit<TimeEditRequest, "id" | "status" | "createdAt">) => void;
+  addEditRequest: (req: Omit<TimeEditRequest, "id" | "status" | "createdAt" | "currentTier" | "approvedTiers" | "totalTiers">) => void;
   updateRequestStatus: (id: string, status: "approved" | "rejected") => void;
   notifications: AppNotification[];
   addNotification: (notif: Omit<AppNotification, "id">) => void;
