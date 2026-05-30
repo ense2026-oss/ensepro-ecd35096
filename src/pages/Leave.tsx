@@ -68,6 +68,7 @@ const Leave = () => {
   const [leaves, setLeaves] = useState<LeaveRecord[]>([]);
   const [filterStatus, setFilterStatus] = useState("all");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [calendarOpen, setCalendarOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [editingRecord, setEditingRecord] = useState<LeaveRecord | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
