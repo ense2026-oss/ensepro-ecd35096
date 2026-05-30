@@ -125,6 +125,9 @@ const colorFields: { key: keyof CustomColors; label: string; icon: string }[] = 
 
 const STORAGE_KEY = "hrpro-display-settings";
 
+// Per-user personal display key (does not affect the global/main program theme)
+export const getPersonalDisplayKey = (userId: string) => `${STORAGE_KEY}::${userId}`;
+
 interface DisplaySettingsState {
   themeId: string;
   fontId: string;
@@ -141,9 +144,9 @@ const defaultSettings: DisplaySettingsState = {
   customColors: { ...defaultCustomColors },
 };
 
-const loadSettings = (): DisplaySettingsState => {
+const loadSettings = (key: string = STORAGE_KEY): DisplaySettingsState => {
   try {
-    const saved = localStorage.getItem(STORAGE_KEY);
+    const saved = localStorage.getItem(key);
     if (saved) {
       const parsed = JSON.parse(saved);
       return {
