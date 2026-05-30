@@ -301,7 +301,7 @@ const LeaveCalendarDialog: React.FC<LeaveCalendarDialogProps> = ({
             <div className="flex-1 overflow-y-auto p-3 space-y-2">
               {selectedLeaves.map((l) => (
                 <div key={l.id} className="flex items-center gap-2 rounded-xl border p-2">
-                  <EmployeeAvatar src={l.photoUrl} name={l.name} className="w-9 h-9" />
+                  <EmployeeAvatar photoUrl={l.photoUrl} firstName={l.name} size="md" />
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium truncate">{l.name}</p>
                     <div className="flex items-center gap-1.5">
