@@ -25,12 +25,10 @@ interface ModuleConfig {
 
 const MODULE_DEFS: ModuleConfig[] = [
   { id: "employees", label: "ข้อมูลพนักงาน", description: "จัดการข้อมูลพนักงานทั้งหมด", icon: Users, locked: true },
-  { id: "organization", label: "โครงสร้างองค์กร", description: "จัดการแผนกและตำแหน่งงาน", icon: GitBranch },
   { id: "contracts", label: "จัดการสัญญาจ้าง", description: "สร้างและจัดการสัญญาจ้างพนักงาน", icon: FileSignature },
   { id: "attendance", label: "บันทึกเวลา", description: "ระบบบันทึกเวลาเข้า-ออกงาน", icon: Clock },
   { id: "leave", label: "ระบบลางาน", description: "การลาและอนุมัติการลา", icon: CalendarDays },
   { id: "overtime", label: "ระบบโอที", description: "การทำงานล่วงเวลาและอนุมัติ", icon: Clock },
-  { id: "check-in", label: "ลงเวลาเข้า-ออกงาน", description: "สแกนหน้าหรือ GPS ลงเวลา", icon: MapPin },
   { id: "shift-management", label: "จัดการกะทำงาน", description: "กำหนดกะและจัดตารางงาน", icon: CalendarDays },
   { id: "payroll", label: "จัดการเงินเดือน", description: "คำนวณเงินเดือนและสลิป", icon: Banknote },
   { id: "reports", label: "รายงาน", description: "รายงานและสรุปข้อมูลต่างๆ", icon: FileText },
