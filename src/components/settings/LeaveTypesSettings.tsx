@@ -10,11 +10,12 @@ interface LeaveType {
   name: string;
   quota: number;
   require_doc: boolean;
+  doc_required_min_days: number;
   color: string;
   sort_order: number;
 }
 
-const emptyForm = { name: "", quota: 0, require_doc: false, color: "#6B7280" };
+const emptyForm = { name: "", quota: 0, require_doc: false, doc_required_min_days: 1, color: "#6B7280" };
 
 const LeaveTypesSettings = () => {
   const { toast } = useToast();
