@@ -228,6 +228,8 @@ function employeeToDb(emp: Partial<Employee>) {
   if (emp.role !== undefined) mapped.role = emp.role;
   if (emp.children !== undefined) mapped.children = emp.children;
   if (emp.childrenAfter2018 !== undefined) mapped.children_after_2018 = emp.childrenAfter2018;
+  if (emp.sons !== undefined) mapped.sons = emp.sons;
+  if (emp.daughters !== undefined) mapped.daughters = emp.daughters;
   if (emp.pvdRate !== undefined) mapped.pvd_rate = emp.pvdRate;
   if (emp.taxDeductions !== undefined) mapped.tax_deductions = emp.taxDeductions;
   if (emp.initialPassword !== undefined) mapped.initial_password = emp.initialPassword;
