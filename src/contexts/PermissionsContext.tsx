@@ -89,8 +89,10 @@ export const PermissionsProvider: React.FC<{ children: React.ReactNode }> = ({ c
     if (alwaysAccessible.includes(normalized)) return true;
     const mod = routeToModule[normalized];
     if (!mod) return true; // unknown routes accessible by default
+    // Permissions not loaded yet: allow to avoid false lockout during initial fetch
+    if (permissions.length === 0) return true;
     const perm = permissions.find((p) => p.role_name === role.toLowerCase() && p.module === mod);
-    if (!perm) return true; // no permission record = accessible (fallback)
+    if (!perm) return false; // no permission record for a known module = deny access
     return perm.can_view;
   }, [permissions]);
 
