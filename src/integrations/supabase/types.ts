@@ -14,6 +14,90 @@ export type Database = {
   }
   public: {
     Tables: {
+      _emp_stage: {
+        Row: {
+          address: string | null
+          bank_account: string | null
+          birth_date: string | null
+          blood_group: string | null
+          children: number | null
+          contract_end_date: string | null
+          daughters: number | null
+          dept: string | null
+          first_name: string | null
+          gender: string | null
+          home_address: string | null
+          id_expire_date: string | null
+          last_name: string | null
+          marital_status: string | null
+          match_id: string | null
+          national_id: string | null
+          nickname: string | null
+          phone: string | null
+          position: string | null
+          prefix: string | null
+          salary: string | null
+          sons: number | null
+          start_date: string | null
+          status: string | null
+          trial_end_date: string | null
+        }
+        Insert: {
+          address?: string | null
+          bank_account?: string | null
+          birth_date?: string | null
+          blood_group?: string | null
+          children?: number | null
+          contract_end_date?: string | null
+          daughters?: number | null
+          dept?: string | null
+          first_name?: string | null
+          gender?: string | null
+          home_address?: string | null
+          id_expire_date?: string | null
+          last_name?: string | null
+          marital_status?: string | null
+          match_id?: string | null
+          national_id?: string | null
+          nickname?: string | null
+          phone?: string | null
+          position?: string | null
+          prefix?: string | null
+          salary?: string | null
+          sons?: number | null
+          start_date?: string | null
+          status?: string | null
+          trial_end_date?: string | null
+        }
+        Update: {
+          address?: string | null
+          bank_account?: string | null
+          birth_date?: string | null
+          blood_group?: string | null
+          children?: number | null
+          contract_end_date?: string | null
+          daughters?: number | null
+          dept?: string | null
+          first_name?: string | null
+          gender?: string | null
+          home_address?: string | null
+          id_expire_date?: string | null
+          last_name?: string | null
+          marital_status?: string | null
+          match_id?: string | null
+          national_id?: string | null
+          nickname?: string | null
+          phone?: string | null
+          position?: string | null
+          prefix?: string | null
+          salary?: string | null
+          sons?: number | null
+          start_date?: string | null
+          status?: string | null
+          trial_end_date?: string | null
+        }
+        Relationships: []
+      }
       affiliations: {
         Row: {
           created_at: string
