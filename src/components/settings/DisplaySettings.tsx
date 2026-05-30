@@ -68,6 +68,7 @@ const fontSizeOptions = [
   { id: "small", name: "เล็ก", scale: 0.9 },
   { id: "medium", name: "ปกติ", scale: 1 },
   { id: "large", name: "ใหญ่", scale: 1.1 },
+  { id: "xlarge", name: "ใหญ่มาก", scale: 1.25 },
 ];
 
 const borderRadiusOptions = [
