@@ -33,7 +33,8 @@ const LeaveRequestDialog = ({ open, onOpenChange, leaveTypes, onSubmit, canSelec
   const [errors, setErrors] = useState<Record<string, boolean>>({});
 
   const selectedType = leaveTypes.find((lt) => lt.name === leaveType);
-  const requireDoc = selectedType?.requireDoc ?? false;
+  const requireDocSetting = selectedType?.requireDoc ?? false;
+  const docMinDays = selectedType?.docRequiredMinDays ?? 1;
   const substituteList = (allEmployeeNames.length > 0 ? allEmployeeNames : employeeNames).filter((n) => n !== (selectedEmployee || currentUserName));
 
   useEffect(() => {
