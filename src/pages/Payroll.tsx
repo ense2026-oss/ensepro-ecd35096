@@ -239,8 +239,8 @@ function CustomItemsDialog({
 }
 
 /* ─── Payslip Dialog ─── */
-function PayslipDialog({ open, onClose, emp, payroll }: { open: boolean; onClose: () => void; emp: Employee; payroll: ReturnType<typeof calcPayroll> }) {
-  const taxConfig = PAYROLL_CONFIG.taxConfig;
+function PayslipDialog({ open, onClose, emp, payroll, config }: { open: boolean; onClose: () => void; emp: Employee; payroll: ReturnType<typeof calcPayroll>; config: PayrollConfig }) {
+  const taxConfig = config.taxConfig;
   const expenseDeduction = calculateExpenseDeduction(payroll.annualIncome);
   const totalDeductions = calculateTotalDeductions(payroll.deductions);
   const netIncome = Math.max(0, payroll.annualIncome - expenseDeduction - totalDeductions);
