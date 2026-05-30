@@ -713,7 +713,7 @@ const Payroll = () => {
     } finally {
       setSavingPeriod(false);
     }
-  }, [period?.id, isPublished, selectedYear, selectedMonth, activeEmployees, attendanceMap, overrideMap, refetchPeriod, thaiYear]);
+  }, [period?.id, isPublished, selectedYear, selectedMonth, activeEmployees, attendanceMap, overrideMap, refetchPeriod, thaiYear, payrollConfig]);
 
   const publishPeriod = useCallback(async () => {
     if (!period) return;
