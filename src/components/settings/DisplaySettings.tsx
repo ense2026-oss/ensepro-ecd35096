@@ -336,10 +336,14 @@ const DisplaySettings = ({ storageKey = STORAGE_KEY, personal = false }: Display
             <Palette className="w-5 h-5 text-primary" />
             การแสดงผล
           </h3>
-          <p className="text-sm text-muted-foreground mt-0.5">ปรับแต่งสีธีม ฟอนต์ และรูปแบบการแสดงผล</p>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            {personal
+              ? "ปรับแต่งการแสดงผลเฉพาะของคุณ — บันทึกอัตโนมัติและไม่กระทบกับการแสดงผลของโปรแกรมหลัก"
+              : "ปรับแต่งสีธีม ฟอนต์ และรูปแบบการแสดงผล"}
+          </p>
         </div>
         <button onClick={reset} className="flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-xl border border-border hover:bg-muted transition-colors">
-          <RotateCcw className="w-3.5 h-3.5" /> รีเซ็ต
+          <RotateCcw className="w-3.5 h-3.5" /> {personal ? "ใช้ค่าโปรแกรมหลัก" : "รีเซ็ต"}
         </button>
       </div>
 
