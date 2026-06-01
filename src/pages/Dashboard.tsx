@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo, useRef, useCallback, forwardRef, Children
 import {
   Users, UserCheck, UserX, Clock, TrendingUp, TrendingDown,
   Calendar, Briefcase, AlertCircle, CheckCircle, MapPin,
+  CalendarOff, Building2, User as UserIcon,
 } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -82,6 +83,21 @@ StatCard.displayName = "StatCard";
 /* ─── LiveClock ─── */
 const THAI_DAYS = ["อาทิตย์", "จันทร์", "อังคาร", "พุธ", "พฤหัสบดี", "ศุกร์", "เสาร์"];
 const THAI_MONTHS_CLOCK = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
+const THAI_DAYS_SHORT = ["อา.", "จ.", "อ.", "พ.", "พฤ.", "ศ.", "ส."];
+const THAI_MONTHS_SHORT = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
+
+/** Format an ISO date "yyyy-MM-dd" to a short Thai BE label, e.g. "1 มิ.ย. 69" */
+const formatThaiShort = (iso: string): { day: string; date: string } => {
+  if (!iso) return { day: "", date: "" };
+  const [y, m, d] = iso.split("-").map((x) => parseInt(x));
+  const dt = new Date(y, m - 1, d);
+  return {
+    day: THAI_DAYS_SHORT[dt.getDay()],
+    date: `${d} ${THAI_MONTHS_SHORT[m - 1]} ${String((y + 543) % 100).padStart(2, "0")}`,
+  };
+};
+
+
 
 const LiveClock = () => {
   const [now, setNow] = useState(new Date());
@@ -203,6 +219,9 @@ const Dashboard = () => {
   const [checkInToday, setCheckInToday] = useState<any | null>(null);
   const [leaveTypes, setLeaveTypes] = useState<any[]>([]);
   const [myEmployee, setMyEmployee] = useState<any | null>(null);
+  const [companyHolidays, setCompanyHolidays] = useState<any[]>([]);
+  const [myDayoffPatterns, setMyDayoffPatterns] = useState<any[]>([]);
+  const [myDayoffOverrides, setMyDayoffOverrides] = useState<any[]>([]);
 
   const today = format(new Date(), "yyyy-MM-dd");
   const monthStart = format(startOfMonth(new Date()), "yyyy-MM-dd");
@@ -232,6 +251,18 @@ const Dashboard = () => {
       const empRecord = empLookup.data;
       if (empRecord) setMyEmployee(empRecord);
       const empId = empRecord?.id || empIdDirect || null;
+
+      // Holidays + personal day-offs (common to all views)
+      const [chRes, patRes, ovrRes] = await Promise.all([
+        supabase.from("company_holidays").select("date, name, is_paid").gte("date", today).order("date").limit(12),
+        empId ? supabase.from("employee_dayoff_patterns").select("*").eq("employee_id", empId) : Promise.resolve({ data: [] as any[] }),
+        empId ? supabase.from("employee_dayoff_overrides").select("*").eq("employee_id", empId).gte("date", today) : Promise.resolve({ data: [] as any[] }),
+      ]);
+      setCompanyHolidays(chRes.data || []);
+      setMyDayoffPatterns(patRes.data || []);
+      setMyDayoffOverrides(ovrRes.data || []);
+
+
 
       if (viewType === "employee") {
         if (!empId) { setLoading(false); return; }
@@ -308,6 +339,9 @@ const Dashboard = () => {
       .on("postgres_changes", { event: "*", schema: "public", table: "leave_requests" }, debouncedFetch)
       .on("postgres_changes", { event: "*", schema: "public", table: "overtime_requests" }, debouncedFetch)
       .on("postgres_changes", { event: "*", schema: "public", table: "time_edit_requests" }, debouncedFetch)
+      .on("postgres_changes", { event: "*", schema: "public", table: "company_holidays" }, debouncedFetch)
+      .on("postgres_changes", { event: "*", schema: "public", table: "employee_dayoff_patterns" }, debouncedFetch)
+      .on("postgres_changes", { event: "*", schema: "public", table: "employee_dayoff_overrides" }, debouncedFetch)
       .subscribe();
 
     return () => {
@@ -385,13 +419,14 @@ const Dashboard = () => {
 
   const totalLeaveDays = leavePieData.reduce((s, d) => s + d.value, 0);
 
-  // Department stats
+  // Department stats — count, active, present today, and on-leave today per department
   const deptStats = useMemo(() => {
-    const depts: Record<string, { count: number; present: number }> = {};
+    const depts: Record<string, { count: number; active: number; present: number; onLeave: number }> = {};
     employees.forEach((e) => {
       const d = e.dept || "ไม่ระบุ";
-      if (!depts[d]) depts[d] = { count: 0, present: 0 };
+      if (!depts[d]) depts[d] = { count: 0, active: 0, present: 0, onLeave: 0 };
       depts[d].count++;
+      if (e.status === "active") depts[d].active++;
     });
     todayAttendance.forEach((a) => {
       const emp = employees.find((e) => e.id === a.employee_id);
@@ -400,11 +435,50 @@ const Dashboard = () => {
         if (depts[d]) depts[d].present++;
       }
     });
+    leaveRequests.forEach((l) => {
+      if (l.status !== "approved" && l.status !== "pending") return;
+      const from = toIso(l.date_from);
+      const to = toIso(l.date_to);
+      if (!(from <= today && to >= today)) return;
+      const emp = employees.find((e) => e.id === l.employee_id);
+      if (emp) {
+        const d = emp.dept || "ไม่ระบุ";
+        if (depts[d]) depts[d].onLeave++;
+      }
+    });
     return Object.entries(depts)
       .map(([dept, v]) => ({ dept, ...v }))
       .sort((a, b) => b.count - a.count)
-      .slice(0, 5);
-  }, [employees, todayAttendance]);
+      .slice(0, 6);
+  }, [employees, todayAttendance, leaveRequests, today]);
+
+  // Upcoming personal day-offs for the current user (next 60 days, excludes company holidays which are listed separately)
+  const upcomingMyDayoffs = useMemo(() => {
+    const holidaySet = new Set(companyHolidays.map((h) => h.date));
+    const result: { iso: string; dow: number; label: string }[] = [];
+    const start = new Date();
+    for (let i = 0; i < 60 && result.length < 5; i++) {
+      const d = new Date(start);
+      d.setDate(start.getDate() + i);
+      const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      const dow = d.getDay();
+      const ov = myDayoffOverrides.find((o) => o.date === iso);
+      if (ov) {
+        if (ov.is_dayoff) result.push({ iso, dow, label: ov.reason || "วันหยุดพิเศษ" });
+        continue;
+      }
+      if (holidaySet.has(iso)) continue; // shown in company section
+      const matched = myDayoffPatterns.some(
+        (p) =>
+          (!p.effective_from || iso >= p.effective_from) &&
+          (!p.effective_to || iso <= p.effective_to) &&
+          (p.weekdays || []).includes(dow)
+      );
+      if (matched) result.push({ iso, dow, label: "วันหยุดประจำสัปดาห์" });
+    }
+    return result;
+  }, [companyHolidays, myDayoffPatterns, myDayoffOverrides]);
+
 
   // Attendance chart
   const attendanceChartData = useMemo(() => {
@@ -648,7 +722,7 @@ const Dashboard = () => {
       </div>
 
       {/* Bottom Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Recent Activity */}
         <div className="card-base p-5">
           <div className="flex items-center justify-between mb-4">
@@ -690,7 +764,10 @@ const Dashboard = () => {
         {/* Department Status */}
         <div className="card-base p-5">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="font-bold font-display">{viewType === "manager" ? "สถิติแผนกของฉัน" : "สถิติตามแผนก"}</h3>
+            <div>
+              <h3 className="font-bold font-display">{viewType === "manager" ? "สถิติแผนกของฉัน" : "สถิติตามแผนก"}</h3>
+              <p className="text-xs text-muted-foreground mt-0.5">พนักงานที่ใช้งาน · {totalEmployees} คนทั้งหมด</p>
+            </div>
           </div>
           <div className="space-y-4">
             {loading ? (
@@ -699,13 +776,16 @@ const Dashboard = () => {
               <p className="text-sm text-muted-foreground text-center py-4">ยังไม่มีข้อมูลแผนก</p>
             ) : (
               deptStats.map((dept) => {
-                const percentage = dept.count > 0 ? Math.round((dept.present / dept.count) * 100) : 0;
+                const percentage = dept.count > 0 ? Math.round((dept.active / dept.count) * 100) : 0;
                 return (
                   <div key={dept.dept}>
                     <div className="flex items-center justify-between mb-1.5">
                       <span className="text-sm font-medium">{dept.dept}</span>
                       <div className="flex items-center gap-2">
-                        <span className="text-xs text-muted-foreground">{dept.present}/{dept.count}</span>
+                        {dept.onLeave > 0 && (
+                          <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full" style={{ background: "hsl(220 90% 93%)", color: "hsl(220 90% 45%)" }}>ลา {dept.onLeave}</span>
+                        )}
+                        <span className="text-xs text-muted-foreground">{dept.active}/{dept.count} คน</span>
                         <span className="text-xs font-bold" style={{ color: percentage >= 90 ? "hsl(90 100% 35%)" : "#FF870F" }}>{percentage}%</span>
                       </div>
                     </div>
@@ -731,6 +811,79 @@ const Dashboard = () => {
                 <p className="text-xs text-muted-foreground">ชั่วโมง</p>
               </div>
             </div>
+          </div>
+        </div>
+
+        {/* Holidays */}
+        <div className="card-base p-5">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="font-bold font-display">วันหยุด</h3>
+              <p className="text-xs text-muted-foreground mt-0.5">บริษัท และของฉัน</p>
+            </div>
+            <CalendarOff className="w-5 h-5 text-muted-foreground" />
+          </div>
+
+          {/* Company holidays */}
+          <div className="mb-5">
+            <div className="flex items-center gap-1.5 mb-2.5">
+              <Building2 className="w-3.5 h-3.5" style={{ color: "#FF870F" }} />
+              <span className="text-xs font-semibold text-foreground">วันหยุดบริษัท</span>
+            </div>
+            {loading ? (
+              <div className="space-y-2">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-9 w-full rounded-lg" />)}</div>
+            ) : companyHolidays.length === 0 ? (
+              <p className="text-xs text-muted-foreground py-2">ไม่มีวันหยุดบริษัทที่จะถึง</p>
+            ) : (
+              <div className="space-y-1.5">
+                {companyHolidays.slice(0, 4).map((h) => {
+                  const f = formatThaiShort(h.date);
+                  return (
+                    <div key={h.date + h.name} className="flex items-center gap-2.5 p-2 rounded-lg" style={{ background: "hsl(31 100% 96%)" }}>
+                      <div className="w-9 h-9 rounded-lg flex flex-col items-center justify-center flex-shrink-0" style={{ background: "hsl(31 100% 92%)", color: "#FF870F" }}>
+                        <span className="text-[9px] leading-none font-medium">{f.day}</span>
+                        <span className="text-sm leading-none font-bold">{h.date.split("-")[2]}</span>
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-medium leading-tight truncate">{h.name}</p>
+                        <p className="text-[10px] text-muted-foreground">{f.date}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* My personal day-offs */}
+          <div>
+            <div className="flex items-center gap-1.5 mb-2.5">
+              <UserIcon className="w-3.5 h-3.5" style={{ color: "hsl(220 90% 50%)" }} />
+              <span className="text-xs font-semibold text-foreground">วันหยุดของฉัน</span>
+            </div>
+            {loading ? (
+              <div className="space-y-2">{Array.from({ length: 2 }).map((_, i) => <Skeleton key={i} className="h-9 w-full rounded-lg" />)}</div>
+            ) : upcomingMyDayoffs.length === 0 ? (
+              <p className="text-xs text-muted-foreground py-2">ไม่มีวันหยุดส่วนตัวที่จะถึง</p>
+            ) : (
+              <div className="space-y-1.5">
+                {upcomingMyDayoffs.map((d) => {
+                  const f = formatThaiShort(d.iso);
+                  return (
+                    <div key={d.iso} className="flex items-center gap-2.5 p-2 rounded-lg" style={{ background: "hsl(220 90% 97%)" }}>
+                      <div className="w-9 h-9 rounded-lg flex flex-col items-center justify-center flex-shrink-0" style={{ background: "hsl(220 90% 93%)", color: "hsl(220 90% 45%)" }}>
+                        <span className="text-[9px] leading-none font-medium">{f.day}</span>
+                        <span className="text-sm leading-none font-bold">{d.iso.split("-")[2]}</span>
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-medium leading-tight truncate">{d.label}</p>
+                        <p className="text-[10px] text-muted-foreground">{f.date}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
       </div>
