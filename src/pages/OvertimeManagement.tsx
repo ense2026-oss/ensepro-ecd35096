@@ -123,6 +123,7 @@ const OvertimeManagement = () => {
   const [deptFilter, setDeptFilter] = useState("all");
   const [activeTab, setActiveTab] = useState("calendar");
   const [selectedEmpId, setSelectedEmpId] = useState<string>("");
+  const [empColCollapsed, setEmpColCollapsed] = useState(false);
 
   useEffect(() => {
     if (isEmployeeRole && employeeId) setSelectedEmpId(employeeId);
