@@ -949,13 +949,11 @@ const BulkOTActionsView = ({ employees, canEdit, managerName, onChanged }: any) 
           <div className="grid grid-cols-2 gap-2">
             <div>
               <label className="block text-xs font-semibold mb-1.5 text-muted-foreground">เวลาเริ่ม</label>
-              <input type="time" value={bulkStart} onChange={(e) => setBulkStart(e.target.value)}
-                className="w-full px-2 py-2 text-sm rounded-xl border outline-none bg-muted/30" />
+              <Time24Input value={bulkStart} onChange={setBulkStart} />
             </div>
             <div>
               <label className="block text-xs font-semibold mb-1.5 text-muted-foreground">เวลาสิ้นสุด</label>
-              <input type="time" value={bulkEnd} onChange={(e) => setBulkEnd(e.target.value)}
-                className="w-full px-2 py-2 text-sm rounded-xl border outline-none bg-muted/30" />
+              <Time24Input value={bulkEnd} onChange={setBulkEnd} />
             </div>
           </div>
           <div>
