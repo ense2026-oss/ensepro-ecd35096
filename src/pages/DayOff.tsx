@@ -180,6 +180,17 @@ const DayOff = () => {
     }
   };
 
+  const deleteOverride = async (id: string) => {
+    if (!canEdit) return;
+    try {
+      const { error } = await supabase.from("employee_dayoff_overrides").delete().eq("id", id);
+      if (error) throw error;
+      toast({ title: "ยกเลิกวันหยุดสำเร็จ" });
+    } catch (err: any) {
+      toast({ title: "ไม่สามารถยกเลิกได้", description: err.message, variant: "destructive" });
+    }
+  };
+
   const cellColor = (status: string) => {
     switch (status) {
       case "work": return { bg: "hsl(var(--muted))", color: "hsl(var(--muted-foreground))", label: "✓" };
