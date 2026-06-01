@@ -698,10 +698,37 @@ const EmployeeProfile = () => {
     </div>
   );
 
+  const documentsTab = (
+    <div className="space-y-4">
+      <EmployeeDocuments
+        employeeId={emp.id}
+        category="personal"
+        canEdit={canEditRestricted}
+        title="เอกสารส่วนตัว"
+        description="เช่น สำเนาบัตรประชาชน ทะเบียนบ้าน รูปถ่าย"
+      />
+      <EmployeeDocuments
+        employeeId={emp.id}
+        category="education"
+        canEdit={canEditRestricted}
+        title="เอกสารการศึกษา"
+        description="เช่น วุฒิการศึกษา ทรานสคริปต์ ใบรับรอง"
+      />
+      <EmployeeDocuments
+        employeeId={emp.id}
+        category="work"
+        canEdit={canEditRestricted}
+        title="เอกสารการทำงาน"
+        description="เช่น สัญญาจ้าง หนังสือรับรอง ใบประเมิน"
+      />
+    </div>
+  );
+
   const tabContent: Record<string, React.ReactNode> = {
     personal: personalTab,
     work: workTab,
     family: familyTab,
+    documents: documentsTab,
     education: educationTab,
     workhistory: workHistoryTab,
     tax: taxTab,
