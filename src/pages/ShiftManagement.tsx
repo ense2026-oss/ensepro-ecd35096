@@ -172,21 +172,40 @@ const ShiftManagement = () => {
 
   const setShiftForDate = async (empId: string, dateIso: string, shiftId: string | null) => {
     if (!canEdit) return;
+    const existing = dayAssignments.find((d) => d.employee_id === empId && d.start_date === dateIso);
+    const prevAssignments = assignments;
+
+    // Optimistic update — reflect change instantly in the UI
+    const tempId = `temp-${Date.now()}`;
+    setAssignments((cur) => {
+      let next = existing ? cur.filter((a) => a.id !== existing.id) : cur.slice();
+      if (shiftId) {
+        next = [
+          { id: tempId, employee_id: empId, shift_id: shiftId, start_date: dateIso, end_date: dateIso, assignment_type: "day" },
+          ...next,
+        ];
+      }
+      return next;
+    });
+
     try {
-      // Always remove existing day assignment for this date first
-      const existing = dayAssignments.find((d) => d.employee_id === empId && d.start_date === dateIso);
       if (existing) {
-        await supabase.from("shift_assignments").delete().eq("id", existing.id);
+        const { error } = await supabase.from("shift_assignments").delete().eq("id", existing.id);
+        if (error) throw error;
       }
       if (shiftId) {
-        const { error } = await supabase.from("shift_assignments").insert({
+        const { data, error } = await supabase.from("shift_assignments").insert({
           employee_id: empId, shift_id: shiftId,
           start_date: dateIso, end_date: dateIso,
           assignment_type: "day",
-        });
+        }).select().single();
         if (error) throw error;
+        // Replace temp row with the real one
+        if (data) setAssignments((cur) => cur.map((a) => (a.id === tempId ? (data as ShiftAssignment) : a)));
       }
     } catch (err: any) {
+      // Rollback on failure
+      setAssignments(prevAssignments);
       toast({ title: "ไม่สามารถบันทึกได้", description: err.message, variant: "destructive" });
     }
   };
