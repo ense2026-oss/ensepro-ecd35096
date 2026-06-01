@@ -345,9 +345,10 @@ const DayOff = () => {
                                   <div className="pt-1.5 border-t mt-2 flex items-center gap-2">
                                     <button
                                       onClick={() => toggleOverride(emp.id, iso, status)}
-                                      className="flex-1 text-[11px] font-semibold text-primary hover:underline text-left"
+                                      className="flex items-center gap-1 flex-1 text-[11px] font-semibold text-primary hover:underline text-left"
                                     >
-                                      คลิกเพื่อ{status === "work" ? "ตั้งเป็นวันหยุด" : "เปลี่ยนสถานะ"}
+                                      <Plus className="w-3.5 h-3.5" />
+                                      {status === "work" ? "ตั้งเป็นวันหยุด" : "เปลี่ยนสถานะ"}
                                     </button>
                                     {hasOverride && (
                                       <button
