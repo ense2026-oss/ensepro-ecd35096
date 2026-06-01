@@ -338,7 +338,7 @@ const EmployeeProfile = () => {
           <SelectField label="กะการทำงาน" value={emp.shift} onChange={set("shift")} options={["กะเช้า 08:00-17:00", "กะบ่าย 12:00-21:00", "กะดึก 00:00-08:00"]} />
           <InputField label="Face Scan ID" value={emp.faceScanId} onChange={set("faceScanId")} />
           <InputField label="เงินเดือน (บาท)" value={emp.salary} onChange={set("salary")} type="number" />
-          <SelectField label="สถานะ" value={emp.status} onChange={set("status")} options={["active", "leave", "inactive"]} />
+          <SelectField label="สถานะ" value={emp.status} onChange={set("status")} options={STATUS_OPTIONS} />
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-4">
