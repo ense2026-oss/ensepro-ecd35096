@@ -764,7 +764,10 @@ const Dashboard = () => {
         {/* Department Status */}
         <div className="card-base p-5">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="font-bold font-display">{viewType === "manager" ? "สถิติแผนกของฉัน" : "สถิติตามแผนก"}</h3>
+            <div>
+              <h3 className="font-bold font-display">{viewType === "manager" ? "สถิติแผนกของฉัน" : "สถิติตามแผนก"}</h3>
+              <p className="text-xs text-muted-foreground mt-0.5">พนักงานที่ใช้งาน · {totalEmployees} คนทั้งหมด</p>
+            </div>
           </div>
           <div className="space-y-4">
             {loading ? (
@@ -773,13 +776,16 @@ const Dashboard = () => {
               <p className="text-sm text-muted-foreground text-center py-4">ยังไม่มีข้อมูลแผนก</p>
             ) : (
               deptStats.map((dept) => {
-                const percentage = dept.count > 0 ? Math.round((dept.present / dept.count) * 100) : 0;
+                const percentage = dept.count > 0 ? Math.round((dept.active / dept.count) * 100) : 0;
                 return (
                   <div key={dept.dept}>
                     <div className="flex items-center justify-between mb-1.5">
                       <span className="text-sm font-medium">{dept.dept}</span>
                       <div className="flex items-center gap-2">
-                        <span className="text-xs text-muted-foreground">{dept.present}/{dept.count}</span>
+                        {dept.onLeave > 0 && (
+                          <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full" style={{ background: "hsl(220 90% 93%)", color: "hsl(220 90% 45%)" }}>ลา {dept.onLeave}</span>
+                        )}
+                        <span className="text-xs text-muted-foreground">{dept.active}/{dept.count} คน</span>
                         <span className="text-xs font-bold" style={{ color: percentage >= 90 ? "hsl(90 100% 35%)" : "#FF870F" }}>{percentage}%</span>
                       </div>
                     </div>
