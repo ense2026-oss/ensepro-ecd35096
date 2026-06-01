@@ -112,16 +112,20 @@ const OvertimeManagement = () => {
 
   const fetchAll = async (showLoading = false) => {
     if (showLoading) setLoading(true);
-    const [ot, pr, or, hol] = await Promise.all([
+    const [ot, pr, or, hol, sh, asn] = await Promise.all([
       supabase.from("overtime_requests").select("id, employee_id, date, hours, ot_type, start_time, end_time, status").eq("status", "approved"),
       supabase.from("employee_dayoff_patterns").select("*"),
       supabase.from("employee_dayoff_overrides").select("*"),
       supabase.from("company_holidays").select("*"),
+      supabase.from("shifts").select("*").order("sort_order"),
+      supabase.from("shift_assignments").select("*"),
     ]);
     setEntries((ot.data as OTEntry[]) || []);
     setPatterns((pr.data as Pattern[]) || []);
     setOverrides((or.data as Override[]) || []);
     setHolidays((hol.data as CompanyHoliday[]) || []);
+    setShifts((sh.data as Shift[]) || []);
+    setAssignments((asn.data as ShiftAssignment[]) || []);
     if (showLoading) setLoading(false);
   };
 
