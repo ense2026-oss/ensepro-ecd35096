@@ -310,6 +310,27 @@ export const EmployeeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   }, [session, fetchEmployees]);
 
+  // Realtime: refetch when employees or related tables change (any device)
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+  useEffect(() => {
+    if (!session) return;
+    const debounced = () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      debounceRef.current = setTimeout(() => fetchEmployees(), 250);
+    };
+    const channel = supabase
+      .channel("employees-realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "employees" }, debounced)
+      .on("postgres_changes", { event: "*", schema: "public", table: "employee_education" }, debounced)
+      .on("postgres_changes", { event: "*", schema: "public", table: "employee_work_history" }, debounced)
+      .on("postgres_changes", { event: "*", schema: "public", table: "employee_custom_payroll_items" }, debounced)
+      .subscribe();
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      supabase.removeChannel(channel);
+    };
+  }, [session, fetchEmployees]);
+
   const addEmployee = useCallback(async (emp: Omit<Employee, "id">) => {
     const dbData = employeeToDb(emp as Partial<Employee>);
     const { data, error } = await supabase.from("employees").insert(dbData).select().single();
