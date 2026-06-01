@@ -250,14 +250,16 @@ const DayOff = () => {
                     const isWeekend = dow === 0 || dow === 6;
                     const iso = isoDate(d);
                     const isHoliday = holidaySet.has(iso);
+                    const hName = holidays.find((h) => h.date === iso)?.name;
                     return (
                       <th key={iso} className="sticky top-0 z-20 px-1 py-1 text-center font-semibold border-b min-w-[28px]" style={{
                         borderColor: "hsl(var(--border))",
-                        background: isHoliday ? "hsl(220 80% 95%)" : (isWeekend ? "hsl(0 0% 96%)" : "hsl(var(--muted) / 0.5)"),
-                        color: isHoliday ? "hsl(220 80% 35%)" : undefined,
-                      }}>
+                        background: isHoliday ? "hsl(220 80% 90%)" : (isWeekend ? "hsl(0 0% 96%)" : "hsl(var(--muted) / 0.5)"),
+                        color: isHoliday ? "hsl(220 80% 30%)" : undefined,
+                      }} title={isHoliday && hName ? hName : undefined}>
                         <div className="text-[9px] opacity-60">{WEEKDAY_LABELS[dow]}</div>
                         <div>{d.getDate()}</div>
+                        {isHoliday && <div className="mx-auto mt-0.5 w-1.5 h-1.5 rounded-full" style={{ background: "hsl(220 80% 45%)" }} />}
                       </th>
                     );
                   })}
