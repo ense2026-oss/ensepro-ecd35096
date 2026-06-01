@@ -239,12 +239,18 @@ const RolesSettings = () => {
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center gap-3 flex-wrap">
         <p className="text-sm text-muted-foreground">{roles.length} Role | {totalUsers} พนักงานที่ผูกบัญชีแล้ว</p>
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-muted-foreground">จัดการเฉพาะ Role ที่รองรับในระบบ</span>
-        </div>
+        <button
+          onClick={openAdd}
+          className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold text-primary-foreground"
+          style={{ background: "linear-gradient(135deg, hsl(var(--primary)), hsl(31 100% 60%))", boxShadow: "0 4px 12px hsl(var(--primary) / 0.3)" }}
+        >
+          <Plus className="w-4 h-4" />
+          เพิ่มสิทธิ์ใช้งาน
+        </button>
       </div>
+
 
       {/* Roles summary table */}
       <div className="overflow-x-auto">
