@@ -15,7 +15,8 @@ import {
   Trash2,
   MailOpen,
   Mail,
-  ArrowUpRight,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 
 type NotifType = AppNotification["type"];
