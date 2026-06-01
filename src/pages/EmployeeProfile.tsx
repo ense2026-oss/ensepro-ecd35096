@@ -300,7 +300,7 @@ const EmployeeProfile = () => {
       {isEditing && canEditRestricted ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <SelectField label="แผนก" value={emp.dept} onChange={(v) => { set("dept")(v); set("position")(""); }} options={["", ...affiliations.map(a => a.name)]} />
-          <SelectField label="ตำแหน่ง" value={emp.position} onChange={set("position")} options={["", ...flattenPositionNames(affiliations.find(a => a.name === emp.dept)?.positions || [])]} />
+          <SelectField label="ตำแหน่ง" value={emp.position} onChange={set("position")} options={["", ...positionOptions(emp.dept)]} />
           <SelectField label="ประเภทพนักงาน" value={emp.employeeType} onChange={set("employeeType")} options={["พนักงานประจำ", "พนักงานชั่วคราว", "พนักงานทดลองงาน"]} />
           <DatePickerField label="วันที่เริ่มงาน" value={emp.startDate} onChange={set("startDate")} />
           <SelectField label="กะการทำงาน" value={emp.shift} onChange={set("shift")} options={["กะเช้า 08:00-17:00", "กะบ่าย 12:00-21:00", "กะดึก 00:00-08:00"]} />
