@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 
 type NotifType = AppNotification["type"];
-type NotifFilter = "all" | "unread" | "read" | NotifType;
+type NotifFilter = "unread" | "read" | NotifType;
 
 const typeConfig: Record<NotifType, { label: string; icon: React.ElementType; color: string; bg: string }> = {
   leave: { label: "ลางาน", icon: CalendarDays, color: "#FF870F", bg: "hsl(31 100% 93%)" },
