@@ -182,7 +182,7 @@ const DayOff = () => {
       case "work": return { bg: "hsl(var(--muted))", color: "hsl(var(--muted-foreground))", label: "✓" };
       case "pattern": return { bg: "hsl(0 70% 90%)", color: "hsl(0 70% 35%)", label: "●" };
       case "extra": return { bg: "hsl(31 90% 88%)", color: "hsl(31 90% 35%)", label: "+" };
-      case "company": return { bg: "hsl(220 80% 90%)", color: "hsl(220 80% 35%)", label: "★" };
+      case "company": return { bg: "hsl(220 80% 88%)", color: "hsl(220 80% 30%)", label: "หยุด" };
       default: return { bg: "transparent", color: "inherit", label: "" };
     }
   };
