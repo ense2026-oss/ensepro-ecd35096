@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, useEffect } from "react";
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from "react";
 import { TaxDeduction, DEFAULT_TAX_DEDUCTION } from "@/utils/taxCalculation";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -308,6 +308,27 @@ export const EmployeeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       const timer = setTimeout(() => fetchEmployees(), 50);
       return () => clearTimeout(timer);
     }
+  }, [session, fetchEmployees]);
+
+  // Realtime: refetch when employees or related tables change (any device)
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+  useEffect(() => {
+    if (!session) return;
+    const debounced = () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      debounceRef.current = setTimeout(() => fetchEmployees(), 250);
+    };
+    const channel = supabase
+      .channel("employees-realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "employees" }, debounced)
+      .on("postgres_changes", { event: "*", schema: "public", table: "employee_education" }, debounced)
+      .on("postgres_changes", { event: "*", schema: "public", table: "employee_work_history" }, debounced)
+      .on("postgres_changes", { event: "*", schema: "public", table: "employee_custom_payroll_items" }, debounced)
+      .subscribe();
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      supabase.removeChannel(channel);
+    };
   }, [session, fetchEmployees]);
 
   const addEmployee = useCallback(async (emp: Omit<Employee, "id">) => {

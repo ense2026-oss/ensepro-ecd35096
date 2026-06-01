@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useMemo, useCallback, type ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useMemo, useCallback, useRef, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 /* ═══════════════════ Types ═══════════════════ */
@@ -169,6 +169,29 @@ export const OrgProvider = ({ children }: { children: ReactNode }) => {
       setLoading(false);
     }, 300);
     return () => clearTimeout(timer);
+  }, [fetchAffiliations, fetchOrgLevels]);
+
+  // Realtime: keep org structure in sync across devices
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+  useEffect(() => {
+    const debounced = () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      debounceRef.current = setTimeout(() => {
+        fetchAffiliations();
+        fetchOrgLevels();
+      }, 250);
+    };
+    const channel = supabase
+      .channel("org-realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "affiliations" }, debounced)
+      .on("postgres_changes", { event: "*", schema: "public", table: "positions" }, debounced)
+      .on("postgres_changes", { event: "*", schema: "public", table: "org_levels" }, debounced)
+      .on("postgres_changes", { event: "*", schema: "public", table: "org_level_employees" }, debounced)
+      .subscribe();
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      supabase.removeChannel(channel);
+    };
   }, [fetchAffiliations, fetchOrgLevels]);
 
   /* ─── Affiliation CRUD ─── */
