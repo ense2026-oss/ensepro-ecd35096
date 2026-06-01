@@ -813,6 +813,79 @@ const Dashboard = () => {
             </div>
           </div>
         </div>
+
+        {/* Holidays */}
+        <div className="card-base p-5">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="font-bold font-display">วันหยุด</h3>
+              <p className="text-xs text-muted-foreground mt-0.5">บริษัท และของฉัน</p>
+            </div>
+            <CalendarOff className="w-5 h-5 text-muted-foreground" />
+          </div>
+
+          {/* Company holidays */}
+          <div className="mb-5">
+            <div className="flex items-center gap-1.5 mb-2.5">
+              <Building2 className="w-3.5 h-3.5" style={{ color: "#FF870F" }} />
+              <span className="text-xs font-semibold text-foreground">วันหยุดบริษัท</span>
+            </div>
+            {loading ? (
+              <div className="space-y-2">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-9 w-full rounded-lg" />)}</div>
+            ) : companyHolidays.length === 0 ? (
+              <p className="text-xs text-muted-foreground py-2">ไม่มีวันหยุดบริษัทที่จะถึง</p>
+            ) : (
+              <div className="space-y-1.5">
+                {companyHolidays.slice(0, 4).map((h) => {
+                  const f = formatThaiShort(h.date);
+                  return (
+                    <div key={h.date + h.name} className="flex items-center gap-2.5 p-2 rounded-lg" style={{ background: "hsl(31 100% 96%)" }}>
+                      <div className="w-9 h-9 rounded-lg flex flex-col items-center justify-center flex-shrink-0" style={{ background: "hsl(31 100% 92%)", color: "#FF870F" }}>
+                        <span className="text-[9px] leading-none font-medium">{f.day}</span>
+                        <span className="text-sm leading-none font-bold">{h.date.split("-")[2]}</span>
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-medium leading-tight truncate">{h.name}</p>
+                        <p className="text-[10px] text-muted-foreground">{f.date}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* My personal day-offs */}
+          <div>
+            <div className="flex items-center gap-1.5 mb-2.5">
+              <UserIcon className="w-3.5 h-3.5" style={{ color: "hsl(220 90% 50%)" }} />
+              <span className="text-xs font-semibold text-foreground">วันหยุดของฉัน</span>
+            </div>
+            {loading ? (
+              <div className="space-y-2">{Array.from({ length: 2 }).map((_, i) => <Skeleton key={i} className="h-9 w-full rounded-lg" />)}</div>
+            ) : upcomingMyDayoffs.length === 0 ? (
+              <p className="text-xs text-muted-foreground py-2">ไม่มีวันหยุดส่วนตัวที่จะถึง</p>
+            ) : (
+              <div className="space-y-1.5">
+                {upcomingMyDayoffs.map((d) => {
+                  const f = formatThaiShort(d.iso);
+                  return (
+                    <div key={d.iso} className="flex items-center gap-2.5 p-2 rounded-lg" style={{ background: "hsl(220 90% 97%)" }}>
+                      <div className="w-9 h-9 rounded-lg flex flex-col items-center justify-center flex-shrink-0" style={{ background: "hsl(220 90% 93%)", color: "hsl(220 90% 45%)" }}>
+                        <span className="text-[9px] leading-none font-medium">{f.day}</span>
+                        <span className="text-sm leading-none font-bold">{d.iso.split("-")[2]}</span>
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-medium leading-tight truncate">{d.label}</p>
+                        <p className="text-[10px] text-muted-foreground">{f.date}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
