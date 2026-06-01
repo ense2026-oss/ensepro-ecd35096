@@ -360,16 +360,21 @@ const OvertimeManagement = () => {
                     {monthDays.map((d) => {
                       const iso = isoDate(d);
                       const dow = d.getDay();
+                      const isHoliday = holidaySet.has(iso);
                       const dayoff = isDayoffOn(emp.id, iso, dow, patterns, overrides, holidaySet);
                       const dayEntries = otFor(emp.id, iso);
                       const totalH = dayEntries.reduce((s, e) => s + (e.hours || 0), 0);
                       const primary = dayEntries[0];
                       const tInfo = primary ? otTypeInfo(primary.ot_type) : null;
+                      const shift = shiftFor(emp.id, iso);
 
                       let bg = "hsl(var(--muted))";
                       let color = "hsl(var(--muted-foreground))";
                       let label = dayoff ? "·" : "—";
-                      let title = `${WEEKDAY_FULL[dow]} ${d.getDate()}${dayoff ? " · วันหยุด" : ""}`;
+                      let title = `${WEEKDAY_FULL[dow]} ${d.getDate()}`;
+                      if (isHoliday) title += ` · วันหยุด${holidayNameMap.get(iso) ? `: ${holidayNameMap.get(iso)}` : ""}`;
+                      else if (dayoff) title += " · วันหยุดพนักงาน";
+                      if (shift) title += ` · กะ${shift.name} (${shift.start_time}-${shift.end_time})`;
                       if (totalH > 0 && tInfo) {
                         bg = `${tInfo.color}25`;
                         color = tInfo.color;
@@ -377,31 +382,41 @@ const OvertimeManagement = () => {
                         title += ` · OT ${fmtHours(totalH)} ชม. (${tInfo.label})`;
                       }
 
+                      const cellInner = (
+                        <span className="relative block w-full h-8 rounded overflow-hidden" style={{ background: bg }}>
+                          <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold" style={{ color }}>{label}</span>
+                          {shift && (
+                            <span className="absolute bottom-0 inset-x-0 h-[3px]" style={{ background: shift.color }} />
+                          )}
+                        </span>
+                      );
+
                       return (
-                        <td key={iso} className="p-0.5 text-center border-b" style={{ borderColor: "hsl(var(--border))" }}>
+                        <td key={iso} className="p-0.5 text-center border-b" style={{ borderColor: "hsl(var(--border))", background: isHoliday ? "hsl(220 80% 97%)" : undefined }}>
                           {canEdit ? (
                             <OTCellPopover
                               dateLabel={`${fmtThaiDate(iso)} · ${emp.firstName}`}
                               dayoff={dayoff}
+                              holidayName={isHoliday ? (holidayNameMap.get(iso) || "วันหยุด") : ""}
+                              shiftLabel={shift ? `${shift.name} (${shift.start_time}-${shift.end_time})` : ""}
+                              shiftColor={shift?.color}
                               entry={primary}
                               onSave={(h, t, st, et) => saveOT(emp.id, iso, h, t, st, et)}
                               onRemove={() => removeOT(emp.id, iso)}
                             >
                               <button
                                 className={cn(
-                                  "w-full h-8 rounded text-[10px] font-bold transition-all hover:scale-110 cursor-pointer",
+                                  "w-full transition-all hover:scale-110 cursor-pointer",
                                   dayoff && totalH === 0 && "opacity-60"
                                 )}
-                                style={{ background: bg, color }}
                                 title={title}
                               >
-                                {label}
+                                {cellInner}
                               </button>
                             </OTCellPopover>
                           ) : (
-                            <div className="w-full h-8 rounded text-[10px] font-bold flex items-center justify-center"
-                              style={{ background: bg, color }} title={title}>
-                              {label}
+                            <div className={cn("w-full", dayoff && totalH === 0 && "opacity-60")} title={title}>
+                              {cellInner}
                             </div>
                           )}
                         </td>
