@@ -30,6 +30,7 @@ const Employees = () => {
   const [search, setSearch] = useState("");
   const [selectedDept, setSelectedDept] = useState("all");
   const [selectedPosition, setSelectedPosition] = useState("all");
+  const [selectedStatus, setSelectedStatus] = useState("all");
   const [viewMode, setViewMode] = useState<"table" | "card">("table");
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -60,8 +61,9 @@ const Employees = () => {
       e.email.includes(search);
     const matchDept = selectedDept === "all" || e.dept === selectedDept;
     const matchPos = selectedPosition === "all" || e.position === selectedPosition;
-    return matchSearch && matchDept && matchPos;
-  }), [nonAdmins, search, selectedDept, selectedPosition]);
+    const matchStatus = selectedStatus === "all" || e.status === selectedStatus;
+    return matchSearch && matchDept && matchPos && matchStatus;
+  }), [nonAdmins, search, selectedDept, selectedPosition, selectedStatus]);
 
   // Stats
   const stats = useMemo(() => ({
@@ -81,6 +83,7 @@ const Employees = () => {
   const handleSearch = (val: string) => { setSearch(val); setCurrentPage(1); };
   const handleDeptChange = (val: string) => { setSelectedDept(val); setSelectedPosition("all"); setCurrentPage(1); };
   const handlePositionChange = (val: string) => { setSelectedPosition(val); setCurrentPage(1); };
+  const handleStatusChange = (val: string) => { setSelectedStatus(val); setCurrentPage(1); };
   const handlePageSizeChange = (val: string) => { setPageSize(Number(val)); setCurrentPage(1); };
 
   const handleAdd = () => { setEditingEmployee(null); setFormOpen(true); };
@@ -165,6 +168,13 @@ const Employees = () => {
           <select value={selectedPosition} onChange={(e) => handlePositionChange(e.target.value)}
             className="px-3 py-2.5 text-sm rounded-xl border bg-muted/30 outline-none cursor-pointer">
             {positions.map((p) => <option key={p} value={p}>{p === "all" ? "ทุกตำแหน่ง" : p}</option>)}
+          </select>
+          <select value={selectedStatus} onChange={(e) => handleStatusChange(e.target.value)}
+            className="px-3 py-2.5 text-sm rounded-xl border bg-muted/30 outline-none cursor-pointer">
+            <option value="all">ทุกสถานะ</option>
+            <option value="active">ทำงานปกติ</option>
+            <option value="leave">ลาพัก</option>
+            <option value="inactive">พ้นสภาพ</option>
           </select>
           <div className="flex items-center gap-1 border rounded-xl p-1">
             <button onClick={() => setViewMode("table")}
