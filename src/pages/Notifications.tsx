@@ -32,7 +32,6 @@ const typeConfig: Record<NotifType, { label: string; icon: React.ElementType; co
 };
 
 const allFilterOptions: { key: NotifFilter; label: string }[] = [
-  { key: "all", label: "ทั้งหมด" },
   { key: "unread", label: "ยังไม่อ่าน" },
   { key: "read", label: "อ่านแล้ว" },
   { key: "leave", label: "ลางาน" },
@@ -42,6 +41,8 @@ const allFilterOptions: { key: NotifFilter; label: string }[] = [
   { key: "approval", label: "อนุมัติ" },
   { key: "system", label: "ระบบ" },
 ];
+
+const PAGE_SIZE = 15;
 
 // Types hidden from regular employees
 const adminOnlyTypes: NotifType[] = ["employee", "ot", "system"];
