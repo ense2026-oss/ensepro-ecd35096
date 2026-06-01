@@ -181,6 +181,7 @@ const Reports = () => {
   const [filterYear, setFilterYear] = useState(currentThaiYear);
   const [filterMonth, setFilterMonth] = useState(currentMonthName);
   const [expandedCats, setExpandedCats] = useState<Record<string, boolean>>({ employees: true, overtime: true, attendance: true, leave: true, shifts: true, payroll: true });
+  const [empStatusFilter, setEmpStatusFilter] = useState<string[]>(["active", "inactive", "leave"]);
 
   // --- Real leave data ---
   const [leaveData, setLeaveData] = useState<any[]>([]);
