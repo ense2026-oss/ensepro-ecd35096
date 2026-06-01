@@ -98,6 +98,7 @@ const ShiftManagement = () => {
   const [deptFilter, setDeptFilter] = useState("all");
   const [activeTab, setActiveTab] = useState("calendar");
   const [selectedEmpId, setSelectedEmpId] = useState<string>("");
+  const [empColCollapsed, setEmpColCollapsed] = useState(false);
 
   // Auto-select self for employee role
   useEffect(() => {
@@ -254,7 +255,14 @@ const ShiftManagement = () => {
             <table className="w-full text-xs border-collapse">
               <thead>
                 <tr>
-                  <th className="sticky left-0 top-0 px-3 py-2 text-left font-semibold border-b border-r min-w-[180px] z-30" style={{ borderColor: "hsl(var(--border))", background: "hsl(var(--card))" }}>พนักงาน</th>
+                  <th className={cn("sticky left-0 top-0 px-3 py-2 text-left font-semibold border-b border-r z-30", !empColCollapsed && "min-w-[180px]")} style={{ borderColor: "hsl(var(--border))", background: "hsl(var(--card))" }}>
+                    <div className="flex items-center justify-between gap-2">
+                      {!empColCollapsed && <span>พนักงาน</span>}
+                      <button onClick={() => setEmpColCollapsed((c) => !c)} className="p-1 rounded-lg hover:bg-muted transition-colors" title={empColCollapsed ? "ขยายคอลัมน์พนักงาน" : "ยุบคอลัมน์พนักงาน"}>
+                        {empColCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </th>
                   {monthDays.map((d) => {
                     const dow = d.getDay();
                     const isWeekend = dow === 0 || dow === 6;
@@ -279,10 +287,12 @@ const ShiftManagement = () => {
                     <td className="sticky left-0 bg-card px-3 py-2 border-b border-r z-10" style={{ borderColor: "hsl(var(--border))" }}>
                       <div className="flex items-center gap-2">
                         <EmployeeAvatar photoUrl={emp.photoUrl} avatar={emp.avatar} avatarColor={emp.avatarColor} avatarTextColor={emp.avatarTextColor} firstName={emp.firstName} size="sm" />
-                        <div className="min-w-0">
-                          <p className="text-xs font-semibold truncate">{emp.prefix}{emp.firstName} {emp.lastName}</p>
-                          <p className="text-[10px] text-muted-foreground truncate">{emp.dept}</p>
-                        </div>
+                        {!empColCollapsed && (
+                          <div className="min-w-0">
+                            <p className="text-xs font-semibold truncate">{emp.prefix}{emp.firstName} {emp.lastName}</p>
+                            <p className="text-[10px] text-muted-foreground truncate">{emp.dept}</p>
+                          </div>
+                        )}
                       </div>
                     </td>
                     {monthDays.map((d) => {
