@@ -350,8 +350,8 @@ const ShiftManagement = () => {
                                 ))}
                                 {hasDayOverride && (
                                   <button onClick={() => setShiftForDate(emp.id, iso, null)}
-                                    className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold hover:bg-destructive/10 text-destructive transition-colors text-left border-t mt-1">
-                                    <X className="w-3 h-3" />ลบกะรายวัน (กลับไปใช้กะระยะยาว)
+                                    className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold hover:bg-destructive/10 text-destructive transition-colors border-t mt-1">
+                                    <Trash2 className="w-3.5 h-3.5" />ลบกะรายวัน
                                   </button>
                                 )}
                               </PopoverContent>
