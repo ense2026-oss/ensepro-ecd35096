@@ -283,10 +283,12 @@ const DayOff = () => {
                       <div className="flex items-center gap-2">
                         <span className="text-[10px] text-muted-foreground font-semibold w-5 text-right tabular-nums">{idx + 1}</span>
                         <EmployeeAvatar photoUrl={emp.photoUrl} avatar={emp.avatar} avatarColor={emp.avatarColor} avatarTextColor={emp.avatarTextColor} firstName={emp.firstName} size="sm" />
-                        <div>
-                          <p className="text-xs font-semibold whitespace-nowrap">{emp.prefix}{emp.firstName} {emp.lastName}</p>
-                          <p className="text-[10px] text-muted-foreground whitespace-nowrap">{emp.dept}</p>
-                        </div>
+                        {!empColCollapsed && (
+                          <div>
+                            <p className="text-xs font-semibold whitespace-nowrap">{emp.prefix}{emp.firstName} {emp.lastName}</p>
+                            <p className="text-[10px] text-muted-foreground whitespace-nowrap">{emp.dept}</p>
+                          </div>
+                        )}
                       </div>
                     </td>
                     {monthDays.map((d) => {
