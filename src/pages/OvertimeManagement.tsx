@@ -139,11 +139,27 @@ const OvertimeManagement = () => {
       .on("postgres_changes", { event: "*", schema: "public", table: "employee_dayoff_overrides" }, refetch)
       .on("postgres_changes", { event: "*", schema: "public", table: "employee_dayoff_patterns" }, refetch)
       .on("postgres_changes", { event: "*", schema: "public", table: "company_holidays" }, refetch)
+      .on("postgres_changes", { event: "*", schema: "public", table: "shifts" }, refetch)
+      .on("postgres_changes", { event: "*", schema: "public", table: "shift_assignments" }, refetch)
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, []);
 
   const holidaySet = useMemo(() => new Set(holidays.map((h) => h.date)), [holidays]);
+  const holidayNameMap = useMemo(() => {
+    const m = new Map<string, string>();
+    holidays.forEach((h) => m.set(h.date, h.name));
+    return m;
+  }, [holidays]);
+  const shiftMap = useMemo(() => {
+    const m = new Map<string, Shift>();
+    shifts.forEach((s) => m.set(s.id, s));
+    return m;
+  }, [shifts]);
+  const shiftFor = (empId: string, dateIso: string): Shift | null => {
+    const id = getShiftIdFor(empId, dateIso, assignments);
+    return id ? shiftMap.get(id) || null : null;
+  };
   const monthDays = useMemo(() => getMonthDays(year, month), [year, month]);
 
   const departments = useMemo(() => {
