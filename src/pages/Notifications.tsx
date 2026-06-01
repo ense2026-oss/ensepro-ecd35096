@@ -78,12 +78,26 @@ const Notifications = () => {
     setNotificationCount(unreadCount);
   }, [unreadCount, setNotificationCount]);
 
-  const filtered = roleNotifications.filter((n) => {
-    if (activeFilter === "all") return true;
-    if (activeFilter === "unread") return !n.read;
-    if (activeFilter === "read") return n.read;
-    return n.type === activeFilter;
-  });
+  const filtered = useMemo(
+    () =>
+      roleNotifications.filter((n) => {
+        if (activeFilter === "unread") return !n.read;
+        if (activeFilter === "read") return n.read;
+        return n.type === activeFilter;
+      }),
+    [roleNotifications, activeFilter],
+  );
+
+  // Pagination – 15 per page, reset when filter or result count changes
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  useEffect(() => {
+    setPage(1);
+  }, [activeFilter]);
+  useEffect(() => {
+    if (page > totalPages) setPage(totalPages);
+  }, [page, totalPages]);
+  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
 
   // Filter options by role
   const filterOptions = hasApprovalAccess
