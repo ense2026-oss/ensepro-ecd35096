@@ -89,6 +89,7 @@ const DayOff = () => {
   const initialEmp = params.get("employee") || "";
   const [activeTab, setActiveTab] = useState(initialEmp ? "employee" : "calendar");
   const [selectedEmpId, setSelectedEmpId] = useState<string>(initialEmp);
+  const [empColCollapsed, setEmpColCollapsed] = useState(false);
 
   // Auto-select self for employee role
   useEffect(() => {
