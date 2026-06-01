@@ -301,10 +301,11 @@ const ShiftManagement = () => {
                 </tr>
               </thead>
               <tbody>
-                {filteredEmployees.map((emp) => (
+                {filteredEmployees.map((emp, idx) => (
                   <tr key={emp.id} className="hover:bg-muted/20">
-                    <td className="sticky left-0 bg-card px-3 py-2 border-b border-r z-10" style={{ borderColor: "hsl(var(--border))" }}>
+                    <td className="sticky left-0 bg-card px-3 py-2 border-b border-r whitespace-nowrap z-10" style={{ borderColor: "hsl(var(--border))" }}>
                       <div className="flex items-center gap-2">
+                        <span className="text-[10px] text-muted-foreground font-semibold w-5 text-right tabular-nums">{idx + 1}</span>
                         <EmployeeAvatar photoUrl={emp.photoUrl} avatar={emp.avatar} avatarColor={emp.avatarColor} avatarTextColor={emp.avatarTextColor} firstName={emp.firstName} size="sm" />
                         {!empColCollapsed && (
                           <div className="min-w-0">
