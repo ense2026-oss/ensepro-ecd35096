@@ -324,6 +324,9 @@ const Dashboard = () => {
       .on("postgres_changes", { event: "*", schema: "public", table: "leave_requests" }, debouncedFetch)
       .on("postgres_changes", { event: "*", schema: "public", table: "overtime_requests" }, debouncedFetch)
       .on("postgres_changes", { event: "*", schema: "public", table: "time_edit_requests" }, debouncedFetch)
+      .on("postgres_changes", { event: "*", schema: "public", table: "company_holidays" }, debouncedFetch)
+      .on("postgres_changes", { event: "*", schema: "public", table: "employee_dayoff_patterns" }, debouncedFetch)
+      .on("postgres_changes", { event: "*", schema: "public", table: "employee_dayoff_overrides" }, debouncedFetch)
       .subscribe();
 
     return () => {
