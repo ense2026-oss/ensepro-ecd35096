@@ -71,17 +71,37 @@ const DatePickerField = ({ label, value, onChange }: { label: string; value: str
   </div>
 );
 
+type SelectOption = string | { value: string; label: string };
 const SelectField = ({ label, value, onChange, options }: {
-  label: string; value: string; onChange: (v: string) => void; options: string[];
+  label: string; value: string; onChange: (v: string) => void; options: SelectOption[];
 }) => (
   <div className="space-y-1.5">
     <label className="text-xs font-medium text-muted-foreground">{label}</label>
     <select value={value} onChange={(e) => onChange(e.target.value)}
       className="w-full px-3 py-2 text-sm rounded-xl border border-border bg-muted/30 outline-none focus:ring-2 focus:ring-primary/30 transition-all cursor-pointer">
-      {options.map((o) => <option key={o}>{o}</option>)}
+      {options.map((o) => {
+        const val = typeof o === "string" ? o : o.value;
+        const lbl = typeof o === "string" ? o : o.label;
+        return <option key={val} value={val}>{lbl}</option>;
+      })}
     </select>
   </div>
 );
+
+/* ───────────────────── Shared label maps ───────────────────── */
+const STATUS_OPTIONS: SelectOption[] = [
+  { value: "active", label: "ทำงานปกติ" },
+  { value: "leave", label: "ลาพัก" },
+  { value: "inactive", label: "พ้นสภาพ" },
+];
+const ROLE_OPTIONS: SelectOption[] = [
+  { value: "Executive", label: "ผู้บริหาร" },
+  { value: "Manager", label: "ผู้จัดการ" },
+  { value: "Admin", label: "ผู้ดูแลระบบ" },
+  { value: "HR", label: "ฝ่ายบุคคล" },
+  { value: "Accountant", label: "ฝ่ายบัญชี" },
+  { value: "Employee", label: "พนักงาน" },
+];
 
 /* ───────────────────── Main Component ───────────────────── */
 const EmployeeProfile = () => {
@@ -318,7 +338,7 @@ const EmployeeProfile = () => {
           <SelectField label="กะการทำงาน" value={emp.shift} onChange={set("shift")} options={["กะเช้า 08:00-17:00", "กะบ่าย 12:00-21:00", "กะดึก 00:00-08:00"]} />
           <InputField label="Face Scan ID" value={emp.faceScanId} onChange={set("faceScanId")} />
           <InputField label="เงินเดือน (บาท)" value={emp.salary} onChange={set("salary")} type="number" />
-          <SelectField label="สถานะ" value={emp.status} onChange={set("status")} options={["active", "leave", "inactive"]} />
+          <SelectField label="สถานะ" value={emp.status} onChange={set("status")} options={STATUS_OPTIONS} />
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-4">
@@ -600,7 +620,7 @@ const EmployeeProfile = () => {
           {isEditing && canEditRestricted ? (
             <>
               <InputField label="Username" value={emp.username} onChange={set("username")} />
-              <SelectField label="Role" value={emp.role} onChange={set("role")} options={["Executive", "Manager", "Admin", "HR", "Accountant", "Employee"]} />
+              <SelectField label="สิทธิ์การใช้งาน" value={emp.role} onChange={set("role")} options={ROLE_OPTIONS} />
             </>
           ) : (
             <>
