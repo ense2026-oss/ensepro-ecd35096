@@ -243,11 +243,11 @@ const DayOff = () => {
             </div>
           </div>
 
-          <div className="card-base overflow-auto max-h-[calc(100vh-260px)]">
+          <div className="overflow-auto max-h-[calc(100vh-200px)]">
             <table className="w-full text-xs border-collapse">
               <thead>
                 <tr>
-                  <th className="sticky left-0 top-0 px-3 py-2 text-left font-semibold border-b border-r min-w-[180px] z-30" style={{borderColor:"hsl(var(--border))", background:"hsl(var(--card))"}}>พนักงาน</th>
+                  <th className="sticky left-0 top-0 px-3 py-2 text-left font-semibold border-b border-r whitespace-nowrap z-30" style={{borderColor:"hsl(var(--border))", background:"hsl(var(--card))"}}>พนักงาน</th>
                   {monthDays.map((d) => {
                     const dow = d.getDay();
                     const isWeekend = dow === 0 || dow === 6;
