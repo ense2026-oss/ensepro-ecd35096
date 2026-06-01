@@ -315,10 +315,10 @@ const Notifications = () => {
               </div>
               <div className="space-y-3">
                 {[
-                  { label: "คำขอลารออนุมัติ", value: "2", color: "#FF870F" },
+                  { label: "คำขอลารออนุมัติ", value: String(roleNotifications.filter((n) => n.type === "leave" && !n.read).length), color: "#FF870F" },
                   { label: "คำขอแก้ไขเวลา", value: String(roleNotifications.filter((n) => n.type === "attendance" && !n.read).length), color: "hsl(220 90% 50%)" },
-                  { label: "พนักงานใหม่รอยืนยัน", value: "2", color: "hsl(90 100% 35%)" },
-                  { label: "OT รออนุมัติ", value: "0", color: "hsl(0 0% 45%)" },
+                  { label: "พนักงานใหม่รอยืนยัน", value: String(roleNotifications.filter((n) => n.type === "employee" && !n.read).length), color: "hsl(90 100% 35%)" },
+                  { label: "OT รออนุมัติ", value: String(roleNotifications.filter((n) => n.type === "ot" && !n.read).length), color: "hsl(0 0% 45%)" },
                 ].map((item) => (
                   <div key={item.label} className="flex items-center justify-between p-2.5 rounded-xl hover:bg-muted/50 transition-colors">
                     <span className="text-xs text-muted-foreground">{item.label}</span>
