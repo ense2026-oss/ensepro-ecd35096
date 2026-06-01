@@ -17,9 +17,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 
 const statusConfig: Record<string, { label: string; className: string }> = {
-  active: { label: "ทำงาน", className: "badge-present" },
-  leave: { label: "ลางาน", className: "badge-leave" },
-  inactive: { label: "ลาออก", className: "badge-absent" },
+  active: { label: "ทำงานปกติ", className: "badge-present" },
+  leave: { label: "ลาพัก", className: "badge-leave" },
+  inactive: { label: "พ้นสภาพ", className: "badge-absent" },
 };
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];

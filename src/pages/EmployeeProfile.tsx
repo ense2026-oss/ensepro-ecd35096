@@ -355,7 +355,7 @@ const EmployeeProfile = () => {
           <div className="space-y-1">
             <p className="text-xs text-muted-foreground">สถานะ</p>
             <span className={emp.status === "active" ? "badge-present" : emp.status === "leave" ? "badge-leave" : "badge-absent"}>
-              {emp.status === "active" ? "ทำงาน" : emp.status === "leave" ? "ลางาน" : "ลาออก"}
+              {emp.status === "active" ? "ทำงานปกติ" : emp.status === "leave" ? "ลาพัก" : "พ้นสภาพ"}
             </span>
           </div>
         </div>
@@ -783,7 +783,7 @@ const EmployeeProfile = () => {
           </div>
           <div className="flex flex-col items-center gap-1">
             <span className={emp.status === "active" ? "badge-present" : emp.status === "leave" ? "badge-leave" : "badge-absent"}>
-              {emp.status === "active" ? "ทำงาน" : emp.status === "leave" ? "ลางาน" : "ลาออก"}
+              {emp.status === "active" ? "ทำงานปกติ" : emp.status === "leave" ? "ลาพัก" : "พ้นสภาพ"}
             </span>
             <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-primary/10 text-primary">{emp.role}</span>
           </div>
