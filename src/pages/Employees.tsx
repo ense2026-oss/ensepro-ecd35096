@@ -83,6 +83,7 @@ const Employees = () => {
   const handleSearch = (val: string) => { setSearch(val); setCurrentPage(1); };
   const handleDeptChange = (val: string) => { setSelectedDept(val); setSelectedPosition("all"); setCurrentPage(1); };
   const handlePositionChange = (val: string) => { setSelectedPosition(val); setCurrentPage(1); };
+  const handleStatusChange = (val: string) => { setSelectedStatus(val); setCurrentPage(1); };
   const handlePageSizeChange = (val: string) => { setPageSize(Number(val)); setCurrentPage(1); };
 
   const handleAdd = () => { setEditingEmployee(null); setFormOpen(true); };
