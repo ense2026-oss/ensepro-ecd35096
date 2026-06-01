@@ -287,10 +287,12 @@ const ShiftManagement = () => {
                     <td className="sticky left-0 bg-card px-3 py-2 border-b border-r z-10" style={{ borderColor: "hsl(var(--border))" }}>
                       <div className="flex items-center gap-2">
                         <EmployeeAvatar photoUrl={emp.photoUrl} avatar={emp.avatar} avatarColor={emp.avatarColor} avatarTextColor={emp.avatarTextColor} firstName={emp.firstName} size="sm" />
-                        <div className="min-w-0">
-                          <p className="text-xs font-semibold truncate">{emp.prefix}{emp.firstName} {emp.lastName}</p>
-                          <p className="text-[10px] text-muted-foreground truncate">{emp.dept}</p>
-                        </div>
+                        {!empColCollapsed && (
+                          <div className="min-w-0">
+                            <p className="text-xs font-semibold truncate">{emp.prefix}{emp.firstName} {emp.lastName}</p>
+                            <p className="text-[10px] text-muted-foreground truncate">{emp.dept}</p>
+                          </div>
+                        )}
                       </div>
                     </td>
                     {monthDays.map((d) => {
