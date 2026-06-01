@@ -562,7 +562,7 @@ const OTCellPopover = ({ children, dateLabel, dayoff, holidayName, shiftLabel, s
 
 /* =================== TAB 2: Employee Detail =================== */
 const EmployeeOTDetailView = ({
-  employees, entries, patterns, overrides, holidaySet,
+  employees, entries, patterns, overrides, holidaySet, holidayNameMap, shiftFor, shifts,
   selectedEmpId, setSelectedEmpId, canEdit, onChanged, onSaveOT, onRemoveOT, lockEmployee,
 }: any) => {
   const { toast } = useToast();
