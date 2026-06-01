@@ -124,6 +124,18 @@ const EmployeeProfile = () => {
     return names;
   };
 
+  // Position options synced with "จัดการสังกัด": positions of the matching
+  // affiliation, falling back to ALL positions when the dept doesn't match
+  // any affiliation (or that affiliation has none defined yet).
+  const positionOptions = (dept: string): string[] => {
+    const aff = affiliations.find((a) => a.name === dept);
+    const matched = aff ? flattenPositionNames(aff.positions) : [];
+    if (matched.length) return matched;
+    const all = new Set<string>();
+    affiliations.forEach((a) => flattenPositionNames(a.positions).forEach((n) => all.add(n)));
+    return Array.from(all);
+  };
+
   const employee = getEmployeeById(id || "");
 
   const [activeTab, setActiveTab] = useState("personal");
