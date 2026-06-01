@@ -62,6 +62,14 @@ const isDayoffOn = (empId: string, dateIso: string, dow: number, patterns: Patte
   return patterns.some((p) => p.employee_id === empId && isPatternActive(p, dateIso) && p.weekdays.includes(dow));
 };
 
+// Returns the shift assigned to an employee on a date (day override > bulk)
+const getShiftIdFor = (empId: string, dateIso: string, assignments: ShiftAssignment[]): string | null => {
+  const day = assignments.find((a) => a.assignment_type === "day" && a.employee_id === empId && a.start_date === dateIso);
+  if (day) return day.shift_id;
+  const bulk = assignments.find((a) => a.assignment_type !== "day" && a.employee_id === empId && a.start_date <= dateIso && a.end_date >= dateIso);
+  return bulk ? bulk.shift_id : null;
+};
+
 const fmtThaiDate = (iso: string) => {
   if (!iso) return "-";
   const [y, m, d] = iso.split("-");
