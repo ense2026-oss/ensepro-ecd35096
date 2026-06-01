@@ -440,6 +440,9 @@ const OvertimeManagement = () => {
             patterns={patterns}
             overrides={overrides}
             holidaySet={holidaySet}
+            holidayNameMap={holidayNameMap}
+            shiftFor={shiftFor}
+            shifts={shifts}
             selectedEmpId={selectedEmpId}
             setSelectedEmpId={setSelectedEmpId}
             canEdit={canEdit}
