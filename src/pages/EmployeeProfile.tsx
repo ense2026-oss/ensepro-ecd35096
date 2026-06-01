@@ -18,6 +18,7 @@ import LazyImage from "@/components/ui/lazy-image";
 import defaultAvatarImg from "@/assets/default-avatar.png";
 import { supabase } from "@/integrations/supabase/client";
 import DisplaySettings, { getPersonalDisplayKey } from "@/components/settings/DisplaySettings";
+import EmployeeDocuments from "@/components/employees/EmployeeDocuments";
 
 const TAB_CONFIG = [
   { key: "personal",   label: "ข้อมูลส่วนตัว",   icon: User },
