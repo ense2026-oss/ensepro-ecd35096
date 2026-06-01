@@ -465,7 +465,7 @@ const OvertimeManagement = () => {
 };
 
 /* =================== OT Cell editor popover =================== */
-const OTCellPopover = ({ children, dateLabel, dayoff, entry, onSave, onRemove }: any) => {
+const OTCellPopover = ({ children, dateLabel, dayoff, holidayName, shiftLabel, shiftColor, entry, onSave, onRemove }: any) => {
   const [open, setOpen] = useState(false);
   const [hours, setHours] = useState<string>(entry ? String(entry.hours) : "");
   const [otType, setOtType] = useState<string>(entry?.ot_type || (dayoff ? "holiday" : "workday"));
