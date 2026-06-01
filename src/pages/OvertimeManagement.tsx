@@ -294,16 +294,29 @@ const OvertimeManagement = () => {
                 </select>
               </div>
             </div>
-            <div className="flex flex-wrap gap-3 text-xs">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-xs">
               <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded" style={{ background: "hsl(var(--muted))" }} />ไม่มี OT</span>
               {OT_TYPES.map((t) => (
                 <span key={t.value} className="flex items-center gap-1.5">
                   <span className="inline-block w-3 h-3 rounded" style={{ background: `${t.color}30` }} />{t.label}
                 </span>
               ))}
+              <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded" style={{ background: "hsl(220 80% 90%)" }} />วันหยุดบริษัท</span>
+              <span className="flex items-center gap-1.5"><span className="inline-block w-5 h-2 rounded-sm" style={{ background: "linear-gradient(90deg,#2563EB,#7C3AED)" }} />แถบสีล่าง = กะการทำงาน</span>
+              {shifts.length > 0 && (
+                <span className="flex items-center gap-2 pl-1 ml-1 border-l" style={{ borderColor: "hsl(var(--border))" }}>
+                  {shifts.map((s) => (
+                    <span key={s.id} className="flex items-center gap-1">
+                      <span className="inline-block w-2.5 h-2.5 rounded-full" style={{ background: s.color }} />
+                      <span className="text-[11px]">{s.name}</span>
+                    </span>
+                  ))}
+                </span>
+              )}
               {canEdit && <span className="text-muted-foreground">· คลิกเซลล์เพื่อกำหนด OT</span>}
             </div>
           </div>
+
 
           <div className="card-base overflow-auto max-h-[calc(100vh-260px)]">
             <table className="w-full text-xs border-collapse">
