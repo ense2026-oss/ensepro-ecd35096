@@ -272,7 +272,6 @@ const Notifications = () => {
             <div className="card-base p-5">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-bold font-display">ตามประเภท</h3>
-                <button className="text-xs font-medium" style={{ color: "#FF870F" }}>ดูทั้งหมด</button>
               </div>
               <div className="space-y-3">
                 {visibleTypes.map(([key, cfg]) => {
@@ -280,7 +279,13 @@ const Notifications = () => {
                   const unread = roleNotifications.filter((n) => n.type === key && !n.read).length;
                   const pct = totalCount > 0 ? Math.round((count / totalCount) * 100) : 0;
                   return (
-                    <div key={key}>
+                    <button
+                      key={key}
+                      onClick={() => setActiveFilter(key as NotifFilter)}
+                      className={`w-full text-left rounded-lg p-1.5 -m-1.5 transition-colors hover:bg-muted/50 ${
+                        activeFilter === key ? "bg-muted/50" : ""
+                      }`}
+                    >
                       <div className="flex items-center justify-between mb-1">
                         <div className="flex items-center gap-2">
                           <cfg.icon className="w-3.5 h-3.5" style={{ color: cfg.color }} />
@@ -298,7 +303,7 @@ const Notifications = () => {
                       <div className="h-1.5 rounded-full bg-muted overflow-hidden">
                         <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, background: cfg.color }} />
                       </div>
-                    </div>
+                    </button>
                   );
                 })}
               </div>
