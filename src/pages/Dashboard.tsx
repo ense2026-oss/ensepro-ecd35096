@@ -204,6 +204,9 @@ const Dashboard = () => {
   const [checkInToday, setCheckInToday] = useState<any | null>(null);
   const [leaveTypes, setLeaveTypes] = useState<any[]>([]);
   const [myEmployee, setMyEmployee] = useState<any | null>(null);
+  const [companyHolidays, setCompanyHolidays] = useState<any[]>([]);
+  const [myDayoffPatterns, setMyDayoffPatterns] = useState<any[]>([]);
+  const [myDayoffOverrides, setMyDayoffOverrides] = useState<any[]>([]);
 
   const today = format(new Date(), "yyyy-MM-dd");
   const monthStart = format(startOfMonth(new Date()), "yyyy-MM-dd");
