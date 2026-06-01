@@ -181,6 +181,7 @@ const Reports = () => {
   const [filterYear, setFilterYear] = useState(currentThaiYear);
   const [filterMonth, setFilterMonth] = useState(currentMonthName);
   const [expandedCats, setExpandedCats] = useState<Record<string, boolean>>({ employees: true, overtime: true, attendance: true, leave: true, shifts: true, payroll: true });
+  const [empStatusFilter, setEmpStatusFilter] = useState<string[]>(["active", "inactive", "leave"]);
 
   // --- Real leave data ---
   const [leaveData, setLeaveData] = useState<any[]>([]);
@@ -665,7 +666,7 @@ const Reports = () => {
           position: e.position || "-",
           type: e.employee_type || "-",
           startDate: e.start_date || "-",
-          status: e.status === "active" ? "ทำงาน" : e.status === "resigned" ? "ลาออก" : e.status || "-",
+          status: e.status === "active" ? "ทำงาน" : e.status === "inactive" ? "ลาพัก" : e.status === "leave" ? "ลาออก" : e.status || "-",
           rawStatus: e.status,
         })));
       } else if (selectedReport === "emp-new") {
@@ -1048,6 +1049,36 @@ const Reports = () => {
               <option key={m} value={m}>{m}</option>
             ))}
           </select>
+          {cat === "employees" && selectedReport === "emp-all" && (
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground">สถานะ:</span>
+              {[
+                { key: "active", label: "ทำงาน", bg: "hsl(var(--accent-green) / 0.15)", color: "#4CAF50" },
+                { key: "leave", label: "พ้นสภาพ", bg: "hsl(0 80% 95%)", color: "#ef4444" },
+                { key: "inactive", label: "ลาพัก", bg: "hsl(31 100% 95%)", color: "#FF870F" },
+              ].map((opt) => {
+                const active = empStatusFilter.includes(opt.key);
+                return (
+                  <button
+                    key={opt.key}
+                    onClick={() => {
+                      setEmpStatusFilter((prev) =>
+                        active ? prev.filter((s) => s !== opt.key) : [...prev, opt.key]
+                      );
+                    }}
+                    className="text-xs font-medium px-2.5 py-1 rounded-full border transition-colors"
+                    style={{
+                      background: active ? opt.bg : "transparent",
+                      borderColor: active ? opt.color : "hsl(var(--border))",
+                      color: active ? opt.color : "hsl(var(--muted-foreground))",
+                    }}
+                  >
+                    {opt.label}
+                  </button>
+                );
+              })}
+            </div>
+          )}
           <button onClick={() => { 
             if (selectedReport === 'leave-summary') fetchLeaveData();
             else if (selectedReport === 'leave-balance') fetchLeaveBalance();
@@ -1364,14 +1395,19 @@ const Reports = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {empLoading ? (
-                    <tr><td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">กำลังโหลดข้อมูล...</td></tr>
-                  ) : empTableData.length === 0 ? (
-                    <tr><td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">ไม่พบข้อมูลพนักงาน</td></tr>
-                  ) : (
-                    empTableData.map((emp, i) => (
+                  {(() => {
+                    const filteredEmpData = selectedReport === "emp-all"
+                      ? empTableData.filter((emp: any) => empStatusFilter.includes(emp.rawStatus))
+                      : empTableData;
+                    if (empLoading) {
+                      return <tr><td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">กำลังโหลดข้อมูล...</td></tr>;
+                    }
+                    if (filteredEmpData.length === 0) {
+                      return <tr><td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">ไม่พบข้อมูลพนักงาน</td></tr>;
+                    }
+                    return filteredEmpData.map((emp: any, i: number) => (
                       <tr key={i} className="border-t border-border hover:bg-muted/30 transition-colors">
-                        <td className="px-4 py-3 text-center">{empTableData.length - i}</td>
+                        <td className="px-4 py-3 text-center">{filteredEmpData.length - i}</td>
                         <td className="px-4 py-3 font-medium">{emp.name}</td>
                         <td className="px-4 py-3">{emp.dept}</td>
                         <td className="px-4 py-3">{emp.position}</td>
@@ -1379,21 +1415,35 @@ const Reports = () => {
                         <td className="px-4 py-3">{emp.startDate}</td>
                         <td className="px-4 py-3">
                           <span className="px-2 py-0.5 rounded-full text-xs font-medium" style={{
-                            background: emp.rawStatus === "active" || emp.rawStatus === "new" ? "hsl(var(--accent-green) / 0.15)" : "hsl(0 80% 95%)",
-                            color: emp.rawStatus === "active" || emp.rawStatus === "new" ? "#4CAF50" : "#ef4444",
+                            background: emp.rawStatus === "active" || emp.rawStatus === "new"
+                              ? "hsl(var(--accent-green) / 0.15)"
+                              : emp.rawStatus === "inactive"
+                                ? "hsl(31 100% 95%)"
+                                : "hsl(0 80% 95%)",
+                            color: emp.rawStatus === "active" || emp.rawStatus === "new"
+                              ? "#4CAF50"
+                              : emp.rawStatus === "inactive"
+                                ? "#FF870F"
+                                : "#ef4444",
                           }}>{emp.status}</span>
                         </td>
                       </tr>
-                    ))
-                  )}
+                    ));
+                  })()}
                 </tbody>
-                {empTableData.length > 0 && (
-                  <tfoot>
-                    <tr className="border-t-2 font-semibold" style={{ background: "hsl(var(--muted) / 0.5)" }}>
-                      <td className="px-4 py-3" colSpan={7}>รวมทั้งหมด {empTableData.length} คน</td>
-                    </tr>
-                  </tfoot>
-                )}
+                {(() => {
+                  const filteredEmpData = selectedReport === "emp-all"
+                    ? empTableData.filter((emp: any) => empStatusFilter.includes(emp.rawStatus))
+                    : empTableData;
+                  if (filteredEmpData.length === 0) return null;
+                  return (
+                    <tfoot>
+                      <tr className="border-t-2 font-semibold" style={{ background: "hsl(var(--muted) / 0.5)" }}>
+                        <td className="px-4 py-3" colSpan={7}>รวมทั้งหมด {filteredEmpData.length} คน</td>
+                      </tr>
+                    </tfoot>
+                  );
+                })()}
               </table>
             )}
             {cat === "attendance" && (
