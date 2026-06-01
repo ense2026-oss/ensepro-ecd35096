@@ -1049,6 +1049,36 @@ const Reports = () => {
               <option key={m} value={m}>{m}</option>
             ))}
           </select>
+          {cat === "employees" && selectedReport === "emp-all" && (
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground">สถานะ:</span>
+              {[
+                { key: "active", label: "ทำงาน", bg: "hsl(var(--accent-green) / 0.15)", color: "#4CAF50" },
+                { key: "leave", label: "พ้นสภาพ", bg: "hsl(0 80% 95%)", color: "#ef4444" },
+                { key: "inactive", label: "ลาพัก", bg: "hsl(31 100% 95%)", color: "#FF870F" },
+              ].map((opt) => {
+                const active = empStatusFilter.includes(opt.key);
+                return (
+                  <button
+                    key={opt.key}
+                    onClick={() => {
+                      setEmpStatusFilter((prev) =>
+                        active ? prev.filter((s) => s !== opt.key) : [...prev, opt.key]
+                      );
+                    }}
+                    className="text-xs font-medium px-2.5 py-1 rounded-full border transition-colors"
+                    style={{
+                      background: active ? opt.bg : "transparent",
+                      borderColor: active ? opt.color : "hsl(var(--border))",
+                      color: active ? opt.color : "hsl(var(--muted-foreground))",
+                    }}
+                  >
+                    {opt.label}
+                  </button>
+                );
+              })}
+            </div>
+          )}
           <button onClick={() => { 
             if (selectedReport === 'leave-summary') fetchLeaveData();
             else if (selectedReport === 'leave-balance') fetchLeaveBalance();
