@@ -91,6 +91,8 @@ const OvertimeManagement = () => {
   const [patterns, setPatterns] = useState<Pattern[]>([]);
   const [overrides, setOverrides] = useState<Override[]>([]);
   const [holidays, setHolidays] = useState<CompanyHoliday[]>([]);
+  const [shifts, setShifts] = useState<Shift[]>([]);
+  const [assignments, setAssignments] = useState<ShiftAssignment[]>([]);
   const [loading, setLoading] = useState(true);
 
   const today = new Date();
