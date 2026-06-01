@@ -71,17 +71,37 @@ const DatePickerField = ({ label, value, onChange }: { label: string; value: str
   </div>
 );
 
+type SelectOption = string | { value: string; label: string };
 const SelectField = ({ label, value, onChange, options }: {
-  label: string; value: string; onChange: (v: string) => void; options: string[];
+  label: string; value: string; onChange: (v: string) => void; options: SelectOption[];
 }) => (
   <div className="space-y-1.5">
     <label className="text-xs font-medium text-muted-foreground">{label}</label>
     <select value={value} onChange={(e) => onChange(e.target.value)}
       className="w-full px-3 py-2 text-sm rounded-xl border border-border bg-muted/30 outline-none focus:ring-2 focus:ring-primary/30 transition-all cursor-pointer">
-      {options.map((o) => <option key={o}>{o}</option>)}
+      {options.map((o) => {
+        const val = typeof o === "string" ? o : o.value;
+        const lbl = typeof o === "string" ? o : o.label;
+        return <option key={val} value={val}>{lbl}</option>;
+      })}
     </select>
   </div>
 );
+
+/* ───────────────────── Shared label maps ───────────────────── */
+const STATUS_OPTIONS: SelectOption[] = [
+  { value: "active", label: "ทำงานปกติ" },
+  { value: "leave", label: "ลาพัก" },
+  { value: "inactive", label: "พ้นสภาพ" },
+];
+const ROLE_OPTIONS: SelectOption[] = [
+  { value: "Executive", label: "ผู้บริหาร" },
+  { value: "Manager", label: "ผู้จัดการ" },
+  { value: "Admin", label: "ผู้ดูแลระบบ" },
+  { value: "HR", label: "ฝ่ายบุคคล" },
+  { value: "Accountant", label: "ฝ่ายบัญชี" },
+  { value: "Employee", label: "พนักงาน" },
+];
 
 /* ───────────────────── Main Component ───────────────────── */
 const EmployeeProfile = () => {
