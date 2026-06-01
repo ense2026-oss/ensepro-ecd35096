@@ -1180,18 +1180,57 @@ const Reports = () => {
         {cat === "employees" && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <div className="rounded-2xl border border-border bg-card p-5">
-              <h3 className="text-sm font-bold mb-4">แนวโน้มการรับ-ออก พนักงาน</h3>
-              <ResponsiveContainer width="100%" height={260}>
-                <LineChart data={empHiringTrend}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis dataKey="month" fontSize={12} />
-                  <YAxis fontSize={12} />
-                  <Tooltip />
-                  <Legend />
-                  <Line type="monotone" dataKey="เข้าใหม่" stroke="#87FF0F" strokeWidth={2} dot={{ r: 4 }} />
-                  <Line type="monotone" dataKey="ลาออก" stroke="#FF870F" strokeWidth={2} dot={{ r: 4 }} />
-                </LineChart>
-              </ResponsiveContainer>
+              <h3 className="text-sm font-bold mb-4">จำนวนพนักงาน</h3>
+              {(() => {
+                const statusMeta: Record<string, { label: string; color: string }> = {
+                  active: { label: "ทำงาน", color: "#4CAF50" },
+                  inactive: { label: "ลาพัก", color: "#FF870F" },
+                  leave: { label: "พ้นสภาพ", color: "#ef4444" },
+                };
+                const filteredEmps = empTableData.filter((emp: any) => empStatusFilter.includes(emp.rawStatus));
+                const donutData = Object.keys(statusMeta)
+                  .filter((key) => empStatusFilter.includes(key))
+                  .map((key) => ({
+                    name: statusMeta[key].label,
+                    value: filteredEmps.filter((emp: any) => emp.rawStatus === key).length,
+                    color: statusMeta[key].color,
+                  }))
+                  .filter((d) => d.value > 0);
+                const total = filteredEmps.length;
+                if (total === 0) {
+                  return <div className="h-[260px] flex items-center justify-center text-muted-foreground text-sm">ไม่มีข้อมูล</div>;
+                }
+                return (
+                  <div className="relative">
+                    <ResponsiveContainer width="100%" height={260}>
+                      <RechartsPie>
+                        <Pie
+                          data={donutData}
+                          dataKey="value"
+                          nameKey="name"
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={70}
+                          outerRadius={100}
+                          paddingAngle={donutData.length > 1 ? 3 : 0}
+                          stroke="hsl(var(--card))"
+                          strokeWidth={3}
+                        >
+                          {donutData.map((entry, i) => (
+                            <Cell key={i} fill={entry.color} />
+                          ))}
+                        </Pie>
+                        <Tooltip formatter={(v: any, n: any) => [`${v} คน`, n]} />
+                        <Legend />
+                      </RechartsPie>
+                    </ResponsiveContainer>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none" style={{ top: "-22px" }}>
+                      <span className="text-3xl font-bold text-foreground">{total}</span>
+                      <span className="text-xs text-muted-foreground">พนักงานทั้งหมด</span>
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
             <div className="rounded-2xl border border-border bg-card p-5">
               <h3 className="text-sm font-bold mb-4">จำนวนพนักงานตามแผนก</h3>
