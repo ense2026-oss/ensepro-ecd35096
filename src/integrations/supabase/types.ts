@@ -563,6 +563,42 @@ export type Database = {
           },
         ]
       }
+      employee_documents: {
+        Row: {
+          category: string
+          created_at: string
+          employee_id: string
+          file_name: string
+          file_type: string
+          file_url: string
+          id: string
+          name: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          employee_id: string
+          file_name?: string
+          file_type?: string
+          file_url?: string
+          id?: string
+          name?: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          employee_id?: string
+          file_name?: string
+          file_type?: string
+          file_url?: string
+          id?: string
+          name?: string
+          uploaded_by?: string | null
+        }
+        Relationships: []
+      }
       employee_education: {
         Row: {
           created_at: string

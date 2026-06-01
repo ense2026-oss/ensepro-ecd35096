@@ -4,7 +4,7 @@ import {
   ArrowLeft, Camera, Edit, Save, X, Plus, Trash2,
   User, Briefcase, Users, GraduationCap, Clock, Shield, Receipt,
   Phone, Mail, MapPin, Calendar, CreditCard, Droplets,
-  Building, Star, Lock, Eye, EyeOff, AlertCircle, Palette
+  Building, Star, Lock, Eye, EyeOff, AlertCircle, Palette, Paperclip
 } from "lucide-react";
 
 import { ThaiDatePicker } from "@/components/ui/thai-date-picker";
@@ -18,12 +18,13 @@ import LazyImage from "@/components/ui/lazy-image";
 import defaultAvatarImg from "@/assets/default-avatar.png";
 import { supabase } from "@/integrations/supabase/client";
 import DisplaySettings, { getPersonalDisplayKey } from "@/components/settings/DisplaySettings";
+import EmployeeDocuments from "@/components/employees/EmployeeDocuments";
 
 const TAB_CONFIG = [
   { key: "personal",   label: "ข้อมูลส่วนตัว",   icon: User },
   { key: "work",       label: "ข้อมูลการทำงาน",  icon: Briefcase },
   { key: "family",     label: "ข้อมูลครอบครัว",  icon: Users },
-  { key: "education",  label: "ประวัติการศึกษา",  icon: GraduationCap },
+  { key: "documents",  label: "เอกสารแนบ",       icon: Paperclip },
   { key: "workhistory",label: "ประวัติการทำงาน",  icon: Clock },
   { key: "tax",        label: "ข้อมูลภาษี",      icon: Receipt },
   { key: "security",   label: "ความปลอดภัย",     icon: Shield },
