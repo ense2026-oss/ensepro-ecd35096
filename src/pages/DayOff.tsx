@@ -10,7 +10,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import SearchableSelect from "@/components/ui/searchable-select";
 import { ThaiDatePicker } from "@/components/ui/thai-date-picker";
 import EmployeeAvatar from "@/components/ui/employee-avatar";
-import { HoverCard, HoverCardTrigger, HoverCardContent } from "@/components/ui/hover-card";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 
 interface Pattern {
   id: string;
@@ -182,7 +182,7 @@ const DayOff = () => {
       case "work": return { bg: "hsl(var(--muted))", color: "hsl(var(--muted-foreground))", label: "✓" };
       case "pattern": return { bg: "hsl(0 70% 90%)", color: "hsl(0 70% 35%)", label: "●" };
       case "extra": return { bg: "hsl(31 90% 88%)", color: "hsl(31 90% 35%)", label: "+" };
-      case "company": return { bg: "hsl(220 80% 90%)", color: "hsl(220 80% 35%)", label: "★" };
+      case "company": return { bg: "hsl(220 80% 88%)", color: "hsl(220 80% 30%)", label: "หยุด" };
       default: return { bg: "transparent", color: "inherit", label: "" };
     }
   };
@@ -250,14 +250,16 @@ const DayOff = () => {
                     const isWeekend = dow === 0 || dow === 6;
                     const iso = isoDate(d);
                     const isHoliday = holidaySet.has(iso);
+                    const hName = holidays.find((h) => h.date === iso)?.name;
                     return (
                       <th key={iso} className="sticky top-0 z-20 px-1 py-1 text-center font-semibold border-b min-w-[28px]" style={{
                         borderColor: "hsl(var(--border))",
-                        background: isHoliday ? "hsl(220 80% 95%)" : (isWeekend ? "hsl(0 0% 96%)" : "hsl(var(--muted) / 0.5)"),
-                        color: isHoliday ? "hsl(220 80% 35%)" : undefined,
-                      }}>
+                        background: isHoliday ? "hsl(220 80% 90%)" : (isWeekend ? "hsl(0 0% 96%)" : "hsl(var(--muted) / 0.5)"),
+                        color: isHoliday ? "hsl(220 80% 30%)" : undefined,
+                      }} title={isHoliday && hName ? hName : undefined}>
                         <div className="text-[9px] opacity-60">{WEEKDAY_LABELS[dow]}</div>
                         <div>{d.getDate()}</div>
+                        {isHoliday && <div className="mx-auto mt-0.5 w-1.5 h-1.5 rounded-full" style={{ background: "hsl(220 80% 45%)" }} />}
                       </th>
                     );
                   })}
@@ -287,18 +289,18 @@ const DayOff = () => {
                       const statusDot = status === "work" ? "hsl(var(--muted-foreground))" : status === "pattern" ? "hsl(0 70% 50%)" : status === "extra" ? "hsl(31 90% 50%)" : "hsl(220 80% 55%)";
                       return (
                         <td key={iso} className="p-0.5 text-center border-b" style={{borderColor:"hsl(var(--border))"}}>
-                          <HoverCard openDelay={120} closeDelay={60}>
-                            <HoverCardTrigger asChild>
+                          <Popover>
+                            <PopoverTrigger asChild>
                               <button
                                 disabled={!canEdit}
-                                onClick={() => toggleOverride(emp.id, iso, status)}
                                 className={`w-full h-7 rounded text-[11px] font-bold transition-all ${canEdit ? "hover:scale-110 cursor-pointer" : "cursor-default"} ${hasOverride ? "ring-1 ring-offset-1 ring-orange-400" : ""}`}
                                 style={{ background: c.bg, color: c.color }}
+                                title={`${d.getDate()}/${month + 1}/${year + 543} · ${statusLabel}${status === "company" && holidayName ? ` · ${holidayName}` : ""}`}
                               >
                                 {c.label}
                               </button>
-                            </HoverCardTrigger>
-                            <HoverCardContent className="w-64 p-3" align="center" side="top">
+                            </PopoverTrigger>
+                            <PopoverContent className="w-64 p-3" align="center" side="top">
                               <div className="text-[11px] text-muted-foreground border-b pb-1.5 mb-2">
                                 {d.getDate()}/{month + 1}/{year + 543} · {emp.prefix}{emp.firstName} {emp.lastName}
                               </div>
@@ -315,13 +317,16 @@ const DayOff = () => {
                                   <div className="text-muted-foreground pl-4">เหตุผล: {ov.reason}</div>
                                 )}
                                 {canEdit && (
-                                  <div className="text-[10px] text-muted-foreground pt-1.5 border-t mt-2">
+                                  <button
+                                    onClick={() => toggleOverride(emp.id, iso, status)}
+                                    className="w-full text-[11px] font-semibold text-primary pt-1.5 border-t mt-2 hover:underline text-left"
+                                  >
                                     คลิกเพื่อ{status === "work" ? "ตั้งเป็นวันหยุด" : "เปลี่ยนสถานะ"}
-                                  </div>
+                                  </button>
                                 )}
                               </div>
-                            </HoverCardContent>
-                          </HoverCard>
+                            </PopoverContent>
+                          </Popover>
                         </td>
                       );
                     })}
