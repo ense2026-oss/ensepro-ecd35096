@@ -492,7 +492,23 @@ const OTCellPopover = ({ children, dateLabel, dayoff, holidayName, shiftLabel, s
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>{children}</PopoverTrigger>
       <PopoverContent className="w-64 p-3 space-y-2.5" align="center">
-        <div className="text-[11px] text-muted-foreground border-b pb-1.5">{dateLabel}{dayoff ? " · วันหยุด" : ""}</div>
+        <div className="border-b pb-1.5 space-y-1">
+          <div className="text-[11px] text-muted-foreground">{dateLabel}</div>
+          <div className="flex flex-wrap items-center gap-1.5">
+            {holidayName && (
+              <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded" style={{ background: "hsl(220 80% 92%)", color: "hsl(220 80% 35%)" }}>วันหยุด · {holidayName}</span>
+            )}
+            {!holidayName && dayoff && (
+              <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-muted text-muted-foreground">วันหยุดพนักงาน</span>
+            )}
+            {shiftLabel && (
+              <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded inline-flex items-center gap-1" style={{ background: `${shiftColor || "#888"}20`, color: shiftColor || "inherit" }}>
+                <span className="inline-block w-2 h-2 rounded-full" style={{ background: shiftColor || "#888" }} />
+                กะ {shiftLabel}
+              </span>
+            )}
+          </div>
+        </div>
         <div>
           <label className="block text-[11px] font-semibold mb-1 text-muted-foreground">จำนวนชั่วโมง OT</label>
           <input type="number" min="0" step="0.5" value={hours} onChange={(e) => setHours(e.target.value)}
