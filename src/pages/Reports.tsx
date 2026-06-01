@@ -666,7 +666,7 @@ const Reports = () => {
           position: e.position || "-",
           type: e.employee_type || "-",
           startDate: e.start_date || "-",
-          status: e.status === "active" ? "ทำงาน" : e.status === "resigned" ? "ลาออก" : e.status || "-",
+          status: e.status === "active" ? "ทำงาน" : e.status === "inactive" ? "ลาพัก" : e.status === "leave" ? "ลาออก" : e.status || "-",
           rawStatus: e.status,
         })));
       } else if (selectedReport === "emp-new") {
