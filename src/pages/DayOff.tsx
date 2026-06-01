@@ -362,6 +362,11 @@ const DayOff = () => {
         <TabsContent value="bulk" className="space-y-4">
           <BulkActionsView employees={employees} patterns={patterns} canEdit={canEdit} userId={user?.id} onChanged={fetchAll} />
         </TabsContent>
+
+        {/* ============ TAB 4: Company holidays ============ */}
+        <TabsContent value="company" className="space-y-4">
+          <CompanyHolidaysSettings />
+        </TabsContent>
       </Tabs>
     </div>
   );
