@@ -83,6 +83,21 @@ StatCard.displayName = "StatCard";
 /* ─── LiveClock ─── */
 const THAI_DAYS = ["อาทิตย์", "จันทร์", "อังคาร", "พุธ", "พฤหัสบดี", "ศุกร์", "เสาร์"];
 const THAI_MONTHS_CLOCK = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
+const THAI_DAYS_SHORT = ["อา.", "จ.", "อ.", "พ.", "พฤ.", "ศ.", "ส."];
+const THAI_MONTHS_SHORT = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
+
+/** Format an ISO date "yyyy-MM-dd" to a short Thai BE label, e.g. "1 มิ.ย. 69" */
+const formatThaiShort = (iso: string): { day: string; date: string } => {
+  if (!iso) return { day: "", date: "" };
+  const [y, m, d] = iso.split("-").map((x) => parseInt(x));
+  const dt = new Date(y, m - 1, d);
+  return {
+    day: THAI_DAYS_SHORT[dt.getDay()],
+    date: `${d} ${THAI_MONTHS_SHORT[m - 1]} ${String((y + 543) % 100).padStart(2, "0")}`,
+  };
+};
+
+
 
 const LiveClock = () => {
   const [now, setNow] = useState(new Date());
