@@ -404,13 +404,14 @@ const Dashboard = () => {
 
   const totalLeaveDays = leavePieData.reduce((s, d) => s + d.value, 0);
 
-  // Department stats
+  // Department stats — count, active, present today, and on-leave today per department
   const deptStats = useMemo(() => {
-    const depts: Record<string, { count: number; present: number }> = {};
+    const depts: Record<string, { count: number; active: number; present: number; onLeave: number }> = {};
     employees.forEach((e) => {
       const d = e.dept || "ไม่ระบุ";
-      if (!depts[d]) depts[d] = { count: 0, present: 0 };
+      if (!depts[d]) depts[d] = { count: 0, active: 0, present: 0, onLeave: 0 };
       depts[d].count++;
+      if (e.status === "active") depts[d].active++;
     });
     todayAttendance.forEach((a) => {
       const emp = employees.find((e) => e.id === a.employee_id);
@@ -419,11 +420,50 @@ const Dashboard = () => {
         if (depts[d]) depts[d].present++;
       }
     });
+    leaveRequests.forEach((l) => {
+      if (l.status !== "approved" && l.status !== "pending") return;
+      const from = toIso(l.date_from);
+      const to = toIso(l.date_to);
+      if (!(from <= today && to >= today)) return;
+      const emp = employees.find((e) => e.id === l.employee_id);
+      if (emp) {
+        const d = emp.dept || "ไม่ระบุ";
+        if (depts[d]) depts[d].onLeave++;
+      }
+    });
     return Object.entries(depts)
       .map(([dept, v]) => ({ dept, ...v }))
       .sort((a, b) => b.count - a.count)
-      .slice(0, 5);
-  }, [employees, todayAttendance]);
+      .slice(0, 6);
+  }, [employees, todayAttendance, leaveRequests, today]);
+
+  // Upcoming personal day-offs for the current user (next 60 days, excludes company holidays which are listed separately)
+  const upcomingMyDayoffs = useMemo(() => {
+    const holidaySet = new Set(companyHolidays.map((h) => h.date));
+    const result: { iso: string; dow: number; label: string }[] = [];
+    const start = new Date();
+    for (let i = 0; i < 60 && result.length < 5; i++) {
+      const d = new Date(start);
+      d.setDate(start.getDate() + i);
+      const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      const dow = d.getDay();
+      const ov = myDayoffOverrides.find((o) => o.date === iso);
+      if (ov) {
+        if (ov.is_dayoff) result.push({ iso, dow, label: ov.reason || "วันหยุดพิเศษ" });
+        continue;
+      }
+      if (holidaySet.has(iso)) continue; // shown in company section
+      const matched = myDayoffPatterns.some(
+        (p) =>
+          (!p.effective_from || iso >= p.effective_from) &&
+          (!p.effective_to || iso <= p.effective_to) &&
+          (p.weekdays || []).includes(dow)
+      );
+      if (matched) result.push({ iso, dow, label: "วันหยุดประจำสัปดาห์" });
+    }
+    return result;
+  }, [companyHolidays, myDayoffPatterns, myDayoffOverrides]);
+
 
   // Attendance chart
   const attendanceChartData = useMemo(() => {
