@@ -150,9 +150,9 @@ const Notifications = () => {
                   อ่านทั้งหมด
                 </button>
               )}
-              <button className="text-xs font-medium" style={{ color: "#FF870F" }}>
-                ดูทั้งหมด <ArrowUpRight className="w-3 h-3 inline ml-0.5" />
-              </button>
+              <span className="text-xs text-muted-foreground font-medium">
+                {filtered.length} รายการ
+              </span>
             </div>
           </div>
 
