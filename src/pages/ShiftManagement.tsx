@@ -250,7 +250,7 @@ const ShiftManagement = () => {
             </div>
           </div>
 
-          <div className="card-base overflow-auto max-h-[calc(100vh-260px)]">
+          <div className="overflow-x-auto overflow-y-visible">
             <table className="w-full text-xs border-collapse">
               <thead>
                 <tr>
