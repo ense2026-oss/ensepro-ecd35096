@@ -244,8 +244,8 @@ const EmployeeFormDialog = ({ open, onOpenChange, employee, onSave }: EmployeeFo
               />
               <p className="text-[10px] text-muted-foreground">ใช้ ID เดียวกับที่ตั้งค่าในเครื่องสแกนหน้า</p>
             </div>
-            <SelectField label="สถานะ" value={form.status} onChange={set("status")} options={["active", "leave", "inactive"]} />
-            <SelectField label="Role" value={form.role} onChange={set("role")} options={["Executive", "Manager", "Admin", "HR", "Accountant", "Employee"]} />
+            <SelectField label="สถานะ" value={form.status} onChange={set("status")} options={STATUS_OPTIONS} />
+            <SelectField label="สิทธิ์การใช้งาน" value={form.role} onChange={set("role")} options={ROLE_OPTIONS} />
           </div>
 
           {/* ข้อมูลครอบครัว */}
