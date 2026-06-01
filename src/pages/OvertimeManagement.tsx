@@ -670,13 +670,11 @@ const EmployeeOTDetailView = ({
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <label className="block text-xs font-semibold mb-1.5 text-muted-foreground">เริ่ม</label>
-                <input type="time" value={addStart} onChange={(e) => setAddStart(e.target.value)}
-                  className="w-full px-2 py-2 text-sm rounded-xl border outline-none bg-muted/30" />
+                <Time24Input value={addStart} onChange={setAddStart} />
               </div>
               <div>
                 <label className="block text-xs font-semibold mb-1.5 text-muted-foreground">สิ้นสุด</label>
-                <input type="time" value={addEnd} onChange={(e) => setAddEnd(e.target.value)}
-                  className="w-full px-2 py-2 text-sm rounded-xl border outline-none bg-muted/30" />
+                <Time24Input value={addEnd} onChange={setAddEnd} />
               </div>
             </div>
             <button onClick={addOT} disabled={saving}
