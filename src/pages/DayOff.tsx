@@ -11,6 +11,8 @@ import SearchableSelect from "@/components/ui/searchable-select";
 import { ThaiDatePicker } from "@/components/ui/thai-date-picker";
 import EmployeeAvatar from "@/components/ui/employee-avatar";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import CompanyHolidaysSettings from "@/components/settings/CompanyHolidaysSettings";
+import { CalendarOff } from "lucide-react";
 
 interface Pattern {
   id: string;
@@ -203,6 +205,7 @@ const DayOff = () => {
           <TabsTrigger value="calendar"><CalendarDays className="w-4 h-4 mr-1.5" />ปฏิทินรายเดือน</TabsTrigger>
           <TabsTrigger value="employee"><Users className="w-4 h-4 mr-1.5" />รายพนักงาน</TabsTrigger>
           <TabsTrigger value="bulk"><Settings2 className="w-4 h-4 mr-1.5" />จัดการแบบกลุ่ม</TabsTrigger>
+          <TabsTrigger value="company"><CalendarOff className="w-4 h-4 mr-1.5" />วันหยุดบริษัท</TabsTrigger>
         </TabsList>
 
         {/* ============ TAB 1: Calendar ============ */}
@@ -358,6 +361,11 @@ const DayOff = () => {
         {/* ============ TAB 3: Bulk ============ */}
         <TabsContent value="bulk" className="space-y-4">
           <BulkActionsView employees={employees} patterns={patterns} canEdit={canEdit} userId={user?.id} onChanged={fetchAll} />
+        </TabsContent>
+
+        {/* ============ TAB 4: Company holidays ============ */}
+        <TabsContent value="company" className="space-y-4">
+          <CompanyHolidaysSettings />
         </TabsContent>
       </Tabs>
     </div>
