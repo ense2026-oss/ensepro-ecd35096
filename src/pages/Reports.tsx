@@ -1234,15 +1234,33 @@ const Reports = () => {
             </div>
             <div className="rounded-2xl border border-border bg-card p-5">
               <h3 className="text-sm font-bold mb-4">จำนวนพนักงานตามแผนก</h3>
-              <ResponsiveContainer width="100%" height={260}>
-                <BarChart data={empHeadcountData} layout="vertical">
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis type="number" fontSize={12} />
-                  <YAxis dataKey="dept" type="category" fontSize={12} width={80} />
-                  <Tooltip />
-                  <Bar dataKey="count" fill="#FF870F" radius={[0, 4, 4, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+              {(() => {
+                const filteredEmps = selectedReport === "emp-all"
+                  ? empTableData.filter((emp: any) => empStatusFilter.includes(emp.rawStatus))
+                  : empTableData;
+                const deptMap: Record<string, number> = {};
+                filteredEmps.forEach((emp: any) => {
+                  const d = emp.dept || "-";
+                  deptMap[d] = (deptMap[d] || 0) + 1;
+                });
+                const deptData = Object.keys(deptMap)
+                  .map((dept) => ({ dept, count: deptMap[dept] }))
+                  .sort((a, b) => b.count - a.count);
+                if (deptData.length === 0) {
+                  return <div className="h-[260px] flex items-center justify-center text-muted-foreground text-sm">ไม่มีข้อมูล</div>;
+                }
+                return (
+                  <ResponsiveContainer width="100%" height={260}>
+                    <BarChart data={deptData} layout="vertical">
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                      <XAxis type="number" fontSize={12} />
+                      <YAxis dataKey="dept" type="category" fontSize={12} width={80} />
+                      <Tooltip />
+                      <Bar dataKey="count" fill="#FF870F" radius={[0, 4, 4, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                );
+              })()}
             </div>
           </div>
         )}
