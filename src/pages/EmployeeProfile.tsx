@@ -25,7 +25,7 @@ const TAB_CONFIG = [
   { key: "work",       label: "ข้อมูลการทำงาน",  icon: Briefcase },
   { key: "family",     label: "ข้อมูลครอบครัว",  icon: Users },
   { key: "documents",  label: "เอกสารแนบ",       icon: Paperclip },
-  { key: "workhistory",label: "ประวัติการทำงาน",  icon: Clock },
+  { key: "workhistory",label: "ประวัติ",          icon: Clock },
   { key: "tax",        label: "ข้อมูลภาษี",      icon: Receipt },
   { key: "security",   label: "ความปลอดภัย",     icon: Shield },
   { key: "display",    label: "การแสดงผล",       icon: Palette },
@@ -703,24 +703,35 @@ const EmployeeProfile = () => {
       <EmployeeDocuments
         employeeId={emp.id}
         category="personal"
-        canEdit={canEditRestricted}
+        canEdit={true}
         title="เอกสารส่วนตัว"
         description="เช่น สำเนาบัตรประชาชน ทะเบียนบ้าน รูปถ่าย"
       />
-      <EmployeeDocuments
-        employeeId={emp.id}
-        category="education"
-        canEdit={canEditRestricted}
-        title="เอกสารการศึกษา"
-        description="เช่น วุฒิการศึกษา ทรานสคริปต์ ใบรับรอง"
-      />
-      <EmployeeDocuments
-        employeeId={emp.id}
-        category="work"
-        canEdit={canEditRestricted}
-        title="เอกสารการทำงาน"
-        description="เช่น สัญญาจ้าง หนังสือรับรอง ใบประเมิน"
-      />
+    </div>
+  );
+
+  const historyTab = (
+    <div className="space-y-8">
+      <div className="space-y-4">
+        {educationTab}
+        <EmployeeDocuments
+          employeeId={emp.id}
+          category="education"
+          canEdit={true}
+          title="เอกสารการศึกษา"
+          description="เช่น วุฒิการศึกษา ทรานสคริปต์ ใบรับรอง"
+        />
+      </div>
+      <div className="space-y-4">
+        {workHistoryTab}
+        <EmployeeDocuments
+          employeeId={emp.id}
+          category="work"
+          canEdit={true}
+          title="เอกสารการทำงาน"
+          description="เช่น สัญญาจ้าง หนังสือรับรอง ใบประเมิน"
+        />
+      </div>
     </div>
   );
 
@@ -729,8 +740,7 @@ const EmployeeProfile = () => {
     work: workTab,
     family: familyTab,
     documents: documentsTab,
-    education: educationTab,
-    workhistory: workHistoryTab,
+    workhistory: historyTab,
     tax: taxTab,
     security: securityTab,
     display: displayTab,
