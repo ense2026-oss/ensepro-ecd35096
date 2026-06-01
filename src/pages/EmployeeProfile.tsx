@@ -355,7 +355,7 @@ const EmployeeProfile = () => {
           <div className="space-y-1">
             <p className="text-xs text-muted-foreground">สถานะ</p>
             <span className={emp.status === "active" ? "badge-present" : emp.status === "leave" ? "badge-leave" : "badge-absent"}>
-              {emp.status === "active" ? "ทำงาน" : emp.status === "leave" ? "ลางาน" : "ลาออก"}
+              {emp.status === "active" ? "ทำงานปกติ" : emp.status === "leave" ? "ลาพัก" : "พ้นสภาพ"}
             </span>
           </div>
         </div>
