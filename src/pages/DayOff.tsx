@@ -331,12 +331,24 @@ const DayOff = () => {
                                   <div className="text-muted-foreground pl-4">เหตุผล: {ov.reason}</div>
                                 )}
                                 {canEdit && (
-                                  <button
-                                    onClick={() => toggleOverride(emp.id, iso, status)}
-                                    className="w-full text-[11px] font-semibold text-primary pt-1.5 border-t mt-2 hover:underline text-left"
-                                  >
-                                    คลิกเพื่อ{status === "work" ? "ตั้งเป็นวันหยุด" : "เปลี่ยนสถานะ"}
-                                  </button>
+                                  <div className="pt-1.5 border-t mt-2 flex items-center gap-2">
+                                    <button
+                                      onClick={() => toggleOverride(emp.id, iso, status)}
+                                      className="flex-1 text-[11px] font-semibold text-primary hover:underline text-left"
+                                    >
+                                      คลิกเพื่อ{status === "work" ? "ตั้งเป็นวันหยุด" : "เปลี่ยนสถานะ"}
+                                    </button>
+                                    {hasOverride && (
+                                      <button
+                                        onClick={() => deleteOverride(ov!.id)}
+                                        className="flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-semibold text-destructive hover:bg-destructive/10 transition-colors flex-shrink-0"
+                                        title="ยกเลิกวันหยุด"
+                                      >
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                        ยกเลิกวันหยุด
+                                      </button>
+                                    )}
+                                  </div>
                                 )}
                               </div>
                             </PopoverContent>
