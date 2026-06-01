@@ -67,12 +67,12 @@ const Employees = () => {
 
   // Stats
   const stats = useMemo(() => ({
-    total: nonAdmins.length,
-    active: nonAdmins.filter((e) => e.status === "active").length,
-    onLeave: nonAdmins.filter((e) => e.status === "leave").length,
-    inactive: nonAdmins.filter((e) => e.status === "inactive").length,
-    departments: new Set(nonAdmins.map((e) => e.dept).filter(Boolean)).size,
-  }), [nonAdmins]);
+    total: filtered.length,
+    active: filtered.filter((e) => e.status === "active").length,
+    onLeave: filtered.filter((e) => e.status === "leave").length,
+    inactive: filtered.filter((e) => e.status === "inactive").length,
+    departments: new Set(filtered.map((e) => e.dept).filter(Boolean)).size,
+  }), [filtered]);
 
   // Pagination
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
