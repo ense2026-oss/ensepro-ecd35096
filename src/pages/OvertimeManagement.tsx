@@ -329,13 +329,17 @@ const OvertimeManagement = () => {
                     const iso = isoDate(d);
                     const isHoliday = holidaySet.has(iso);
                     return (
-                      <th key={iso} className="sticky top-0 z-20 px-1 py-1 text-center font-semibold border-b min-w-[40px]" style={{
+                      <th key={iso} title={isHoliday ? `วันหยุด: ${holidayNameMap.get(iso) || ""}` : `${WEEKDAY_FULL[dow]} ${d.getDate()}`}
+                        className="sticky top-0 z-20 px-1 py-1 text-center font-semibold border-b min-w-[40px]" style={{
                         borderColor: "hsl(var(--border))",
                         background: isHoliday ? "hsl(220 80% 95%)" : (isWeekend ? "hsl(0 0% 96%)" : "hsl(var(--muted) / 0.5)"),
                         color: isHoliday ? "hsl(220 80% 35%)" : undefined,
                       }}>
                         <div className="text-[9px] opacity-60">{WEEKDAY_LABELS[dow]}</div>
                         <div>{d.getDate()}</div>
+                        <div className="h-1 flex items-center justify-center">
+                          {isHoliday && <span className="inline-block w-1.5 h-1.5 rounded-full" style={{ background: "hsl(220 80% 45%)" }} />}
+                        </div>
                       </th>
                     );
                   })}
