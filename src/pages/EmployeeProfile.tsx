@@ -620,7 +620,7 @@ const EmployeeProfile = () => {
           {isEditing && canEditRestricted ? (
             <>
               <InputField label="Username" value={emp.username} onChange={set("username")} />
-              <SelectField label="Role" value={emp.role} onChange={set("role")} options={["Executive", "Manager", "Admin", "HR", "Accountant", "Employee"]} />
+              <SelectField label="สิทธิ์การใช้งาน" value={emp.role} onChange={set("role")} options={ROLE_OPTIONS} />
             </>
           ) : (
             <>
