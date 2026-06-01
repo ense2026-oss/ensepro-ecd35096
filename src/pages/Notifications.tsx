@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { usePendingCounts } from "@/contexts/PendingCountsContext";
 import { useTimeEditRequests, type AppNotification } from "@/contexts/TimeEditContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -15,11 +15,12 @@ import {
   Trash2,
   MailOpen,
   Mail,
-  ArrowUpRight,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 
 type NotifType = AppNotification["type"];
-type NotifFilter = "all" | "unread" | "read" | NotifType;
+type NotifFilter = "unread" | "read" | NotifType;
 
 const typeConfig: Record<NotifType, { label: string; icon: React.ElementType; color: string; bg: string }> = {
   leave: { label: "ลางาน", icon: CalendarDays, color: "#FF870F", bg: "hsl(31 100% 93%)" },
@@ -31,7 +32,6 @@ const typeConfig: Record<NotifType, { label: string; icon: React.ElementType; co
 };
 
 const allFilterOptions: { key: NotifFilter; label: string }[] = [
-  { key: "all", label: "ทั้งหมด" },
   { key: "unread", label: "ยังไม่อ่าน" },
   { key: "read", label: "อ่านแล้ว" },
   { key: "leave", label: "ลางาน" },
@@ -41,6 +41,8 @@ const allFilterOptions: { key: NotifFilter; label: string }[] = [
   { key: "approval", label: "อนุมัติ" },
   { key: "system", label: "ระบบ" },
 ];
+
+const PAGE_SIZE = 15;
 
 // Types hidden from regular employees
 const adminOnlyTypes: NotifType[] = ["employee", "ot", "system"];
@@ -53,7 +55,8 @@ const Notifications = () => {
   const { canAction } = usePermissions();
   const hasApprovalAccess = canAction(role, 'leave', 'approve') || canAction(role, 'ot', 'approve');
 
-  const [activeFilter, setActiveFilter] = useState<NotifFilter>("all");
+  const [activeFilter, setActiveFilter] = useState<NotifFilter>("unread");
+  const [page, setPage] = useState(1);
 
   // Filter notifications by role and ownership
   const currentUserFullName = currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : "";
@@ -75,12 +78,26 @@ const Notifications = () => {
     setNotificationCount(unreadCount);
   }, [unreadCount, setNotificationCount]);
 
-  const filtered = roleNotifications.filter((n) => {
-    if (activeFilter === "all") return true;
-    if (activeFilter === "unread") return !n.read;
-    if (activeFilter === "read") return n.read;
-    return n.type === activeFilter;
-  });
+  const filtered = useMemo(
+    () =>
+      roleNotifications.filter((n) => {
+        if (activeFilter === "unread") return !n.read;
+        if (activeFilter === "read") return n.read;
+        return n.type === activeFilter;
+      }),
+    [roleNotifications, activeFilter],
+  );
+
+  // Pagination – 15 per page, reset when filter or result count changes
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  useEffect(() => {
+    setPage(1);
+  }, [activeFilter]);
+  useEffect(() => {
+    if (page > totalPages) setPage(totalPages);
+  }, [page, totalPages]);
+  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
 
   // Filter options by role
   const filterOptions = hasApprovalAccess
@@ -133,9 +150,9 @@ const Notifications = () => {
                   อ่านทั้งหมด
                 </button>
               )}
-              <button className="text-xs font-medium" style={{ color: "#FF870F" }}>
-                ดูทั้งหมด <ArrowUpRight className="w-3 h-3 inline ml-0.5" />
-              </button>
+              <span className="text-xs text-muted-foreground font-medium">
+                {filtered.length} รายการ
+              </span>
             </div>
           </div>
 
@@ -167,7 +184,7 @@ const Notifications = () => {
                 <p className="text-sm text-muted-foreground">ไม่มีการแจ้งเตือน</p>
               </div>
             ) : (
-              filtered.map((n) => {
+              paginated.map((n) => {
                 const cfg = typeConfig[n.type];
                 return (
                   <div
@@ -208,7 +225,46 @@ const Notifications = () => {
               })
             )}
           </div>
+
+          {/* Pagination */}
+          {filtered.length > PAGE_SIZE && (
+            <div className="flex items-center justify-between mt-4 pt-3 border-t border-border">
+              <p className="text-xs text-muted-foreground">
+                {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} จาก {filtered.length}
+              </p>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                  className="p-1.5 rounded-lg border border-border hover:bg-muted transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  aria-label="หน้าก่อนหน้า"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                  <button
+                    key={p}
+                    onClick={() => setPage(p)}
+                    className={`min-w-[2rem] h-8 px-2 text-xs font-medium rounded-lg border transition-colors ${
+                      page === p ? "border-primary bg-primary/10 text-primary" : "border-border hover:bg-muted"
+                    }`}
+                  >
+                    {p}
+                  </button>
+                ))}
+                <button
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={page === totalPages}
+                  className="p-1.5 rounded-lg border border-border hover:bg-muted transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  aria-label="หน้าถัดไป"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          )}
         </div>
+
 
         {/* Right sidebar – admin only */}
         {hasApprovalAccess && (
@@ -216,7 +272,6 @@ const Notifications = () => {
             <div className="card-base p-5">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-bold font-display">ตามประเภท</h3>
-                <button className="text-xs font-medium" style={{ color: "#FF870F" }}>ดูทั้งหมด</button>
               </div>
               <div className="space-y-3">
                 {visibleTypes.map(([key, cfg]) => {
@@ -224,7 +279,13 @@ const Notifications = () => {
                   const unread = roleNotifications.filter((n) => n.type === key && !n.read).length;
                   const pct = totalCount > 0 ? Math.round((count / totalCount) * 100) : 0;
                   return (
-                    <div key={key}>
+                    <button
+                      key={key}
+                      onClick={() => setActiveFilter(key as NotifFilter)}
+                      className={`w-full text-left rounded-lg p-1.5 -m-1.5 transition-colors hover:bg-muted/50 ${
+                        activeFilter === key ? "bg-muted/50" : ""
+                      }`}
+                    >
                       <div className="flex items-center justify-between mb-1">
                         <div className="flex items-center gap-2">
                           <cfg.icon className="w-3.5 h-3.5" style={{ color: cfg.color }} />
@@ -242,7 +303,7 @@ const Notifications = () => {
                       <div className="h-1.5 rounded-full bg-muted overflow-hidden">
                         <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, background: cfg.color }} />
                       </div>
-                    </div>
+                    </button>
                   );
                 })}
               </div>
@@ -254,10 +315,10 @@ const Notifications = () => {
               </div>
               <div className="space-y-3">
                 {[
-                  { label: "คำขอลารออนุมัติ", value: "2", color: "#FF870F" },
+                  { label: "คำขอลารออนุมัติ", value: String(roleNotifications.filter((n) => n.type === "leave" && !n.read).length), color: "#FF870F" },
                   { label: "คำขอแก้ไขเวลา", value: String(roleNotifications.filter((n) => n.type === "attendance" && !n.read).length), color: "hsl(220 90% 50%)" },
-                  { label: "พนักงานใหม่รอยืนยัน", value: "2", color: "hsl(90 100% 35%)" },
-                  { label: "OT รออนุมัติ", value: "0", color: "hsl(0 0% 45%)" },
+                  { label: "พนักงานใหม่รอยืนยัน", value: String(roleNotifications.filter((n) => n.type === "employee" && !n.read).length), color: "hsl(90 100% 35%)" },
+                  { label: "OT รออนุมัติ", value: String(roleNotifications.filter((n) => n.type === "ot" && !n.read).length), color: "hsl(0 0% 45%)" },
                 ].map((item) => (
                   <div key={item.label} className="flex items-center justify-between p-2.5 rounded-xl hover:bg-muted/50 transition-colors">
                     <span className="text-xs text-muted-foreground">{item.label}</span>
