@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo, useRef, useCallback, forwardRef, Children
 import {
   Users, UserCheck, UserX, Clock, TrendingUp, TrendingDown,
   Calendar, Briefcase, AlertCircle, CheckCircle, MapPin,
+  CalendarOff, Building2, User as UserIcon,
 } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
