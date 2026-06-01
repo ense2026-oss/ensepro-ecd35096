@@ -40,6 +40,27 @@ const OT_TYPES: { value: string; label: string; color: string }[] = [
 ];
 const otTypeInfo = (t: string) => OT_TYPES.find((o) => o.value === t) || OT_TYPES[0];
 
+const HH_OPTS = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, "0"));
+const MM_OPTS = ["00", "05", "10", "15", "20", "25", "30", "35", "40", "45", "50", "55"];
+const Time24Input = ({ value, onChange }: { value: string; onChange: (v: string) => void }) => {
+  const [h, m] = value ? value.split(":") : ["", ""];
+  const selectCls = "flex-1 px-2 py-2 text-sm rounded-lg border outline-none bg-muted/30 cursor-pointer";
+  return (
+    <div className="flex items-center gap-1">
+      <select value={h} onChange={(e) => onChange(`${e.target.value}:${m || "00"}`)} className={selectCls}>
+        <option value="" disabled>ชม.</option>
+        {HH_OPTS.map((hh) => <option key={hh} value={hh}>{hh}</option>)}
+      </select>
+      <span className="text-muted-foreground font-bold">:</span>
+      <select value={m} onChange={(e) => onChange(`${h || "00"}:${e.target.value}`)} className={selectCls}>
+        <option value="" disabled>น.</option>
+        {MM_OPTS.map((mm) => <option key={mm} value={mm}>{mm}</option>)}
+      </select>
+    </div>
+  );
+};
+
+
 const isoDate = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
 const getMonthDays = (year: number, month: number): Date[] => {
