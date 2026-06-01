@@ -535,32 +535,38 @@ const OTCellPopover = ({ children, dateLabel, dayoff, holidayName, shiftLabel, s
         </div>
         <div>
           <label className="block text-[11px] font-semibold mb-1 text-muted-foreground">จำนวนชั่วโมง OT</label>
-          <input type="number" min="0" step="0.5" value={hours} onChange={(e) => setHours(e.target.value)}
-            placeholder="เช่น 2" className="w-full px-3 py-2 text-sm rounded-lg border outline-none bg-muted/30" />
-          <div className="flex gap-1 mt-1.5">
-            {[1, 2, 3, 4].map((q) => (
-              <button key={q} onClick={() => setHours(String(q))}
-                className="flex-1 px-2 py-1 rounded-md text-[11px] font-semibold border bg-muted/30 hover:bg-muted">{q}</button>
-            ))}
+          <div className="grid grid-cols-4 gap-1">
+            {[1, 2, 3, 4].map((q) => {
+              const active = hours === String(q);
+              return (
+                <button key={q} onClick={() => setHours(String(q))}
+                  className={`px-2 py-2 rounded-lg text-sm font-bold border transition-all ${active ? "text-primary-foreground border-transparent shadow-sm" : "bg-muted/30 hover:bg-muted text-foreground"}`}
+                  style={active ? { background: "linear-gradient(135deg, hsl(var(--primary)), hsl(31 100% 60%))" } : undefined}>{q}</button>
+              );
+            })}
           </div>
         </div>
         <div>
           <label className="block text-[11px] font-semibold mb-1 text-muted-foreground">ประเภท OT</label>
-          <select value={otType} onChange={(e) => setOtType(e.target.value)}
-            className="w-full px-3 py-2 text-sm rounded-lg border outline-none bg-muted/30 cursor-pointer">
-            {OT_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
-          </select>
+          <div className="grid grid-cols-3 gap-1">
+            {OT_TYPES.map((t) => {
+              const active = otType === t.value;
+              return (
+                <button key={t.value} onClick={() => setOtType(t.value)}
+                  className={`px-2 py-2 rounded-lg text-[11px] font-bold border transition-all ${active ? "text-white border-transparent shadow-sm" : "bg-muted/30 hover:bg-muted text-foreground"}`}
+                  style={active ? { background: t.color } : undefined}>{t.label}</button>
+              );
+            })}
+          </div>
         </div>
         <div className="grid grid-cols-2 gap-2">
           <div>
             <label className="block text-[11px] font-semibold mb-1 text-muted-foreground">เริ่ม</label>
-            <input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)}
-              className="w-full px-2 py-2 text-sm rounded-lg border outline-none bg-muted/30" />
+            <Time24Input value={startTime} onChange={setStartTime} />
           </div>
           <div>
             <label className="block text-[11px] font-semibold mb-1 text-muted-foreground">สิ้นสุด</label>
-            <input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)}
-              className="w-full px-2 py-2 text-sm rounded-lg border outline-none bg-muted/30" />
+            <Time24Input value={endTime} onChange={setEndTime} />
           </div>
         </div>
         <div className="flex gap-2 pt-1">
