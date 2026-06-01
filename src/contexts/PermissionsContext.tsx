@@ -85,6 +85,24 @@ export const PermissionsProvider: React.FC<{ children: React.ReactNode }> = ({ c
     fetchPermissions();
   }, [fetchPermissions]);
 
+  // Realtime: refresh permissions/roles instantly when admins or permissions change
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+  useEffect(() => {
+    const debounced = () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      debounceRef.current = setTimeout(() => fetchPermissions(), 250);
+    };
+    const channel = supabase
+      .channel("permissions-realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "role_permissions" }, debounced)
+      .on("postgres_changes", { event: "*", schema: "public", table: "user_roles" }, debounced)
+      .subscribe();
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      supabase.removeChannel(channel);
+    };
+  }, [fetchPermissions]);
+
   const canAccessRoute = useCallback((role: string, path: string): boolean => {
     const normalized = "/" + path.split("/")[1];
     if (alwaysAccessible.includes(normalized)) return true;
