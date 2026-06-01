@@ -237,6 +237,18 @@ const Dashboard = () => {
       if (empRecord) setMyEmployee(empRecord);
       const empId = empRecord?.id || empIdDirect || null;
 
+      // Holidays + personal day-offs (common to all views)
+      const [chRes, patRes, ovrRes] = await Promise.all([
+        supabase.from("company_holidays").select("date, name, is_paid").gte("date", today).order("date").limit(12),
+        empId ? supabase.from("employee_dayoff_patterns").select("*").eq("employee_id", empId) : Promise.resolve({ data: [] as any[] }),
+        empId ? supabase.from("employee_dayoff_overrides").select("*").eq("employee_id", empId).gte("date", today) : Promise.resolve({ data: [] as any[] }),
+      ]);
+      setCompanyHolidays(chRes.data || []);
+      setMyDayoffPatterns(patRes.data || []);
+      setMyDayoffOverrides(ovrRes.data || []);
+
+
+
       if (viewType === "employee") {
         if (!empId) { setLoading(false); return; }
         const [leaveRes, otRes, ciRes] = await Promise.all([
