@@ -26,6 +26,8 @@ interface OTEntry {
 interface Pattern { id: string; employee_id: string; weekdays: number[]; effective_from: string; effective_to: string | null; }
 interface Override { id: string; employee_id: string; date: string; is_dayoff: boolean; }
 interface CompanyHoliday { id: string; date: string; name: string; }
+interface Shift { id: string; name: string; start_time: string; end_time: string; color: string; }
+interface ShiftAssignment { id: string; employee_id: string; shift_id: string; start_date: string; end_date: string; assignment_type: string; }
 
 const WEEKDAY_LABELS = ["อา.", "จ.", "อ.", "พ.", "พฤ.", "ศ.", "ส."];
 const WEEKDAY_FULL = ["อาทิตย์", "จันทร์", "อังคาร", "พุธ", "พฤหัสบดี", "ศุกร์", "เสาร์"];
