@@ -55,7 +55,8 @@ const Notifications = () => {
   const { canAction } = usePermissions();
   const hasApprovalAccess = canAction(role, 'leave', 'approve') || canAction(role, 'ot', 'approve');
 
-  const [activeFilter, setActiveFilter] = useState<NotifFilter>("all");
+  const [activeFilter, setActiveFilter] = useState<NotifFilter>("unread");
+  const [page, setPage] = useState(1);
 
   // Filter notifications by role and ownership
   const currentUserFullName = currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : "";
