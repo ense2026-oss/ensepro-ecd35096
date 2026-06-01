@@ -184,7 +184,7 @@ const Notifications = () => {
                 <p className="text-sm text-muted-foreground">ไม่มีการแจ้งเตือน</p>
               </div>
             ) : (
-              filtered.map((n) => {
+              paginated.map((n) => {
                 const cfg = typeConfig[n.type];
                 return (
                   <div
@@ -225,7 +225,46 @@ const Notifications = () => {
               })
             )}
           </div>
+
+          {/* Pagination */}
+          {filtered.length > PAGE_SIZE && (
+            <div className="flex items-center justify-between mt-4 pt-3 border-t border-border">
+              <p className="text-xs text-muted-foreground">
+                {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} จาก {filtered.length}
+              </p>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                  className="p-1.5 rounded-lg border border-border hover:bg-muted transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  aria-label="หน้าก่อนหน้า"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                  <button
+                    key={p}
+                    onClick={() => setPage(p)}
+                    className={`min-w-[2rem] h-8 px-2 text-xs font-medium rounded-lg border transition-colors ${
+                      page === p ? "border-primary bg-primary/10 text-primary" : "border-border hover:bg-muted"
+                    }`}
+                  >
+                    {p}
+                  </button>
+                ))}
+                <button
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={page === totalPages}
+                  className="p-1.5 rounded-lg border border-border hover:bg-muted transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  aria-label="หน้าถัดไป"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          )}
         </div>
+
 
         {/* Right sidebar – admin only */}
         {hasApprovalAccess && (
