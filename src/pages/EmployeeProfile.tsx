@@ -23,7 +23,7 @@ const TAB_CONFIG = [
   { key: "personal",   label: "ข้อมูลส่วนตัว",   icon: User },
   { key: "work",       label: "ข้อมูลการทำงาน",  icon: Briefcase },
   { key: "family",     label: "ข้อมูลครอบครัว",  icon: Users },
-  { key: "education",  label: "ประวัติการศึกษา",  icon: GraduationCap },
+  { key: "documents",  label: "เอกสารแนบ",       icon: Paperclip },
   { key: "workhistory",label: "ประวัติการทำงาน",  icon: Clock },
   { key: "tax",        label: "ข้อมูลภาษี",      icon: Receipt },
   { key: "security",   label: "ความปลอดภัย",     icon: Shield },
