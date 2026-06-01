@@ -287,18 +287,18 @@ const DayOff = () => {
                       const statusDot = status === "work" ? "hsl(var(--muted-foreground))" : status === "pattern" ? "hsl(0 70% 50%)" : status === "extra" ? "hsl(31 90% 50%)" : "hsl(220 80% 55%)";
                       return (
                         <td key={iso} className="p-0.5 text-center border-b" style={{borderColor:"hsl(var(--border))"}}>
-                          <HoverCard openDelay={120} closeDelay={60}>
-                            <HoverCardTrigger asChild>
+                          <Popover>
+                            <PopoverTrigger asChild>
                               <button
                                 disabled={!canEdit}
-                                onClick={() => toggleOverride(emp.id, iso, status)}
                                 className={`w-full h-7 rounded text-[11px] font-bold transition-all ${canEdit ? "hover:scale-110 cursor-pointer" : "cursor-default"} ${hasOverride ? "ring-1 ring-offset-1 ring-orange-400" : ""}`}
                                 style={{ background: c.bg, color: c.color }}
+                                title={`${d.getDate()}/${month + 1}/${year + 543} · ${statusLabel}${status === "company" && holidayName ? ` · ${holidayName}` : ""}`}
                               >
                                 {c.label}
                               </button>
-                            </HoverCardTrigger>
-                            <HoverCardContent className="w-64 p-3" align="center" side="top">
+                            </PopoverTrigger>
+                            <PopoverContent className="w-64 p-3" align="center" side="top">
                               <div className="text-[11px] text-muted-foreground border-b pb-1.5 mb-2">
                                 {d.getDate()}/{month + 1}/{year + 543} · {emp.prefix}{emp.firstName} {emp.lastName}
                               </div>
@@ -315,13 +315,16 @@ const DayOff = () => {
                                   <div className="text-muted-foreground pl-4">เหตุผล: {ov.reason}</div>
                                 )}
                                 {canEdit && (
-                                  <div className="text-[10px] text-muted-foreground pt-1.5 border-t mt-2">
+                                  <button
+                                    onClick={() => toggleOverride(emp.id, iso, status)}
+                                    className="w-full text-[11px] font-semibold text-primary pt-1.5 border-t mt-2 hover:underline text-left"
+                                  >
                                     คลิกเพื่อ{status === "work" ? "ตั้งเป็นวันหยุด" : "เปลี่ยนสถานะ"}
-                                  </div>
+                                  </button>
                                 )}
                               </div>
-                            </HoverCardContent>
-                          </HoverCard>
+                            </PopoverContent>
+                          </Popover>
                         </td>
                       );
                     })}
