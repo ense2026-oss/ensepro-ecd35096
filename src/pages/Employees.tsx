@@ -30,6 +30,7 @@ const Employees = () => {
   const [search, setSearch] = useState("");
   const [selectedDept, setSelectedDept] = useState("all");
   const [selectedPosition, setSelectedPosition] = useState("all");
+  const [selectedStatus, setSelectedStatus] = useState("all");
   const [viewMode, setViewMode] = useState<"table" | "card">("table");
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -60,8 +61,9 @@ const Employees = () => {
       e.email.includes(search);
     const matchDept = selectedDept === "all" || e.dept === selectedDept;
     const matchPos = selectedPosition === "all" || e.position === selectedPosition;
-    return matchSearch && matchDept && matchPos;
-  }), [nonAdmins, search, selectedDept, selectedPosition]);
+    const matchStatus = selectedStatus === "all" || e.status === selectedStatus;
+    return matchSearch && matchDept && matchPos && matchStatus;
+  }), [nonAdmins, search, selectedDept, selectedPosition, selectedStatus]);
 
   // Stats
   const stats = useMemo(() => ({
