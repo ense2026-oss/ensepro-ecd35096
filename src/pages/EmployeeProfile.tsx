@@ -4,7 +4,7 @@ import {
   ArrowLeft, Camera, Edit, Save, X, Plus, Trash2,
   User, Briefcase, Users, GraduationCap, Clock, Shield, Receipt,
   Phone, Mail, MapPin, Calendar, CreditCard, Droplets,
-  Building, Star, Lock, Eye, EyeOff, AlertCircle, Palette
+  Building, Star, Lock, Eye, EyeOff, AlertCircle, Palette, Paperclip
 } from "lucide-react";
 
 import { ThaiDatePicker } from "@/components/ui/thai-date-picker";
