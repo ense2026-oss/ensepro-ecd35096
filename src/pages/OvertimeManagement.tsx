@@ -443,10 +443,7 @@ const OvertimeManagement = () => {
                               onRemove={() => removeOT(emp.id, iso)}
                             >
                               <button
-                                className={cn(
-                                  "w-full transition-all hover:scale-110 cursor-pointer",
-                                  dayoff && totalH === 0 && "opacity-60"
-                                )}
+                                className="w-full transition-all hover:scale-110 cursor-pointer"
                                 title={title}
                               >
                                 {cellInner}
