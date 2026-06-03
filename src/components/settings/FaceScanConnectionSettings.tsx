@@ -84,6 +84,7 @@ interface SyncLog {
 
 const PROJECT_REF = import.meta.env.VITE_SUPABASE_PROJECT_ID;
 const FN_BASE = `https://${PROJECT_REF}.supabase.co/functions/v1`;
+const ADMS_FN_URL = `${FN_BASE}/facescan-adms`;
 
 const FaceScanConnectionSettings = () => {
   const [devices, setDevices] = useState<Device[]>([]);
