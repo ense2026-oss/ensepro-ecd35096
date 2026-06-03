@@ -397,6 +397,41 @@ cron.schedule('*/30 * * * * *', async () => {
 
 console.log('Bridge service started');`;
 
+  const admsRelayScript = `// FaceScan ADMS Relay — Deno Deploy
+// วางทั้งหมดใน playground ที่ https://dash.deno.com แล้วกด Save & Deploy
+// เครื่องสแกนส่งไปที่ /iclock/* → relay forward เข้า Edge Function
+
+const ADMS_FN_URL = "${ADMS_FN_URL}";
+
+Deno.serve(async (req) => {
+  const url = new URL(req.url);
+  if (url.pathname === "/" || url.pathname === "/health") {
+    return new Response("FaceScan ADMS relay OK", { status: 200 });
+  }
+  const match = url.pathname.match(/\\/iclock\\/([^/]+)/i);
+  if (!match) return new Response("Not found", { status: 404 });
+
+  const target = \`\${ADMS_FN_URL}/\${match[1]}\${url.search}\`;
+  const init = {
+    method: req.method,
+    headers: { "Content-Type": req.headers.get("Content-Type") || "text/plain" },
+  };
+  if (req.method !== "GET" && req.method !== "HEAD") init.body = await req.text();
+
+  try {
+    const res = await fetch(target, init);
+    const body = await res.text();
+    return new Response(body, {
+      status: res.status,
+      headers: { "Content-Type": "text/plain; charset=utf-8" },
+    });
+  } catch (_e) {
+    return new Response("OK", { status: 200 });
+  }
+});`;
+
+
+
   return (
     <div className="space-y-5">
       <div>
