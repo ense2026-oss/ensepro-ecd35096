@@ -297,9 +297,10 @@ const LeaveCalendarDialog: React.FC<LeaveCalendarDialogProps> = ({
               </div>
               <button
                 onClick={() => setSelectedDay(null)}
-                className="p-1.5 rounded-md hover:bg-muted transition-colors"
+                className="p-1.5 rounded-full bg-destructive text-destructive-foreground shadow-md hover:bg-destructive/90 transition-colors"
               >
-                <X className="w-4 h-4" />
+                <X className="w-5 h-5" />
+
               </button>
             </div>
             <div className="flex-1 overflow-y-auto p-3 space-y-2">
