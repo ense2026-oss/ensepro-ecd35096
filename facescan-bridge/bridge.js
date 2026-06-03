@@ -163,7 +163,7 @@ async function ack(logId, status, message, extra = {}) {
       body: JSON.stringify({ log_id: logId, status, message, ...extra }),
     });
   } catch (e) {
-    log("[ack] ส่งผลกลับไม่ได้:", e.message);
+    log("[ack] ส่งผลกลับไม่ได้:", errMessage(e));
   }
 }
 
