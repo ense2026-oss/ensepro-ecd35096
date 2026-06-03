@@ -213,12 +213,17 @@ async function handleCommand(cmd, deviceMap) {
   try {
     if (cmd.sync_type === "test_connection") {
       if (!device) throw new Error("ไม่พบเครื่องสำหรับทดสอบ");
-      const zk = new ZKLib(device.device_ip, DEVICE_PORT, ZK_TIMEOUT, ZK_TIMEOUT);
-      await zk.createSocket();
+      const zk = await openZk(device.device_ip);
       let info = "";
       try {
-        const t = await zk.getTime().catch(() => null);
-        info = t ? `เวลาเครื่อง: ${t}` : "เชื่อมต่อสำเร็จ";
+        // เช็คสุขภาพด้วย getInfo ก่อน (มาตรฐานกว่า) แล้ว fallback เป็น getTime
+        const gi = await zk.getInfo().catch(() => null);
+        if (gi) {
+          info = `ผู้ใช้ ${gi.userCounts ?? "?"} คน, log ${gi.logCounts ?? "?"} รายการ`;
+        } else {
+          const t = await zk.getTime().catch(() => null);
+          info = t ? `เวลาเครื่อง: ${t}` : "เชื่อมต่อสำเร็จ";
+        }
       } finally {
         try { await zk.disconnect(); } catch { /* ignore */ }
       }
