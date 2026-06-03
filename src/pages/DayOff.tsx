@@ -343,13 +343,15 @@ const DayOff = () => {
                                 )}
                                 {canEdit && (
                                   <div className="pt-1.5 border-t mt-2 flex flex-col items-center gap-1.5">
-                                    <button
-                                      onClick={() => toggleOverride(emp.id, iso, status)}
-                                      className="flex items-center justify-center gap-2 w-full text-sm font-semibold text-primary hover:underline"
-                                    >
-                                      <Plus className="w-5 h-5" />
-                                      {status === "work" ? "ตั้งเป็นวันหยุด" : "เปลี่ยนสถานะ"}
-                                    </button>
+                                    {!hasOverride && (
+                                      <button
+                                        onClick={() => toggleOverride(emp.id, iso, status)}
+                                        className="flex items-center justify-center gap-2 w-full text-sm font-semibold text-primary hover:underline"
+                                      >
+                                        <Plus className="w-5 h-5" />
+                                        {status === "work" ? "ตั้งเป็นวันหยุด" : "เปลี่ยนสถานะ"}
+                                      </button>
+                                    )}
                                     {hasOverride && (
                                       <button
                                         onClick={() => deleteOverride(ov!.id)}
