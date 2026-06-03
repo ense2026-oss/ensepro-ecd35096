@@ -257,14 +257,14 @@ const LeaveCalendarDialog: React.FC<LeaveCalendarDialogProps> = ({
                         {dayLeaves.slice(0, 3).map((l) => (
                           <div
                             key={l.id}
-                            className="flex items-center gap-1.5 rounded px-1 py-1 text-xl font-medium truncate"
+                            className="flex items-center gap-1.5 rounded px-1 py-1 text-sm font-medium truncate"
                             style={{
                               background: `${colorMap.get(l.type) || "hsl(var(--primary))"}20`,
                               borderLeft: `2px solid ${colorMap.get(l.type) || "hsl(var(--primary))"}`,
                             }}
                             title={`${l.name} · ${l.type}`}
                           >
-                            <EmployeeAvatar photoUrl={l.photoUrl} firstName={l.name} size="sm" />
+                            <EmployeeAvatar photoUrl={l.photoUrl} firstName={l.name} size="xs" />
                             <span className="truncate">{l.name}</span>
                           </div>
                         ))}
