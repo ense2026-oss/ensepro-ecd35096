@@ -197,7 +197,7 @@ const LeaveCalendarDialog: React.FC<LeaveCalendarDialogProps> = ({
           )}
         </DialogHeader>
 
-        <DialogBody className="p-0 flex flex-col">
+        <DialogBody className="p-0 flex flex-col overflow-hidden min-h-0">
           {/* Weekday header */}
           <div className="grid grid-cols-7 border-b bg-muted/40 shrink-0">
             {THAI_DAYS.map((d, i) => (
@@ -212,7 +212,7 @@ const LeaveCalendarDialog: React.FC<LeaveCalendarDialogProps> = ({
           </div>
 
           {/* Calendar grid */}
-          <div className="grid grid-cols-7 flex-1 auto-rows-fr">
+          <div className="grid grid-cols-7 flex-1 auto-rows-fr min-h-0">
             {cells.map((day, idx) => {
               const dow = idx % 7;
               const dayLeaves = day ? leavesByDay.get(day) || [] : [];
@@ -221,16 +221,17 @@ const LeaveCalendarDialog: React.FC<LeaveCalendarDialogProps> = ({
                 <div
                   key={idx}
                   onClick={() => day && dayLeaves.length > 0 && setSelectedDay(day)}
-                  className={`border-b border-r min-h-[90px] p-1.5 flex flex-col gap-1 overflow-hidden transition-colors ${
+                  className={`border-b border-r min-h-0 p-1 sm:p-1.5 flex flex-col gap-0.5 sm:gap-1 overflow-hidden transition-colors ${
                     day ? "" : "bg-muted/20"
                   } ${todayCell ? "bg-primary/10 ring-1 ring-primary/30" : ""} ${dayLeaves.length > 0 ? "cursor-pointer hover:bg-muted/50" : ""}`}
                   style={dow === 0 ? { borderLeft: "1px solid hsl(var(--border))" } : undefined}
                 >
+
                   {day && (
                     <>
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between shrink-0">
                         <span
-                          className={`text-2xl font-semibold w-10 h-10 flex items-center justify-center rounded-full ${
+                          className={`text-base sm:text-lg lg:text-2xl font-semibold w-7 h-7 sm:w-8 sm:h-8 lg:w-10 lg:h-10 flex items-center justify-center rounded-full ${
                             todayCell ? "text-primary-foreground" : ""
                           }`}
                           style={{
@@ -246,6 +247,7 @@ const LeaveCalendarDialog: React.FC<LeaveCalendarDialogProps> = ({
                         >
                           {day}
                         </span>
+
                         {dayLeaves.length > 0 && (
                           <span className="text-sm font-bold text-muted-foreground">
                             {dayLeaves.length}
@@ -253,11 +255,11 @@ const LeaveCalendarDialog: React.FC<LeaveCalendarDialogProps> = ({
                         )}
                       </div>
 
-                      <div className="flex flex-col gap-1 overflow-hidden">
+                      <div className="flex flex-col gap-0.5 sm:gap-1 overflow-hidden min-h-0">
                         {dayLeaves.slice(0, 3).map((l) => (
                           <div
                             key={l.id}
-                            className="flex items-center gap-1.5 rounded px-1 py-1 text-sm font-medium truncate"
+                            className="flex items-center gap-1 sm:gap-1.5 rounded px-1 py-0.5 sm:py-1 text-xs sm:text-sm font-medium truncate"
                             style={{
                               background: `${colorMap.get(l.type) || "hsl(var(--primary))"}20`,
                               borderLeft: `2px solid ${colorMap.get(l.type) || "hsl(var(--primary))"}`,
@@ -269,11 +271,12 @@ const LeaveCalendarDialog: React.FC<LeaveCalendarDialogProps> = ({
                           </div>
                         ))}
                         {dayLeaves.length > 3 && (
-                          <span className="text-sm text-muted-foreground pl-1">
+                          <span className="text-xs sm:text-sm text-muted-foreground pl-1">
                             +{dayLeaves.length - 3} เพิ่มเติม
                           </span>
                         )}
                       </div>
+
                     </>
                   )}
                 </div>
