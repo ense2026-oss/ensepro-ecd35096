@@ -210,6 +210,23 @@ const ShiftManagement = () => {
     }
   };
 
+  // Delete the long-term (bulk) assignment that covers a given date for an employee
+  const deleteBulkForDate = async (empId: string, dateIso: string) => {
+    if (!canEdit) return;
+    const bulk = bulkAssignments.find((b) => b.employee_id === empId && b.start_date <= dateIso && b.end_date >= dateIso);
+    if (!bulk) return;
+    const prevAssignments = assignments;
+    // Optimistic removal
+    setAssignments((cur) => cur.filter((a) => a.id !== bulk.id));
+    const { error } = await supabase.from("shift_assignments").delete().eq("id", bulk.id);
+    if (error) {
+      setAssignments(prevAssignments);
+      toast({ title: "ไม่สามารถยกเลิกได้", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "ยกเลิกกะระยะยาวสำเร็จ" });
+    }
+  };
+
   // Stats
   const uniqueEmployees = new Set(bulkAssignments.map((a) => a.employee_id)).size;
   const totalAssigned = bulkAssignments.length;
@@ -322,6 +339,7 @@ const ShiftManagement = () => {
                       const shiftId = getShiftFor(emp.id, iso, bulkAssignments, dayAssignments);
                       const shift = shiftId ? shifts.find((s) => s.id === shiftId) : null;
                       const hasDayOverride = dayAssignments.some((da) => da.employee_id === emp.id && da.start_date === iso);
+                      const hasBulk = bulkAssignments.some((b) => b.employee_id === emp.id && b.start_date <= iso && b.end_date >= iso);
 
                       // Cell content
                       let bg = "hsl(var(--muted))";
@@ -372,6 +390,12 @@ const ShiftManagement = () => {
                                   <button onClick={() => setShiftForDate(emp.id, iso, null)}
                                     className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold hover:bg-destructive/10 text-destructive transition-colors border-t mt-1">
                                     <Trash2 className="w-3.5 h-3.5" />ลบกะรายวัน
+                                  </button>
+                                )}
+                                {hasBulk && (
+                                  <button onClick={() => deleteBulkForDate(emp.id, iso)}
+                                    className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold hover:bg-destructive/10 text-destructive transition-colors border-t mt-1">
+                                    <Trash2 className="w-3.5 h-3.5" />ยกเลิกกะระยะยาว
                                   </button>
                                 )}
                               </PopoverContent>
