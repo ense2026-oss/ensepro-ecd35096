@@ -57,6 +57,9 @@ interface Device {
   enabled: boolean;
   last_sync_at: string | null;
   last_status: string;
+  serial_number: string;
+  connection_mode: string;
+  adms_last_seen: string | null;
 }
 
 interface BridgeToken {
