@@ -190,6 +190,8 @@ const FaceScanConnectionSettings = () => {
       machine_number: d.machine_number,
       comm_password: d.comm_password,
       enabled: d.enabled,
+      serial_number: d.serial_number ?? "",
+      connection_mode: d.connection_mode ?? "adms",
     });
     setDeviceDialogOpen(true);
   };
