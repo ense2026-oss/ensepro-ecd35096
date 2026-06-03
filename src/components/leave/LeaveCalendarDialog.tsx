@@ -223,7 +223,7 @@ const LeaveCalendarDialog: React.FC<LeaveCalendarDialogProps> = ({
                   onClick={() => day && dayLeaves.length > 0 && setSelectedDay(day)}
                   className={`border-b border-r min-h-[90px] p-1.5 flex flex-col gap-1 overflow-hidden transition-colors ${
                     day ? "" : "bg-muted/20"
-                  } ${dayLeaves.length > 0 ? "cursor-pointer hover:bg-muted/50" : ""}`}
+                  } ${todayCell ? "bg-primary/10 ring-1 ring-primary/30" : ""} ${dayLeaves.length > 0 ? "cursor-pointer hover:bg-muted/50" : ""}`}
                   style={dow === 0 ? { borderLeft: "1px solid hsl(var(--border))" } : undefined}
                 >
                   {day && (
