@@ -229,9 +229,9 @@ const LeaveCalendarDialog: React.FC<LeaveCalendarDialogProps> = ({
 
                   {day && (
                     <>
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between shrink-0">
                         <span
-                          className={`text-2xl font-semibold w-10 h-10 flex items-center justify-center rounded-full ${
+                          className={`text-base sm:text-lg lg:text-2xl font-semibold w-7 h-7 sm:w-8 sm:h-8 lg:w-10 lg:h-10 flex items-center justify-center rounded-full ${
                             todayCell ? "text-primary-foreground" : ""
                           }`}
                           style={{
@@ -247,6 +247,7 @@ const LeaveCalendarDialog: React.FC<LeaveCalendarDialogProps> = ({
                         >
                           {day}
                         </span>
+
                         {dayLeaves.length > 0 && (
                           <span className="text-sm font-bold text-muted-foreground">
                             {dayLeaves.length}
