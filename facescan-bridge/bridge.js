@@ -23,6 +23,7 @@ const BRIDGE_TOKEN = process.env.BRIDGE_TOKEN;
 const FN_BASE = (process.env.FN_BASE || "").replace(/\/+$/, "");
 const DEVICE_PORT = parseInt(process.env.DEVICE_PORT || "4370", 10); // พอร์ต ZK มาตรฐาน
 const ZK_TIMEOUT = parseInt(process.env.ZK_TIMEOUT_MS || "10000", 10);
+const ZK_INPORT = parseInt(process.env.ZK_INPORT || "4000", 10); // พอร์ต UDP ฝั่ง local (node-zklib)
 const DEFAULT_POLL_SECONDS = parseInt(process.env.POLL_SECONDS || "30", 10);
 
 if (!BRIDGE_TOKEN || !FN_BASE) {
@@ -58,6 +59,37 @@ function saveState() {
 // ---------- helper ----------
 function log(...args) {
   console.log(`[${new Date().toISOString()}]`, ...args);
+}
+
+// ดึงข้อความ error จริงจาก node-zklib (ZKError ตัวมันเองไม่มี .message)
+function errMessage(e) {
+  if (!e) return "unknown error";
+  if (typeof e === "string") return e;
+  if (e.message) return e.message;
+  if (e.err) {
+    if (e.err.message) return e.err.message + (e.err.code ? ` (${e.err.code})` : "");
+    if (typeof e.err === "string") return e.err;
+  }
+  if (e.code) return String(e.code);
+  try {
+    return JSON.stringify(e);
+  } catch {
+    return String(e);
+  }
+}
+
+// สร้าง ZK instance พร้อม callback จับ socket error/close
+function makeZk(ip) {
+  return new ZKLib(ip, DEVICE_PORT, ZK_TIMEOUT, ZK_INPORT);
+}
+
+async function openZk(ip) {
+  const zk = makeZk(ip);
+  await zk.createSocket(
+    (err) => log(`[zk] socket error (${ip}):`, errMessage(err)),
+    () => {}
+  );
+  return zk;
 }
 
 const headers = {
@@ -98,8 +130,7 @@ function normalizeRecord(rec) {
 async function readDeviceLogs(device) {
   const ip = device.device_ip;
   if (!ip) throw new Error("device ไม่มี device_ip");
-  const zk = new ZKLib(ip, DEVICE_PORT, ZK_TIMEOUT, ZK_TIMEOUT);
-  await zk.createSocket();
+  const zk = await openZk(ip);
   let logs;
   try {
     const res = await zk.getAttendances();
@@ -132,7 +163,7 @@ async function ack(logId, status, message, extra = {}) {
       body: JSON.stringify({ log_id: logId, status, message, ...extra }),
     });
   } catch (e) {
-    log("[ack] ส่งผลกลับไม่ได้:", e.message);
+    log("[ack] ส่งผลกลับไม่ได้:", errMessage(e));
   }
 }
 
@@ -182,12 +213,17 @@ async function handleCommand(cmd, deviceMap) {
   try {
     if (cmd.sync_type === "test_connection") {
       if (!device) throw new Error("ไม่พบเครื่องสำหรับทดสอบ");
-      const zk = new ZKLib(device.device_ip, DEVICE_PORT, ZK_TIMEOUT, ZK_TIMEOUT);
-      await zk.createSocket();
+      const zk = await openZk(device.device_ip);
       let info = "";
       try {
-        const t = await zk.getTime().catch(() => null);
-        info = t ? `เวลาเครื่อง: ${t}` : "เชื่อมต่อสำเร็จ";
+        // เช็คสุขภาพด้วย getInfo ก่อน (มาตรฐานกว่า) แล้ว fallback เป็น getTime
+        const gi = await zk.getInfo().catch(() => null);
+        if (gi) {
+          info = `ผู้ใช้ ${gi.userCounts ?? "?"} คน, log ${gi.logCounts ?? "?"} รายการ`;
+        } else {
+          const t = await zk.getTime().catch(() => null);
+          info = t ? `เวลาเครื่อง: ${t}` : "เชื่อมต่อสำเร็จ";
+        }
       } finally {
         try { await zk.disconnect(); } catch { /* ignore */ }
       }
@@ -209,8 +245,8 @@ async function handleCommand(cmd, deviceMap) {
     // คำสั่งอื่น (enroll_push / delete_user) — ยังไม่รองรับผ่าน ZK ในเวอร์ชันนี้
     await ack(cmd.id, "error", `คำสั่ง ${cmd.sync_type} ยังไม่รองรับใน Bridge เวอร์ชันนี้`);
   } catch (e) {
-    log(`[cmd] ${cmd.sync_type} ล้มเหลว:`, e.message);
-    await ack(cmd.id, "error", e.message);
+    log(`[cmd] ${cmd.sync_type} ล้มเหลว:`, errMessage(e));
+    await ack(cmd.id, "error", errMessage(e));
   }
 }
 
@@ -237,11 +273,11 @@ async function tick() {
       try {
         await syncDevice(device);
       } catch (e) {
-        log(`[sync] ${device.name} ล้มเหลว:`, e.message);
+        log(`[sync] ${device.name} ล้มเหลว:`, errMessage(e));
       }
     }
   } catch (e) {
-    log("[poll] ติดต่อระบบไม่ได้:", e.message);
+    log("[poll] ติดต่อระบบไม่ได้:", errMessage(e));
   } finally {
     setTimeout(tick, pollSeconds * 1000);
   }
