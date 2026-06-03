@@ -402,11 +402,17 @@ const OvertimeManagement = () => {
 
                       let bg = "hsl(var(--muted))";
                       let color = "hsl(var(--muted-foreground))";
-                      let label = dayoff ? "·" : "—";
+                      let label = "—";
                       let title = `${WEEKDAY_FULL[dow]} ${d.getDate()}`;
                       if (isHoliday) title += ` · วันหยุด${holidayNameMap.get(iso) ? `: ${holidayNameMap.get(iso)}` : ""}`;
                       else if (dayoff) title += " · วันหยุดพนักงาน";
                       if (shift) title += ` · กะ${shift.name} (${shift.start_time}-${shift.end_time})`;
+                      // Day-off cells: soft (faded) red background with "หยุด" label
+                      if (dayoff) {
+                        bg = "hsl(0 75% 95%)";
+                        color = "hsl(0 60% 55%)";
+                        label = "หยุด";
+                      }
                       if (totalH > 0 && tInfo) {
                         bg = `${tInfo.color}25`;
                         color = tInfo.color;
