@@ -255,11 +255,11 @@ const LeaveCalendarDialog: React.FC<LeaveCalendarDialogProps> = ({
                         )}
                       </div>
 
-                      <div className="flex flex-col gap-1 overflow-hidden">
+                      <div className="flex flex-col gap-0.5 sm:gap-1 overflow-hidden min-h-0">
                         {dayLeaves.slice(0, 3).map((l) => (
                           <div
                             key={l.id}
-                            className="flex items-center gap-1.5 rounded px-1 py-1 text-sm font-medium truncate"
+                            className="flex items-center gap-1 sm:gap-1.5 rounded px-1 py-0.5 sm:py-1 text-xs sm:text-sm font-medium truncate"
                             style={{
                               background: `${colorMap.get(l.type) || "hsl(var(--primary))"}20`,
                               borderLeft: `2px solid ${colorMap.get(l.type) || "hsl(var(--primary))"}`,
@@ -271,11 +271,12 @@ const LeaveCalendarDialog: React.FC<LeaveCalendarDialogProps> = ({
                           </div>
                         ))}
                         {dayLeaves.length > 3 && (
-                          <span className="text-sm text-muted-foreground pl-1">
+                          <span className="text-xs sm:text-sm text-muted-foreground pl-1">
                             +{dayLeaves.length - 3} เพิ่มเติม
                           </span>
                         )}
                       </div>
+
                     </>
                   )}
                 </div>
