@@ -130,8 +130,7 @@ function normalizeRecord(rec) {
 async function readDeviceLogs(device) {
   const ip = device.device_ip;
   if (!ip) throw new Error("device ไม่มี device_ip");
-  const zk = new ZKLib(ip, DEVICE_PORT, ZK_TIMEOUT, ZK_TIMEOUT);
-  await zk.createSocket();
+  const zk = await openZk(ip);
   let logs;
   try {
     const res = await zk.getAttendances();
