@@ -904,7 +904,9 @@ export type Database = {
       }
       face_scan_devices: {
         Row: {
+          adms_last_seen: string | null
           comm_password: string
+          connection_mode: string
           created_at: string
           description: string
           device_ip: string
@@ -914,12 +916,15 @@ export type Database = {
           last_sync_at: string | null
           machine_number: number
           name: string
+          serial_number: string
           server_ip: string
           server_port: number
           updated_at: string
         }
         Insert: {
+          adms_last_seen?: string | null
           comm_password?: string
+          connection_mode?: string
           created_at?: string
           description?: string
           device_ip?: string
@@ -929,12 +934,15 @@ export type Database = {
           last_sync_at?: string | null
           machine_number?: number
           name?: string
+          serial_number?: string
           server_ip?: string
           server_port?: number
           updated_at?: string
         }
         Update: {
+          adms_last_seen?: string | null
           comm_password?: string
+          connection_mode?: string
           created_at?: string
           description?: string
           device_ip?: string
@@ -944,6 +952,7 @@ export type Database = {
           last_sync_at?: string | null
           machine_number?: number
           name?: string
+          serial_number?: string
           server_ip?: string
           server_port?: number
           updated_at?: string

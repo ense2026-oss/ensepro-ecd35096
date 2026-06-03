@@ -57,6 +57,9 @@ interface Device {
   enabled: boolean;
   last_sync_at: string | null;
   last_status: string;
+  serial_number: string;
+  connection_mode: string;
+  adms_last_seen: string | null;
 }
 
 interface BridgeToken {
@@ -81,6 +84,7 @@ interface SyncLog {
 
 const PROJECT_REF = import.meta.env.VITE_SUPABASE_PROJECT_ID;
 const FN_BASE = `https://${PROJECT_REF}.supabase.co/functions/v1`;
+const ADMS_FN_URL = `${FN_BASE}/facescan-adms`;
 
 const FaceScanConnectionSettings = () => {
   const [devices, setDevices] = useState<Device[]>([]);
@@ -100,6 +104,8 @@ const FaceScanConnectionSettings = () => {
     machine_number: 1,
     comm_password: "0",
     enabled: true,
+    serial_number: "",
+    connection_mode: "adms",
   });
 
   // Delete device confirm
@@ -167,6 +173,8 @@ const FaceScanConnectionSettings = () => {
       machine_number: 1,
       comm_password: "0",
       enabled: true,
+      serial_number: "",
+      connection_mode: "adms",
     });
     setDeviceDialogOpen(true);
   };
@@ -182,13 +190,23 @@ const FaceScanConnectionSettings = () => {
       machine_number: d.machine_number,
       comm_password: d.comm_password,
       enabled: d.enabled,
+      serial_number: d.serial_number ?? "",
+      connection_mode: d.connection_mode ?? "adms",
     });
     setDeviceDialogOpen(true);
   };
 
   const saveDevice = async () => {
-    if (!deviceForm.name.trim() || !deviceForm.device_ip.trim()) {
-      toast.error("กรุณากรอกชื่อเครื่องและ Device IP");
+    if (!deviceForm.name.trim()) {
+      toast.error("กรุณากรอกชื่อเครื่อง");
+      return;
+    }
+    if (deviceForm.connection_mode === "adms" && !deviceForm.serial_number.trim()) {
+      toast.error("โหมด ADMS ต้องกรอก Serial Number (SN) ของเครื่อง");
+      return;
+    }
+    if (deviceForm.connection_mode === "bridge" && !deviceForm.device_ip.trim()) {
+      toast.error("โหมด Bridge ต้องกรอก Device IP");
       return;
     }
     if (editingDevice) {
@@ -379,22 +397,60 @@ cron.schedule('*/30 * * * * *', async () => {
 
 console.log('Bridge service started');`;
 
+  const admsRelayScript = `// FaceScan ADMS Relay — Deno Deploy
+// วางทั้งหมดใน playground ที่ https://dash.deno.com แล้วกด Save & Deploy
+// เครื่องสแกนส่งไปที่ /iclock/* → relay forward เข้า Edge Function
+
+const ADMS_FN_URL = "${ADMS_FN_URL}";
+
+Deno.serve(async (req) => {
+  const url = new URL(req.url);
+  if (url.pathname === "/" || url.pathname === "/health") {
+    return new Response("FaceScan ADMS relay OK", { status: 200 });
+  }
+  const match = url.pathname.match(/\\/iclock\\/([^/]+)/i);
+  if (!match) return new Response("Not found", { status: 404 });
+
+  const target = \`\${ADMS_FN_URL}/\${match[1]}\${url.search}\`;
+  const init = {
+    method: req.method,
+    headers: { "Content-Type": req.headers.get("Content-Type") || "text/plain" },
+  };
+  if (req.method !== "GET" && req.method !== "HEAD") init.body = await req.text();
+
+  try {
+    const res = await fetch(target, init);
+    const body = await res.text();
+    return new Response(body, {
+      status: res.status,
+      headers: { "Content-Type": "text/plain; charset=utf-8" },
+    });
+  } catch (_e) {
+    return new Response("OK", { status: 200 });
+  }
+});`;
+
+
+
   return (
     <div className="space-y-5">
       <div>
         <h3 className="text-lg font-bold font-display">เชื่อมต่อ FaceScan</h3>
         <p className="text-sm text-muted-foreground mt-0.5">
-          จัดการการเชื่อมต่อกับเครื่องสแกนหน้า HIP CiF76S ผ่าน Bridge Service
+          จัดการการเชื่อมต่อกับเครื่องสแกนหน้า HIP CiF76S — ADMS Push (ตรงเข้า Cloud) หรือ Bridge Service
         </p>
       </div>
 
       <Tabs defaultValue="devices" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-2 lg:grid-cols-5 h-auto">
+        <TabsList className="grid w-full grid-cols-2 lg:grid-cols-6 h-auto">
           <TabsTrigger value="devices" className="gap-2">
             <Server className="w-4 h-4" /> เครื่องสแกน
           </TabsTrigger>
           <TabsTrigger value="mapping" className="gap-2">
             <Users className="w-4 h-4" /> จับคู่ Face ID
+          </TabsTrigger>
+          <TabsTrigger value="adms" className="gap-2">
+            <Wifi className="w-4 h-4" /> ADMS Push
           </TabsTrigger>
           <TabsTrigger value="tokens" className="gap-2">
             <KeyRound className="w-4 h-4" /> Bridge Token
@@ -410,6 +466,83 @@ console.log('Bridge service started');`;
         <TabsContent value="mapping">
           <FaceScanMapping devices={devices} />
         </TabsContent>
+
+        {/* ADMS PUSH */}
+        <TabsContent value="adms" className="space-y-4">
+          <Card className="p-5 space-y-4">
+            <div>
+              <h4 className="font-semibold mb-2">📡 ADMS Push — เครื่องส่งข้อมูลตรงเข้า Cloud</h4>
+              <p className="text-sm text-muted-foreground">
+                เครื่อง HIP CiF76S "ดันข้อมูล" (push) การสแกนผ่านอินเทอร์เน็ตเข้าระบบเราโดยตรง
+                ไม่ต้องมี PC รัน Bridge ใน LAN และไม่ต้องเปิดพอร์ตเราเตอร์ — เพราะเครื่องเป็นฝ่ายเชื่อมออก
+              </p>
+              <p className="text-sm text-muted-foreground mt-2">
+                เครื่องส่งไปที่ path ตายตัว <code>/iclock/*</code> จึงต้องมี
+                <strong> ตัวรับ ADMS สาธารณะ (relay)</strong> เปิดไว้ฟรี (Deno Deploy / Cloudflare Worker)
+                แล้ว forward เข้า Edge Function ของเรา
+              </p>
+            </div>
+
+            <div className="rounded-md border bg-muted/30 p-3 text-xs leading-relaxed font-mono">
+              [HIP CiF76S] → push /iclock/* → [Relay สาธารณะ] → forward → [facescan-adms] → ตารางลงเวลา
+            </div>
+
+            <div>
+              <h4 className="font-semibold mb-2">🛠 ขั้นตอน</h4>
+              <ol className="text-sm text-muted-foreground list-decimal pl-5 space-y-1.5">
+                <li>
+                  Deploy relay ฟรีที่{" "}
+                  <a href="https://dash.deno.com" target="_blank" rel="noreferrer" className="text-primary underline">
+                    dash.deno.com
+                  </a>{" "}
+                  → New Project → Deploy from playground → วางโค้ดด้านล่าง → Save &amp; Deploy
+                </li>
+                <li>จะได้โดเมนสาธารณะ เช่น <code>your-name.deno.dev</code> (ทดสอบเปิด <code>/health</code> ต้องเห็น OK)</li>
+                <li>เพิ่มเครื่องในแท็บ "เครื่องสแกน" เลือกโหมด <strong>ADMS Push</strong> แล้วกรอก <strong>Serial Number (SN)</strong> ให้ตรงกับเครื่องจริง</li>
+                <li>
+                  ที่ตัวเครื่อง: <strong>Comm → Cloud Server Setting (ADMS)</strong> →
+                  Server Address = โดเมน relay, Port = <strong>443</strong>, HTTPS = ON, Enable Domain Name = ON → <strong>Reboot</strong>
+                </li>
+                <li>ลองสแกน → record เข้าหน้าลงเวลาภายในไม่กี่วินาที (ดูแท็บ Sync Logs)</li>
+              </ol>
+            </div>
+
+            <div>
+              <h4 className="font-semibold mb-2">🔗 Edge Function Endpoint (relay จะ forward มาที่นี่)</h4>
+              <div className="font-mono text-xs bg-background border rounded p-2 break-all flex items-center justify-between gap-2">
+                <code>{ADMS_FN_URL}</code>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6 flex-shrink-0"
+                  onClick={() => copyToClipboard(ADMS_FN_URL)}
+                >
+                  <Copy className="w-3 h-3" />
+                </Button>
+              </div>
+            </div>
+
+            <div>
+              <h4 className="font-semibold mb-2">💻 โค้ด Relay (Deno Deploy)</h4>
+              <div className="relative">
+                <Textarea readOnly value={admsRelayScript} className="font-mono text-xs min-h-[360px]" />
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="absolute top-2 right-2"
+                  onClick={() => copyToClipboard(admsRelayScript)}
+                >
+                  <Copy className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+
+            <div className="rounded-md border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-700 dark:text-amber-400">
+              ⚠️ เมื่อเปิดโหมดส่งมาที่เรา เครื่องจะหยุดส่งข้อมูลไปยัง Cloud เดิม (HIP ส่งได้ปลายทางเดียว)
+            </div>
+          </Card>
+        </TabsContent>
+
 
         {/* DEVICES */}
         <TabsContent value="devices" className="space-y-3">
@@ -427,10 +560,13 @@ console.log('Bridge service started');`;
               <Card key={d.id} className="p-4">
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
                       <h4 className="font-semibold">{d.name}</h4>
                       <Badge variant={d.enabled ? "default" : "secondary"} className="text-xs">
                         {d.enabled ? "เปิดใช้" : "ปิดใช้"}
+                      </Badge>
+                      <Badge variant="outline" className="text-xs uppercase">
+                        {d.connection_mode === "adms" ? "ADMS Push" : "Bridge"}
                       </Badge>
                       {statusBadge(d.last_status)}
                     </div>
@@ -438,15 +574,30 @@ console.log('Bridge service started');`;
                       <p className="text-sm text-muted-foreground mb-2">{d.description}</p>
                     )}
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                      <div>
-                        <span className="font-medium text-foreground">Device IP:</span> {d.device_ip}
-                      </div>
-                      <div>
-                        <span className="font-medium text-foreground">Server:</span> {d.server_ip}:{d.server_port}
-                      </div>
-                      <div>
-                        <span className="font-medium text-foreground">Machine #:</span> {d.machine_number}
-                      </div>
+                      {d.connection_mode === "adms" ? (
+                        <>
+                          <div>
+                            <span className="font-medium text-foreground">SN:</span>{" "}
+                            {d.serial_number || "—"}
+                          </div>
+                          <div>
+                            <span className="font-medium text-foreground">เห็นล่าสุด:</span>{" "}
+                            {formatDateTime(d.adms_last_seen)}
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div>
+                            <span className="font-medium text-foreground">Device IP:</span> {d.device_ip}
+                          </div>
+                          <div>
+                            <span className="font-medium text-foreground">Server:</span> {d.server_ip}:{d.server_port}
+                          </div>
+                          <div>
+                            <span className="font-medium text-foreground">Machine #:</span> {d.machine_number}
+                          </div>
+                        </>
+                      )}
                       <div>
                         <span className="font-medium text-foreground">Sync ล่าสุด:</span>{" "}
                         {formatDateTime(d.last_sync_at)}
@@ -454,30 +605,34 @@ console.log('Bridge service started');`;
                     </div>
                   </div>
                   <div className="flex gap-1">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => testConnection(d)}
-                      disabled={testingDeviceId === d.id || !d.enabled}
-                      className="gap-1.5"
-                    >
-                      {testingDeviceId === d.id ? (
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      ) : (
-                        <Wifi className="w-3.5 h-3.5" />
-                      )}
-                      Test
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => pullLogs(d)}
-                      disabled={!d.enabled}
-                      className="gap-1.5"
-                    >
-                      <Download className="w-3.5 h-3.5" />
-                      Pull
-                    </Button>
+                    {d.connection_mode === "bridge" && (
+                      <>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => testConnection(d)}
+                          disabled={testingDeviceId === d.id || !d.enabled}
+                          className="gap-1.5"
+                        >
+                          {testingDeviceId === d.id ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <Wifi className="w-3.5 h-3.5" />
+                          )}
+                          Test
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => pullLogs(d)}
+                          disabled={!d.enabled}
+                          className="gap-1.5"
+                        >
+                          <Download className="w-3.5 h-3.5" />
+                          Pull
+                        </Button>
+                      </>
+                    )}
                     <Button variant="ghost" size="icon" onClick={() => openEditDevice(d)}>
                       <Pencil className="w-4 h-4" />
                     </Button>
@@ -712,53 +867,98 @@ console.log('Bridge service started');`;
                   placeholder="เช่น รถไฟฟ้าขสมช"
                 />
               </div>
+
               <div className="col-span-2 mx-[20px]">
-                <Label>Device IP *</Label>
-                <Input
-                  value={deviceForm.device_ip}
-                  onChange={(e) => setDeviceForm({ ...deviceForm, device_ip: e.target.value })}
-                  placeholder="192.168.2.201"
-                />
+                <Label>โหมดเชื่อมต่อ</Label>
+                <div className="flex gap-2 mt-1">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={deviceForm.connection_mode === "adms" ? "default" : "outline"}
+                    className="flex-1"
+                    onClick={() => setDeviceForm({ ...deviceForm, connection_mode: "adms" })}
+                  >
+                    ADMS Push
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={deviceForm.connection_mode === "bridge" ? "default" : "outline"}
+                    className="flex-1"
+                    onClick={() => setDeviceForm({ ...deviceForm, connection_mode: "bridge" })}
+                  >
+                    Bridge
+                  </Button>
+                </div>
               </div>
-              <div className="mx-[20px] mr-0">
-                <Label>Server IP</Label>
-                <Input
-                  value={deviceForm.server_ip}
-                  onChange={(e) => setDeviceForm({ ...deviceForm, server_ip: e.target.value })}
-                />
-              </div>
-              <div className="mr-[20px]">
-                <Label>Server Port</Label>
-                <Input
-                  type="number"
-                  value={deviceForm.server_port}
-                  onChange={(e) =>
-                    setDeviceForm({ ...deviceForm, server_port: parseInt(e.target.value) || 0 })
-                  }
-                />
-              </div>
-              <div className="mr-0 ml-[20px]">
-                <Label>Machine No.</Label>
-                <Input
-                  type="number"
-                  value={deviceForm.machine_number}
-                  onChange={(e) =>
-                    setDeviceForm({
-                      ...deviceForm,
-                      machine_number: parseInt(e.target.value) || 1,
-                    })
-                  }
-                />
-              </div>
-              <div className="mr-[20px]">
-                <Label>Comm Password</Label>
-                <Input
-                  value={deviceForm.comm_password}
-                  onChange={(e) =>
-                    setDeviceForm({ ...deviceForm, comm_password: e.target.value })
-                  }
-                />
-              </div>
+
+              {deviceForm.connection_mode === "adms" && (
+                <div className="col-span-2 mx-[20px]">
+                  <Label>Serial Number (SN) *</Label>
+                  <Input
+                    value={deviceForm.serial_number}
+                    onChange={(e) =>
+                      setDeviceForm({ ...deviceForm, serial_number: e.target.value.trim() })
+                    }
+                    placeholder="เช่น CJDM231260001"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    SN ต้องตรงกับเครื่องจริง (ดูที่เมนู Info ของเครื่อง) — ใช้ระบุตัวตนเมื่อเครื่อง push เข้ามา
+                  </p>
+                </div>
+              )}
+
+              {deviceForm.connection_mode === "bridge" && (
+                <>
+                  <div className="col-span-2 mx-[20px]">
+                    <Label>Device IP *</Label>
+                    <Input
+                      value={deviceForm.device_ip}
+                      onChange={(e) => setDeviceForm({ ...deviceForm, device_ip: e.target.value })}
+                      placeholder="192.168.2.201"
+                    />
+                  </div>
+                  <div className="mx-[20px] mr-0">
+                    <Label>Server IP</Label>
+                    <Input
+                      value={deviceForm.server_ip}
+                      onChange={(e) => setDeviceForm({ ...deviceForm, server_ip: e.target.value })}
+                    />
+                  </div>
+                  <div className="mr-[20px]">
+                    <Label>Server Port</Label>
+                    <Input
+                      type="number"
+                      value={deviceForm.server_port}
+                      onChange={(e) =>
+                        setDeviceForm({ ...deviceForm, server_port: parseInt(e.target.value) || 0 })
+                      }
+                    />
+                  </div>
+                  <div className="mr-0 ml-[20px]">
+                    <Label>Machine No.</Label>
+                    <Input
+                      type="number"
+                      value={deviceForm.machine_number}
+                      onChange={(e) =>
+                        setDeviceForm({
+                          ...deviceForm,
+                          machine_number: parseInt(e.target.value) || 1,
+                        })
+                      }
+                    />
+                  </div>
+                  <div className="mr-[20px]">
+                    <Label>Comm Password</Label>
+                    <Input
+                      value={deviceForm.comm_password}
+                      onChange={(e) =>
+                        setDeviceForm({ ...deviceForm, comm_password: e.target.value })
+                      }
+                    />
+                  </div>
+                </>
+              )}
               <div className="col-span-2 flex items-center justify-between border-t pt-3 mx-[20px]">
                 <Label>เปิดใช้งาน</Label>
                 <Switch
