@@ -318,6 +318,7 @@ const OvertimeManagement = () => {
             </div>
             <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-xs">
               <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded" style={{ background: "hsl(var(--muted))" }} />ไม่มี OT</span>
+              <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded" style={{ background: "hsl(0 75% 95%)" }} />วันหยุด</span>
               {OT_TYPES.map((t) => (
                 <span key={t.value} className="flex items-center gap-1.5">
                   <span className="inline-block w-3 h-3 rounded" style={{ background: `${t.color}30` }} />{t.label}
