@@ -392,6 +392,12 @@ const ShiftManagement = () => {
                                     <Trash2 className="w-3.5 h-3.5" />ลบกะรายวัน
                                   </button>
                                 )}
+                                {hasBulk && (
+                                  <button onClick={() => deleteBulkForDate(emp.id, iso)}
+                                    className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold hover:bg-destructive/10 text-destructive transition-colors border-t mt-1">
+                                    <Trash2 className="w-3.5 h-3.5" />ยกเลิกกะระยะยาว
+                                  </button>
+                                )}
                               </PopoverContent>
                             </Popover>
                           ) : (
