@@ -342,21 +342,21 @@ const DayOff = () => {
                                   <div className="text-muted-foreground pl-4">เหตุผล: {ov.reason}</div>
                                 )}
                                 {canEdit && (
-                                  <div className="pt-1.5 border-t mt-2 flex items-center gap-2">
+                                  <div className="pt-1.5 border-t mt-2 flex flex-col items-center gap-1.5">
                                     <button
                                       onClick={() => toggleOverride(emp.id, iso, status)}
-                                      className="flex items-center gap-1 flex-1 text-[11px] font-semibold text-primary hover:underline text-left"
+                                      className="flex items-center justify-center gap-2 w-full text-sm font-semibold text-primary hover:underline"
                                     >
-                                      <Plus className="w-3.5 h-3.5" />
+                                      <Plus className="w-5 h-5" />
                                       {status === "work" ? "ตั้งเป็นวันหยุด" : "เปลี่ยนสถานะ"}
                                     </button>
                                     {hasOverride && (
                                       <button
                                         onClick={() => deleteOverride(ov!.id)}
-                                        className="flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-semibold text-destructive hover:bg-destructive/10 transition-colors flex-shrink-0"
+                                        className="flex items-center justify-center gap-2 w-full px-2 py-1 rounded-md text-sm font-semibold text-destructive hover:bg-destructive/10 transition-colors"
                                         title="ยกเลิกวันหยุด"
                                       >
-                                        <Trash2 className="w-3.5 h-3.5" />
+                                        <Trash2 className="w-5 h-5" />
                                         ยกเลิกวันหยุด
                                       </button>
                                     )}
