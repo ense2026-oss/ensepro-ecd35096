@@ -197,7 +197,7 @@ const LeaveCalendarDialog: React.FC<LeaveCalendarDialogProps> = ({
           )}
         </DialogHeader>
 
-        <DialogBody className="p-0 flex flex-col">
+        <DialogBody className="p-0 flex flex-col overflow-hidden min-h-0">
           {/* Weekday header */}
           <div className="grid grid-cols-7 border-b bg-muted/40 shrink-0">
             {THAI_DAYS.map((d, i) => (
