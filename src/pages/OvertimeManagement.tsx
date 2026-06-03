@@ -318,6 +318,7 @@ const OvertimeManagement = () => {
             </div>
             <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-xs">
               <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded" style={{ background: "hsl(var(--muted))" }} />ไม่มี OT</span>
+              <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded" style={{ background: "hsl(0 75% 95%)" }} />วันหยุด</span>
               {OT_TYPES.map((t) => (
                 <span key={t.value} className="flex items-center gap-1.5">
                   <span className="inline-block w-3 h-3 rounded" style={{ background: `${t.color}30` }} />{t.label}
@@ -402,11 +403,17 @@ const OvertimeManagement = () => {
 
                       let bg = "hsl(var(--muted))";
                       let color = "hsl(var(--muted-foreground))";
-                      let label = dayoff ? "·" : "—";
+                      let label = "—";
                       let title = `${WEEKDAY_FULL[dow]} ${d.getDate()}`;
                       if (isHoliday) title += ` · วันหยุด${holidayNameMap.get(iso) ? `: ${holidayNameMap.get(iso)}` : ""}`;
                       else if (dayoff) title += " · วันหยุดพนักงาน";
                       if (shift) title += ` · กะ${shift.name} (${shift.start_time}-${shift.end_time})`;
+                      // Day-off cells: soft (faded) red background with "หยุด" label
+                      if (dayoff) {
+                        bg = "hsl(0 75% 95%)";
+                        color = "hsl(0 60% 55%)";
+                        label = "หยุด";
+                      }
                       if (totalH > 0 && tInfo) {
                         bg = `${tInfo.color}25`;
                         color = tInfo.color;
@@ -437,17 +444,15 @@ const OvertimeManagement = () => {
                               onRemove={() => removeOT(emp.id, iso)}
                             >
                               <button
-                                className={cn(
-                                  "w-full transition-all hover:scale-110 cursor-pointer",
-                                  dayoff && totalH === 0 && "opacity-60"
-                                )}
+                                className="w-full transition-all hover:scale-110 cursor-pointer"
                                 title={title}
                               >
                                 {cellInner}
                               </button>
                             </OTCellPopover>
                           ) : (
-                            <div className={cn("w-full", dayoff && totalH === 0 && "opacity-60")} title={title}>
+                            <div className="w-full" title={title}>
+
                               {cellInner}
                             </div>
                           )}
