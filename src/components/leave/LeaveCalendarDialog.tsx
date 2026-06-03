@@ -212,7 +212,7 @@ const LeaveCalendarDialog: React.FC<LeaveCalendarDialogProps> = ({
           </div>
 
           {/* Calendar grid */}
-          <div className="grid grid-cols-7 flex-1 auto-rows-fr">
+          <div className="grid grid-cols-7 flex-1 auto-rows-fr min-h-0">
             {cells.map((day, idx) => {
               const dow = idx % 7;
               const dayLeaves = day ? leavesByDay.get(day) || [] : [];
@@ -221,11 +221,12 @@ const LeaveCalendarDialog: React.FC<LeaveCalendarDialogProps> = ({
                 <div
                   key={idx}
                   onClick={() => day && dayLeaves.length > 0 && setSelectedDay(day)}
-                  className={`border-b border-r min-h-[90px] p-1.5 flex flex-col gap-1 overflow-hidden transition-colors ${
+                  className={`border-b border-r min-h-0 p-1 sm:p-1.5 flex flex-col gap-0.5 sm:gap-1 overflow-hidden transition-colors ${
                     day ? "" : "bg-muted/20"
                   } ${todayCell ? "bg-primary/10 ring-1 ring-primary/30" : ""} ${dayLeaves.length > 0 ? "cursor-pointer hover:bg-muted/50" : ""}`}
                   style={dow === 0 ? { borderLeft: "1px solid hsl(var(--border))" } : undefined}
                 >
+
                   {day && (
                     <>
                       <div className="flex items-center justify-between">
