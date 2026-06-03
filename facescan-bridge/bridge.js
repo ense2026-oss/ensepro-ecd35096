@@ -273,11 +273,11 @@ async function tick() {
       try {
         await syncDevice(device);
       } catch (e) {
-        log(`[sync] ${device.name} ล้มเหลว:`, e.message);
+        log(`[sync] ${device.name} ล้มเหลว:`, errMessage(e));
       }
     }
   } catch (e) {
-    log("[poll] ติดต่อระบบไม่ได้:", e.message);
+    log("[poll] ติดต่อระบบไม่ได้:", errMessage(e));
   } finally {
     setTimeout(tick, pollSeconds * 1000);
   }
