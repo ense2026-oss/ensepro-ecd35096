@@ -344,58 +344,59 @@ const FaceScanConnectionSettings = () => {
     );
   };
 
-  const sampleNodeScript = `// bridge-service.js (รันบน Windows PC ในออฟฟิศ)
-// npm install @supabase/supabase-js koffi node-cron
-import koffi from 'koffi';
-import cron from 'node-cron';
+  const sampleNodeScript = `// bridge.js (รันบน PC ในออฟฟิศ — Node.js 18+)
+// ติดตั้ง: npm install node-zklib dotenv
+// ใช้โปรโตคอล ZK มาตรฐานที่พอร์ต 4370 — ไม่ต้องใช้ DLL ของ Windows
+require('dotenv').config();
+const ZKLib = require('node-zklib');
 
-const CLOUD_URL = '${FN_BASE}';
-const BRIDGE_TOKEN = 'fsbt_xxxxxxxxxxxx'; // <-- ใส่ token จากหน้า Bridge Token
+const FN_BASE = '${FN_BASE}';
+const BRIDGE_TOKEN = process.env.BRIDGE_TOKEN; // <-- ใส่ใน .env จากหน้า Bridge Token
+const DEVICE_PORT = 4370;
+const headers = { 'Content-Type': 'application/json', 'x-bridge-token': BRIDGE_TOKEN };
 
-// โหลด DLL
-const lib = koffi.load('FK623Attend.dll');
-const ConnectNet = lib.func('int ConnectNet(str, int, str)');
-const GetGeneralLogData = lib.func('int GetGeneralLogData(int, _Out_ str, _Out_ str, _Out_ int*, _Out_ int*, _Out_ int*)');
-const DisConnect = lib.func('void DisConnect(int)');
-
-async function fetchConfig() {
-  const res = await fetch(\`\${CLOUD_URL}/facescan-bridge-config\`, {
-    headers: { 'x-bridge-token': BRIDGE_TOKEN }
-  });
+async function poll() {
+  const res = await fetch(\`\${FN_BASE}/facescan-bridge-poll\`, { headers });
   return await res.json();
 }
 
 async function pushRecords(deviceId, records) {
-  await fetch(\`\${CLOUD_URL}/facescan-ingest\`, {
+  await fetch(\`\${FN_BASE}/facescan-ingest\`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-bridge-token': BRIDGE_TOKEN,
-    },
+    headers,
     body: JSON.stringify({ device_id: deviceId, records }),
   });
 }
 
-async function pollDevice(device) {
-  const handle = ConnectNet(device.device_ip, device.server_port, device.comm_password);
-  if (handle <= 0) {
-    console.error('Connect failed', device.name);
-    return;
-  }
-  const records = [];
-  // ... ใช้ GetGeneralLogData อ่าน logs ทั้งหมด
-  // แปลงเป็น { enroll_number, datetime (ISO), verify_mode, in_out }
-  DisConnect(handle);
+async function syncDevice(device) {
+  const zk = new ZKLib(device.device_ip, DEVICE_PORT, 10000, 10000);
+  await zk.createSocket();
+  const res = await zk.getAttendances();
+  await zk.disconnect();
+  const logs = res?.data || [];
+  const records = logs.map((r) => ({
+    enroll_number: String(r.deviceUserId),
+    datetime: new Date(r.recordTime).toISOString(),
+    verify_mode: 'face',
+  }));
   if (records.length) await pushRecords(device.id, records);
 }
 
-// Poll ทุก 30 วินาที
-cron.schedule('*/30 * * * * *', async () => {
-  const cfg = await fetchConfig();
-  for (const dev of cfg.devices) await pollDevice(dev);
-});
+async function tick() {
+  try {
+    const cfg = await poll();
+    for (const dev of (cfg.devices || []).filter((d) => d.enabled && d.device_ip)) {
+      try { await syncDevice(dev); } catch (e) { console.error(dev.name, e.message); }
+    }
+  } catch (e) { console.error('poll', e.message); }
+  setTimeout(tick, 30000);
+}
 
-console.log('Bridge service started');`;
+console.log('Bridge service started');
+tick();
+
+// 💡 โค้ดเวอร์ชันเต็ม (กรอง cursor กันซ้ำ + รับคำสั่ง test/pull + ack)
+// อยู่ในโฟลเดอร์ facescan-bridge/ ของโปรเจกต์ — คัดลอกทั้งโฟลเดอร์ไปรันบน PC ได้เลย`;
 
   const admsRelayScript = `const ADMS_FN_URL = "${ADMS_FN_URL}";
 
@@ -773,24 +774,25 @@ Deno.serve(async (req) => {
             <div>
               <h4 className="font-semibold mb-2">📌 ภาพรวม</h4>
               <p className="text-sm text-muted-foreground">
-                เครื่อง HIP CiF76S ใช้ Windows DLL และอยู่บน Private LAN (192.168.x.x) ไม่สามารถเชื่อมต่อจากเว็บ cloud ได้โดยตรง
-                จึงต้องติดตั้ง <strong>Bridge Service</strong> บน PC Windows ที่อยู่ LAN เดียวกับเครื่องสแกน เพื่อทำหน้าที่:
+                เครื่อง HIP CiF76S อยู่บน Private LAN (192.168.x.x) เชื่อมจากเว็บ cloud ตรง ๆ ไม่ได้
+                จึงติดตั้ง <strong>Bridge</strong> (โปรแกรม Node.js เล็ก ๆ) บน PC ที่อยู่ LAN เดียวกับเครื่องสแกน
+                โดยใช้โปรโตคอล <strong>ZK มาตรฐานที่พอร์ต 4370</strong> — ไม่ต้องใช้ DLL ของ Windows. หน้าที่ของ Bridge:
               </p>
               <ul className="text-sm text-muted-foreground list-disc pl-5 mt-2 space-y-1">
-                <li>เรียก DLL เพื่อเชื่อมต่อเครื่อง (ConnectNet)</li>
-                <li>ดึง check-in/out logs (GetGeneralLogData) → POST ไปยัง <code>facescan-ingest</code></li>
-                <li>รับคำสั่ง enroll/delete ผู้ใช้จาก cloud → ส่งเข้าเครื่อง</li>
+                <li>เชื่อมต่อเครื่องผ่าน LAN (node-zklib) ที่ <code>device_ip:4370</code></li>
+                <li>ดึงรายการสแกนใหม่ → POST ไปยัง <code>facescan-ingest</code> (กัน cursor ไม่ให้ซ้ำ)</li>
+                <li>รับคำสั่ง test / pull จาก cloud แล้วรายงานผลกลับ (ack)</li>
               </ul>
             </div>
 
             <div>
               <h4 className="font-semibold mb-2">🛠 ขั้นตอนติดตั้ง</h4>
               <ol className="text-sm text-muted-foreground list-decimal pl-5 space-y-1.5">
-                <li>ติดตั้ง Node.js 18+ บน PC Windows ในออฟฟิศ</li>
-                <li>คัดลอก DLL ทั้ง 4 ไฟล์ (FK623Attend.dll, FKAttend.dll, FKViaDev.dll, FaceDataConv.dll) ไปที่โฟลเดอร์ service</li>
+                <li>ติดตั้ง Node.js 18+ บน PC ในออฟฟิศ (วง LAN เดียวกับเครื่อง)</li>
+                <li>คัดลอกโฟลเดอร์ <code>facescan-bridge/</code> จากโปรเจกต์ไปวางบน PC</li>
                 <li>สร้าง Bridge Token จากแท็บ "Bridge Token" และคัดลอกเก็บไว้</li>
-                <li>วางโค้ด <code>bridge-service.js</code> ด้านล่าง แล้วใส่ token ที่ได้</li>
-                <li>รัน <code>node bridge-service.js</code> หรือใช้ NSSM/Task Scheduler ให้รันอัตโนมัติ</li>
+                <li>รัน <code>npm install</code> แล้วคัดลอก <code>.env.example</code> เป็น <code>.env</code> ใส่ token</li>
+                <li>รัน <code>npm start</code> หรือใช้ pm2 / Task Scheduler ให้รันอัตโนมัติ</li>
               </ol>
             </div>
 
@@ -806,9 +808,9 @@ Deno.serve(async (req) => {
                 </div>
                 <div className="font-mono text-xs bg-muted p-2 rounded">
                   <span className="font-semibold text-primary">GET</span>{" "}
-                  {FN_BASE}/facescan-bridge-config
+                  {FN_BASE}/facescan-bridge-poll
                   <div className="text-muted-foreground mt-1">
-                    Returns: enabled devices + employee enroll list
+                    Returns: enabled devices + enroll list + คำสั่งที่ค้างอยู่
                   </div>
                 </div>
               </div>
