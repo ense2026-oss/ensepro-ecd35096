@@ -450,7 +450,8 @@ const OvertimeManagement = () => {
                               </button>
                             </OTCellPopover>
                           ) : (
-                            <div className={cn("w-full", dayoff && totalH === 0 && "opacity-60")} title={title}>
+                            <div className="w-full" title={title}>
+
                               {cellInner}
                             </div>
                           )}
