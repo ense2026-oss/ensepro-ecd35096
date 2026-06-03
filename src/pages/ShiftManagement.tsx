@@ -210,6 +210,23 @@ const ShiftManagement = () => {
     }
   };
 
+  // Delete the long-term (bulk) assignment that covers a given date for an employee
+  const deleteBulkForDate = async (empId: string, dateIso: string) => {
+    if (!canEdit) return;
+    const bulk = bulkAssignments.find((b) => b.employee_id === empId && b.start_date <= dateIso && b.end_date >= dateIso);
+    if (!bulk) return;
+    const prevAssignments = assignments;
+    // Optimistic removal
+    setAssignments((cur) => cur.filter((a) => a.id !== bulk.id));
+    const { error } = await supabase.from("shift_assignments").delete().eq("id", bulk.id);
+    if (error) {
+      setAssignments(prevAssignments);
+      toast({ title: "ไม่สามารถยกเลิกได้", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "ยกเลิกกะระยะยาวสำเร็จ" });
+    }
+  };
+
   // Stats
   const uniqueEmployees = new Set(bulkAssignments.map((a) => a.employee_id)).size;
   const totalAssigned = bulkAssignments.length;
