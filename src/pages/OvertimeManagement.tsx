@@ -423,7 +423,7 @@ const OvertimeManagement = () => {
 
                       const cellInner = (
                         <span className="relative block w-full h-8 rounded overflow-hidden" style={{ background: bg }}>
-                          <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold" style={{ color }}>{label}</span>
+                          <span className={cn("absolute inset-0 flex items-center justify-center font-bold", totalH > 0 ? "text-sm" : "text-[10px]")} style={{ color }}>{label}</span>
                           {shift && (
                             <span className="absolute bottom-0 inset-x-0 h-[3px]" style={{ background: shift.color }} />
                           )}
