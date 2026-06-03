@@ -863,53 +863,98 @@ Deno.serve(async (req) => {
                   placeholder="เช่น รถไฟฟ้าขสมช"
                 />
               </div>
+
               <div className="col-span-2 mx-[20px]">
-                <Label>Device IP *</Label>
-                <Input
-                  value={deviceForm.device_ip}
-                  onChange={(e) => setDeviceForm({ ...deviceForm, device_ip: e.target.value })}
-                  placeholder="192.168.2.201"
-                />
+                <Label>โหมดเชื่อมต่อ</Label>
+                <div className="flex gap-2 mt-1">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={deviceForm.connection_mode === "adms" ? "default" : "outline"}
+                    className="flex-1"
+                    onClick={() => setDeviceForm({ ...deviceForm, connection_mode: "adms" })}
+                  >
+                    ADMS Push
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={deviceForm.connection_mode === "bridge" ? "default" : "outline"}
+                    className="flex-1"
+                    onClick={() => setDeviceForm({ ...deviceForm, connection_mode: "bridge" })}
+                  >
+                    Bridge
+                  </Button>
+                </div>
               </div>
-              <div className="mx-[20px] mr-0">
-                <Label>Server IP</Label>
-                <Input
-                  value={deviceForm.server_ip}
-                  onChange={(e) => setDeviceForm({ ...deviceForm, server_ip: e.target.value })}
-                />
-              </div>
-              <div className="mr-[20px]">
-                <Label>Server Port</Label>
-                <Input
-                  type="number"
-                  value={deviceForm.server_port}
-                  onChange={(e) =>
-                    setDeviceForm({ ...deviceForm, server_port: parseInt(e.target.value) || 0 })
-                  }
-                />
-              </div>
-              <div className="mr-0 ml-[20px]">
-                <Label>Machine No.</Label>
-                <Input
-                  type="number"
-                  value={deviceForm.machine_number}
-                  onChange={(e) =>
-                    setDeviceForm({
-                      ...deviceForm,
-                      machine_number: parseInt(e.target.value) || 1,
-                    })
-                  }
-                />
-              </div>
-              <div className="mr-[20px]">
-                <Label>Comm Password</Label>
-                <Input
-                  value={deviceForm.comm_password}
-                  onChange={(e) =>
-                    setDeviceForm({ ...deviceForm, comm_password: e.target.value })
-                  }
-                />
-              </div>
+
+              {deviceForm.connection_mode === "adms" && (
+                <div className="col-span-2 mx-[20px]">
+                  <Label>Serial Number (SN) *</Label>
+                  <Input
+                    value={deviceForm.serial_number}
+                    onChange={(e) =>
+                      setDeviceForm({ ...deviceForm, serial_number: e.target.value.trim() })
+                    }
+                    placeholder="เช่น CJDM231260001"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    SN ต้องตรงกับเครื่องจริง (ดูที่เมนู Info ของเครื่อง) — ใช้ระบุตัวตนเมื่อเครื่อง push เข้ามา
+                  </p>
+                </div>
+              )}
+
+              {deviceForm.connection_mode === "bridge" && (
+                <>
+                  <div className="col-span-2 mx-[20px]">
+                    <Label>Device IP *</Label>
+                    <Input
+                      value={deviceForm.device_ip}
+                      onChange={(e) => setDeviceForm({ ...deviceForm, device_ip: e.target.value })}
+                      placeholder="192.168.2.201"
+                    />
+                  </div>
+                  <div className="mx-[20px] mr-0">
+                    <Label>Server IP</Label>
+                    <Input
+                      value={deviceForm.server_ip}
+                      onChange={(e) => setDeviceForm({ ...deviceForm, server_ip: e.target.value })}
+                    />
+                  </div>
+                  <div className="mr-[20px]">
+                    <Label>Server Port</Label>
+                    <Input
+                      type="number"
+                      value={deviceForm.server_port}
+                      onChange={(e) =>
+                        setDeviceForm({ ...deviceForm, server_port: parseInt(e.target.value) || 0 })
+                      }
+                    />
+                  </div>
+                  <div className="mr-0 ml-[20px]">
+                    <Label>Machine No.</Label>
+                    <Input
+                      type="number"
+                      value={deviceForm.machine_number}
+                      onChange={(e) =>
+                        setDeviceForm({
+                          ...deviceForm,
+                          machine_number: parseInt(e.target.value) || 1,
+                        })
+                      }
+                    />
+                  </div>
+                  <div className="mr-[20px]">
+                    <Label>Comm Password</Label>
+                    <Input
+                      value={deviceForm.comm_password}
+                      onChange={(e) =>
+                        setDeviceForm({ ...deviceForm, comm_password: e.target.value })
+                      }
+                    />
+                  </div>
+                </>
+              )}
               <div className="col-span-2 flex items-center justify-between border-t pt-3 mx-[20px]">
                 <Label>เปิดใช้งาน</Label>
                 <Switch
