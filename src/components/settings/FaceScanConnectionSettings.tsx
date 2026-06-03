@@ -344,6 +344,32 @@ const FaceScanConnectionSettings = () => {
     );
   };
 
+  // ADMS devices don't poll like Bridge; their health is derived from the last
+  // time the device pushed data to the relay (adms_last_seen).
+  const admsStatusBadge = (lastSeen: string | null | undefined) => {
+    if (!lastSeen) {
+      return (
+        <Badge variant="outline" className="bg-muted text-muted-foreground border-border">
+          รอข้อมูลจากเครื่อง
+        </Badge>
+      );
+    }
+    const ageMs = Date.now() - new Date(lastSeen).getTime();
+    const online = ageMs < 1000 * 60 * 15; // seen within 15 minutes
+    return (
+      <Badge
+        variant="outline"
+        className={
+          online
+            ? "bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20"
+            : "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20"
+        }
+      >
+        {online ? "ออนไลน์ (ADMS)" : "เงียบ (ADMS)"}
+      </Badge>
+    );
+  };
+
   const sampleNodeScript = `// bridge.js (รันบน PC ในออฟฟิศ — Node.js 18+)
 // ติดตั้ง: npm install node-zklib dotenv
 // ใช้โปรโตคอล ZK มาตรฐานที่พอร์ต 4370 — ไม่ต้องใช้ DLL ของ Windows
@@ -565,7 +591,9 @@ Deno.serve(async (req) => {
                       <Badge variant="outline" className="text-xs uppercase">
                         {d.connection_mode === "adms" ? "ADMS Push" : "Bridge"}
                       </Badge>
-                      {statusBadge(d.last_status)}
+                      {d.connection_mode === "adms"
+                        ? admsStatusBadge(d.adms_last_seen)
+                        : statusBadge(d.last_status)}
                     </div>
                     {d.description && (
                       <p className="text-sm text-muted-foreground mb-2">{d.description}</p>
