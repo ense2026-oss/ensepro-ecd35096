@@ -448,10 +448,13 @@ console.log('Bridge service started');`;
               <Card key={d.id} className="p-4">
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
                       <h4 className="font-semibold">{d.name}</h4>
                       <Badge variant={d.enabled ? "default" : "secondary"} className="text-xs">
                         {d.enabled ? "เปิดใช้" : "ปิดใช้"}
+                      </Badge>
+                      <Badge variant="outline" className="text-xs uppercase">
+                        {d.connection_mode === "adms" ? "ADMS Push" : "Bridge"}
                       </Badge>
                       {statusBadge(d.last_status)}
                     </div>
@@ -459,15 +462,30 @@ console.log('Bridge service started');`;
                       <p className="text-sm text-muted-foreground mb-2">{d.description}</p>
                     )}
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                      <div>
-                        <span className="font-medium text-foreground">Device IP:</span> {d.device_ip}
-                      </div>
-                      <div>
-                        <span className="font-medium text-foreground">Server:</span> {d.server_ip}:{d.server_port}
-                      </div>
-                      <div>
-                        <span className="font-medium text-foreground">Machine #:</span> {d.machine_number}
-                      </div>
+                      {d.connection_mode === "adms" ? (
+                        <>
+                          <div>
+                            <span className="font-medium text-foreground">SN:</span>{" "}
+                            {d.serial_number || "—"}
+                          </div>
+                          <div>
+                            <span className="font-medium text-foreground">เห็นล่าสุด:</span>{" "}
+                            {formatDateTime(d.adms_last_seen)}
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div>
+                            <span className="font-medium text-foreground">Device IP:</span> {d.device_ip}
+                          </div>
+                          <div>
+                            <span className="font-medium text-foreground">Server:</span> {d.server_ip}:{d.server_port}
+                          </div>
+                          <div>
+                            <span className="font-medium text-foreground">Machine #:</span> {d.machine_number}
+                          </div>
+                        </>
+                      )}
                       <div>
                         <span className="font-medium text-foreground">Sync ล่าสุด:</span>{" "}
                         {formatDateTime(d.last_sync_at)}
