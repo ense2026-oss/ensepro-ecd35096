@@ -230,7 +230,7 @@ const LeaveCalendarDialog: React.FC<LeaveCalendarDialogProps> = ({
                     <>
                       <div className="flex items-center justify-between">
                         <span
-                          className={`text-xs font-semibold w-6 h-6 flex items-center justify-center rounded-full ${
+                          className={`text-2xl font-semibold w-10 h-10 flex items-center justify-center rounded-full ${
                             todayCell ? "text-primary-foreground" : ""
                           }`}
                           style={{
@@ -247,28 +247,29 @@ const LeaveCalendarDialog: React.FC<LeaveCalendarDialogProps> = ({
                           {day}
                         </span>
                         {dayLeaves.length > 0 && (
-                          <span className="text-[10px] font-bold text-muted-foreground">
+                          <span className="text-sm font-bold text-muted-foreground">
                             {dayLeaves.length}
                           </span>
                         )}
                       </div>
 
-                      <div className="flex flex-col gap-0.5 overflow-hidden">
+                      <div className="flex flex-col gap-1 overflow-hidden">
                         {dayLeaves.slice(0, 3).map((l) => (
                           <div
                             key={l.id}
-                            className="flex items-center gap-1 rounded px-1 py-0.5 text-[10px] font-medium truncate"
+                            className="flex items-center gap-1.5 rounded px-1 py-1 text-xl font-medium truncate"
                             style={{
                               background: `${colorMap.get(l.type) || "hsl(var(--primary))"}20`,
                               borderLeft: `2px solid ${colorMap.get(l.type) || "hsl(var(--primary))"}`,
                             }}
                             title={`${l.name} · ${l.type}`}
                           >
+                            <EmployeeAvatar photoUrl={l.photoUrl} firstName={l.name} size="sm" />
                             <span className="truncate">{l.name}</span>
                           </div>
                         ))}
                         {dayLeaves.length > 3 && (
-                          <span className="text-[10px] text-muted-foreground pl-1">
+                          <span className="text-sm text-muted-foreground pl-1">
                             +{dayLeaves.length - 3} เพิ่มเติม
                           </span>
                         )}
