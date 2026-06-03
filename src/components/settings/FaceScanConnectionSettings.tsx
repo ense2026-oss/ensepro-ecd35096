@@ -197,8 +197,16 @@ const FaceScanConnectionSettings = () => {
   };
 
   const saveDevice = async () => {
-    if (!deviceForm.name.trim() || !deviceForm.device_ip.trim()) {
-      toast.error("กรุณากรอกชื่อเครื่องและ Device IP");
+    if (!deviceForm.name.trim()) {
+      toast.error("กรุณากรอกชื่อเครื่อง");
+      return;
+    }
+    if (deviceForm.connection_mode === "adms" && !deviceForm.serial_number.trim()) {
+      toast.error("โหมด ADMS ต้องกรอก Serial Number (SN) ของเครื่อง");
+      return;
+    }
+    if (deviceForm.connection_mode === "bridge" && !deviceForm.device_ip.trim()) {
+      toast.error("โหมด Bridge ต้องกรอก Device IP");
       return;
     }
     if (editingDevice) {
