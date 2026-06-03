@@ -808,9 +808,9 @@ Deno.serve(async (req) => {
                 </div>
                 <div className="font-mono text-xs bg-muted p-2 rounded">
                   <span className="font-semibold text-primary">GET</span>{" "}
-                  {FN_BASE}/facescan-bridge-config
+                  {FN_BASE}/facescan-bridge-poll
                   <div className="text-muted-foreground mt-1">
-                    Returns: enabled devices + employee enroll list
+                    Returns: enabled devices + enroll list + คำสั่งที่ค้างอยู่
                   </div>
                 </div>
               </div>
