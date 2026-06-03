@@ -1,10 +1,16 @@
 import { useState, useRef, useEffect } from "react";
 import { Search, ChevronDown, X, Check } from "lucide-react";
+import EmployeeAvatar from "@/components/ui/employee-avatar";
 
 interface SearchableSelectOption {
   value: string;
   label: string;
   subtitle?: string;
+  photoUrl?: string;
+  avatar?: string;
+  avatarColor?: string;
+  avatarTextColor?: string;
+  firstName?: string;
 }
 
 interface SearchableSelectProps {
