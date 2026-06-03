@@ -397,11 +397,7 @@ cron.schedule('*/30 * * * * *', async () => {
 
 console.log('Bridge service started');`;
 
-  const admsRelayScript = `// FaceScan ADMS Relay — Deno Deploy
-// วางทั้งหมดใน playground ที่ https://dash.deno.com แล้วกด Save & Deploy
-// เครื่องสแกนส่งไปที่ /iclock/* → relay forward เข้า Edge Function
-
-const ADMS_FN_URL = "${ADMS_FN_URL}";
+  const admsRelayScript = `const ADMS_FN_URL = "${ADMS_FN_URL}";
 
 Deno.serve(async (req) => {
   const url = new URL(req.url);
