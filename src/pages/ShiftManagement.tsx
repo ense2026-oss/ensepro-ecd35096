@@ -339,6 +339,7 @@ const ShiftManagement = () => {
                       const shiftId = getShiftFor(emp.id, iso, bulkAssignments, dayAssignments);
                       const shift = shiftId ? shifts.find((s) => s.id === shiftId) : null;
                       const hasDayOverride = dayAssignments.some((da) => da.employee_id === emp.id && da.start_date === iso);
+                      const hasBulk = bulkAssignments.some((b) => b.employee_id === emp.id && b.start_date <= iso && b.end_date >= iso);
 
                       // Cell content
                       let bg = "hsl(var(--muted))";
