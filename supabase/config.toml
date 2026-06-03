@@ -1,1 +1,4 @@
 project_id = "typckluzuzpxznrlrprq"
+
+[functions.facescan-adms]
+verify_jwt = false
