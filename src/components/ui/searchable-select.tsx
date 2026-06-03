@@ -72,8 +72,18 @@ const SearchableSelect = ({
         onClick={() => setOpen(!open)}
         className="w-full flex items-center justify-between px-3 py-2.5 text-sm rounded-xl border outline-none bg-muted/30 cursor-pointer hover:bg-muted/50 transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        <span className={selectedOption ? "text-foreground" : "text-muted-foreground"}>
-          {selectedOption ? selectedOption.label : placeholder}
+        <span className={`flex items-center gap-2 min-w-0 ${selectedOption ? "text-foreground" : "text-muted-foreground"}`}>
+          {selectedOption && (selectedOption.photoUrl || selectedOption.firstName || selectedOption.avatar) && (
+            <EmployeeAvatar
+              photoUrl={selectedOption.photoUrl}
+              avatar={selectedOption.avatar}
+              avatarColor={selectedOption.avatarColor}
+              avatarTextColor={selectedOption.avatarTextColor}
+              firstName={selectedOption.firstName}
+              size="sm"
+            />
+          )}
+          <span className="truncate">{selectedOption ? selectedOption.label : placeholder}</span>
         </span>
         <div className="flex items-center gap-1 shrink-0">
           {allowClear && value && (
