@@ -402,17 +402,20 @@ console.log('Bridge service started');`;
       <div>
         <h3 className="text-lg font-bold font-display">เชื่อมต่อ FaceScan</h3>
         <p className="text-sm text-muted-foreground mt-0.5">
-          จัดการการเชื่อมต่อกับเครื่องสแกนหน้า HIP CiF76S ผ่าน Bridge Service
+          จัดการการเชื่อมต่อกับเครื่องสแกนหน้า HIP CiF76S — ADMS Push (ตรงเข้า Cloud) หรือ Bridge Service
         </p>
       </div>
 
       <Tabs defaultValue="devices" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-2 lg:grid-cols-5 h-auto">
+        <TabsList className="grid w-full grid-cols-2 lg:grid-cols-6 h-auto">
           <TabsTrigger value="devices" className="gap-2">
             <Server className="w-4 h-4" /> เครื่องสแกน
           </TabsTrigger>
           <TabsTrigger value="mapping" className="gap-2">
             <Users className="w-4 h-4" /> จับคู่ Face ID
+          </TabsTrigger>
+          <TabsTrigger value="adms" className="gap-2">
+            <Wifi className="w-4 h-4" /> ADMS Push
           </TabsTrigger>
           <TabsTrigger value="tokens" className="gap-2">
             <KeyRound className="w-4 h-4" /> Bridge Token
