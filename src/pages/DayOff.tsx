@@ -191,6 +191,25 @@ const DayOff = () => {
     }
   };
 
+  // Cancel the entire recurring day-off pattern(s) that apply to this date — like deleting a long-term shift
+  const deletePatternForDate = async (empId: string, dateIso: string, dow: number) => {
+    if (!canEdit) return;
+    const matched = patterns.filter((p) => p.employee_id === empId && isPatternActive(p, dateIso) && p.weekdays.includes(dow));
+    if (matched.length === 0) return;
+    try {
+      const { error } = await supabase
+        .from("employee_dayoff_patterns")
+        .delete()
+        .in("id", matched.map((p) => p.id));
+      if (error) throw error;
+      toast({ title: "ยกเลิกหยุดประจำสำเร็จ" });
+    } catch (err: any) {
+      toast({ title: "ไม่สามารถยกเลิกได้", description: err.message, variant: "destructive" });
+    }
+  };
+
+
+
   const cellColor = (status: string) => {
     switch (status) {
       case "work": return { bg: "hsl(var(--muted))", color: "hsl(var(--muted-foreground))", label: "✓" };
