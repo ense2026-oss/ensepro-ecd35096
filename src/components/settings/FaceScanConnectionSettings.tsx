@@ -432,6 +432,83 @@ console.log('Bridge service started');`;
           <FaceScanMapping devices={devices} />
         </TabsContent>
 
+        {/* ADMS PUSH */}
+        <TabsContent value="adms" className="space-y-4">
+          <Card className="p-5 space-y-4">
+            <div>
+              <h4 className="font-semibold mb-2">📡 ADMS Push — เครื่องส่งข้อมูลตรงเข้า Cloud</h4>
+              <p className="text-sm text-muted-foreground">
+                เครื่อง HIP CiF76S "ดันข้อมูล" (push) การสแกนผ่านอินเทอร์เน็ตเข้าระบบเราโดยตรง
+                ไม่ต้องมี PC รัน Bridge ใน LAN และไม่ต้องเปิดพอร์ตเราเตอร์ — เพราะเครื่องเป็นฝ่ายเชื่อมออก
+              </p>
+              <p className="text-sm text-muted-foreground mt-2">
+                เครื่องส่งไปที่ path ตายตัว <code>/iclock/*</code> จึงต้องมี
+                <strong> ตัวรับ ADMS สาธารณะ (relay)</strong> เปิดไว้ฟรี (Deno Deploy / Cloudflare Worker)
+                แล้ว forward เข้า Edge Function ของเรา
+              </p>
+            </div>
+
+            <div className="rounded-md border bg-muted/30 p-3 text-xs leading-relaxed font-mono">
+              [HIP CiF76S] → push /iclock/* → [Relay สาธารณะ] → forward → [facescan-adms] → ตารางลงเวลา
+            </div>
+
+            <div>
+              <h4 className="font-semibold mb-2">🛠 ขั้นตอน</h4>
+              <ol className="text-sm text-muted-foreground list-decimal pl-5 space-y-1.5">
+                <li>
+                  Deploy relay ฟรีที่{" "}
+                  <a href="https://dash.deno.com" target="_blank" rel="noreferrer" className="text-primary underline">
+                    dash.deno.com
+                  </a>{" "}
+                  → New Project → Deploy from playground → วางโค้ดด้านล่าง → Save &amp; Deploy
+                </li>
+                <li>จะได้โดเมนสาธารณะ เช่น <code>your-name.deno.dev</code> (ทดสอบเปิด <code>/health</code> ต้องเห็น OK)</li>
+                <li>เพิ่มเครื่องในแท็บ "เครื่องสแกน" เลือกโหมด <strong>ADMS Push</strong> แล้วกรอก <strong>Serial Number (SN)</strong> ให้ตรงกับเครื่องจริง</li>
+                <li>
+                  ที่ตัวเครื่อง: <strong>Comm → Cloud Server Setting (ADMS)</strong> →
+                  Server Address = โดเมน relay, Port = <strong>443</strong>, HTTPS = ON, Enable Domain Name = ON → <strong>Reboot</strong>
+                </li>
+                <li>ลองสแกน → record เข้าหน้าลงเวลาภายในไม่กี่วินาที (ดูแท็บ Sync Logs)</li>
+              </ol>
+            </div>
+
+            <div>
+              <h4 className="font-semibold mb-2">🔗 Edge Function Endpoint (relay จะ forward มาที่นี่)</h4>
+              <div className="font-mono text-xs bg-background border rounded p-2 break-all flex items-center justify-between gap-2">
+                <code>{ADMS_FN_URL}</code>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6 flex-shrink-0"
+                  onClick={() => copyToClipboard(ADMS_FN_URL)}
+                >
+                  <Copy className="w-3 h-3" />
+                </Button>
+              </div>
+            </div>
+
+            <div>
+              <h4 className="font-semibold mb-2">💻 โค้ด Relay (Deno Deploy)</h4>
+              <div className="relative">
+                <Textarea readOnly value={admsRelayScript} className="font-mono text-xs min-h-[360px]" />
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="absolute top-2 right-2"
+                  onClick={() => copyToClipboard(admsRelayScript)}
+                >
+                  <Copy className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+
+            <div className="rounded-md border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-700 dark:text-amber-400">
+              ⚠️ เมื่อเปิดโหมดส่งมาที่เรา เครื่องจะหยุดส่งข้อมูลไปยัง Cloud เดิม (HIP ส่งได้ปลายทางเดียว)
+            </div>
+          </Card>
+        </TabsContent>
+
+
         {/* DEVICES */}
         <TabsContent value="devices" className="space-y-3">
           <div className="flex justify-between items-center">
