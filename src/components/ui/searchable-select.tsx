@@ -138,6 +138,16 @@ const SearchableSelect = ({
                   }`}
                 >
                   <Check className={`w-4 h-4 shrink-0 ${opt.value === value ? "text-primary" : "text-transparent"}`} />
+                  {(opt.photoUrl || opt.firstName || opt.avatar) && (
+                    <EmployeeAvatar
+                      photoUrl={opt.photoUrl}
+                      avatar={opt.avatar}
+                      avatarColor={opt.avatarColor}
+                      avatarTextColor={opt.avatarTextColor}
+                      firstName={opt.firstName}
+                      size="sm"
+                    />
+                  )}
                   <div className="flex-1 min-w-0">
                     <span className="block truncate">{opt.label}</span>
                     {opt.subtitle && (
