@@ -245,8 +245,8 @@ async function handleCommand(cmd, deviceMap) {
     // คำสั่งอื่น (enroll_push / delete_user) — ยังไม่รองรับผ่าน ZK ในเวอร์ชันนี้
     await ack(cmd.id, "error", `คำสั่ง ${cmd.sync_type} ยังไม่รองรับใน Bridge เวอร์ชันนี้`);
   } catch (e) {
-    log(`[cmd] ${cmd.sync_type} ล้มเหลว:`, e.message);
-    await ack(cmd.id, "error", e.message);
+    log(`[cmd] ${cmd.sync_type} ล้มเหลว:`, errMessage(e));
+    await ack(cmd.id, "error", errMessage(e));
   }
 }
 
