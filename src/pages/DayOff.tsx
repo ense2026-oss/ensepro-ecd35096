@@ -343,7 +343,17 @@ const DayOff = () => {
                                 )}
                                 {canEdit && (
                                   <div className="pt-1.5 border-t mt-2 flex flex-col items-center gap-1.5">
-                                    {!hasOverride && (
+                                    {!hasOverride && status === "pattern" && (
+                                      <button
+                                        onClick={() => toggleOverride(emp.id, iso, status)}
+                                        className="flex items-center justify-center gap-2 w-full px-2 py-1 rounded-md text-sm font-semibold text-destructive hover:bg-destructive/10 transition-colors"
+                                        title="ยกเลิกหยุดประจำ"
+                                      >
+                                        <Trash2 className="w-5 h-5" />
+                                        ยกเลิกหยุดประจำ
+                                      </button>
+                                    )}
+                                    {!hasOverride && status !== "pattern" && (
                                       <button
                                         onClick={() => toggleOverride(emp.id, iso, status)}
                                         className="flex items-center justify-center gap-2 w-full text-sm font-semibold text-primary hover:underline"
