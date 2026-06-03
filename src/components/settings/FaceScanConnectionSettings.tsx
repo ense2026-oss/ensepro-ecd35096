@@ -774,24 +774,25 @@ Deno.serve(async (req) => {
             <div>
               <h4 className="font-semibold mb-2">📌 ภาพรวม</h4>
               <p className="text-sm text-muted-foreground">
-                เครื่อง HIP CiF76S ใช้ Windows DLL และอยู่บน Private LAN (192.168.x.x) ไม่สามารถเชื่อมต่อจากเว็บ cloud ได้โดยตรง
-                จึงต้องติดตั้ง <strong>Bridge Service</strong> บน PC Windows ที่อยู่ LAN เดียวกับเครื่องสแกน เพื่อทำหน้าที่:
+                เครื่อง HIP CiF76S อยู่บน Private LAN (192.168.x.x) เชื่อมจากเว็บ cloud ตรง ๆ ไม่ได้
+                จึงติดตั้ง <strong>Bridge</strong> (โปรแกรม Node.js เล็ก ๆ) บน PC ที่อยู่ LAN เดียวกับเครื่องสแกน
+                โดยใช้โปรโตคอล <strong>ZK มาตรฐานที่พอร์ต 4370</strong> — ไม่ต้องใช้ DLL ของ Windows. หน้าที่ของ Bridge:
               </p>
               <ul className="text-sm text-muted-foreground list-disc pl-5 mt-2 space-y-1">
-                <li>เรียก DLL เพื่อเชื่อมต่อเครื่อง (ConnectNet)</li>
-                <li>ดึง check-in/out logs (GetGeneralLogData) → POST ไปยัง <code>facescan-ingest</code></li>
-                <li>รับคำสั่ง enroll/delete ผู้ใช้จาก cloud → ส่งเข้าเครื่อง</li>
+                <li>เชื่อมต่อเครื่องผ่าน LAN (node-zklib) ที่ <code>device_ip:4370</code></li>
+                <li>ดึงรายการสแกนใหม่ → POST ไปยัง <code>facescan-ingest</code> (กัน cursor ไม่ให้ซ้ำ)</li>
+                <li>รับคำสั่ง test / pull จาก cloud แล้วรายงานผลกลับ (ack)</li>
               </ul>
             </div>
 
             <div>
               <h4 className="font-semibold mb-2">🛠 ขั้นตอนติดตั้ง</h4>
               <ol className="text-sm text-muted-foreground list-decimal pl-5 space-y-1.5">
-                <li>ติดตั้ง Node.js 18+ บน PC Windows ในออฟฟิศ</li>
-                <li>คัดลอก DLL ทั้ง 4 ไฟล์ (FK623Attend.dll, FKAttend.dll, FKViaDev.dll, FaceDataConv.dll) ไปที่โฟลเดอร์ service</li>
+                <li>ติดตั้ง Node.js 18+ บน PC ในออฟฟิศ (วง LAN เดียวกับเครื่อง)</li>
+                <li>คัดลอกโฟลเดอร์ <code>facescan-bridge/</code> จากโปรเจกต์ไปวางบน PC</li>
                 <li>สร้าง Bridge Token จากแท็บ "Bridge Token" และคัดลอกเก็บไว้</li>
-                <li>วางโค้ด <code>bridge-service.js</code> ด้านล่าง แล้วใส่ token ที่ได้</li>
-                <li>รัน <code>node bridge-service.js</code> หรือใช้ NSSM/Task Scheduler ให้รันอัตโนมัติ</li>
+                <li>รัน <code>npm install</code> แล้วคัดลอก <code>.env.example</code> เป็น <code>.env</code> ใส่ token</li>
+                <li>รัน <code>npm start</code> หรือใช้ pm2 / Task Scheduler ให้รันอัตโนมัติ</li>
               </ol>
             </div>
 
