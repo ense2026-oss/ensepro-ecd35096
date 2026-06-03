@@ -605,30 +605,34 @@ Deno.serve(async (req) => {
                     </div>
                   </div>
                   <div className="flex gap-1">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => testConnection(d)}
-                      disabled={testingDeviceId === d.id || !d.enabled}
-                      className="gap-1.5"
-                    >
-                      {testingDeviceId === d.id ? (
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      ) : (
-                        <Wifi className="w-3.5 h-3.5" />
-                      )}
-                      Test
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => pullLogs(d)}
-                      disabled={!d.enabled}
-                      className="gap-1.5"
-                    >
-                      <Download className="w-3.5 h-3.5" />
-                      Pull
-                    </Button>
+                    {d.connection_mode === "bridge" && (
+                      <>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => testConnection(d)}
+                          disabled={testingDeviceId === d.id || !d.enabled}
+                          className="gap-1.5"
+                        >
+                          {testingDeviceId === d.id ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <Wifi className="w-3.5 h-3.5" />
+                          )}
+                          Test
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => pullLogs(d)}
+                          disabled={!d.enabled}
+                          className="gap-1.5"
+                        >
+                          <Download className="w-3.5 h-3.5" />
+                          Pull
+                        </Button>
+                      </>
+                    )}
                     <Button variant="ghost" size="icon" onClick={() => openEditDevice(d)}>
                       <Pencil className="w-4 h-4" />
                     </Button>
