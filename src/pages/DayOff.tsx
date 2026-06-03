@@ -449,7 +449,7 @@ const EmployeeDetailView = ({ employees, patterns, overrides, selectedEmpId, set
 
   const empOptions = employees
     .filter((e: any) => e.status === "active")
-    .map((e: any) => ({ value: e.id, label: `${e.prefix}${e.firstName} ${e.lastName}${e.nickname ? ` (${e.nickname})` : ""}`, subtitle: e.dept }));
+    .map((e: any) => ({ value: e.id, label: `${e.prefix}${e.firstName} ${e.lastName}${e.nickname ? ` (${e.nickname})` : ""}`, subtitle: e.dept, photoUrl: e.photoUrl, avatar: e.avatar, avatarColor: e.avatarColor, avatarTextColor: e.avatarTextColor, firstName: e.firstName }));
 
   const empPatterns = patterns.filter((p: Pattern) => p.employee_id === selectedEmpId);
   const empOverrides = overrides.filter((o: Override) => o.employee_id === selectedEmpId).sort((a: Override, b: Override) => b.date.localeCompare(a.date));
