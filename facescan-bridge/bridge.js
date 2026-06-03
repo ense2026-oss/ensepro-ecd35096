@@ -23,6 +23,7 @@ const BRIDGE_TOKEN = process.env.BRIDGE_TOKEN;
 const FN_BASE = (process.env.FN_BASE || "").replace(/\/+$/, "");
 const DEVICE_PORT = parseInt(process.env.DEVICE_PORT || "4370", 10); // พอร์ต ZK มาตรฐาน
 const ZK_TIMEOUT = parseInt(process.env.ZK_TIMEOUT_MS || "10000", 10);
+const ZK_INPORT = parseInt(process.env.ZK_INPORT || "4000", 10); // พอร์ต UDP ฝั่ง local (node-zklib)
 const DEFAULT_POLL_SECONDS = parseInt(process.env.POLL_SECONDS || "30", 10);
 
 if (!BRIDGE_TOKEN || !FN_BASE) {
