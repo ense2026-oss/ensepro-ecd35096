@@ -61,6 +61,37 @@ function log(...args) {
   console.log(`[${new Date().toISOString()}]`, ...args);
 }
 
+// ดึงข้อความ error จริงจาก node-zklib (ZKError ตัวมันเองไม่มี .message)
+function errMessage(e) {
+  if (!e) return "unknown error";
+  if (typeof e === "string") return e;
+  if (e.message) return e.message;
+  if (e.err) {
+    if (e.err.message) return e.err.message + (e.err.code ? ` (${e.err.code})` : "");
+    if (typeof e.err === "string") return e.err;
+  }
+  if (e.code) return String(e.code);
+  try {
+    return JSON.stringify(e);
+  } catch {
+    return String(e);
+  }
+}
+
+// สร้าง ZK instance พร้อม callback จับ socket error/close
+function makeZk(ip) {
+  return new ZKLib(ip, DEVICE_PORT, ZK_TIMEOUT, ZK_INPORT);
+}
+
+async function openZk(ip) {
+  const zk = makeZk(ip);
+  await zk.createSocket(
+    (err) => log(`[zk] socket error (${ip}):`, errMessage(err)),
+    () => {}
+  );
+  return zk;
+}
+
 const headers = {
   "Content-Type": "application/json",
   "x-bridge-token": BRIDGE_TOKEN,
