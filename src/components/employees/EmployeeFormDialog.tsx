@@ -86,6 +86,7 @@ const SectionLabel = ({ children }: { children: React.ReactNode }) => (
 const EmployeeFormDialog = ({ open, onOpenChange, employee, onSave }: EmployeeFormDialogProps) => {
   const isEdit = !!employee;
   const { affiliations, affiliationNames, allPositions } = useOrg();
+  const ROLE_OPTIONS = useRoleOptions();
   const [form, setForm] = useState<Omit<Employee, "id" | "education" | "workHistory">>(EMPTY);
   const [errors, setErrors] = useState<string[]>([]);
   const photoInputRef = useRef<HTMLInputElement>(null);
