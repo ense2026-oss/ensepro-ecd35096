@@ -20,7 +20,7 @@ import CompanyHolidaysSettings from "@/components/settings/CompanyHolidaysSettin
 
 const ALL_TABS = [
   { id: "company", label: "ข้อมูลบริษัท", icon: Building2 },
-  { id: "affiliations", label: "จัดการสังกัด", icon: Network },
+  { id: "affiliations", label: "จัดการแผนก", icon: Network },
   { id: "locations", label: "พื้นที่เข้างาน", icon: MapPin, requireModule: "check-in" },
   { id: "roles", label: "สิทธิ์ผู้ใช้งาน", icon: Shield },
   { id: "admins", label: "ผู้ดูแลระบบ", icon: ShieldCheck },
