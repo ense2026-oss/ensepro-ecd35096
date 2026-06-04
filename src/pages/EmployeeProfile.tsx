@@ -95,14 +95,6 @@ const STATUS_OPTIONS: SelectOption[] = [
   { value: "leave", label: "ลาพัก" },
   { value: "inactive", label: "พ้นสภาพ" },
 ];
-const ROLE_OPTIONS: SelectOption[] = [
-  { value: "Executive", label: "ผู้บริหาร" },
-  { value: "Manager", label: "ผู้จัดการ" },
-  { value: "Admin", label: "ผู้ดูแลระบบ" },
-  { value: "HR", label: "ฝ่ายบุคคล" },
-  { value: "Accountant", label: "ฝ่ายบัญชี" },
-  { value: "Employee", label: "พนักงาน" },
-];
 
 /* ───────────────────── Main Component ───────────────────── */
 const EmployeeProfile = () => {
