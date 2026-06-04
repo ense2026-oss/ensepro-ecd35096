@@ -4,6 +4,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Save, X, ScanFace, Upload, Camera } from "lucide-react";
 import type { Employee } from "@/contexts/EmployeeContext";
 import { useOrg } from "@/contexts/OrgContext";
+import { useRoleOptions } from "@/hooks/useRoleOptions";
 import { processFileUpload } from "@/utils/fileCompression";
 
 interface EmployeeFormDialogProps {
@@ -67,14 +68,6 @@ const STATUS_OPTIONS: SelectOption[] = [
   { value: "leave", label: "ลาพัก" },
   { value: "inactive", label: "พ้นสภาพ" },
 ];
-const ROLE_OPTIONS: SelectOption[] = [
-  { value: "Executive", label: "ผู้บริหาร" },
-  { value: "Manager", label: "ผู้จัดการ" },
-  { value: "Admin", label: "ผู้ดูแลระบบ" },
-  { value: "HR", label: "ฝ่ายบุคคล" },
-  { value: "Accountant", label: "ฝ่ายบัญชี" },
-  { value: "Employee", label: "พนักงาน" },
-];
 
 const TextAreaField = ({ label, value, onChange, rows = 2 }: {
   label: string; value: string; onChange: (v: string) => void; rows?: number;
@@ -94,6 +87,7 @@ const SectionLabel = ({ children }: { children: React.ReactNode }) => (
 const EmployeeFormDialog = ({ open, onOpenChange, employee, onSave }: EmployeeFormDialogProps) => {
   const isEdit = !!employee;
   const { affiliations, affiliationNames, allPositions } = useOrg();
+  const ROLE_OPTIONS = useRoleOptions();
   const [form, setForm] = useState<Omit<Employee, "id" | "education" | "workHistory">>(EMPTY);
   const [errors, setErrors] = useState<string[]>([]);
   const photoInputRef = useRef<HTMLInputElement>(null);

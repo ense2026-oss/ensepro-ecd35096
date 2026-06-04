@@ -11,6 +11,7 @@ import { ThaiDatePicker } from "@/components/ui/thai-date-picker";
 import { useEmployees } from "@/contexts/EmployeeContext";
 import { useOrg, type Position } from "@/contexts/OrgContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { useRoleOptions } from "@/hooks/useRoleOptions";
 import { toast } from "sonner";
 import { TaxDeduction, DEFAULT_TAX_DEDUCTION, calculateTotalDeductions, calculateAnnualIncome, calculateExpenseDeduction, calculateProgressiveTax, formatCurrency } from "@/utils/taxCalculation";
 import { processFileUpload } from "@/utils/fileCompression";
@@ -95,14 +96,6 @@ const STATUS_OPTIONS: SelectOption[] = [
   { value: "leave", label: "ลาพัก" },
   { value: "inactive", label: "พ้นสภาพ" },
 ];
-const ROLE_OPTIONS: SelectOption[] = [
-  { value: "Executive", label: "ผู้บริหาร" },
-  { value: "Manager", label: "ผู้จัดการ" },
-  { value: "Admin", label: "ผู้ดูแลระบบ" },
-  { value: "HR", label: "ฝ่ายบุคคล" },
-  { value: "Accountant", label: "ฝ่ายบัญชี" },
-  { value: "Employee", label: "พนักงาน" },
-];
 
 /* ───────────────────── Main Component ───────────────────── */
 const EmployeeProfile = () => {
@@ -111,6 +104,7 @@ const EmployeeProfile = () => {
   const { getEmployeeById, updateEmployee } = useEmployees();
   const { currentUser } = useAuth();
   const { affiliations, orgLevelsFlat } = useOrg();
+  const ROLE_OPTIONS = useRoleOptions();
   const canEditRestricted = currentUser?.role === "Admin" || currentUser?.role === "HR" || currentUser?.role === "Executive";
 
   // Fetch org levels assigned to this employee
