@@ -27,7 +27,6 @@ const ALL_TABS = [
   { id: "shifts", label: "กะการทำงาน", icon: Clock },
   { id: "payroll", label: "ตั้งค่าเงินเดือน", icon: Banknote },
   { id: "modules", label: "ตั้งค่าโมดูล", icon: ToggleRight },
-  { id: "contracts", label: "สัญญาจ้าง", icon: FileSignature },
   { id: "leave-types", label: "ประเภทการลา", icon: Calendar },
   { id: "company-holidays", label: "วันหยุดบริษัท", icon: CalendarDays },
   { id: "approval", label: "ระบบอนุมัติ", icon: Workflow },
