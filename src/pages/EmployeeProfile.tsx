@@ -336,7 +336,7 @@ const EmployeeProfile = () => {
           <SelectField label="ตำแหน่ง" value={emp.position} onChange={set("position")} options={["", ...positionOptions(emp.dept)]} />
           <SelectField label="ประเภทพนักงาน" value={emp.employeeType} onChange={set("employeeType")} options={["พนักงานประจำ", "พนักงานชั่วคราว", "พนักงานทดลองงาน"]} />
           <DatePickerField label="วันที่เริ่มงาน" value={emp.startDate} onChange={set("startDate")} />
-          <SelectField label="กะการทำงาน" value={emp.shift} onChange={set("shift")} options={["กะเช้า 08:00-17:00", "กะบ่าย 12:00-21:00", "กะดึก 00:00-08:00"]} />
+          
           <InputField label="Face Scan ID" value={emp.faceScanId} onChange={set("faceScanId")} />
           <InputField label="เงินเดือน (บาท)" value={emp.salary} onChange={set("salary")} type="number" />
           <SelectField label="สถานะ" value={emp.status} onChange={set("status")} options={STATUS_OPTIONS} />
