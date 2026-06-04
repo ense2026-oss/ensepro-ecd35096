@@ -452,6 +452,12 @@ export const EmployeeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   }, [fetchEmployees]);
 
   const deleteEmployee = useCallback(async (id: string) => {
+    // Protect the primary admin account from deletion regardless of role
+    const target = employees.find((e) => e.id === id);
+    if (target && (target.email || "").toLowerCase() === "ense2026@gmail.com") {
+      throw new Error("ไม่สามารถลบบัญชีผู้ดูแลระบบหลักนี้ได้");
+    }
+
     // Cleanup auth account before deleting employee record
     try {
       await supabase.functions.invoke("sync-employee-role", {
