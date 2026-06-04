@@ -32,20 +32,20 @@ const AffiliationSettings = () => {
   const openEditAff = (aff: { id: string; name: string; parent_org_level_id?: string | null }) => { setEditingAffId(aff.id); setAffForm({ name: aff.name, parentOrgLevelId: aff.parent_org_level_id || "" }); setAffDialogOpen(true); };
 
   const handleSaveAff = async () => {
-    if (!affForm.name.trim()) { toast({ title: "กรุณากรอกชื่อสังกัด", variant: "destructive" }); return; }
+    if (!affForm.name.trim()) { toast({ title: "กรุณากรอกชื่อแผนก", variant: "destructive" }); return; }
     setSaving(true);
     try {
       if (editingAffId) {
         await updateAffiliation(editingAffId, affForm.name, affForm.parentOrgLevelId || null);
-        toast({ title: "แก้ไขสังกัดสำเร็จ", description: affForm.name });
+        toast({ title: "แก้ไขแผนกสำเร็จ", description: affForm.name });
       } else {
         await addAffiliation(affForm.name, affForm.parentOrgLevelId || null);
-        toast({ title: "เพิ่มสังกัดสำเร็จ", description: affForm.name });
+        toast({ title: "เพิ่มแผนกสำเร็จ", description: affForm.name });
       }
       setAffDialogOpen(false);
     } catch (error) {
-      const message = error instanceof Error ? error.message : "ไม่สามารถบันทึกสังกัดได้";
-      toast({ title: "บันทึกสังกัดไม่สำเร็จ", description: message, variant: "destructive" });
+      const message = error instanceof Error ? error.message : "ไม่สามารถบันทึกแผนกได้";
+      toast({ title: "บันทึกแผนกไม่สำเร็จ", description: message, variant: "destructive" });
     } finally {
       setSaving(false);
     }
@@ -56,11 +56,11 @@ const AffiliationSettings = () => {
     const aff = affiliations.find((a) => a.id === deleteAffId);
     try {
       await deleteAffiliation(deleteAffId);
-      toast({ title: "ลบสังกัดสำเร็จ", description: aff?.name });
+      toast({ title: "ลบแผนกสำเร็จ", description: aff?.name });
       setDeleteAffId(null);
     } catch (error) {
-      const message = error instanceof Error ? error.message : "ไม่สามารถลบสังกัดได้";
-      toast({ title: "ลบสังกัดไม่สำเร็จ", description: message, variant: "destructive" });
+      const message = error instanceof Error ? error.message : "ไม่สามารถลบแผนกได้";
+      toast({ title: "ลบแผนกไม่สำเร็จ", description: message, variant: "destructive" });
     }
   };
 
