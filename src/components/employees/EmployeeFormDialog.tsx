@@ -4,6 +4,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Save, X, ScanFace, Upload, Camera } from "lucide-react";
 import type { Employee } from "@/contexts/EmployeeContext";
 import { useOrg } from "@/contexts/OrgContext";
+import { useRoleOptions } from "@/hooks/useRoleOptions";
 import { processFileUpload } from "@/utils/fileCompression";
 
 interface EmployeeFormDialogProps {
