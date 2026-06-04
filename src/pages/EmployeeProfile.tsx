@@ -111,7 +111,7 @@ const EmployeeProfile = () => {
   const { getEmployeeById, updateEmployee } = useEmployees();
   const { currentUser } = useAuth();
   const { affiliations, orgLevelsFlat } = useOrg();
-  const canEditRestricted = currentUser?.role === "Admin" || currentUser?.role === "HR";
+  const canEditRestricted = currentUser?.role === "Admin" || currentUser?.role === "HR" || currentUser?.role === "Executive";
 
   // Fetch org levels assigned to this employee
   const [employeeOrgLevels, setEmployeeOrgLevels] = useState<string[]>([]);
