@@ -129,9 +129,17 @@ Deno.serve(async (req) => {
 
       const { data: emp } = await supabaseAdmin
         .from("employees")
-        .select("user_id")
+        .select("user_id, email")
         .eq("id", employeeId)
         .single();
+
+      // Protect the primary admin account from deletion regardless of role
+      if (emp?.email && emp.email.toLowerCase() === "ense2026@gmail.com") {
+        return new Response(JSON.stringify({ error: "ไม่สามารถลบบัญชีผู้ดูแลระบบหลักนี้ได้" }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
 
       if (emp?.user_id) {
         await supabaseAdmin.from("user_roles").delete().eq("user_id", emp.user_id);
