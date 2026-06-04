@@ -470,7 +470,7 @@ export const EmployeeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const { error } = await supabase.from("employees").delete().eq("id", id);
     if (error) { console.error("Delete employee error:", error); throw error; }
     await fetchEmployees();
-  }, [fetchEmployees]);
+  }, [fetchEmployees, employees]);
 
   const getEmployeeById = useCallback(
     (id: string) => employees.find((e) => e.id === id),
