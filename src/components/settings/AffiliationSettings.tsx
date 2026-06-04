@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "@/hooks/use-toast";
 import { useOrg } from "@/contexts/OrgContext";
+import PositionCombobox from "@/components/ui/position-combobox";
 
 const AffiliationSettings = () => {
   const { affiliations, addAffiliation, updateAffiliation, deleteAffiliation, addPosition, updatePosition, deletePosition, orgLevelsFlat } = useOrg();
