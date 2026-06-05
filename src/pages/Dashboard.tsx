@@ -797,21 +797,6 @@ const Dashboard = () => {
               })
             )}
           </div>
-
-          <div className="mt-5 p-4 rounded-xl" style={{ background: "hsl(var(--muted))" }}>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-semibold">OT สะสมเดือนนี้</p>
-                <p className="text-xs text-muted-foreground mt-0.5">{scopeLabel}</p>
-              </div>
-              <div className="text-right">
-                {loading ? <Skeleton className="h-8 w-12" /> : (
-                  <p className="text-2xl font-bold font-display" style={{ color: "#FF870F" }}>{monthOtHours}</p>
-                )}
-                <p className="text-xs text-muted-foreground">ชั่วโมง</p>
-              </div>
-            </div>
-          </div>
         </div>
 
         {/* Holidays */}
