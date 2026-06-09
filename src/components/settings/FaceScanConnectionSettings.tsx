@@ -510,6 +510,18 @@ Deno.serve(async (req) => {
               [HIP CiF76S] → push /iclock/* → [Relay สาธารณะ] → forward → [facescan-adms] → ตารางลงเวลา
             </div>
 
+            <div className="rounded-md border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-700 dark:text-red-400 space-y-1">
+              <p className="font-semibold">❗ สิ่งที่มักเข้าใจผิด</p>
+              <p>
+                <strong>ห้าม</strong> นำ URL ของ Edge Function (ลงท้าย <code>/functions/v1/facescan-adms</code>) ไปกรอกในเครื่องสแกนโดยตรง —
+                เครื่องจะยิงไป path <code>/iclock/*</code> เสมอ จึง <strong>ใช้ไม่ได้</strong>
+              </p>
+              <p>
+                ต้อง deploy <strong>Relay</strong> ก่อน แล้วนำ "โดเมนของ relay" (เช่น <code>xxxx.deno.dev</code>) ไปกรอกในเครื่อง
+              </p>
+            </div>
+
+
             <div>
               <h4 className="font-semibold mb-2">🛠 ขั้นตอน</h4>
               <ol className="text-sm text-muted-foreground list-decimal pl-5 space-y-1.5">
