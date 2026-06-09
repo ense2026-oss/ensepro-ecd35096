@@ -96,6 +96,21 @@ Deno.serve(async (req) => {
 
     // ---- GET /cdata : handshake / config ----
     if (action === "cdata" && req.method === "GET") {
+      // Record a successful handshake so the user can confirm in Sync Logs that
+      // the device is talking to us (even before any punch is scanned).
+      try {
+        await supabaseAdmin.from("face_scan_sync_logs").insert({
+          device_id: device.id,
+          sync_type: "adms_handshake",
+          status: "success",
+          records_synced: 0,
+          message: `เครื่อง "${device.name}" (SN=${sn}) เชื่อมต่อสำเร็จ (handshake) — พร้อมรับข้อมูลการสแกน`,
+          command_payload: {},
+          finished_at: new Date().toISOString(),
+        });
+      } catch (_e) {
+        // best-effort diagnostics only
+      }
       const config = [
         `GET OPTION FROM: ${sn}`,
         "ATTLOGStamp=None",
