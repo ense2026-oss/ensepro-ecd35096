@@ -510,6 +510,18 @@ Deno.serve(async (req) => {
               [HIP CiF76S] → push /iclock/* → [Relay สาธารณะ] → forward → [facescan-adms] → ตารางลงเวลา
             </div>
 
+            <div className="rounded-md border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-700 dark:text-red-400 space-y-1">
+              <p className="font-semibold">❗ สิ่งที่มักเข้าใจผิด</p>
+              <p>
+                <strong>ห้าม</strong> นำ URL ของ Edge Function (ลงท้าย <code>/functions/v1/facescan-adms</code>) ไปกรอกในเครื่องสแกนโดยตรง —
+                เครื่องจะยิงไป path <code>/iclock/*</code> เสมอ จึง <strong>ใช้ไม่ได้</strong>
+              </p>
+              <p>
+                ต้อง deploy <strong>Relay</strong> ก่อน แล้วนำ "โดเมนของ relay" (เช่น <code>xxxx.deno.dev</code>) ไปกรอกในเครื่อง
+              </p>
+            </div>
+
+
             <div>
               <h4 className="font-semibold mb-2">🛠 ขั้นตอน</h4>
               <ol className="text-sm text-muted-foreground list-decimal pl-5 space-y-1.5">
@@ -531,7 +543,10 @@ Deno.serve(async (req) => {
             </div>
 
             <div>
-              <h4 className="font-semibold mb-2">🔗 Edge Function Endpoint (relay จะ forward มาที่นี่)</h4>
+              <h4 className="font-semibold mb-2">🔗 Edge Function Endpoint (ปลายทางที่ relay forward มา — ไม่ใช่ค่าที่กรอกในเครื่อง)</h4>
+              <p className="text-xs text-muted-foreground mb-2">
+                URL นี้ถูกฝังในโค้ด relay ด้านล่างอยู่แล้ว โดยปกติไม่ต้องแตะต้อง — แสดงไว้เพื่ออ้างอิงเท่านั้น
+              </p>
               <div className="font-mono text-xs bg-background border rounded p-2 break-all flex items-center justify-between gap-2">
                 <code>{ADMS_FN_URL}</code>
                 <Button
@@ -544,6 +559,7 @@ Deno.serve(async (req) => {
                 </Button>
               </div>
             </div>
+
 
             <div>
               <h4 className="font-semibold mb-2">💻 โค้ด Relay (Deno Deploy)</h4>

@@ -66,8 +66,25 @@ Deno.serve(async (req) => {
 
     if (!device || !device.enabled) {
       // Unknown / disabled SN. Still reply 200 so the device doesn't error-loop,
-      // but record nothing.
+      // but record a diagnostic log so the user can SEE that a device reached us
+      // even though its SN didn't match an enabled ADMS device.
       console.warn("facescan-adms: unknown or disabled SN", sn, "action", action);
+      const reason = !device
+        ? `เครื่องส่งข้อมูลเข้ามาแล้ว แต่ไม่พบ SN นี้ในระบบ (SN="${sn || "ว่าง"}") — ตรวจ Serial Number ให้ตรงกับเครื่องในแท็บ "เครื่องสแกน"`
+        : `เครื่อง SN="${sn}" ส่งข้อมูลเข้ามา แต่ถูกตั้งค่าเป็น "ปิดใช้" — เปิดใช้งานเครื่องก่อน`;
+      try {
+        await supabaseAdmin.from("face_scan_sync_logs").insert({
+          device_id: device?.id ?? null,
+          sync_type: "adms_handshake",
+          status: "error",
+          records_synced: 0,
+          message: `[${req.method} /${action}] ${reason}`,
+          command_payload: {},
+          finished_at: new Date().toISOString(),
+        });
+      } catch (_e) {
+        // best-effort diagnostics only
+      }
       return ok();
     }
 
@@ -79,6 +96,21 @@ Deno.serve(async (req) => {
 
     // ---- GET /cdata : handshake / config ----
     if (action === "cdata" && req.method === "GET") {
+      // Record a successful handshake so the user can confirm in Sync Logs that
+      // the device is talking to us (even before any punch is scanned).
+      try {
+        await supabaseAdmin.from("face_scan_sync_logs").insert({
+          device_id: device.id,
+          sync_type: "adms_handshake",
+          status: "success",
+          records_synced: 0,
+          message: `เครื่อง "${device.name}" (SN=${sn}) เชื่อมต่อสำเร็จ (handshake) — พร้อมรับข้อมูลการสแกน`,
+          command_payload: {},
+          finished_at: new Date().toISOString(),
+        });
+      } catch (_e) {
+        // best-effort diagnostics only
+      }
       const config = [
         `GET OPTION FROM: ${sn}`,
         "ATTLOGStamp=None",
