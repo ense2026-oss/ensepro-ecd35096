@@ -53,7 +53,7 @@ Deno.serve(async (req) => {
       .select("role")
       .eq("user_id", userId);
     const isAuthorized = (roles ?? []).some(
-      (r: any) => r.role === "admin" || r.role === "hr"
+      (r: any) => r.role === "admin" || r.role === "hr" || r.role === "executive"
     );
     if (!isAuthorized) {
       return new Response(JSON.stringify({ error: "Forbidden" }), {
