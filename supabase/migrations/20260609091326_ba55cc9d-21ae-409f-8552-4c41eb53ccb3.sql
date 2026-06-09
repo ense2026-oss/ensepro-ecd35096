@@ -1,0 +1,1 @@
+DELETE FROM public.face_scan_sync_logs WHERE sync_type = 'adms_handshake'; UPDATE public.face_scan_devices SET adms_last_seen = NULL, last_status = 'error' WHERE serial_number = 'C2637C580F253D37';
