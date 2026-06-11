@@ -14,6 +14,7 @@ import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { usePermissions } from "@/contexts/PermissionsContext";
 import type { RolePermission, ModuleKey, ActionKey, Scope } from "@/contexts/PermissionsContext";
+import { SETTINGS_SUBMODULES } from "@/lib/settingsModules";
 
 // --- Module config ---
 interface ModuleConfig {
@@ -36,7 +37,13 @@ const moduleConfigs: ModuleConfig[] = [
   { key: "reports" as ModuleKey, label: "ระบบรายงาน", actions: ["view"], hasScope: true },
   { key: "contracts" as ModuleKey, label: "ระบบสัญญาจ้าง", actions: ["view", "add", "edit", "delete", "approve"], hasScope: true },
   { key: "notifications" as ModuleKey, label: "ระบบแจ้งเตือน", actions: ["view", "delete"], hasScope: false },
-  { key: "settings" as ModuleKey, label: "การตั้งค่าระบบ", actions: ["view", "add", "edit", "delete"], hasScope: false },
+  
+  ...SETTINGS_SUBMODULES.map((m) => ({
+    key: m.key as ModuleKey,
+    label: `ตั้งค่า · ${m.label}`,
+    actions: ["view", "edit"] as ActionKey[],
+    hasScope: true,
+  })),
 ];
 
 const actionLabels: Record<ActionKey, string> = {

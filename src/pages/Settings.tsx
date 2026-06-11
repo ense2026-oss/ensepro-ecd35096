@@ -2,6 +2,10 @@ import { useState, useEffect } from "react";
 import { Building2, MapPin, Shield, Clock, Calendar, Workflow, ScanFace, Palette, Banknote, FileSignature, ToggleRight, ChevronRight, Network, Wifi, CalendarDays, ShieldCheck } from "lucide-react";
 import { useModuleSettings } from "@/hooks/useModuleSettings";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { Lock } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { usePermissions } from "@/contexts/PermissionsContext";
+import { SETTINGS_TAB_TO_MODULE } from "@/lib/settingsModules";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import LocationsSettings from "@/components/settings/LocationsSettings";
 import RolesSettings from "@/components/settings/RolesSettings";
@@ -43,13 +47,22 @@ const Settings = () => {
   const isMobile = useIsMobile();
 
   const { modules: moduleSettings } = useModuleSettings();
+  const { role } = useAuth();
+  const { canAction, loading: permsLoading } = usePermissions();
 
   const tabs = ALL_TABS.filter((tab) => {
     if ('requireModule' in tab && tab.requireModule) {
-      return moduleSettings[tab.requireModule] !== false;
+      if (moduleSettings[tab.requireModule] === false) return false;
     }
+    // Per-tab view permission (allow while permissions still loading)
+    const mod = SETTINGS_TAB_TO_MODULE[tab.id];
+    if (mod && !permsLoading && !canAction(role, mod, "view")) return false;
     return true;
   });
+
+  const activeModule = SETTINGS_TAB_TO_MODULE[activeTab];
+  const canEditActiveTab = !activeModule || canAction(role, activeModule, "edit");
+
 
   // If active tab got hidden, switch to first available
   useEffect(() => {
@@ -171,8 +184,18 @@ const Settings = () => {
 
         {/* Content */}
         <div className="flex-1 card-base p-5 min-w-0">
-          {renderContent()}
+          {!canEditActiveTab && (
+            <div className="flex items-center gap-2 mb-4 px-3 py-2.5 rounded-xl text-sm bg-muted/50 text-muted-foreground border border-dashed" style={{ borderColor: "hsl(var(--border))" }}>
+              <Lock className="w-4 h-4 flex-shrink-0" />
+              <span>คุณมีสิทธิ์ <span className="font-semibold">ดูอย่างเดียว</span> ในแท็บนี้ — ไม่สามารถแก้ไขได้</span>
+            </div>
+          )}
+          <fieldset disabled={!canEditActiveTab} className={`min-w-0 w-full border-0 p-0 m-0${!canEditActiveTab ? " opacity-90" : ""}`}>
+            {renderContent()}
+          </fieldset>
+
         </div>
+
       </div>
     </div>
   );
