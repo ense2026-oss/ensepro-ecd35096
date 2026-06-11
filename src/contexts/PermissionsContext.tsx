@@ -3,7 +3,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 
 // Types
-export type ModuleKey = "leave" | "ot" | "attendance" | "check-in" | "employee" | "organization" | "shiftManagement" | "day_off" | "payroll" | "reports" | "settings" | "contracts" | "notifications";
+export type SettingsModuleKey =
+  | "settings_company" | "settings_affiliations" | "settings_locations" | "settings_roles"
+  | "settings_admins" | "settings_shifts" | "settings_payroll" | "settings_modules"
+  | "settings_leave_types" | "settings_company_holidays" | "settings_approval"
+  | "settings_facescan" | "settings_display";
+
+export type ModuleKey = "leave" | "ot" | "attendance" | "check-in" | "employee" | "organization" | "shiftManagement" | "day_off" | "payroll" | "reports" | "settings" | "contracts" | "notifications" | SettingsModuleKey;
 export type ActionKey = "view" | "add" | "edit" | "delete" | "approve";
 export type Scope = "self" | "department" | "all";
 
