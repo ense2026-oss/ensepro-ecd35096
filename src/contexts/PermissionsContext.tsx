@@ -112,14 +112,22 @@ export const PermissionsProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const canAccessRoute = useCallback((role: string, path: string): boolean => {
     const normalized = "/" + path.split("/")[1];
     if (alwaysAccessible.includes(normalized)) return true;
-    const mod = routeToModule[normalized];
-    if (!mod) return true; // unknown routes accessible by default
     // Permissions not loaded yet: allow to avoid false lockout during initial fetch
     if (permissions.length === 0) return true;
+    // Settings page: accessible if ANY settings sub-tab is viewable for this role
+    if (normalized === "/settings") {
+      const r = role.toLowerCase();
+      return permissions.some(
+        (p) => p.role_name === r && p.module.startsWith("settings_") && p.can_view
+      );
+    }
+    const mod = routeToModule[normalized];
+    if (!mod) return true; // unknown routes accessible by default
     const perm = permissions.find((p) => p.role_name === role.toLowerCase() && p.module === mod);
     if (!perm) return false; // no permission record for a known module = deny access
     return perm.can_view;
   }, [permissions]);
+
 
   const canAction = useCallback((role: string, module: string, action: ActionKey): boolean => {
     const perm = permissions.find((p) => p.role_name === role.toLowerCase() && p.module === module);
