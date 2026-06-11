@@ -37,7 +37,7 @@ const moduleConfigs: ModuleConfig[] = [
   { key: "reports" as ModuleKey, label: "ระบบรายงาน", actions: ["view"], hasScope: true },
   { key: "contracts" as ModuleKey, label: "ระบบสัญญาจ้าง", actions: ["view", "add", "edit", "delete", "approve"], hasScope: true },
   { key: "notifications" as ModuleKey, label: "ระบบแจ้งเตือน", actions: ["view", "delete"], hasScope: false },
-  { key: "settings" as ModuleKey, label: "การตั้งค่าระบบ (ทั่วไป)", actions: ["view"], hasScope: false },
+  
   ...SETTINGS_SUBMODULES.map((m) => ({
     key: m.key as ModuleKey,
     label: `ตั้งค่า · ${m.label}`,
