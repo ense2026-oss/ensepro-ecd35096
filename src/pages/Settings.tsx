@@ -190,9 +190,10 @@ const Settings = () => {
               <span>คุณมีสิทธิ์ <span className="font-semibold">ดูอย่างเดียว</span> ในแท็บนี้ — ไม่สามารถแก้ไขได้</span>
             </div>
           )}
-          <fieldset disabled={!canEditActiveTab} className={!canEditActiveTab ? "opacity-90" : undefined}>
+          <fieldset disabled={!canEditActiveTab} className={`min-w-0 w-full border-0 p-0 m-0${!canEditActiveTab ? " opacity-90" : ""}`}>
             {renderContent()}
           </fieldset>
+
         </div>
 
       </div>
