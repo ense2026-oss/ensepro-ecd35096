@@ -17,8 +17,8 @@ interface TopbarProps {
 const Topbar = ({ onMenuToggle, pageTitle = "Dashboard", pageSubtitle = "ภาพรวมระบบ HR" }: TopbarProps) => {
   const navigate = useNavigate();
   const { currentUser, role, logout } = useAuth();
-  const { canAction } = usePermissions();
-  const canAccessSettings = canAction(role, 'settings', 'view');
+  const { canAction, canAccessRoute } = usePermissions();
+  const canAccessSettings = canAccessRoute(role, '/settings');
   const { setNotificationCount } = usePendingCounts();
   const [showProfile, setShowProfile] = useState(false);
   const [showNotif, setShowNotif] = useState(false);
