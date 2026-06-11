@@ -14,6 +14,7 @@ import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { usePermissions } from "@/contexts/PermissionsContext";
 import type { RolePermission, ModuleKey, ActionKey, Scope } from "@/contexts/PermissionsContext";
+import { SETTINGS_SUBMODULES } from "@/lib/settingsModules";
 
 // --- Module config ---
 interface ModuleConfig {
