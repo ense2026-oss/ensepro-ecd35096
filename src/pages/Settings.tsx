@@ -47,13 +47,22 @@ const Settings = () => {
   const isMobile = useIsMobile();
 
   const { modules: moduleSettings } = useModuleSettings();
+  const { role } = useAuth();
+  const { canAction, loading: permsLoading } = usePermissions();
 
   const tabs = ALL_TABS.filter((tab) => {
     if ('requireModule' in tab && tab.requireModule) {
-      return moduleSettings[tab.requireModule] !== false;
+      if (moduleSettings[tab.requireModule] === false) return false;
     }
+    // Per-tab view permission (allow while permissions still loading)
+    const mod = SETTINGS_TAB_TO_MODULE[tab.id];
+    if (mod && !permsLoading && !canAction(role, mod, "view")) return false;
     return true;
   });
+
+  const activeModule = SETTINGS_TAB_TO_MODULE[activeTab];
+  const canEditActiveTab = !activeModule || canAction(role, activeModule, "edit");
+
 
   // If active tab got hidden, switch to first available
   useEffect(() => {
