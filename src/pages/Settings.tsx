@@ -184,8 +184,17 @@ const Settings = () => {
 
         {/* Content */}
         <div className="flex-1 card-base p-5 min-w-0">
-          {renderContent()}
+          {!canEditActiveTab && (
+            <div className="flex items-center gap-2 mb-4 px-3 py-2.5 rounded-xl text-sm bg-muted/50 text-muted-foreground border border-dashed" style={{ borderColor: "hsl(var(--border))" }}>
+              <Lock className="w-4 h-4 flex-shrink-0" />
+              <span>คุณมีสิทธิ์ <span className="font-semibold">ดูอย่างเดียว</span> ในแท็บนี้ — ไม่สามารถแก้ไขได้</span>
+            </div>
+          )}
+          <fieldset disabled={!canEditActiveTab} className={!canEditActiveTab ? "opacity-90" : undefined}>
+            {renderContent()}
+          </fieldset>
         </div>
+
       </div>
     </div>
   );
