@@ -361,7 +361,7 @@ const RolesSettings = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {moduleConfigs.map((mod) => (
+                    {uniqueModuleConfigs.map((mod) => (
                       <tr key={mod.key} className="border-t" style={{ borderColor: "hsl(var(--border))" }}>
                         <td className="px-4 py-2.5 font-medium whitespace-nowrap">- {mod.label}</td>
                         {allActions.map((action) => {
