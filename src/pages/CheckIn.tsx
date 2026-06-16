@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import {
   MapPin, Clock, CheckCircle, XCircle, Navigation, Loader2,
   LogIn, LogOut, AlertTriangle, Phone, Mail, Briefcase,
-  Camera, FileEdit, X, ScanFace,
+  Camera, FileEdit, X, ScanFace, Timer, Hourglass,
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import TimeInput24 from "@/components/ui/time-input-24";
@@ -11,6 +11,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogBody, DialogFooter } from "@/components/ui/dialog";
 import { useGeolocation, findNearestLocation, type OfficeLocation, type NearestResult } from "@/utils/geo";
 import { supabase } from "@/integrations/supabase/client";
+import { notifyApprovers, getApprovalTiers } from "@/utils/notifications";
 
 // Mock office locations
 const officeLocations: OfficeLocation[] = [
