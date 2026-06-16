@@ -22,6 +22,7 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { usePayrollPeriod, type PayslipRow } from "@/hooks/usePayrollPeriod";
 import { useAuth } from "@/contexts/AuthContext";
+import { usePermissions } from "@/contexts/PermissionsContext";
 import { usePayrollConfig, DEFAULT_PAYROLL_CONFIG, type PayrollConfig } from "@/utils/payrollConfig";
 
 /* ─── Payroll config (loaded from settings; default as fallback) ─── */
@@ -79,9 +80,9 @@ function calcPayroll(emp: Employee, config: PayrollConfig, att: AttendanceStats,
 
 /* ─── Inline Editable Cell ─── */
 function EditableCell({
-  value, onChange, className = "",
+  value, onChange, className = "", readOnly = false,
 }: {
-  value: number; onChange: (v: number) => void; className?: string;
+  value: number; onChange: (v: number) => void; className?: string; readOnly?: boolean;
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(String(value));
@@ -99,6 +100,10 @@ function EditableCell({
     const n = Number(draft);
     if (!isNaN(n) && n !== value) onChange(n);
   };
+
+  if (readOnly) {
+    return <span className={`tabular-nums px-1 py-0.5 ${className}`}>{formatCurrency(value)}</span>;
+  }
 
   if (editing) {
     return (
@@ -348,6 +353,12 @@ function getMonthDateRange(year: number, month: number) {
 /* ═══════════════════════ Main Page ═══════════════════════ */
 const Payroll = () => {
   const { employees, updateEmployee } = useEmployees();
+  const { role, user } = useAuth();
+  const { canAction } = usePermissions();
+  const roleKey = role || "employee";
+  const canEdit = canAction(roleKey, "payroll", "edit");
+  const canAdd = canAction(roleKey, "payroll", "add");
+  const canManage = canEdit || canAdd;
   const { config: payrollConfig } = usePayrollConfig();
   const [search, setSearch] = useState("");
   const [filterDept, setFilterDept] = useState("all");
@@ -505,7 +516,7 @@ const Payroll = () => {
 
   // Period & snapshot integration
   const { period, payslips: snapshotRows, loading: periodLoading, refetch: refetchPeriod } = usePayrollPeriod(selectedYear, selectedMonth);
-  const { user } = useAuth();
+  
   const isPublished = period?.status === "published";
   const hasPeriod = !!period;
 
@@ -843,19 +854,19 @@ const Payroll = () => {
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          {!isPublished && (
+          {!isPublished && canManage && (
             <Button onClick={computeAndSavePayslips} disabled={savingPeriod || loadingData} size="sm">
               <Calculator className="w-4 h-4 mr-1.5" />
               {hasPeriod ? "คำนวณใหม่" : "คำนวณและบันทึกสลิปเดือนนี้"}
             </Button>
           )}
-          {hasPeriod && !isPublished && (
+          {hasPeriod && !isPublished && canEdit && (
             <Button onClick={publishPeriod} disabled={savingPeriod || snapshotRows.length === 0} size="sm" variant="default">
               <FileText className="w-4 h-4 mr-1.5" />
               เผยแพร่ให้พนักงาน
             </Button>
           )}
-          {isPublished && (
+          {isPublished && canEdit && (
             <Button onClick={unpublishPeriod} disabled={savingPeriod} size="sm" variant="outline">
               ยกเลิกการเผยแพร่
             </Button>
@@ -947,33 +958,35 @@ const Payroll = () => {
                     </div>
                   </td>
                   <td className="text-right px-3 py-3">
-                    <EditableCell value={payroll.salary} onChange={(v) => setOverrideField(emp.id, "base_salary", v)} />
+                    <EditableCell value={payroll.salary} onChange={(v) => setOverrideField(emp.id, "base_salary", v)} readOnly={!canEdit} />
                   </td>
                   <td className="text-right px-3 py-3">
-                    <EditableCell value={payroll.otPay} onChange={(v) => setOverrideField(emp.id, "ot_pay", v)} />
+                    <EditableCell value={payroll.otPay} onChange={(v) => setOverrideField(emp.id, "ot_pay", v)} readOnly={!canEdit} />
                   </td>
                   <td className="text-right px-3 py-3">
-                    <EditableCell value={payroll.diligence} onChange={(v) => setOverrideField(emp.id, "diligence", v)} />
+                    <EditableCell value={payroll.diligence} onChange={(v) => setOverrideField(emp.id, "diligence", v)} readOnly={!canEdit} />
                   </td>
                   {dynamicColumns.income.map((name) => (
                     <td key={`${emp.id}-inc-${name}`} className="text-right px-3 py-3">
                       <EditableCell
                         value={getCustomItemAmount(emp, name, "income")}
                         onChange={(v) => updateCustomItemAmount(emp, name, "income", v)}
+                        readOnly={!canEdit}
                       />
                     </td>
                   ))}
                   <td className="text-right px-3 py-3">
-                    <EditableCell value={payroll.ssf} onChange={(v) => setOverrideField(emp.id, "ssf", v)} />
+                    <EditableCell value={payroll.ssf} onChange={(v) => setOverrideField(emp.id, "ssf", v)} readOnly={!canEdit} />
                   </td>
                   <td className="text-right px-3 py-3">
-                    <EditableCell value={payroll.monthlyTax} onChange={(v) => setOverrideField(emp.id, "tax", v)} />
+                    <EditableCell value={payroll.monthlyTax} onChange={(v) => setOverrideField(emp.id, "tax", v)} readOnly={!canEdit} />
                   </td>
                   {dynamicColumns.deduction.map((name) => (
                     <td key={`${emp.id}-ded-${name}`} className="text-right px-3 py-3">
                       <EditableCell
                         value={getCustomItemAmount(emp, name, "deduction")}
                         onChange={(v) => updateCustomItemAmount(emp, name, "deduction", v)}
+                        readOnly={!canEdit}
                       />
                     </td>
                   ))}
@@ -981,7 +994,9 @@ const Payroll = () => {
                   <td className="text-center px-3 py-3">
                     <div className="flex items-center justify-center gap-1">
                       <button onClick={() => openPayslip(emp)} className="p-1.5 rounded-lg hover:bg-muted transition-colors" title="ดูสลิปเงินเดือน"><Eye className="w-4 h-4 text-muted-foreground" /></button>
-                      <button onClick={() => openCustomItems(emp)} className="p-1.5 rounded-lg hover:bg-muted transition-colors" title="แก้ไขรายการเพิ่มเติม"><Settings2 className="w-4 h-4 text-muted-foreground" /></button>
+                      {canEdit && (
+                        <button onClick={() => openCustomItems(emp)} className="p-1.5 rounded-lg hover:bg-muted transition-colors" title="แก้ไขรายการเพิ่มเติม"><Settings2 className="w-4 h-4 text-muted-foreground" /></button>
+                      )}
                       <button onClick={async () => {
                         const { onProgress, onError } = createDownloadProgressToast(`กำลังดาวน์โหลดสลิปของ ${emp.firstName}`);
                         try {
