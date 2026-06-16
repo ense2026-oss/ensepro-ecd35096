@@ -2,25 +2,32 @@
 // Each Settings tab has its own permission entry in role_permissions
 // (module = key), controlling view + edit + scope per role.
 
+export type SettingsAction = "view" | "add" | "edit" | "delete";
+
 export interface SettingsSubModule {
   key: string;
   label: string;
+  actions: SettingsAction[];
 }
 
+// List-management tabs support full CRUD; form-style tabs only view/edit.
+const LIST_ACTIONS: SettingsAction[] = ["view", "add", "edit", "delete"];
+const FORM_ACTIONS: SettingsAction[] = ["view", "edit"];
+
 export const SETTINGS_SUBMODULES: SettingsSubModule[] = [
-  { key: "settings_company", label: "ข้อมูลบริษัท" },
-  { key: "settings_affiliations", label: "จัดการแผนก" },
-  { key: "settings_locations", label: "พื้นที่เข้างาน" },
-  { key: "settings_roles", label: "สิทธิ์ผู้ใช้งาน" },
-  { key: "settings_admins", label: "ผู้ดูแลระบบ" },
-  { key: "settings_shifts", label: "กะการทำงาน" },
-  { key: "settings_payroll", label: "ตั้งค่าเงินเดือน" },
-  { key: "settings_modules", label: "ตั้งค่าโมดูล" },
-  { key: "settings_leave_types", label: "ประเภทการลา" },
-  { key: "settings_company_holidays", label: "วันหยุดบริษัท" },
-  { key: "settings_approval", label: "ระบบอนุมัติ" },
-  { key: "settings_facescan", label: "เครื่องสแกนหน้า" },
-  { key: "settings_display", label: "การแสดงผล" },
+  { key: "settings_company", label: "ข้อมูลบริษัท", actions: FORM_ACTIONS },
+  { key: "settings_affiliations", label: "จัดการแผนก", actions: LIST_ACTIONS },
+  { key: "settings_locations", label: "พื้นที่เข้างาน", actions: LIST_ACTIONS },
+  { key: "settings_roles", label: "สิทธิ์ผู้ใช้งาน", actions: LIST_ACTIONS },
+  { key: "settings_admins", label: "ผู้ดูแลระบบ", actions: LIST_ACTIONS },
+  { key: "settings_shifts", label: "กะการทำงาน", actions: LIST_ACTIONS },
+  { key: "settings_payroll", label: "ตั้งค่าเงินเดือน", actions: FORM_ACTIONS },
+  { key: "settings_modules", label: "ตั้งค่าโมดูล", actions: FORM_ACTIONS },
+  { key: "settings_leave_types", label: "ประเภทการลา", actions: LIST_ACTIONS },
+  { key: "settings_company_holidays", label: "วันหยุดบริษัท", actions: LIST_ACTIONS },
+  { key: "settings_approval", label: "ระบบอนุมัติ", actions: LIST_ACTIONS },
+  { key: "settings_facescan", label: "เครื่องสแกนหน้า", actions: FORM_ACTIONS },
+  { key: "settings_display", label: "การแสดงผล", actions: FORM_ACTIONS },
 ];
 
 // Map Settings.tsx tab id -> permission module key
