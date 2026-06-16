@@ -211,6 +211,16 @@ const CheckIn = () => {
   const todayCheckIn = todayRecord?.checkIn && todayRecord.checkIn !== "-" ? todayRecord.checkIn : null;
   const todayCheckOut = todayRecord?.checkOut && todayRecord.checkOut !== "-" ? todayRecord.checkOut : null;
 
+  // OT map by date + today's OT record (latest open / latest of the day)
+  const otByDate = otRecords.reduce<Record<string, OTRecord>>((acc, r) => {
+    if (!acc[r.date]) acc[r.date] = r;
+    return acc;
+  }, {});
+  const todayOt = otByDate[todayStr] || null;
+  const todayOtIn = todayOt?.startTime && todayOt.startTime !== "" ? todayOt.startTime : null;
+  const todayOtOut = todayOt?.endTime && todayOt.endTime !== "" ? todayOt.endTime : null;
+  const otStatus = todayOtOut ? "ot-out" : todayOtIn ? "ot-in" : "ot-none";
+
   // Time edit request
   const [editOpen, setEditOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState<CheckInRecord | null>(null);
