@@ -181,6 +181,31 @@ const CheckIn = () => {
     fetchOtRecords();
   }, [fetchHistory, fetchOtRecords]);
 
+  // Fetch this employee's shift assignment for today
+  useEffect(() => {
+    if (!employeeId) return;
+    const fetchShift = async () => {
+      const now = new Date();
+      const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+      const { data } = await supabase
+        .from("shift_assignments")
+        .select("start_date, end_date, shifts(name, start_time, end_time)")
+        .eq("employee_id", employeeId)
+        .lte("start_date", today)
+        .gte("end_date", today)
+        .order("start_date", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      const s = (data as any)?.shifts;
+      if (s) {
+        setTodayShift({ name: s.name, start: s.start_time, end: s.end_time });
+      } else {
+        setTodayShift(currentShift);
+      }
+    };
+    fetchShift();
+  }, [employeeId]);
+
   // Realtime: refresh OT records when overtime_requests change
   useEffect(() => {
     if (!employeeId) return;
