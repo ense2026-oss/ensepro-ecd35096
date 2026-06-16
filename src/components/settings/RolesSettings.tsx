@@ -298,7 +298,7 @@ const RolesSettings = () => {
                   </div>
                 </td>
                 <td className="px-4 py-3 text-center">
-                  <span className="text-sm font-semibold">{countModules(role.permissions)}/{moduleConfigs.length} ระบบ</span>
+                  <span className="text-sm font-semibold">{countModules(role.permissions)}/{uniqueModuleConfigs.length} ระบบ</span>
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex gap-1">
