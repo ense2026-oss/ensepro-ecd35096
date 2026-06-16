@@ -104,7 +104,7 @@ const Attendance = () => {
   const fetchAttendance = useCallback(async () => {
     const { data, error } = await supabase
       .from("attendance_records")
-      .select("*, employees(first_name, last_name, dept)")
+      .select("*, employees(first_name, last_name, dept, photo_url)")
       .order("date", { ascending: false })
       .order("created_at", { ascending: false });
 
@@ -118,6 +118,7 @@ const Attendance = () => {
       id: r.id,
       employeeId: r.employee_id,
       name: r.employees ? `${r.employees.first_name} ${r.employees.last_name}` : "",
+      photoUrl: r.employees?.photo_url || undefined,
       dept: r.employees?.dept || "",
       date: r.date,
       checkIn: r.check_in,
