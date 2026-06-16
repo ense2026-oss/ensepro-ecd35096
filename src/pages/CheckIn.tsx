@@ -521,9 +521,6 @@ const CheckIn = () => {
             </div>
           )}
 
-          <p className="text-[11px] text-muted-foreground text-center max-w-[220px] relative z-10">
-            บันทึก OT ได้ทุกเวลา (ก่อน/หลังงานปกติ) ระบบจะส่งคำขอให้ผู้อนุมัติอัตโนมัติ
-          </p>
             </>
           )}
 
