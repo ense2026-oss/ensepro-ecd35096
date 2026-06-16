@@ -118,6 +118,7 @@ const CheckIn = () => {
   const [filterMonth, setFilterMonth] = useState<number>(new Date().getMonth());
   const [filterYear, setFilterYear] = useState<number>(new Date().getFullYear() + 543);
   const [employeeId, setEmployeeId] = useState<string | null>(null);
+  const [legacyShift, setLegacyShift] = useState<string | null>(null);
   const [todayShift, setTodayShift] = useState<typeof currentShift>(currentShift);
 
   // Find employee id for current user
@@ -126,10 +127,13 @@ const CheckIn = () => {
     const findEmpId = async () => {
       const { data } = await supabase
         .from("employees")
-        .select("id")
+        .select("id, shift")
         .eq("user_id", currentUser.id)
         .maybeSingle();
-      if (data) setEmployeeId(data.id);
+      if (data) {
+        setEmployeeId(data.id);
+        setLegacyShift((data as any).shift || null);
+      }
     };
     findEmpId();
   }, [currentUser]);
