@@ -203,12 +203,21 @@ const CheckIn = () => {
       const s = (data as any)?.shifts;
       if (s) {
         setTodayShift({ name: s.name, start: s.start_time, end: s.end_time });
-      } else {
-        setTodayShift(currentShift);
+        return;
       }
+      // Fallback: parse the employee's legacy shift text e.g. "กะเช้า 08:00-17:00"
+      if (legacyShift) {
+        const m = legacyShift.match(/(\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2})/);
+        const name = legacyShift.replace(/(\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2})/, "").trim() || "กะการทำงาน";
+        if (m) {
+          setTodayShift({ name, start: m[1], end: m[2] });
+          return;
+        }
+      }
+      setTodayShift(currentShift);
     };
     fetchShift();
-  }, [employeeId]);
+  }, [employeeId, legacyShift]);
 
   // Realtime: refresh OT records when overtime_requests change
   useEffect(() => {
