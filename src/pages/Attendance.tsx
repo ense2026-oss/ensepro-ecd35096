@@ -62,9 +62,12 @@ const toISODate = (dateStr: string): string | null => {
 
 const Attendance = () => {
   const { employees } = useEmployees();
-  const { role, user } = useAuth();
-  const { canAction } = usePermissions();
+  const { role, user, currentUser } = useAuth();
+  const { canAction, getScope } = usePermissions();
   const canApproveTime = canAction(role, 'attendance', 'approve');
+  const canEditTime = canAction(role, 'attendance', 'edit');
+  const attendanceScope = getScope(role, 'attendance');
+  const canExport = attendanceScope !== 'self';
   const { setAttendancePending } = usePendingCounts();
   const { editRequests, addEditRequest, updateRequestStatus } = useTimeEditRequests();
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
