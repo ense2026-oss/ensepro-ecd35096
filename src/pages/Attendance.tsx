@@ -616,10 +616,14 @@ const Attendance = () => {
                           </div>
                         </td>
                         <td className="px-4 py-3.5">
-                          <button onClick={() => openEdit(row)} className="text-xs font-medium px-2.5 py-1.5 rounded-lg border hover:bg-muted transition-colors flex items-center gap-1">
-                            <RotateCcw className="w-3 h-3" />
-                            แก้ไขเวลา
-                          </button>
+                          {canEditTime ? (
+                            <button onClick={() => openEdit(row)} className="text-xs font-medium px-2.5 py-1.5 rounded-lg border hover:bg-muted transition-colors flex items-center gap-1">
+                              <RotateCcw className="w-3 h-3" />
+                              แก้ไขเวลา
+                            </button>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">-</span>
+                          )}
                         </td>
                       </tr>
                     );
