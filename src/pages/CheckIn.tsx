@@ -452,7 +452,7 @@ const CheckIn = () => {
 
           <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-muted/50 text-[11px] text-muted-foreground relative z-10">
             <Briefcase className="w-3 h-3" />
-            <span>{currentShift.name} ({currentShift.start} - {currentShift.end})</span>
+            <span>{todayShift.name} ({todayShift.start} - {todayShift.end})</span>
           </div>
 
 
