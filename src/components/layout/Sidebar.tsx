@@ -37,8 +37,6 @@ const allNavItems = [
     items: [
       { path: "/dashboard", label: "แดชบอร์ด", icon: LayoutDashboard },
       { path: "/employees", label: "พนักงาน", icon: Users },
-      { path: "/organization", label: "โครงสร้างองค์กร", icon: GitBranch },
-      { path: "/contracts", label: "สัญญาจ้าง", icon: FileSignature },
     ],
   },
   {
