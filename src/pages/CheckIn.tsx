@@ -310,6 +310,60 @@ const CheckIn = () => {
     toast({ title: "ลงเวลาออกงานสำเร็จ", description: `เวลา ${time} ณ ${nearest.location.name}` });
   };
 
+  const calcOtHours = (start: string, end: string) => {
+    const [sh, sm] = start.split(":").map(Number);
+    const [eh, em] = end.split(":").map(Number);
+    const diff = (eh * 60 + em - (sh * 60 + sm)) / 60;
+    return Math.max(0, Math.round(diff * 10) / 10);
+  };
+
+  const handleOtCheckIn = async () => {
+    if (!employeeId) return;
+    const time = nowTime();
+    const totalTiers = await getApprovalTiers("ot");
+    const { error } = await supabase.from("overtime_requests").insert({
+      employee_id: employeeId,
+      date: todayStr,
+      start_time: time,
+      end_time: "",
+      hours: 0,
+      ot_type: "workday",
+      reason: "บันทึก OT จากหน้าเช็คอิน",
+      status: "pending",
+      current_tier: 1,
+      approved_tiers: 0,
+      total_tiers: totalTiers,
+    });
+    if (error) {
+      toast({ title: "เกิดข้อผิดพลาด", description: error.message, variant: "destructive" });
+      return;
+    }
+    fetchOtRecords();
+    toast({ title: "บันทึกเวลาเข้า OT สำเร็จ", description: `เวลา ${time}` });
+  };
+
+  const handleOtCheckOut = async () => {
+    if (!employeeId || !todayOt) return;
+    const time = nowTime();
+    const hours = calcOtHours(todayOt.startTime, time);
+    const { error } = await supabase
+      .from("overtime_requests")
+      .update({ end_time: time, hours })
+      .eq("id", todayOt.id);
+    if (error) {
+      toast({ title: "เกิดข้อผิดพลาด", description: error.message, variant: "destructive" });
+      return;
+    }
+    fetchOtRecords();
+    toast({ title: "บันทึกเวลาออก OT สำเร็จ", description: `เวลา ${time} (${hours} ชม.) — ส่งคำขอรออนุมัติ` });
+    notifyApprovers({
+      type: "ot",
+      title: "คำขอ OT ใหม่",
+      description: `${currentEmployee.name} บันทึก OT ${todayOt.startTime}-${time} (${hours} ชม.) จากหน้าเช็คอิน`,
+      targetEmployee: currentEmployee.name,
+    });
+  };
+
   const status = todayCheckOut ? "checked-out" : todayCheckIn ? "checked-in" : "not-checked";
 
   return (
