@@ -446,6 +446,24 @@ const CheckIn = () => {
             </div>
           )}
 
+          {(todayOtIn || todayOtOut) && (
+            <div className="flex flex-wrap items-center justify-center gap-2 relative z-10">
+              {todayOtIn && (
+                <span className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs" style={{ background: "hsl(270 70% 95%)" }}>
+                  <LogIn className="w-3 h-3" style={{ color: "hsl(270 70% 50%)" }} />
+                  <span style={{ color: "hsl(270 70% 40%)" }}>เข้า OT: {todayOtIn}</span>
+                </span>
+              )}
+              {todayOtOut && (
+                <span className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs" style={{ background: "hsl(330 70% 95%)" }}>
+                  <LogOut className="w-3 h-3" style={{ color: "hsl(330 70% 50%)" }} />
+                  <span style={{ color: "hsl(330 70% 40%)" }}>ออก OT: {todayOtOut}</span>
+                </span>
+              )}
+            </div>
+          )}
+
+
           {status === "not-checked" && (
             <div className="relative flex items-center justify-center">
               {canCheckIn && <div className="checkin-wave-ring" style={{ "--wave-color": "hsl(90 100% 40%)" } as React.CSSProperties} />}
