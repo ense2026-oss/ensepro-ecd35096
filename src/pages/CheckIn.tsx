@@ -667,7 +667,7 @@ const CheckIn = () => {
               {filteredHistory.length === 0 ? (
                 <tr><td colSpan={9} className="py-8 text-center text-muted-foreground">ไม่พบข้อมูลในเดือนที่เลือก</td></tr>
               ) : filteredHistory.map((r) => {
-                const autoRemark = computeRemark(r, currentShift);
+                const autoRemark = computeRemark(r, todayShift);
                 const ot = otByDate[r.date];
                 return (
                   <tr key={r.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
