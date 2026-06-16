@@ -385,6 +385,33 @@ const CheckIn = () => {
             <div className="w-48 h-48 sm:w-56 sm:h-56 rounded-full border-2 opacity-5" style={{ borderColor: canCheckIn ? "hsl(90 100% 40%)" : "hsl(var(--muted-foreground))" }} />
           </div>
 
+          {/* Mode tabs: normal time vs OT */}
+          <div className="flex items-center gap-1 p-1 rounded-xl bg-muted/60 relative z-10">
+            <button
+              onClick={() => setMode("normal")}
+              className="px-4 py-1.5 rounded-lg text-xs font-bold transition-all"
+              style={{
+                background: mode === "normal" ? "hsl(var(--card))" : "transparent",
+                color: mode === "normal" ? "hsl(90 100% 30%)" : "hsl(var(--muted-foreground))",
+                boxShadow: mode === "normal" ? "0 1px 3px hsl(0 0% 0% / 0.1)" : "none",
+              }}
+            >
+              <Clock className="w-3.5 h-3.5 inline mr-1" />เวลาปกติ
+            </button>
+            <button
+              onClick={() => setMode("ot")}
+              className="px-4 py-1.5 rounded-lg text-xs font-bold transition-all"
+              style={{
+                background: mode === "ot" ? "hsl(var(--card))" : "transparent",
+                color: mode === "ot" ? "hsl(270 70% 50%)" : "hsl(var(--muted-foreground))",
+                boxShadow: mode === "ot" ? "0 1px 3px hsl(0 0% 0% / 0.1)" : "none",
+              }}
+            >
+              <Timer className="w-3.5 h-3.5 inline mr-1" />โอที
+            </button>
+          </div>
+
+
           <div className="flex items-center gap-2 relative z-10">
             <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: status === "checked-out" ? "hsl(220 90% 93%)" : status === "checked-in" ? "hsl(90 100% 92%)" : "hsl(31 100% 93%)" }}>
               {status === "checked-out" ? <CheckCircle className="w-4 h-4" style={{ color: "hsl(220 90% 50%)" }} /> : status === "checked-in" ? <Clock className="w-4 h-4" style={{ color: "hsl(90 100% 35%)" }} /> : <AlertTriangle className="w-4 h-4" style={{ color: "#FF870F" }} />}
