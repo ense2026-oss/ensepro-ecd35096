@@ -1720,6 +1720,10 @@ export type Database = {
         Args: { _action?: string; _module: string; _user_id: string }
         Returns: boolean
       }
+      can_view_employee_data: {
+        Args: { _module: string; _target_employee_id: string; _user_id: string }
+        Returns: boolean
+      }
       get_active_employee_names: {
         Args: never
         Returns: {

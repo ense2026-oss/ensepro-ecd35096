@@ -62,9 +62,12 @@ const toISODate = (dateStr: string): string | null => {
 
 const Attendance = () => {
   const { employees } = useEmployees();
-  const { role, user } = useAuth();
-  const { canAction } = usePermissions();
+  const { role, user, currentUser } = useAuth();
+  const { canAction, getScope } = usePermissions();
   const canApproveTime = canAction(role, 'attendance', 'approve');
+  const canEditTime = canAction(role, 'attendance', 'edit');
+  const attendanceScope = getScope(role, 'attendance');
+  const canExport = attendanceScope !== 'self';
   const { setAttendancePending } = usePendingCounts();
   const { editRequests, addEditRequest, updateRequestStatus } = useTimeEditRequests();
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
@@ -144,10 +147,21 @@ const Attendance = () => {
     };
   }, [debouncedFetchAttendance]);
 
+  // Enforce the configured permission scope on the client (defense-in-depth + correct counts).
+  const scopedAttendance = useMemo(() => {
+    if (attendanceScope === "all") return attendance;
+    if (attendanceScope === "department") {
+      const myDept = currentUser?.dept || "";
+      return attendance.filter((a) => a.dept === myDept);
+    }
+    // self
+    return attendance.filter((a) => a.employeeId === currentUser?.employeeId);
+  }, [attendance, attendanceScope, currentUser?.dept, currentUser?.employeeId]);
+
   const allNames = useMemo(() => {
-    const names = new Set(attendance.map((a) => a.name));
+    const names = new Set(scopedAttendance.map((a) => a.name));
     return Array.from(names).sort();
-  }, [attendance]);
+  }, [scopedAttendance]);
 
   const filteredEmployeeOptions = useMemo(() => {
     if (!employeeSearch) return allNames;
@@ -168,19 +182,19 @@ const Attendance = () => {
     setAttendancePending(editRequests.filter((r) => r.status === "pending").length);
   }, [editRequests, setAttendancePending]);
 
-  const filtered = useMemo(() => attendance.filter((a) => {
+  const filtered = useMemo(() => scopedAttendance.filter((a) => {
     const matchSearch = a.name.includes(search) || a.dept.includes(search);
     const matchStatus = filterStatus === "all" || a.status === filterStatus;
     const matchEmployee = filterEmployee === "all" || a.name === filterEmployee;
     return matchSearch && matchStatus && matchEmployee;
-  }), [attendance, search, filterStatus, filterEmployee]);
+  }), [scopedAttendance, search, filterStatus, filterEmployee]);
 
   const summary = useMemo(() => ({
-    present: attendance.filter((a) => a.status === "present").length,
-    late: attendance.filter((a) => a.status === "late").length,
-    absent: attendance.filter((a) => a.status === "absent").length,
-    leave: attendance.filter((a) => a.status === "leave").length,
-  }), [attendance]);
+    present: scopedAttendance.filter((a) => a.status === "present").length,
+    late: scopedAttendance.filter((a) => a.status === "late").length,
+    absent: scopedAttendance.filter((a) => a.status === "absent").length,
+    leave: scopedAttendance.filter((a) => a.status === "leave").length,
+  }), [scopedAttendance]);
 
   const openEdit = (row: AttendanceRecord) => {
     setEditingRow(row);
@@ -393,20 +407,24 @@ const Attendance = () => {
           <h2 className="text-xl font-bold font-display">บันทึกเวลาเข้าออกงาน</h2>
           <p className="text-sm text-muted-foreground mt-0.5">ข้อมูลจากฐานข้อมูล</p>
         </div>
-        {role !== "employee" && (
+        {(canExport || canEditTime) && (
           <div className="flex items-center gap-2">
-            <button className="flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-medium hover:bg-muted transition-colors">
-              <Download className="w-4 h-4" />
-              Export Excel
-            </button>
-            <button
-              onClick={openNewRequest}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold"
-              style={{ background: "linear-gradient(135deg, hsl(var(--primary)), hsl(31 100% 60%))", color: "hsl(var(--primary-foreground))", boxShadow: "0 4px 12px hsl(var(--primary) / 0.3)" }}
-            >
-              <AlertCircle className="w-4 h-4" />
-              ขอแก้ไขเวลา
-            </button>
+            {canExport && (
+              <button className="flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-medium hover:bg-muted transition-colors">
+                <Download className="w-4 h-4" />
+                Export Excel
+              </button>
+            )}
+            {canEditTime && (
+              <button
+                onClick={openNewRequest}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold"
+                style={{ background: "linear-gradient(135deg, hsl(var(--primary)), hsl(31 100% 60%))", color: "hsl(var(--primary-foreground))", boxShadow: "0 4px 12px hsl(var(--primary) / 0.3)" }}
+              >
+                <AlertCircle className="w-4 h-4" />
+                ขอแก้ไขเวลา
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -598,10 +616,14 @@ const Attendance = () => {
                           </div>
                         </td>
                         <td className="px-4 py-3.5">
-                          <button onClick={() => openEdit(row)} className="text-xs font-medium px-2.5 py-1.5 rounded-lg border hover:bg-muted transition-colors flex items-center gap-1">
-                            <RotateCcw className="w-3 h-3" />
-                            แก้ไขเวลา
-                          </button>
+                          {canEditTime ? (
+                            <button onClick={() => openEdit(row)} className="text-xs font-medium px-2.5 py-1.5 rounded-lg border hover:bg-muted transition-colors flex items-center gap-1">
+                              <RotateCcw className="w-3 h-3" />
+                              แก้ไขเวลา
+                            </button>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">-</span>
+                          )}
                         </td>
                       </tr>
                     );
