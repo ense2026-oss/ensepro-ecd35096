@@ -41,6 +41,25 @@ const reqStatusConf: Record<string, { label: string; color: string; bg: string }
   rejected: { label: "ไม่อนุมัติ", color: "hsl(0 84% 50%)", bg: "hsl(0 84% 95%)" },
 };
 
+const THAI_MONTHS_SHORT = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
+
+// Normalize a stored request date (ISO "yyyy-MM-dd" or Thai "D MMM YYYY") to ISO Gregorian.
+const toISODate = (dateStr: string): string | null => {
+  if (!dateStr) return null;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr;
+  const parts = dateStr.trim().split(/\s+/);
+  if (parts.length === 3) {
+    const d = parseInt(parts[0], 10);
+    const mi = THAI_MONTHS_SHORT.indexOf(parts[1]);
+    let y = parseInt(parts[2], 10);
+    if (y > 2400) y -= 543; // tolerate Buddhist era years
+    if (!isNaN(d) && mi >= 0 && !isNaN(y)) {
+      return `${y}-${String(mi + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+    }
+  }
+  return null;
+};
+
 const Attendance = () => {
   const { employees } = useEmployees();
   const { role, user } = useAuth();
@@ -218,15 +237,46 @@ const Attendance = () => {
   };
 
   const applyAttendanceChange = async (req: TimeEditRequest) => {
-    if (!req.attendanceId) return;
-    const newCheckIn = req.newCheckIn;
-    const isLate = newCheckIn > "08:30";
-    await supabase.from("attendance_records").update({
-      check_in: req.newCheckIn,
-      check_out: req.newCheckOut,
-      late: isLate,
-      status: newCheckIn === "-" ? "absent" : isLate ? "late" : "present",
-    }).eq("id", req.attendanceId);
+    const newCheckIn = req.newCheckIn || "-";
+    const newCheckOut = req.newCheckOut || "-";
+    const isLate = newCheckIn !== "-" && newCheckIn > "08:30";
+    const status = newCheckIn === "-" ? "absent" : isLate ? "late" : "present";
+
+    // 1) If the request is tied to a specific attendance row, update it directly.
+    if (req.attendanceId) {
+      await supabase.from("attendance_records").update({
+        check_in: newCheckIn,
+        check_out: newCheckOut,
+        late: isLate,
+        status,
+      }).eq("id", req.attendanceId);
+    }
+
+    // 2) Apply the change to the underlying check-in records + attendance by date,
+    //    so requests created from the Check-in system (no attendanceId) also take effect.
+    const isoDate = toISODate(req.date);
+    if (isoDate) {
+      // Update raw check-in records (this also re-syncs attendance via DB trigger).
+      await supabase.from("check_in_records")
+        .update({ check_in: newCheckIn, check_out: newCheckOut })
+        .eq("employee_id", req.employeeId)
+        .eq("date", isoDate);
+
+      // Ensure the attendance row reflects exactly the approved values.
+      await supabase.from("attendance_records")
+        .upsert(
+          {
+            employee_id: req.employeeId,
+            date: isoDate,
+            check_in: newCheckIn,
+            check_out: newCheckOut,
+            late: isLate,
+            status,
+          },
+          { onConflict: "employee_id,date" }
+        );
+    }
+
     fetchAttendance();
   };
 
