@@ -127,6 +127,20 @@ const Attendance = () => {
     setLoading(false);
   }, []);
 
+  // Fetch OT hours from overtime_requests (all statuses) and aggregate by employee + date
+  const fetchOvertime = useCallback(async () => {
+    const { data, error } = await supabase
+      .from("overtime_requests")
+      .select("employee_id, date, hours, status");
+    if (error) return;
+    const map: Record<string, number> = {};
+    (data ?? []).forEach((r: any) => {
+      const key = `${r.employee_id}|${r.date}`;
+      map[key] = (map[key] || 0) + (Number(r.hours) || 0);
+    });
+    setOtMap(map);
+  }, []);
+
   const debouncedFetchAttendance = useCallback(() => {
     if (attendanceRealtimeRef.current) clearTimeout(attendanceRealtimeRef.current);
     attendanceRealtimeRef.current = setTimeout(() => fetchAttendance(), 300);
