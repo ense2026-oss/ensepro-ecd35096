@@ -41,6 +41,25 @@ const reqStatusConf: Record<string, { label: string; color: string; bg: string }
   rejected: { label: "ไม่อนุมัติ", color: "hsl(0 84% 50%)", bg: "hsl(0 84% 95%)" },
 };
 
+const THAI_MONTHS_SHORT = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
+
+// Normalize a stored request date (ISO "yyyy-MM-dd" or Thai "D MMM YYYY") to ISO Gregorian.
+const toISODate = (dateStr: string): string | null => {
+  if (!dateStr) return null;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr;
+  const parts = dateStr.trim().split(/\s+/);
+  if (parts.length === 3) {
+    const d = parseInt(parts[0], 10);
+    const mi = THAI_MONTHS_SHORT.indexOf(parts[1]);
+    let y = parseInt(parts[2], 10);
+    if (y > 2400) y -= 543; // tolerate Buddhist era years
+    if (!isNaN(d) && mi >= 0 && !isNaN(y)) {
+      return `${y}-${String(mi + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+    }
+  }
+  return null;
+};
+
 const Attendance = () => {
   const { employees } = useEmployees();
   const { role, user } = useAuth();
