@@ -27,6 +27,7 @@ interface ModuleConfig {
 const moduleConfigs: ModuleConfig[] = [
   { key: "leave" as ModuleKey, label: "ระบบขอลางาน", actions: ["view", "add", "edit", "delete", "approve"], hasScope: true },
   { key: "ot" as ModuleKey, label: "ระบบขอโอที", actions: ["view", "add", "edit", "delete", "approve"], hasScope: true },
+  { key: "ot_management" as ModuleKey, label: "ระบบจัดการโอที", actions: ["view", "add", "edit", "delete", "approve"], hasScope: true },
   { key: "attendance" as ModuleKey, label: "ระบบบันทึกเวลา", actions: ["view", "add", "edit", "delete", "approve"], hasScope: true },
   { key: "check-in" as ModuleKey, label: "ระบบลงเวลา (Check-in)", actions: ["view", "add", "edit", "delete"], hasScope: true },
   { key: "employee" as ModuleKey, label: "ระบบข้อมูลพนักงาน", actions: ["view", "add", "edit", "delete"], hasScope: true },
