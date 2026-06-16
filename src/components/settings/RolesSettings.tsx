@@ -242,7 +242,7 @@ const RolesSettings = () => {
   };
 
   const countModules = (perms: ModulePermissions) =>
-    moduleConfigs.filter((m) => perms[m.key].view).length;
+    uniqueModuleConfigs.filter((m) => perms[m.key].view).length;
 
   const totalUsers = roles.reduce((sum, r) => sum + r.users, 0);
 
