@@ -105,6 +105,8 @@ const CheckIn = () => {
   };
 
   const [history, setHistory] = useState<CheckInRecord[]>([]);
+  const [otRecords, setOtRecords] = useState<OTRecord[]>([]);
+  const [mode, setMode] = useState<"normal" | "ot">("normal");
   const [filterMonth, setFilterMonth] = useState<number>(new Date().getMonth());
   const [filterYear, setFilterYear] = useState<number>(new Date().getFullYear() + 543);
   const [employeeId, setEmployeeId] = useState<string | null>(null);
