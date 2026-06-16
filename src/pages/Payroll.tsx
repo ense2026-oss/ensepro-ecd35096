@@ -353,6 +353,12 @@ function getMonthDateRange(year: number, month: number) {
 /* ═══════════════════════ Main Page ═══════════════════════ */
 const Payroll = () => {
   const { employees, updateEmployee } = useEmployees();
+  const { role } = useAuth();
+  const { canAction } = usePermissions();
+  const roleKey = role || "employee";
+  const canEdit = canAction(roleKey, "payroll", "edit");
+  const canAdd = canAction(roleKey, "payroll", "add");
+  const canManage = canEdit || canAdd;
   const { config: payrollConfig } = usePayrollConfig();
   const [search, setSearch] = useState("");
   const [filterDept, setFilterDept] = useState("all");
