@@ -147,10 +147,21 @@ const Attendance = () => {
     };
   }, [debouncedFetchAttendance]);
 
+  // Enforce the configured permission scope on the client (defense-in-depth + correct counts).
+  const scopedAttendance = useMemo(() => {
+    if (attendanceScope === "all") return attendance;
+    if (attendanceScope === "department") {
+      const myDept = currentUser?.dept || "";
+      return attendance.filter((a) => a.dept === myDept);
+    }
+    // self
+    return attendance.filter((a) => a.employeeId === currentUser?.employeeId);
+  }, [attendance, attendanceScope, currentUser?.dept, currentUser?.employeeId]);
+
   const allNames = useMemo(() => {
-    const names = new Set(attendance.map((a) => a.name));
+    const names = new Set(scopedAttendance.map((a) => a.name));
     return Array.from(names).sort();
-  }, [attendance]);
+  }, [scopedAttendance]);
 
   const filteredEmployeeOptions = useMemo(() => {
     if (!employeeSearch) return allNames;
