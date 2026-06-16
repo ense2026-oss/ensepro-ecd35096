@@ -23,6 +23,7 @@ interface OTRequest {
   id: string;
   employeeId: string;
   employeeName: string;
+  photoUrl?: string;
   department: string;
   date: string;
   startTime: string;
