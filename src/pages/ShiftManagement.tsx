@@ -78,11 +78,17 @@ const fmtThaiDate = (iso: string) => {
 const ShiftManagement = () => {
   const { toast } = useToast();
   const { employees: allEmployees } = useEmployees();
-  const employees = useMemo(() => allEmployees.filter((e: any) => (e.role || "").toLowerCase() !== "admin"), [allEmployees]);
   const { user, role, currentUser } = useAuth();
   const isEmployeeRole = role.toLowerCase() === "employee";
   const employeeId = currentUser?.employeeId || null;
-  const { canAction } = usePermissions();
+  const { canAction, getScope } = usePermissions();
+  const scope = getScope(role, "shiftManagement");
+  const employees = useMemo(() => {
+    const base = allEmployees.filter((e: any) => (e.role || "").toLowerCase() !== "admin");
+    if (scope === "department") return base.filter((e: any) => e.dept && e.dept === currentUser?.dept);
+    if (scope === "self") return base.filter((e: any) => e.id === employeeId);
+    return base;
+  }, [allEmployees, scope, currentUser?.dept, employeeId]);
 
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [assignments, setAssignments] = useState<ShiftAssignment[]>([]);
