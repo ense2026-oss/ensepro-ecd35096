@@ -156,9 +156,41 @@ const CheckIn = () => {
     }
   }, [employeeId]);
 
+  // Fetch OT records (overtime_requests) for this employee
+  const fetchOtRecords = useCallback(async () => {
+    if (!employeeId) return;
+    const { data } = await supabase
+      .from("overtime_requests")
+      .select("id, date, start_time, end_time, status")
+      .eq("employee_id", employeeId)
+      .order("date", { ascending: false });
+    if (data) {
+      setOtRecords(data.map((r: any) => ({
+        id: r.id,
+        date: r.date,
+        startTime: r.start_time,
+        endTime: r.end_time,
+        status: r.status as "pending" | "approved" | "rejected",
+      })));
+    }
+  }, [employeeId]);
+
   useEffect(() => {
     fetchHistory();
-  }, [fetchHistory]);
+    fetchOtRecords();
+  }, [fetchHistory, fetchOtRecords]);
+
+  // Realtime: refresh OT records when overtime_requests change
+  useEffect(() => {
+    if (!employeeId) return;
+    const channel = supabase
+      .channel("checkin-ot-realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "overtime_requests" }, () => {
+        fetchOtRecords();
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [employeeId, fetchOtRecords]);
 
   const nearest: NearestResult | null =
     geo.lat !== null && geo.lng !== null
