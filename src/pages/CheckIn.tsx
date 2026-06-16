@@ -118,6 +118,7 @@ const CheckIn = () => {
   const [filterMonth, setFilterMonth] = useState<number>(new Date().getMonth());
   const [filterYear, setFilterYear] = useState<number>(new Date().getFullYear() + 543);
   const [employeeId, setEmployeeId] = useState<string | null>(null);
+  const [todayShift, setTodayShift] = useState<typeof currentShift>(currentShift);
 
   // Find employee id for current user
   useEffect(() => {
@@ -179,6 +180,31 @@ const CheckIn = () => {
     fetchHistory();
     fetchOtRecords();
   }, [fetchHistory, fetchOtRecords]);
+
+  // Fetch this employee's shift assignment for today
+  useEffect(() => {
+    if (!employeeId) return;
+    const fetchShift = async () => {
+      const now = new Date();
+      const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+      const { data } = await supabase
+        .from("shift_assignments")
+        .select("start_date, end_date, shifts(name, start_time, end_time)")
+        .eq("employee_id", employeeId)
+        .lte("start_date", today)
+        .gte("end_date", today)
+        .order("start_date", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      const s = (data as any)?.shifts;
+      if (s) {
+        setTodayShift({ name: s.name, start: s.start_time, end: s.end_time });
+      } else {
+        setTodayShift(currentShift);
+      }
+    };
+    fetchShift();
+  }, [employeeId]);
 
   // Realtime: refresh OT records when overtime_requests change
   useEffect(() => {
@@ -426,7 +452,7 @@ const CheckIn = () => {
 
           <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-muted/50 text-[11px] text-muted-foreground relative z-10">
             <Briefcase className="w-3 h-3" />
-            <span>{currentShift.name} ({currentShift.start} - {currentShift.end})</span>
+            <span>{todayShift.name} ({todayShift.start} - {todayShift.end})</span>
           </div>
 
 
@@ -641,7 +667,7 @@ const CheckIn = () => {
               {filteredHistory.length === 0 ? (
                 <tr><td colSpan={9} className="py-8 text-center text-muted-foreground">ไม่พบข้อมูลในเดือนที่เลือก</td></tr>
               ) : filteredHistory.map((r) => {
-                const autoRemark = computeRemark(r, currentShift);
+                const autoRemark = computeRemark(r, todayShift);
                 const ot = otByDate[r.date];
                 return (
                   <tr key={r.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
