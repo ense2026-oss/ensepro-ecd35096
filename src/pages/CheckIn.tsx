@@ -34,6 +34,14 @@ interface CheckInRecord {
   remark?: string;
 }
 
+interface OTRecord {
+  id: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  status: "pending" | "approved" | "rejected";
+}
+
 function computeRemark(record: CheckInRecord, shift: typeof currentShift): string | null {
   if (record.checkIn === "-") return record.remark || null;
   const toMinutes = (t: string) => { const [h, m] = t.split(":").map(Number); return h * 60 + m; };
