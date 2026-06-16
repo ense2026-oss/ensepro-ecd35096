@@ -9,7 +9,7 @@ export type SettingsModuleKey =
   | "settings_leave_types" | "settings_company_holidays" | "settings_approval"
   | "settings_facescan" | "settings_display";
 
-export type ModuleKey = "leave" | "ot" | "attendance" | "check-in" | "employee" | "organization" | "shiftManagement" | "day_off" | "payroll" | "reports" | "settings" | "contracts" | "notifications" | SettingsModuleKey;
+export type ModuleKey = "leave" | "ot" | "ot_management" | "attendance" | "check-in" | "employee" | "organization" | "shiftManagement" | "day_off" | "payroll" | "reports" | "settings" | "contracts" | "notifications" | SettingsModuleKey;
 export type ActionKey = "view" | "add" | "edit" | "delete" | "approve";
 export type Scope = "self" | "department" | "all";
 
