@@ -36,8 +36,7 @@ const moduleConfigs: ModuleConfig[] = [
   { key: "payroll" as ModuleKey, label: "ระบบเงินเดือน", actions: ["view", "add", "edit", "delete"], hasScope: true },
   { key: "reports" as ModuleKey, label: "ระบบรายงาน", actions: ["view"], hasScope: true },
   { key: "notifications" as ModuleKey, label: "ระบบแจ้งเตือน", actions: ["view", "delete"], hasScope: false },
-  { key: "notifications" as ModuleKey, label: "ระบบแจ้งเตือน", actions: ["view", "delete"], hasScope: false },
-  
+
   ...SETTINGS_SUBMODULES.map((m) => ({
     key: m.key as ModuleKey,
     label: `ตั้งค่า · ${m.label}`,
@@ -45,6 +44,18 @@ const moduleConfigs: ModuleConfig[] = [
     hasScope: true,
   })),
 ];
+
+// Deduplicate by module key (defensive against accidental duplicate entries),
+// keeping the first occurrence so each module appears once in the matrix and
+// each role+module pair is unique when saved.
+const uniqueModuleConfigs: ModuleConfig[] = (() => {
+  const seen = new Set<string>();
+  return moduleConfigs.filter((m) => {
+    if (seen.has(m.key)) return false;
+    seen.add(m.key);
+    return true;
+  });
+})();
 
 const actionLabels: Record<ActionKey, string> = {
   view: "ดู", add: "เพิ่ม", edit: "แก้ไข", delete: "ลบ", approve: "อนุมัติ",
@@ -70,7 +81,7 @@ const emptyPerm = (): ModulePermission => ({ view: false, add: false, edit: fals
 
 const emptyPermissions = (): ModulePermissions => {
   const p = {} as ModulePermissions;
-  moduleConfigs.forEach((m) => { p[m.key] = emptyPerm(); });
+  uniqueModuleConfigs.forEach((m) => { p[m.key] = emptyPerm(); });
   return p;
 };
 
@@ -184,11 +195,7 @@ const RolesSettings = () => {
     setSaving(true);
     try {
       const roleName = form.name.toLowerCase();
-      // Delete old records for this role then insert new
-      if (editingRole) {
-        await supabase.from("role_permissions").delete().eq("role_name", editingRole);
-      }
-      const rows = moduleConfigs.map((mod) => ({
+      const rows = uniqueModuleConfigs.map((mod) => ({
         role_name: roleName,
         role_description: form.desc,
         module: mod.key,
@@ -199,7 +206,11 @@ const RolesSettings = () => {
         can_approve: form.permissions[mod.key].approve,
         scope: form.permissions[mod.key].scope,
       }));
-      const { error } = await supabase.from("role_permissions").insert(rows);
+      // Upsert by (role_name, module) so the role is never deleted on a failed
+      // save and duplicate modules can't violate the unique constraint.
+      const { error } = await supabase
+        .from("role_permissions")
+        .upsert(rows, { onConflict: "role_name,module" });
       if (error) throw error;
       await refreshPermissions();
       toast({ title: editingRole ? "แก้ไข Role สำเร็จ" : "เพิ่ม Role สำเร็จ", description: form.name });
@@ -231,7 +242,7 @@ const RolesSettings = () => {
   };
 
   const countModules = (perms: ModulePermissions) =>
-    moduleConfigs.filter((m) => perms[m.key].view).length;
+    uniqueModuleConfigs.filter((m) => perms[m.key].view).length;
 
   const totalUsers = roles.reduce((sum, r) => sum + r.users, 0);
 
@@ -287,7 +298,7 @@ const RolesSettings = () => {
                   </div>
                 </td>
                 <td className="px-4 py-3 text-center">
-                  <span className="text-sm font-semibold">{countModules(role.permissions)}/{moduleConfigs.length} ระบบ</span>
+                  <span className="text-sm font-semibold">{countModules(role.permissions)}/{uniqueModuleConfigs.length} ระบบ</span>
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex gap-1">
@@ -350,7 +361,7 @@ const RolesSettings = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {moduleConfigs.map((mod) => (
+                    {uniqueModuleConfigs.map((mod) => (
                       <tr key={mod.key} className="border-t" style={{ borderColor: "hsl(var(--border))" }}>
                         <td className="px-4 py-2.5 font-medium whitespace-nowrap">- {mod.label}</td>
                         {allActions.map((action) => {
