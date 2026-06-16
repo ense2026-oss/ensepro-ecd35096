@@ -97,6 +97,13 @@ const DayOff = () => {
   const [selectedEmpId, setSelectedEmpId] = useState<string>(initialEmp);
   const [empColCollapsed, setEmpColCollapsed] = useState(false);
 
+  // Reset to default tab if user lands on a hidden management tab
+  useEffect(() => {
+    if (!canEdit && (activeTab === "bulk" || activeTab === "company")) {
+      setActiveTab("calendar");
+    }
+  }, [canEdit, activeTab]);
+
   // Auto-select self for employee role
   useEffect(() => {
     if (isEmployeeRole && employeeId) {
@@ -241,8 +248,8 @@ const DayOff = () => {
         <TabsList>
           <TabsTrigger value="calendar"><CalendarDays className="w-4 h-4 mr-1.5" />ปฏิทินรายเดือน</TabsTrigger>
           <TabsTrigger value="employee"><Users className="w-4 h-4 mr-1.5" />รายพนักงาน</TabsTrigger>
-          <TabsTrigger value="bulk"><Settings2 className="w-4 h-4 mr-1.5" />จัดการแบบกลุ่ม</TabsTrigger>
-          <TabsTrigger value="company"><CalendarOff className="w-4 h-4 mr-1.5" />วันหยุดบริษัท</TabsTrigger>
+          {canEdit && <TabsTrigger value="bulk"><Settings2 className="w-4 h-4 mr-1.5" />จัดการแบบกลุ่ม</TabsTrigger>}
+          {canEdit && <TabsTrigger value="company"><CalendarOff className="w-4 h-4 mr-1.5" />วันหยุดบริษัท</TabsTrigger>}
         </TabsList>
 
         {/* ============ TAB 1: Calendar ============ */}
@@ -431,14 +438,18 @@ const DayOff = () => {
         </TabsContent>
 
         {/* ============ TAB 3: Bulk ============ */}
+        {canEdit && (
         <TabsContent value="bulk" className="space-y-4">
           <BulkActionsView employees={employees} patterns={patterns} canEdit={canEdit} userId={user?.id} onChanged={fetchAll} />
         </TabsContent>
+        )}
 
         {/* ============ TAB 4: Company holidays ============ */}
+        {canEdit && (
         <TabsContent value="company" className="space-y-4">
           <CompanyHolidaysSettings />
         </TabsContent>
+        )}
       </Tabs>
     </div>
   );
