@@ -8,7 +8,6 @@ import EmployeeAvatar from "@/components/ui/employee-avatar";
 import {
   LayoutDashboard,
   Users,
-  GitBranch,
   Clock,
   CalendarDays,
   Settings,
@@ -21,7 +20,6 @@ import {
   Shield,
   MapPin,
   Banknote,
-  FileSignature,
   Receipt,
 } from "lucide-react";
 
@@ -37,8 +35,6 @@ const allNavItems = [
     items: [
       { path: "/dashboard", label: "แดชบอร์ด", icon: LayoutDashboard },
       { path: "/employees", label: "พนักงาน", icon: Users },
-      { path: "/organization", label: "โครงสร้างองค์กร", icon: GitBranch },
-      { path: "/contracts", label: "สัญญาจ้าง", icon: FileSignature },
     ],
   },
   {
