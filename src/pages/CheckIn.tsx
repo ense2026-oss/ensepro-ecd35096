@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import {
   MapPin, Clock, CheckCircle, XCircle, Navigation, Loader2,
   LogIn, LogOut, AlertTriangle, Phone, Mail, Briefcase,
-  Camera, FileEdit, X, ScanFace,
+  Camera, FileEdit, X, ScanFace, Timer, Hourglass,
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import TimeInput24 from "@/components/ui/time-input-24";
@@ -11,6 +11,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogBody, DialogFooter } from "@/components/ui/dialog";
 import { useGeolocation, findNearestLocation, type OfficeLocation, type NearestResult } from "@/utils/geo";
 import { supabase } from "@/integrations/supabase/client";
+import { notifyApprovers, getApprovalTiers } from "@/utils/notifications";
 
 // Mock office locations
 const officeLocations: OfficeLocation[] = [
@@ -31,6 +32,14 @@ interface CheckInRecord {
   withinRadius: boolean;
   source: "gps" | "face_scan";
   remark?: string;
+}
+
+interface OTRecord {
+  id: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  status: "pending" | "approved" | "rejected";
 }
 
 function computeRemark(record: CheckInRecord, shift: typeof currentShift): string | null {
@@ -104,6 +113,8 @@ const CheckIn = () => {
   };
 
   const [history, setHistory] = useState<CheckInRecord[]>([]);
+  const [otRecords, setOtRecords] = useState<OTRecord[]>([]);
+  const [mode, setMode] = useState<"normal" | "ot">("normal");
   const [filterMonth, setFilterMonth] = useState<number>(new Date().getMonth());
   const [filterYear, setFilterYear] = useState<number>(new Date().getFullYear() + 543);
   const [employeeId, setEmployeeId] = useState<string | null>(null);
@@ -145,9 +156,41 @@ const CheckIn = () => {
     }
   }, [employeeId]);
 
+  // Fetch OT records (overtime_requests) for this employee
+  const fetchOtRecords = useCallback(async () => {
+    if (!employeeId) return;
+    const { data } = await supabase
+      .from("overtime_requests")
+      .select("id, date, start_time, end_time, status")
+      .eq("employee_id", employeeId)
+      .order("date", { ascending: false });
+    if (data) {
+      setOtRecords(data.map((r: any) => ({
+        id: r.id,
+        date: r.date,
+        startTime: r.start_time,
+        endTime: r.end_time,
+        status: r.status as "pending" | "approved" | "rejected",
+      })));
+    }
+  }, [employeeId]);
+
   useEffect(() => {
     fetchHistory();
-  }, [fetchHistory]);
+    fetchOtRecords();
+  }, [fetchHistory, fetchOtRecords]);
+
+  // Realtime: refresh OT records when overtime_requests change
+  useEffect(() => {
+    if (!employeeId) return;
+    const channel = supabase
+      .channel("checkin-ot-realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "overtime_requests" }, () => {
+        fetchOtRecords();
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [employeeId, fetchOtRecords]);
 
   const nearest: NearestResult | null =
     geo.lat !== null && geo.lng !== null
@@ -167,6 +210,16 @@ const CheckIn = () => {
   const todayRecord = history.find((r) => r.date === todayStr);
   const todayCheckIn = todayRecord?.checkIn && todayRecord.checkIn !== "-" ? todayRecord.checkIn : null;
   const todayCheckOut = todayRecord?.checkOut && todayRecord.checkOut !== "-" ? todayRecord.checkOut : null;
+
+  // OT map by date + today's OT record (latest open / latest of the day)
+  const otByDate = otRecords.reduce<Record<string, OTRecord>>((acc, r) => {
+    if (!acc[r.date]) acc[r.date] = r;
+    return acc;
+  }, {});
+  const todayOt = otByDate[todayStr] || null;
+  const todayOtIn = todayOt?.startTime && todayOt.startTime !== "" ? todayOt.startTime : null;
+  const todayOtOut = todayOt?.endTime && todayOt.endTime !== "" ? todayOt.endTime : null;
+  const otStatus = todayOtOut ? "ot-out" : todayOtIn ? "ot-in" : "ot-none";
 
   // Time edit request
   const [editOpen, setEditOpen] = useState(false);
@@ -257,6 +310,60 @@ const CheckIn = () => {
     toast({ title: "ลงเวลาออกงานสำเร็จ", description: `เวลา ${time} ณ ${nearest.location.name}` });
   };
 
+  const calcOtHours = (start: string, end: string) => {
+    const [sh, sm] = start.split(":").map(Number);
+    const [eh, em] = end.split(":").map(Number);
+    const diff = (eh * 60 + em - (sh * 60 + sm)) / 60;
+    return Math.max(0, Math.round(diff * 10) / 10);
+  };
+
+  const handleOtCheckIn = async () => {
+    if (!employeeId) return;
+    const time = nowTime();
+    const totalTiers = await getApprovalTiers("ot");
+    const { error } = await supabase.from("overtime_requests").insert({
+      employee_id: employeeId,
+      date: todayStr,
+      start_time: time,
+      end_time: "",
+      hours: 0,
+      ot_type: "workday",
+      reason: "บันทึก OT จากหน้าเช็คอิน",
+      status: "pending",
+      current_tier: 1,
+      approved_tiers: 0,
+      total_tiers: totalTiers,
+    });
+    if (error) {
+      toast({ title: "เกิดข้อผิดพลาด", description: error.message, variant: "destructive" });
+      return;
+    }
+    fetchOtRecords();
+    toast({ title: "บันทึกเวลาเข้า OT สำเร็จ", description: `เวลา ${time}` });
+  };
+
+  const handleOtCheckOut = async () => {
+    if (!employeeId || !todayOt) return;
+    const time = nowTime();
+    const hours = calcOtHours(todayOt.startTime, time);
+    const { error } = await supabase
+      .from("overtime_requests")
+      .update({ end_time: time, hours })
+      .eq("id", todayOt.id);
+    if (error) {
+      toast({ title: "เกิดข้อผิดพลาด", description: error.message, variant: "destructive" });
+      return;
+    }
+    fetchOtRecords();
+    toast({ title: "บันทึกเวลาออก OT สำเร็จ", description: `เวลา ${time} (${hours} ชม.) — ส่งคำขอรออนุมัติ` });
+    notifyApprovers({
+      type: "ot",
+      title: "คำขอ OT ใหม่",
+      description: `${currentEmployee.name} บันทึก OT ${todayOt.startTime}-${time} (${hours} ชม.) จากหน้าเช็คอิน`,
+      targetEmployee: currentEmployee.name,
+    });
+  };
+
   const status = todayCheckOut ? "checked-out" : todayCheckIn ? "checked-in" : "not-checked";
 
   return (
@@ -277,6 +384,33 @@ const CheckIn = () => {
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <div className="w-48 h-48 sm:w-56 sm:h-56 rounded-full border-2 opacity-5" style={{ borderColor: canCheckIn ? "hsl(90 100% 40%)" : "hsl(var(--muted-foreground))" }} />
           </div>
+
+          {/* Mode tabs: normal time vs OT */}
+          <div className="flex items-center gap-1 p-1 rounded-xl bg-muted/60 relative z-10">
+            <button
+              onClick={() => setMode("normal")}
+              className="px-4 py-1.5 rounded-lg text-xs font-bold transition-all"
+              style={{
+                background: mode === "normal" ? "hsl(var(--card))" : "transparent",
+                color: mode === "normal" ? "hsl(90 100% 30%)" : "hsl(var(--muted-foreground))",
+                boxShadow: mode === "normal" ? "0 1px 3px hsl(0 0% 0% / 0.1)" : "none",
+              }}
+            >
+              <Clock className="w-3.5 h-3.5 inline mr-1" />เวลาปกติ
+            </button>
+            <button
+              onClick={() => setMode("ot")}
+              className="px-4 py-1.5 rounded-lg text-xs font-bold transition-all"
+              style={{
+                background: mode === "ot" ? "hsl(var(--card))" : "transparent",
+                color: mode === "ot" ? "hsl(270 70% 50%)" : "hsl(var(--muted-foreground))",
+                boxShadow: mode === "ot" ? "0 1px 3px hsl(0 0% 0% / 0.1)" : "none",
+              }}
+            >
+              <Timer className="w-3.5 h-3.5 inline mr-1" />โอที
+            </button>
+          </div>
+
 
           <div className="flex items-center gap-2 relative z-10">
             <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: status === "checked-out" ? "hsl(220 90% 93%)" : status === "checked-in" ? "hsl(90 100% 92%)" : "hsl(31 100% 93%)" }}>
@@ -312,6 +446,26 @@ const CheckIn = () => {
             </div>
           )}
 
+          {(todayOtIn || todayOtOut) && (
+            <div className="flex flex-wrap items-center justify-center gap-2 relative z-10">
+              {todayOtIn && (
+                <span className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs" style={{ background: "hsl(270 70% 95%)" }}>
+                  <LogIn className="w-3 h-3" style={{ color: "hsl(270 70% 50%)" }} />
+                  <span style={{ color: "hsl(270 70% 40%)" }}>เข้า OT: {todayOtIn}</span>
+                </span>
+              )}
+              {todayOtOut && (
+                <span className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs" style={{ background: "hsl(330 70% 95%)" }}>
+                  <LogOut className="w-3 h-3" style={{ color: "hsl(330 70% 50%)" }} />
+                  <span style={{ color: "hsl(330 70% 40%)" }}>ออก OT: {todayOtOut}</span>
+                </span>
+              )}
+            </div>
+          )}
+
+
+          {mode === "normal" && (
+            <>
           {status === "not-checked" && (
             <div className="relative flex items-center justify-center">
               {canCheckIn && <div className="checkin-wave-ring" style={{ "--wave-color": "hsl(90 100% 40%)" } as React.CSSProperties} />}
@@ -355,6 +509,55 @@ const CheckIn = () => {
               <CheckCircle className="w-6 h-6" />
               <span className="font-bold text-sm">เสร็จสิ้น</span>
             </div>
+          )}
+            </>
+          )}
+
+          {mode === "ot" && (
+            <>
+          {otStatus === "ot-none" && (
+            <button
+              onClick={handleOtCheckIn}
+              disabled={geo.loading || !employeeId}
+              className="w-28 h-28 sm:w-32 sm:h-32 rounded-full flex flex-col items-center justify-center gap-1.5 font-bold text-sm sm:text-base transition-all duration-300 disabled:opacity-40 disabled:cursor-not-allowed relative z-10 hover:scale-105"
+              style={{
+                background: "linear-gradient(135deg, hsl(270 70% 60%), hsl(270 70% 45%))",
+                boxShadow: "0 8px 32px hsl(270 70% 45% / 0.4), 0 0 0 6px hsl(270 70% 50% / 0.15)",
+                color: "#fff",
+              }}
+            >
+              <Timer className="w-6 h-6" />
+              เข้า OT
+            </button>
+          )}
+
+          {otStatus === "ot-in" && (
+            <button
+              onClick={handleOtCheckOut}
+              disabled={geo.loading || !employeeId}
+              className="w-28 h-28 sm:w-32 sm:h-32 rounded-full flex flex-col items-center justify-center gap-1.5 font-bold text-sm sm:text-base transition-all duration-300 disabled:opacity-40 disabled:cursor-not-allowed relative z-10 hover:scale-105"
+              style={{
+                background: "linear-gradient(135deg, hsl(330 70% 60%), hsl(330 70% 45%))",
+                boxShadow: "0 8px 32px hsl(330 70% 45% / 0.4), 0 0 0 6px hsl(330 70% 50% / 0.15)",
+                color: "#fff",
+              }}
+            >
+              <LogOut className="w-6 h-6" />
+              ออก OT
+            </button>
+          )}
+
+          {otStatus === "ot-out" && (
+            <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full flex flex-col items-center justify-center gap-1.5 relative z-10" style={{ background: "linear-gradient(135deg, hsl(270 70% 92%), hsl(330 70% 90%))", color: "hsl(270 70% 45%)", boxShadow: "0 0 0 6px hsl(270 70% 50% / 0.1)" }}>
+              <Hourglass className="w-6 h-6" />
+              <span className="font-bold text-sm">รออนุมัติ</span>
+            </div>
+          )}
+
+          <p className="text-[11px] text-muted-foreground text-center max-w-[220px] relative z-10">
+            บันทึก OT ได้ทุกเวลา (ก่อน/หลังงานปกติ) ระบบจะส่งคำขอให้ผู้อนุมัติอัตโนมัติ
+          </p>
+            </>
           )}
 
           {!canCheckIn && !geo.loading && !geo.error && (
@@ -462,6 +665,8 @@ const CheckIn = () => {
                 <th className="pb-3 pl-2 font-semibold">วันที่</th>
                 <th className="pb-3 font-semibold">เข้างาน</th>
                 <th className="pb-3 font-semibold">ออกงาน</th>
+                <th className="pb-3 font-semibold" style={{ color: "hsl(270 70% 50%)" }}>เข้า OT</th>
+                <th className="pb-3 font-semibold" style={{ color: "hsl(330 70% 50%)" }}>ออก OT</th>
                 <th className="pb-3 font-semibold">สถานที่</th>
                 <th className="pb-3 font-semibold">สถานะ</th>
                 <th className="pb-3 font-semibold">หมายเหตุ</th>
@@ -470,14 +675,17 @@ const CheckIn = () => {
             </thead>
             <tbody>
               {filteredHistory.length === 0 ? (
-                <tr><td colSpan={7} className="py-8 text-center text-muted-foreground">ไม่พบข้อมูลในเดือนที่เลือก</td></tr>
+                <tr><td colSpan={9} className="py-8 text-center text-muted-foreground">ไม่พบข้อมูลในเดือนที่เลือก</td></tr>
               ) : filteredHistory.map((r) => {
                 const autoRemark = computeRemark(r, currentShift);
+                const ot = otByDate[r.date];
                 return (
                   <tr key={r.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
                     <td className="py-3 pl-2">{formatThaiDate(r.date)}</td>
                     <td className="py-3 font-mono">{r.checkIn}</td>
                     <td className="py-3 font-mono">{r.checkOut ?? "-"}</td>
+                    <td className="py-3 font-mono" style={{ color: ot?.startTime ? "hsl(270 70% 45%)" : undefined }}>{ot?.startTime || "-"}</td>
+                    <td className="py-3 font-mono" style={{ color: ot?.endTime ? "hsl(330 70% 45%)" : undefined }}>{ot?.endTime || "-"}</td>
                     <td className="py-3">
                       {r.location === "-" || !r.location ? (
                         <span className="text-muted-foreground">-</span>
