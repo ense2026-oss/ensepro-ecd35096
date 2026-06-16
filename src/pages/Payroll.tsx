@@ -994,7 +994,9 @@ const Payroll = () => {
                   <td className="text-center px-3 py-3">
                     <div className="flex items-center justify-center gap-1">
                       <button onClick={() => openPayslip(emp)} className="p-1.5 rounded-lg hover:bg-muted transition-colors" title="ดูสลิปเงินเดือน"><Eye className="w-4 h-4 text-muted-foreground" /></button>
-                      <button onClick={() => openCustomItems(emp)} className="p-1.5 rounded-lg hover:bg-muted transition-colors" title="แก้ไขรายการเพิ่มเติม"><Settings2 className="w-4 h-4 text-muted-foreground" /></button>
+                      {canEdit && (
+                        <button onClick={() => openCustomItems(emp)} className="p-1.5 rounded-lg hover:bg-muted transition-colors" title="แก้ไขรายการเพิ่มเติม"><Settings2 className="w-4 h-4 text-muted-foreground" /></button>
+                      )}
                       <button onClick={async () => {
                         const { onProgress, onError } = createDownloadProgressToast(`กำลังดาวน์โหลดสลิปของ ${emp.firstName}`);
                         try {
