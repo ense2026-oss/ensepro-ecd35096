@@ -20,6 +20,7 @@ interface AttendanceRecord {
   id: string;
   employeeId: string;
   name: string;
+  photoUrl?: string;
   dept: string;
   date: string;
   checkIn: string;
