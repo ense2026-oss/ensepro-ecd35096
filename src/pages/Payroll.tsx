@@ -958,33 +958,35 @@ const Payroll = () => {
                     </div>
                   </td>
                   <td className="text-right px-3 py-3">
-                    <EditableCell value={payroll.salary} onChange={(v) => setOverrideField(emp.id, "base_salary", v)} />
+                    <EditableCell value={payroll.salary} onChange={(v) => setOverrideField(emp.id, "base_salary", v)} readOnly={!canEdit} />
                   </td>
                   <td className="text-right px-3 py-3">
-                    <EditableCell value={payroll.otPay} onChange={(v) => setOverrideField(emp.id, "ot_pay", v)} />
+                    <EditableCell value={payroll.otPay} onChange={(v) => setOverrideField(emp.id, "ot_pay", v)} readOnly={!canEdit} />
                   </td>
                   <td className="text-right px-3 py-3">
-                    <EditableCell value={payroll.diligence} onChange={(v) => setOverrideField(emp.id, "diligence", v)} />
+                    <EditableCell value={payroll.diligence} onChange={(v) => setOverrideField(emp.id, "diligence", v)} readOnly={!canEdit} />
                   </td>
                   {dynamicColumns.income.map((name) => (
                     <td key={`${emp.id}-inc-${name}`} className="text-right px-3 py-3">
                       <EditableCell
                         value={getCustomItemAmount(emp, name, "income")}
                         onChange={(v) => updateCustomItemAmount(emp, name, "income", v)}
+                        readOnly={!canEdit}
                       />
                     </td>
                   ))}
                   <td className="text-right px-3 py-3">
-                    <EditableCell value={payroll.ssf} onChange={(v) => setOverrideField(emp.id, "ssf", v)} />
+                    <EditableCell value={payroll.ssf} onChange={(v) => setOverrideField(emp.id, "ssf", v)} readOnly={!canEdit} />
                   </td>
                   <td className="text-right px-3 py-3">
-                    <EditableCell value={payroll.monthlyTax} onChange={(v) => setOverrideField(emp.id, "tax", v)} />
+                    <EditableCell value={payroll.monthlyTax} onChange={(v) => setOverrideField(emp.id, "tax", v)} readOnly={!canEdit} />
                   </td>
                   {dynamicColumns.deduction.map((name) => (
                     <td key={`${emp.id}-ded-${name}`} className="text-right px-3 py-3">
                       <EditableCell
                         value={getCustomItemAmount(emp, name, "deduction")}
                         onChange={(v) => updateCustomItemAmount(emp, name, "deduction", v)}
+                        readOnly={!canEdit}
                       />
                     </td>
                   ))}
