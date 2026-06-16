@@ -118,6 +118,7 @@ const CheckIn = () => {
   const [filterMonth, setFilterMonth] = useState<number>(new Date().getMonth());
   const [filterYear, setFilterYear] = useState<number>(new Date().getFullYear() + 543);
   const [employeeId, setEmployeeId] = useState<string | null>(null);
+  const [legacyShift, setLegacyShift] = useState<string | null>(null);
   const [todayShift, setTodayShift] = useState<typeof currentShift>(currentShift);
 
   // Find employee id for current user
@@ -126,10 +127,13 @@ const CheckIn = () => {
     const findEmpId = async () => {
       const { data } = await supabase
         .from("employees")
-        .select("id")
+        .select("id, shift")
         .eq("user_id", currentUser.id)
         .maybeSingle();
-      if (data) setEmployeeId(data.id);
+      if (data) {
+        setEmployeeId(data.id);
+        setLegacyShift((data as any).shift || null);
+      }
     };
     findEmpId();
   }, [currentUser]);
@@ -199,12 +203,21 @@ const CheckIn = () => {
       const s = (data as any)?.shifts;
       if (s) {
         setTodayShift({ name: s.name, start: s.start_time, end: s.end_time });
-      } else {
-        setTodayShift(currentShift);
+        return;
       }
+      // Fallback: parse the employee's legacy shift text e.g. "กะเช้า 08:00-17:00"
+      if (legacyShift) {
+        const m = legacyShift.match(/(\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2})/);
+        const name = legacyShift.replace(/(\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2})/, "").trim() || "กะการทำงาน";
+        if (m) {
+          setTodayShift({ name, start: m[1], end: m[2] });
+          return;
+        }
+      }
+      setTodayShift(currentShift);
     };
     fetchShift();
-  }, [employeeId]);
+  }, [employeeId, legacyShift]);
 
   // Realtime: refresh OT records when overtime_requests change
   useEffect(() => {
