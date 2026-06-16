@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import { notifyApprovers, notifyRequester, getApprovalTiers, notifyTierApprover } from "@/utils/notifications";
 import SearchableSelect from "@/components/ui/searchable-select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogBody, DialogFooter } from "@/components/ui/dialog";
+import EmployeeAvatar from "@/components/ui/employee-avatar";
 
 type OTStatus = "pending" | "approved" | "rejected";
 type OTType = "workday" | "holiday" | "special";
@@ -22,6 +23,7 @@ interface OTRequest {
   id: string;
   employeeId: string;
   employeeName: string;
+  photoUrl?: string;
   department: string;
   date: string;
   startTime: string;
@@ -239,13 +241,14 @@ const OvertimeRequest = () => {
   const fetchRequests = useCallback(async () => {
     const { data } = await supabase
       .from("overtime_requests")
-      .select("*, employees(first_name, last_name, dept)")
+      .select("*, employees(first_name, last_name, dept, photo_url)")
       .order("created_at", { ascending: false });
     if (data) {
       setRequests(data.map((r: any) => ({
         id: r.id,
         employeeId: r.employee_id,
         employeeName: r.employees ? `${r.employees.first_name} ${r.employees.last_name}` : "",
+        photoUrl: r.employees?.photo_url || undefined,
         department: r.employees?.dept || "",
         date: r.date,
         startTime: r.start_time,
@@ -609,7 +612,12 @@ const OvertimeRequest = () => {
                 const typeCfg = otTypeLabels[req.type];
                 return (
                   <tr key={req.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
-                    <td className="px-4 py-3"><p className="font-medium">{req.employeeName}</p></td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2.5">
+                        <EmployeeAvatar photoUrl={req.photoUrl} firstName={req.employeeName} size="sm" />
+                        <p className="font-medium">{req.employeeName}</p>
+                      </div>
+                    </td>
                     <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">{req.department}</td>
                     <td className="px-4 py-3">{req.date}</td>
                     <td className="px-4 py-3 hidden lg:table-cell font-mono text-xs">{req.startTime} - {req.endTime}</td>

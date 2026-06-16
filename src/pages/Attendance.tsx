@@ -14,11 +14,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/contexts/PermissionsContext";
 import { notifyRequester, notifyTierApprover } from "@/utils/notifications";
+import EmployeeAvatar from "@/components/ui/employee-avatar";
 
 interface AttendanceRecord {
   id: string;
   employeeId: string;
   name: string;
+  photoUrl?: string;
   dept: string;
   date: string;
   checkIn: string;
@@ -102,7 +104,7 @@ const Attendance = () => {
   const fetchAttendance = useCallback(async () => {
     const { data, error } = await supabase
       .from("attendance_records")
-      .select("*, employees(first_name, last_name, dept)")
+      .select("*, employees(first_name, last_name, dept, photo_url)")
       .order("date", { ascending: false })
       .order("created_at", { ascending: false });
 
@@ -116,6 +118,7 @@ const Attendance = () => {
       id: r.id,
       employeeId: r.employee_id,
       name: r.employees ? `${r.employees.first_name} ${r.employees.last_name}` : "",
+      photoUrl: r.employees?.photo_url || undefined,
       dept: r.employees?.dept || "",
       date: r.date,
       checkIn: r.check_in,
@@ -618,9 +621,7 @@ const Attendance = () => {
                       <tr key={row.id} className="border-b hover:bg-muted/30 transition-colors" style={{ borderColor: "hsl(var(--border))" }}>
                         <td className="px-4 py-3.5">
                           <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold" style={{ background: "hsl(31 100% 93%)", color: "#FF870F" }}>
-                              {row.name.charAt(0)}
-                            </div>
+                            <EmployeeAvatar photoUrl={row.photoUrl} firstName={row.name} size="sm" rounded="lg" />
                             <p className="text-sm font-semibold">{row.name}</p>
                           </div>
                         </td>
