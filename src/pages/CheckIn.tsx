@@ -665,6 +665,8 @@ const CheckIn = () => {
                 <th className="pb-3 pl-2 font-semibold">วันที่</th>
                 <th className="pb-3 font-semibold">เข้างาน</th>
                 <th className="pb-3 font-semibold">ออกงาน</th>
+                <th className="pb-3 font-semibold" style={{ color: "hsl(270 70% 50%)" }}>เข้า OT</th>
+                <th className="pb-3 font-semibold" style={{ color: "hsl(330 70% 50%)" }}>ออก OT</th>
                 <th className="pb-3 font-semibold">สถานที่</th>
                 <th className="pb-3 font-semibold">สถานะ</th>
                 <th className="pb-3 font-semibold">หมายเหตุ</th>
