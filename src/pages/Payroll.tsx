@@ -854,19 +854,19 @@ const Payroll = () => {
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          {!isPublished && (
+          {!isPublished && canManage && (
             <Button onClick={computeAndSavePayslips} disabled={savingPeriod || loadingData} size="sm">
               <Calculator className="w-4 h-4 mr-1.5" />
               {hasPeriod ? "คำนวณใหม่" : "คำนวณและบันทึกสลิปเดือนนี้"}
             </Button>
           )}
-          {hasPeriod && !isPublished && (
+          {hasPeriod && !isPublished && canEdit && (
             <Button onClick={publishPeriod} disabled={savingPeriod || snapshotRows.length === 0} size="sm" variant="default">
               <FileText className="w-4 h-4 mr-1.5" />
               เผยแพร่ให้พนักงาน
             </Button>
           )}
-          {isPublished && (
+          {isPublished && canEdit && (
             <Button onClick={unpublishPeriod} disabled={savingPeriod} size="sm" variant="outline">
               ยกเลิกการเผยแพร่
             </Button>
