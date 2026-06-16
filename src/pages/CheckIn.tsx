@@ -118,6 +118,7 @@ const CheckIn = () => {
   const [filterMonth, setFilterMonth] = useState<number>(new Date().getMonth());
   const [filterYear, setFilterYear] = useState<number>(new Date().getFullYear() + 543);
   const [employeeId, setEmployeeId] = useState<string | null>(null);
+  const [todayShift, setTodayShift] = useState<typeof currentShift>(currentShift);
 
   // Find employee id for current user
   useEffect(() => {
