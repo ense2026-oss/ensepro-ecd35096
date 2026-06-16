@@ -464,6 +464,8 @@ const CheckIn = () => {
           )}
 
 
+          {mode === "normal" && (
+            <>
           {status === "not-checked" && (
             <div className="relative flex items-center justify-center">
               {canCheckIn && <div className="checkin-wave-ring" style={{ "--wave-color": "hsl(90 100% 40%)" } as React.CSSProperties} />}
@@ -507,6 +509,55 @@ const CheckIn = () => {
               <CheckCircle className="w-6 h-6" />
               <span className="font-bold text-sm">เสร็จสิ้น</span>
             </div>
+          )}
+            </>
+          )}
+
+          {mode === "ot" && (
+            <>
+          {otStatus === "ot-none" && (
+            <button
+              onClick={handleOtCheckIn}
+              disabled={geo.loading || !employeeId}
+              className="w-28 h-28 sm:w-32 sm:h-32 rounded-full flex flex-col items-center justify-center gap-1.5 font-bold text-sm sm:text-base transition-all duration-300 disabled:opacity-40 disabled:cursor-not-allowed relative z-10 hover:scale-105"
+              style={{
+                background: "linear-gradient(135deg, hsl(270 70% 60%), hsl(270 70% 45%))",
+                boxShadow: "0 8px 32px hsl(270 70% 45% / 0.4), 0 0 0 6px hsl(270 70% 50% / 0.15)",
+                color: "#fff",
+              }}
+            >
+              <Timer className="w-6 h-6" />
+              เข้า OT
+            </button>
+          )}
+
+          {otStatus === "ot-in" && (
+            <button
+              onClick={handleOtCheckOut}
+              disabled={geo.loading || !employeeId}
+              className="w-28 h-28 sm:w-32 sm:h-32 rounded-full flex flex-col items-center justify-center gap-1.5 font-bold text-sm sm:text-base transition-all duration-300 disabled:opacity-40 disabled:cursor-not-allowed relative z-10 hover:scale-105"
+              style={{
+                background: "linear-gradient(135deg, hsl(330 70% 60%), hsl(330 70% 45%))",
+                boxShadow: "0 8px 32px hsl(330 70% 45% / 0.4), 0 0 0 6px hsl(330 70% 50% / 0.15)",
+                color: "#fff",
+              }}
+            >
+              <LogOut className="w-6 h-6" />
+              ออก OT
+            </button>
+          )}
+
+          {otStatus === "ot-out" && (
+            <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full flex flex-col items-center justify-center gap-1.5 relative z-10" style={{ background: "linear-gradient(135deg, hsl(270 70% 92%), hsl(330 70% 90%))", color: "hsl(270 70% 45%)", boxShadow: "0 0 0 6px hsl(270 70% 50% / 0.1)" }}>
+              <Hourglass className="w-6 h-6" />
+              <span className="font-bold text-sm">รออนุมัติ</span>
+            </div>
+          )}
+
+          <p className="text-[11px] text-muted-foreground text-center max-w-[220px] relative z-10">
+            บันทึก OT ได้ทุกเวลา (ก่อน/หลังงานปกติ) ระบบจะส่งคำขอให้ผู้อนุมัติอัตโนมัติ
+          </p>
+            </>
           )}
 
           {!canCheckIn && !geo.loading && !geo.error && (
