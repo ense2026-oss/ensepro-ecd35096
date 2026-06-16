@@ -37,8 +37,18 @@ export function useModuleSettings() {
   useEffect(() => {
     fetchSettings();
 
+    // Instant in-app sync: any instance that calls updateModules dispatches this event.
+    const handleLocalChange = (e: Event) => {
+      const detail = (e as CustomEvent).detail as Record<string, boolean> | undefined;
+      if (detail && typeof detail === "object") {
+        setModules({ ...DEFAULT_MODULES, ...detail });
+      }
+    };
+    window.addEventListener("module-settings-changed", handleLocalChange);
+
+    // Cross-client realtime sync via DB changes (unique channel name per instance).
     const channel = supabase
-      .channel("module-settings-realtime")
+      .channel(`module-settings-realtime-${Math.random().toString(36).slice(2)}`)
       .on(
         "postgres_changes",
         {
@@ -52,13 +62,13 @@ export function useModuleSettings() {
             const val = payload.new.value as Record<string, boolean>;
             const merged = { ...DEFAULT_MODULES, ...val };
             setModules(merged);
-            window.dispatchEvent(new CustomEvent("module-settings-changed", { detail: merged }));
           }
         }
       )
       .subscribe();
 
     return () => {
+      window.removeEventListener("module-settings-changed", handleLocalChange);
       supabase.removeChannel(channel);
     };
   }, [fetchSettings]);
