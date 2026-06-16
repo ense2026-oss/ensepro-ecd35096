@@ -41,7 +41,7 @@ const moduleConfigs: ModuleConfig[] = [
   ...SETTINGS_SUBMODULES.map((m) => ({
     key: m.key as ModuleKey,
     label: `ตั้งค่า · ${m.label}`,
-    actions: ["view", "edit"] as ActionKey[],
+    actions: m.actions as ActionKey[],
     hasScope: true,
   })),
 ];
