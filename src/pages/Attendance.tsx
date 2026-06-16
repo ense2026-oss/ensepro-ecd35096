@@ -407,20 +407,24 @@ const Attendance = () => {
           <h2 className="text-xl font-bold font-display">บันทึกเวลาเข้าออกงาน</h2>
           <p className="text-sm text-muted-foreground mt-0.5">ข้อมูลจากฐานข้อมูล</p>
         </div>
-        {role !== "employee" && (
+        {(canExport || canEditTime) && (
           <div className="flex items-center gap-2">
-            <button className="flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-medium hover:bg-muted transition-colors">
-              <Download className="w-4 h-4" />
-              Export Excel
-            </button>
-            <button
-              onClick={openNewRequest}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold"
-              style={{ background: "linear-gradient(135deg, hsl(var(--primary)), hsl(31 100% 60%))", color: "hsl(var(--primary-foreground))", boxShadow: "0 4px 12px hsl(var(--primary) / 0.3)" }}
-            >
-              <AlertCircle className="w-4 h-4" />
-              ขอแก้ไขเวลา
-            </button>
+            {canExport && (
+              <button className="flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-medium hover:bg-muted transition-colors">
+                <Download className="w-4 h-4" />
+                Export Excel
+              </button>
+            )}
+            {canEditTime && (
+              <button
+                onClick={openNewRequest}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold"
+                style={{ background: "linear-gradient(135deg, hsl(var(--primary)), hsl(31 100% 60%))", color: "hsl(var(--primary-foreground))", boxShadow: "0 4px 12px hsl(var(--primary) / 0.3)" }}
+              >
+                <AlertCircle className="w-4 h-4" />
+                ขอแก้ไขเวลา
+              </button>
+            )}
           </div>
         )}
       </div>
