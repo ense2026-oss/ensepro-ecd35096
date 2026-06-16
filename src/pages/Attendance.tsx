@@ -237,15 +237,46 @@ const Attendance = () => {
   };
 
   const applyAttendanceChange = async (req: TimeEditRequest) => {
-    if (!req.attendanceId) return;
-    const newCheckIn = req.newCheckIn;
-    const isLate = newCheckIn > "08:30";
-    await supabase.from("attendance_records").update({
-      check_in: req.newCheckIn,
-      check_out: req.newCheckOut,
-      late: isLate,
-      status: newCheckIn === "-" ? "absent" : isLate ? "late" : "present",
-    }).eq("id", req.attendanceId);
+    const newCheckIn = req.newCheckIn || "-";
+    const newCheckOut = req.newCheckOut || "-";
+    const isLate = newCheckIn !== "-" && newCheckIn > "08:30";
+    const status = newCheckIn === "-" ? "absent" : isLate ? "late" : "present";
+
+    // 1) If the request is tied to a specific attendance row, update it directly.
+    if (req.attendanceId) {
+      await supabase.from("attendance_records").update({
+        check_in: newCheckIn,
+        check_out: newCheckOut,
+        late: isLate,
+        status,
+      }).eq("id", req.attendanceId);
+    }
+
+    // 2) Apply the change to the underlying check-in records + attendance by date,
+    //    so requests created from the Check-in system (no attendanceId) also take effect.
+    const isoDate = toISODate(req.date);
+    if (isoDate) {
+      // Update raw check-in records (this also re-syncs attendance via DB trigger).
+      await supabase.from("check_in_records")
+        .update({ check_in: newCheckIn, check_out: newCheckOut })
+        .eq("employee_id", req.employeeId)
+        .eq("date", isoDate);
+
+      // Ensure the attendance row reflects exactly the approved values.
+      await supabase.from("attendance_records")
+        .upsert(
+          {
+            employee_id: req.employeeId,
+            date: isoDate,
+            check_in: newCheckIn,
+            check_out: newCheckOut,
+            late: isLate,
+            status,
+          },
+          { onConflict: "employee_id,date" }
+        );
+    }
+
     fetchAttendance();
   };
 
