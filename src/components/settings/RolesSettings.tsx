@@ -35,7 +35,7 @@ const moduleConfigs: ModuleConfig[] = [
   { key: "day_off" as ModuleKey, label: "ระบบจัดการวันหยุด", actions: ["view", "add", "edit", "delete"], hasScope: true },
   { key: "payroll" as ModuleKey, label: "ระบบเงินเดือน", actions: ["view", "add", "edit", "delete"], hasScope: true },
   { key: "reports" as ModuleKey, label: "ระบบรายงาน", actions: ["view"], hasScope: true },
-  { key: "contracts" as ModuleKey, label: "ระบบสัญญาจ้าง", actions: ["view", "add", "edit", "delete", "approve"], hasScope: true },
+  { key: "notifications" as ModuleKey, label: "ระบบแจ้งเตือน", actions: ["view", "delete"], hasScope: false },
   { key: "notifications" as ModuleKey, label: "ระบบแจ้งเตือน", actions: ["view", "delete"], hasScope: false },
   
   ...SETTINGS_SUBMODULES.map((m) => ({
