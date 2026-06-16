@@ -195,11 +195,7 @@ const RolesSettings = () => {
     setSaving(true);
     try {
       const roleName = form.name.toLowerCase();
-      // Delete old records for this role then insert new
-      if (editingRole) {
-        await supabase.from("role_permissions").delete().eq("role_name", editingRole);
-      }
-      const rows = moduleConfigs.map((mod) => ({
+      const rows = uniqueModuleConfigs.map((mod) => ({
         role_name: roleName,
         role_description: form.desc,
         module: mod.key,
@@ -210,7 +206,11 @@ const RolesSettings = () => {
         can_approve: form.permissions[mod.key].approve,
         scope: form.permissions[mod.key].scope,
       }));
-      const { error } = await supabase.from("role_permissions").insert(rows);
+      // Upsert by (role_name, module) so the role is never deleted on a failed
+      // save and duplicate modules can't violate the unique constraint.
+      const { error } = await supabase
+        .from("role_permissions")
+        .upsert(rows, { onConflict: "role_name,module" });
       if (error) throw error;
       await refreshPermissions();
       toast({ title: editingRole ? "แก้ไข Role สำเร็จ" : "เพิ่ม Role สำเร็จ", description: form.name });
