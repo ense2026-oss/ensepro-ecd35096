@@ -30,7 +30,7 @@ const moduleConfigs: ModuleConfig[] = [
   { key: "attendance" as ModuleKey, label: "ระบบบันทึกเวลา", actions: ["view", "add", "edit", "delete", "approve"], hasScope: true },
   { key: "check-in" as ModuleKey, label: "ระบบลงเวลา (Check-in)", actions: ["view", "add", "edit", "delete"], hasScope: true },
   { key: "employee" as ModuleKey, label: "ระบบข้อมูลพนักงาน", actions: ["view", "add", "edit", "delete"], hasScope: true },
-  { key: "organization" as ModuleKey, label: "ระบบโครงสร้างองค์กร", actions: ["view", "add", "edit", "delete"], hasScope: true },
+  
   { key: "shiftManagement" as ModuleKey, label: "ระบบกะการทำงาน", actions: ["view", "add", "edit", "delete"], hasScope: true },
   { key: "day_off" as ModuleKey, label: "ระบบจัดการวันหยุด", actions: ["view", "add", "edit", "delete"], hasScope: true },
   { key: "payroll" as ModuleKey, label: "ระบบเงินเดือน", actions: ["view", "add", "edit", "delete"], hasScope: true },
