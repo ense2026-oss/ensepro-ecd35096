@@ -612,7 +612,12 @@ const OvertimeRequest = () => {
                 const typeCfg = otTypeLabels[req.type];
                 return (
                   <tr key={req.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
-                    <td className="px-4 py-3"><p className="font-medium">{req.employeeName}</p></td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2.5">
+                        <EmployeeAvatar photoUrl={req.photoUrl} firstName={req.employeeName} size="sm" />
+                        <p className="font-medium">{req.employeeName}</p>
+                      </div>
+                    </td>
                     <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">{req.department}</td>
                     <td className="px-4 py-3">{req.date}</td>
                     <td className="px-4 py-3 hidden lg:table-cell font-mono text-xs">{req.startTime} - {req.endTime}</td>
