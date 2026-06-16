@@ -8,7 +8,6 @@ import EmployeeAvatar from "@/components/ui/employee-avatar";
 import {
   LayoutDashboard,
   Users,
-  GitBranch,
   Clock,
   CalendarDays,
   Settings,
@@ -21,7 +20,6 @@ import {
   Shield,
   MapPin,
   Banknote,
-  FileSignature,
   Receipt,
 } from "lucide-react";
 
