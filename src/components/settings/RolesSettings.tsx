@@ -81,7 +81,7 @@ const emptyPerm = (): ModulePermission => ({ view: false, add: false, edit: fals
 
 const emptyPermissions = (): ModulePermissions => {
   const p = {} as ModulePermissions;
-  moduleConfigs.forEach((m) => { p[m.key] = emptyPerm(); });
+  uniqueModuleConfigs.forEach((m) => { p[m.key] = emptyPerm(); });
   return p;
 };
 
