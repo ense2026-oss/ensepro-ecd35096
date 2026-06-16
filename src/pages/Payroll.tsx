@@ -22,6 +22,7 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { usePayrollPeriod, type PayslipRow } from "@/hooks/usePayrollPeriod";
 import { useAuth } from "@/contexts/AuthContext";
+import { usePermissions } from "@/contexts/PermissionsContext";
 import { usePayrollConfig, DEFAULT_PAYROLL_CONFIG, type PayrollConfig } from "@/utils/payrollConfig";
 
 /* ─── Payroll config (loaded from settings; default as fallback) ─── */
