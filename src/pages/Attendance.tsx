@@ -182,19 +182,19 @@ const Attendance = () => {
     setAttendancePending(editRequests.filter((r) => r.status === "pending").length);
   }, [editRequests, setAttendancePending]);
 
-  const filtered = useMemo(() => attendance.filter((a) => {
+  const filtered = useMemo(() => scopedAttendance.filter((a) => {
     const matchSearch = a.name.includes(search) || a.dept.includes(search);
     const matchStatus = filterStatus === "all" || a.status === filterStatus;
     const matchEmployee = filterEmployee === "all" || a.name === filterEmployee;
     return matchSearch && matchStatus && matchEmployee;
-  }), [attendance, search, filterStatus, filterEmployee]);
+  }), [scopedAttendance, search, filterStatus, filterEmployee]);
 
   const summary = useMemo(() => ({
-    present: attendance.filter((a) => a.status === "present").length,
-    late: attendance.filter((a) => a.status === "late").length,
-    absent: attendance.filter((a) => a.status === "absent").length,
-    leave: attendance.filter((a) => a.status === "leave").length,
-  }), [attendance]);
+    present: scopedAttendance.filter((a) => a.status === "present").length,
+    late: scopedAttendance.filter((a) => a.status === "late").length,
+    absent: scopedAttendance.filter((a) => a.status === "absent").length,
+    leave: scopedAttendance.filter((a) => a.status === "leave").length,
+  }), [scopedAttendance]);
 
   const openEdit = (row: AttendanceRecord) => {
     setEditingRow(row);
