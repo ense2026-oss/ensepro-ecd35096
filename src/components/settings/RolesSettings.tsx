@@ -36,8 +36,7 @@ const moduleConfigs: ModuleConfig[] = [
   { key: "payroll" as ModuleKey, label: "ระบบเงินเดือน", actions: ["view", "add", "edit", "delete"], hasScope: true },
   { key: "reports" as ModuleKey, label: "ระบบรายงาน", actions: ["view"], hasScope: true },
   { key: "notifications" as ModuleKey, label: "ระบบแจ้งเตือน", actions: ["view", "delete"], hasScope: false },
-  { key: "notifications" as ModuleKey, label: "ระบบแจ้งเตือน", actions: ["view", "delete"], hasScope: false },
-  
+
   ...SETTINGS_SUBMODULES.map((m) => ({
     key: m.key as ModuleKey,
     label: `ตั้งค่า · ${m.label}`,
@@ -45,6 +44,18 @@ const moduleConfigs: ModuleConfig[] = [
     hasScope: true,
   })),
 ];
+
+// Deduplicate by module key (defensive against accidental duplicate entries),
+// keeping the first occurrence so each module appears once in the matrix and
+// each role+module pair is unique when saved.
+const uniqueModuleConfigs: ModuleConfig[] = (() => {
+  const seen = new Set<string>();
+  return moduleConfigs.filter((m) => {
+    if (seen.has(m.key)) return false;
+    seen.add(m.key);
+    return true;
+  });
+})();
 
 const actionLabels: Record<ActionKey, string> = {
   view: "ดู", add: "เพิ่ม", edit: "แก้ไข", delete: "ลบ", approve: "อนุมัติ",
