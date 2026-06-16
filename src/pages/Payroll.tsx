@@ -353,7 +353,7 @@ function getMonthDateRange(year: number, month: number) {
 /* ═══════════════════════ Main Page ═══════════════════════ */
 const Payroll = () => {
   const { employees, updateEmployee } = useEmployees();
-  const { role } = useAuth();
+  const { role, user } = useAuth();
   const { canAction } = usePermissions();
   const roleKey = role || "employee";
   const canEdit = canAction(roleKey, "payroll", "edit");
@@ -516,7 +516,7 @@ const Payroll = () => {
 
   // Period & snapshot integration
   const { period, payslips: snapshotRows, loading: periodLoading, refetch: refetchPeriod } = usePayrollPeriod(selectedYear, selectedMonth);
-  const { user } = useAuth();
+  
   const isPublished = period?.status === "published";
   const hasPeriod = !!period;
 
