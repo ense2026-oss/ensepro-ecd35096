@@ -71,6 +71,7 @@ const Attendance = () => {
   const { setAttendancePending } = usePendingCounts();
   const { editRequests, addEditRequest, updateRequestStatus } = useTimeEditRequests();
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
+  const [otMap, setOtMap] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
@@ -126,19 +127,38 @@ const Attendance = () => {
     setLoading(false);
   }, []);
 
+  // Fetch OT hours from overtime_requests (all statuses) and aggregate by employee + date
+  const fetchOvertime = useCallback(async () => {
+    const { data, error } = await supabase
+      .from("overtime_requests")
+      .select("employee_id, date, hours, status");
+    if (error) return;
+    const map: Record<string, number> = {};
+    (data ?? []).forEach((r: any) => {
+      const key = `${r.employee_id}|${r.date}`;
+      map[key] = (map[key] || 0) + (Number(r.hours) || 0);
+    });
+    setOtMap(map);
+  }, []);
+
   const debouncedFetchAttendance = useCallback(() => {
     if (attendanceRealtimeRef.current) clearTimeout(attendanceRealtimeRef.current);
-    attendanceRealtimeRef.current = setTimeout(() => fetchAttendance(), 300);
-  }, [fetchAttendance]);
+    attendanceRealtimeRef.current = setTimeout(() => {
+      fetchAttendance();
+      fetchOvertime();
+    }, 300);
+  }, [fetchAttendance, fetchOvertime]);
 
   useEffect(() => {
     fetchAttendance();
-  }, [fetchAttendance]);
+    fetchOvertime();
+  }, [fetchAttendance, fetchOvertime]);
 
   useEffect(() => {
     const channel = supabase
       .channel("attendance-page-realtime")
       .on("postgres_changes", { event: "*", schema: "public", table: "attendance_records" }, debouncedFetchAttendance)
+      .on("postgres_changes", { event: "*", schema: "public", table: "overtime_requests" }, debouncedFetchAttendance)
       .subscribe();
 
     return () => {
@@ -147,16 +167,26 @@ const Attendance = () => {
     };
   }, [debouncedFetchAttendance]);
 
+  // Merge OT hours (from overtime_requests, all statuses) into each attendance row by employee + date.
+  const attendanceWithOt = useMemo(
+    () =>
+      attendance.map((a) => {
+        const otFromRequests = otMap[`${a.employeeId}|${a.date}`] || 0;
+        return { ...a, ot: otFromRequests || a.ot };
+      }),
+    [attendance, otMap]
+  );
+
   // Enforce the configured permission scope on the client (defense-in-depth + correct counts).
   const scopedAttendance = useMemo(() => {
-    if (attendanceScope === "all") return attendance;
+    if (attendanceScope === "all") return attendanceWithOt;
     if (attendanceScope === "department") {
       const myDept = currentUser?.dept || "";
-      return attendance.filter((a) => a.dept === myDept);
+      return attendanceWithOt.filter((a) => a.dept === myDept);
     }
     // self
-    return attendance.filter((a) => a.employeeId === currentUser?.employeeId);
-  }, [attendance, attendanceScope, currentUser?.dept, currentUser?.employeeId]);
+    return attendanceWithOt.filter((a) => a.employeeId === currentUser?.employeeId);
+  }, [attendanceWithOt, attendanceScope, currentUser?.dept, currentUser?.employeeId]);
 
   const allNames = useMemo(() => {
     const names = new Set(scopedAttendance.map((a) => a.name));
