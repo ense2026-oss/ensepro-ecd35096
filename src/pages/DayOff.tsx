@@ -97,6 +97,13 @@ const DayOff = () => {
   const [selectedEmpId, setSelectedEmpId] = useState<string>(initialEmp);
   const [empColCollapsed, setEmpColCollapsed] = useState(false);
 
+  // Reset to default tab if user lands on a hidden management tab
+  useEffect(() => {
+    if (!canEdit && (activeTab === "bulk" || activeTab === "company")) {
+      setActiveTab("calendar");
+    }
+  }, [canEdit, activeTab]);
+
   // Auto-select self for employee role
   useEffect(() => {
     if (isEmployeeRole && employeeId) {
