@@ -44,10 +44,10 @@ const allNavItems = [
   {
     section: "การบริหารเวลา",
     items: [
+      { path: "/check-in", label: "เช็คอิน", icon: MapPin },
       { path: "/attendance", label: "บันทึกเวลา", icon: Clock },
       { path: "/leave", label: "การลางาน", icon: CalendarDays },
       { path: "/overtime", label: "ทำงานโอที", icon: Clock },
-      { path: "/check-in", label: "เช็คอิน", icon: MapPin },
       { path: "/shift-management", label: "จัดการกะ", icon: CalendarDays },
       { path: "/overtime-management", label: "จัดการโอที", icon: Clock },
       { path: "/day-off", label: "จัดการวันหยุด", icon: CalendarDays },
