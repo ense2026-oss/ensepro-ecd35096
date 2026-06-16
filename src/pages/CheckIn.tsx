@@ -675,14 +675,17 @@ const CheckIn = () => {
             </thead>
             <tbody>
               {filteredHistory.length === 0 ? (
-                <tr><td colSpan={7} className="py-8 text-center text-muted-foreground">ไม่พบข้อมูลในเดือนที่เลือก</td></tr>
+                <tr><td colSpan={9} className="py-8 text-center text-muted-foreground">ไม่พบข้อมูลในเดือนที่เลือก</td></tr>
               ) : filteredHistory.map((r) => {
                 const autoRemark = computeRemark(r, currentShift);
+                const ot = otByDate[r.date];
                 return (
                   <tr key={r.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
                     <td className="py-3 pl-2">{formatThaiDate(r.date)}</td>
                     <td className="py-3 font-mono">{r.checkIn}</td>
                     <td className="py-3 font-mono">{r.checkOut ?? "-"}</td>
+                    <td className="py-3 font-mono" style={{ color: ot?.startTime ? "hsl(270 70% 45%)" : undefined }}>{ot?.startTime || "-"}</td>
+                    <td className="py-3 font-mono" style={{ color: ot?.endTime ? "hsl(330 70% 45%)" : undefined }}>{ot?.endTime || "-"}</td>
                     <td className="py-3">
                       {r.location === "-" || !r.location ? (
                         <span className="text-muted-foreground">-</span>
