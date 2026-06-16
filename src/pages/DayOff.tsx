@@ -241,8 +241,8 @@ const DayOff = () => {
         <TabsList>
           <TabsTrigger value="calendar"><CalendarDays className="w-4 h-4 mr-1.5" />ปฏิทินรายเดือน</TabsTrigger>
           <TabsTrigger value="employee"><Users className="w-4 h-4 mr-1.5" />รายพนักงาน</TabsTrigger>
-          <TabsTrigger value="bulk"><Settings2 className="w-4 h-4 mr-1.5" />จัดการแบบกลุ่ม</TabsTrigger>
-          <TabsTrigger value="company"><CalendarOff className="w-4 h-4 mr-1.5" />วันหยุดบริษัท</TabsTrigger>
+          {canEdit && <TabsTrigger value="bulk"><Settings2 className="w-4 h-4 mr-1.5" />จัดการแบบกลุ่ม</TabsTrigger>}
+          {canEdit && <TabsTrigger value="company"><CalendarOff className="w-4 h-4 mr-1.5" />วันหยุดบริษัท</TabsTrigger>}
         </TabsList>
 
         {/* ============ TAB 1: Calendar ============ */}
