@@ -79,9 +79,9 @@ function calcPayroll(emp: Employee, config: PayrollConfig, att: AttendanceStats,
 
 /* ─── Inline Editable Cell ─── */
 function EditableCell({
-  value, onChange, className = "",
+  value, onChange, className = "", readOnly = false,
 }: {
-  value: number; onChange: (v: number) => void; className?: string;
+  value: number; onChange: (v: number) => void; className?: string; readOnly?: boolean;
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(String(value));
@@ -99,6 +99,10 @@ function EditableCell({
     const n = Number(draft);
     if (!isNaN(n) && n !== value) onChange(n);
   };
+
+  if (readOnly) {
+    return <span className={`tabular-nums px-1 py-0.5 ${className}`}>{formatCurrency(value)}</span>;
+  }
 
   if (editing) {
     return (
