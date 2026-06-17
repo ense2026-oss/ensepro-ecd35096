@@ -246,31 +246,31 @@ const DayOff = () => {
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList>
-          <TabsTrigger value="calendar"><CalendarDays className="w-4 h-4 mr-1.5" />ปฏิทินรายเดือน</TabsTrigger>
-          <TabsTrigger value="employee"><Users className="w-4 h-4 mr-1.5" />รายพนักงาน</TabsTrigger>
-          {canEdit && <TabsTrigger value="bulk"><Settings2 className="w-4 h-4 mr-1.5" />จัดการแบบกลุ่ม</TabsTrigger>}
-          {canEdit && <TabsTrigger value="company"><CalendarOff className="w-4 h-4 mr-1.5" />วันหยุดบริษัท</TabsTrigger>}
+          <TabsTrigger value="calendar"><CalendarDays className="w-4 h-4 sm:mr-1.5" /><span className="hidden sm:inline">ปฏิทินรายเดือน</span></TabsTrigger>
+          <TabsTrigger value="employee"><Users className="w-4 h-4 sm:mr-1.5" /><span className="hidden sm:inline">รายพนักงาน</span></TabsTrigger>
+          {canEdit && <TabsTrigger value="bulk"><Settings2 className="w-4 h-4 sm:mr-1.5" /><span className="hidden sm:inline">จัดการแบบกลุ่ม</span></TabsTrigger>}
+          {canEdit && <TabsTrigger value="company"><CalendarOff className="w-4 h-4 sm:mr-1.5" /><span className="hidden sm:inline">วันหยุดบริษัท</span></TabsTrigger>}
         </TabsList>
 
         {/* ============ TAB 1: Calendar ============ */}
         <TabsContent value="calendar" className="space-y-4">
           <div className="card-base p-4 space-y-3">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="flex items-center gap-2">
-                <button onClick={() => navMonth(-1)} className="p-2 rounded-xl hover:bg-muted"><ChevronLeft className="w-4 h-4" /></button>
-                <h3 className="text-lg font-bold font-display min-w-[180px] text-center">{monthLabel}</h3>
-                <button onClick={() => navMonth(1)} className="p-2 rounded-xl hover:bg-muted"><ChevronRight className="w-4 h-4" /></button>
+            <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center sm:justify-between gap-3">
+              <div className="flex items-center gap-1">
+                <button onClick={() => navMonth(-1)} className="p-2 rounded-xl hover:bg-muted shrink-0"><ChevronLeft className="w-4 h-4" /></button>
+                <h3 className="text-base sm:text-lg font-bold font-display flex-1 sm:flex-none text-center sm:min-w-[180px] truncate">{monthLabel}</h3>
+                <button onClick={() => navMonth(1)} className="p-2 rounded-xl hover:bg-muted shrink-0"><ChevronRight className="w-4 h-4" /></button>
                 <button onClick={() => { const t = new Date(); setYear(t.getFullYear()); setMonth(t.getMonth()); }}
-                  className="ml-2 px-3 py-1.5 rounded-xl text-xs font-semibold border bg-muted/30 hover:bg-muted">วันนี้</button>
+                  className="ml-1 px-3 py-1.5 rounded-xl text-xs font-semibold border bg-muted/30 hover:bg-muted shrink-0">วันนี้</button>
               </div>
-              <div className="flex flex-wrap gap-2 items-center">
-                <div className="relative">
+              <div className="flex gap-2 items-center">
+                <div className="relative flex-1 sm:flex-none">
                   <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
                   <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="ค้นหาชื่อ"
-                    className="pl-8 pr-3 py-2 text-sm rounded-xl border outline-none bg-muted/30 w-44" />
+                    className="pl-8 pr-3 py-2 text-sm rounded-xl border outline-none bg-muted/30 w-full sm:w-44" />
                 </div>
                 <select value={deptFilter} onChange={(e) => setDeptFilter(e.target.value)}
-                  className="px-3 py-2 text-sm rounded-xl border outline-none bg-muted/30">
+                  className="px-3 py-2 text-sm rounded-xl border outline-none bg-muted/30 shrink-0 max-w-[40%] sm:max-w-none">
                   <option value="all">ทุกแผนก</option>
                   {departments.map((d) => <option key={d} value={d}>{d}</option>)}
                 </select>
