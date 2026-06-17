@@ -53,6 +53,7 @@ const MobileFooterNav = React.forwardRef<HTMLDivElement>((_, ref) => {
   const menuItems = allMenuItems.filter((item) => {
     if (!canAccessRoute(role, item.path)) return false;
     if (item.hideOnMobile && isMobile) return false;
+    if (isMobile && item.hideOnMobileForRoles?.includes(role.toLowerCase())) return false;
     const moduleId = pathToModuleMap[item.path];
     if (moduleId && moduleSettings[moduleId] === false) return false;
     return true;
