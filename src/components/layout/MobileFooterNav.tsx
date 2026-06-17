@@ -25,7 +25,7 @@ const allMenuItems = [
   { icon: CalendarDays, label: "ลางาน", path: "/leave", hideOnMobile: false },
   { icon: Clock, label: "โอที", path: "/overtime", hideOnMobile: false },
   { icon: CalendarDays, label: "จัดกะ", path: "/shift-management", hideOnMobile: false },
-  { icon: FileText, label: "รายงาน", path: "/reports", hideOnMobile: false },
+  { icon: FileText, label: "รายงาน", path: "/reports", hideOnMobile: false, hideOnMobileForRoles: ["admin", "executive", "manager", "hr"] },
   { icon: Settings, label: "ตั้งค่า", path: "/settings", hideOnMobile: true },
 ];
 
