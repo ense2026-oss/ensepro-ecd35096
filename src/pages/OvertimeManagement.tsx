@@ -258,11 +258,6 @@ const OvertimeManagement = () => {
     }
   };
 
-  // Stats
-  const monthIsoPrefix = `${year}-${String(month + 1).padStart(2, "0")}`;
-  const monthEntries = entries.filter((e) => e.date.startsWith(monthIsoPrefix));
-  const totalHoursMonth = monthEntries.reduce((s, e) => s + (e.hours || 0), 0);
-  const uniqueEmps = new Set(monthEntries.map((e) => e.employee_id)).size;
 
   if (loading) {
     return <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-muted-foreground" /></div>;
@@ -273,22 +268,6 @@ const OvertimeManagement = () => {
       <div>
         <h2 className="text-xl font-bold font-display">จัดการโอที</h2>
         <p className="text-sm text-muted-foreground mt-0.5">กำหนดและจัดการชั่วโมงโอทีของพนักงาน · คลิกเซลล์เพื่อกำหนด OT รายวัน</p>
-      </div>
-
-      {/* Quick stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-        <div className="card-base p-4">
-          <p className="text-xs text-muted-foreground">เดือนนี้</p>
-          <p className="text-lg font-bold font-display">{monthLabel}</p>
-        </div>
-        <div className="card-base p-4">
-          <p className="text-xs text-muted-foreground">รวมชั่วโมง OT</p>
-          <p className="text-lg font-bold font-display">{fmtHours(totalHoursMonth)} ชม.</p>
-        </div>
-        <div className="card-base p-4">
-          <p className="text-xs text-muted-foreground">พนักงานที่มี OT</p>
-          <p className="text-lg font-bold font-display">{uniqueEmps} คน</p>
-        </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
