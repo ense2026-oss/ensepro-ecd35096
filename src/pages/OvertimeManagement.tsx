@@ -258,11 +258,6 @@ const OvertimeManagement = () => {
     }
   };
 
-  // Stats
-  const monthIsoPrefix = `${year}-${String(month + 1).padStart(2, "0")}`;
-  const monthEntries = entries.filter((e) => e.date.startsWith(monthIsoPrefix));
-  const totalHoursMonth = monthEntries.reduce((s, e) => s + (e.hours || 0), 0);
-  const uniqueEmps = new Set(monthEntries.map((e) => e.employee_id)).size;
 
   if (loading) {
     return <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-muted-foreground" /></div>;
