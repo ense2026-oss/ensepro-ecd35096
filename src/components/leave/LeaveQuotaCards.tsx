@@ -19,12 +19,21 @@ const LeaveQuotaCards = ({ leaveTypes }: LeaveQuotaCardsProps) => {
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
       {leaveTypes.map((lt) => {
         const remaining = lt.quota - lt.used;
-        const pct = Math.round((lt.used / lt.quota) * 100);
+        const pct = lt.quota > 0 ? Math.round((lt.used / lt.quota) * 100) : 0;
         return (
-          <div key={lt.id} className="card-base p-4">
+          <div
+            key={lt.id}
+            className="card-base p-4"
+            style={{ borderLeft: `4px solid ${lt.color}` }}
+          >
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-semibold">{lt.name}</span>
-              <Calendar className="w-4 h-4 text-muted-foreground" />
+              <div
+                className="w-10 h-10 rounded-xl flex items-center justify-center"
+                style={{ background: `color-mix(in srgb, ${lt.color} 15%, white)` }}
+              >
+                <Calendar className="w-5 h-5" style={{ color: lt.color }} />
+              </div>
             </div>
             <p className="text-2xl font-bold font-display" style={{ color: lt.color }}>{remaining}</p>
             <p className="text-xs text-muted-foreground mt-0.5">วันคงเหลือ จาก {lt.quota} วัน</p>
