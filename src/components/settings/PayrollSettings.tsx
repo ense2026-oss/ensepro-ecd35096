@@ -41,6 +41,7 @@ const PayrollSettings = () => {
   const [saving, setSaving] = useState(false);
 
   // OT
+  const [otEnabled, setOtEnabled] = useState(true);
   const [otWeekdayRate, setOtWeekdayRate] = useState("1.5");
   const [otHolidayRate, setOtHolidayRate] = useState("3");
   const [otPublicHolidayRate, setOtPublicHolidayRate] = useState("3");
@@ -63,9 +64,12 @@ const PayrollSettings = () => {
   const [taxMethod, setTaxMethod] = useState<"progressive" | "flat">("progressive");
   const [flatRate, setFlatRate] = useState("5");
 
-  // Shift & Pay Cycle
+  // Shift allowance & Pay Cycle
+  const [shiftAllowanceEnabled, setShiftAllowanceEnabled] = useState(false);
+  const [shiftAllowanceMonthly, setShiftAllowanceMonthly] = useState("0");
   const [shiftAfternoon, setShiftAfternoon] = useState("50");
   const [shiftNight, setShiftNight] = useState("100");
+  const [payCycleEnabled, setPayCycleEnabled] = useState(true);
   const [payCycle, setPayCycle] = useState("end");
   const [customPayDay, setCustomPayDay] = useState("28");
 
@@ -75,6 +79,7 @@ const PayrollSettings = () => {
   // Populate form when config loads
   useEffect(() => {
     if (loading) return;
+    setOtEnabled(config.otEnabled);
     setOtWeekdayRate(normalizeOtRateValue(config.otRateWorkday));
     setOtHolidayRate(normalizeOtRateValue(config.otRateHoliday));
     setOtPublicHolidayRate(normalizeOtRateValue(config.otRatePublicHoliday));
@@ -92,8 +97,11 @@ const PayrollSettings = () => {
     setTaxEnabled(config.taxConfig.enabled);
     setTaxMethod(config.taxConfig.method);
     setFlatRate(String(config.taxConfig.flatRate));
+    setShiftAllowanceEnabled(config.shiftAllowanceEnabled);
+    setShiftAllowanceMonthly(String(config.shiftAllowanceMonthly));
     setShiftAfternoon(String(config.shiftAllowanceAfternoon));
     setShiftNight(String(config.shiftAllowanceNight));
+    setPayCycleEnabled(config.payCycleEnabled);
     setPayCycle(config.payCycle);
     setCustomPayDay(String(config.customPayDay));
     setTemplates(config.templates);
@@ -114,6 +122,7 @@ const PayrollSettings = () => {
   const handleSave = async () => {
     setSaving(true);
     const payload: PayrollConfig = {
+      otEnabled,
       otRateWorkday: Number(otWeekdayRate),
       otRateHoliday: Number(otHolidayRate),
       otRatePublicHoliday: Number(otPublicHolidayRate),
@@ -129,8 +138,11 @@ const PayrollSettings = () => {
       ssfRate: Number(ssfRate),
       ssfCeiling: Number(ssfCeiling),
       taxConfig: { enabled: taxEnabled, method: taxMethod, flatRate: Number(flatRate) },
+      shiftAllowanceEnabled,
+      shiftAllowanceMonthly: Number(shiftAllowanceMonthly),
       shiftAllowanceAfternoon: Number(shiftAfternoon),
       shiftAllowanceNight: Number(shiftNight),
+      payCycleEnabled,
       payCycle,
       customPayDay: Number(customPayDay),
       templates,
@@ -166,38 +178,51 @@ const PayrollSettings = () => {
 
       {/* ── OT Settings ── */}
       <div className="card-base p-5 space-y-4">
-        <h4 className="font-semibold flex items-center gap-2">⏱ อัตราค่าล่วงเวลา (OT)</h4>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-muted-foreground">OT วันทำงาน</label>
-            <select value={otWeekdayRate} onChange={(e) => setOtWeekdayRate(e.target.value)} className={selectClass}>
-              {otRateOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-            </select>
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-muted-foreground">OT วันหยุด</label>
-            <select value={otHolidayRate} onChange={(e) => setOtHolidayRate(e.target.value)} className={selectClass}>
-              {otRateOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-            </select>
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-muted-foreground">OT วันหยุดนักขัตฤกษ์</label>
-            <select value={otPublicHolidayRate} onChange={(e) => setOtPublicHolidayRate(e.target.value)} className={selectClass}>
-              {otRateOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-            </select>
-          </div>
-        </div>
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="flex items-center gap-3">
-            <Switch checked={allowHolidayOT} onCheckedChange={setAllowHolidayOT} />
-            <span className="text-sm">อนุญาตให้ทำ OT ในวันหยุด</span>
-          </div>
+        <div className="flex items-center justify-between">
+          <h4 className="font-semibold flex items-center gap-2">⏱ อัตราค่าล่วงเวลา (OT)</h4>
           <div className="flex items-center gap-2">
-            <label className="text-xs font-medium text-muted-foreground whitespace-nowrap">OT สูงสุด/เดือน (ชม.)</label>
-            <input type="number" value={maxOTHours} onChange={(e) => setMaxOTHours(e.target.value)} className={`${inputClass} w-20`} />
+            <span className="text-xs text-muted-foreground">{otEnabled ? "เปิดใช้งาน" : "ปิดใช้งาน"}</span>
+            <Switch checked={otEnabled} onCheckedChange={setOtEnabled} aria-label="เปิด/ปิด การคำนวณค่าล่วงเวลา" />
           </div>
         </div>
+        {otEnabled ? (
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">OT วันทำงาน</label>
+                <select value={otWeekdayRate} onChange={(e) => setOtWeekdayRate(e.target.value)} className={selectClass}>
+                  {otRateOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">OT วันหยุด</label>
+                <select value={otHolidayRate} onChange={(e) => setOtHolidayRate(e.target.value)} className={selectClass}>
+                  {otRateOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">OT วันหยุดนักขัตฤกษ์</label>
+                <select value={otPublicHolidayRate} onChange={(e) => setOtPublicHolidayRate(e.target.value)} className={selectClass}>
+                  {otRateOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </select>
+              </div>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="flex items-center gap-3">
+                <Switch checked={allowHolidayOT} onCheckedChange={setAllowHolidayOT} />
+                <span className="text-sm">อนุญาตให้ทำ OT ในวันหยุด</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <label className="text-xs font-medium text-muted-foreground whitespace-nowrap">OT สูงสุด/เดือน (ชม.)</label>
+                <input type="number" value={maxOTHours} onChange={(e) => setMaxOTHours(e.target.value)} className={`${inputClass} w-20`} />
+              </div>
+            </div>
+          </>
+        ) : (
+          <p className="text-sm text-muted-foreground">ปิดการคำนวณค่าล่วงเวลา — จะไม่มีการคิดค่า OT ในสลิปเงินเดือน</p>
+        )}
       </div>
+
 
       {/* ── Diligence ── */}
       <div className="card-base p-5 space-y-4">
@@ -379,32 +404,55 @@ const PayrollSettings = () => {
         </div>
       </div>
 
-      {/* ── Shift & Pay Cycle ── */}
+      {/* ── Shift Allowance ── */}
       <div className="card-base p-5 space-y-4">
-        <h4 className="font-semibold flex items-center gap-2">🔄 ค่ากะ และรอบจ่ายเงิน</h4>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-muted-foreground">ค่ากะบ่าย (บาท/วัน)</label>
-            <input type="number" value={shiftAfternoon} onChange={(e) => setShiftAfternoon(e.target.value)} className={inputClass} />
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-muted-foreground">ค่ากะดึก (บาท/วัน)</label>
-            <input type="number" value={shiftNight} onChange={(e) => setShiftNight(e.target.value)} className={inputClass} />
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-muted-foreground">รอบจ่ายเงินเดือน</label>
-            <select value={payCycle} onChange={(e) => setPayCycle(e.target.value)} className={selectClass}>
-              {payCycleOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-            </select>
+        <div className="flex items-center justify-between">
+          <h4 className="font-semibold flex items-center gap-2">🪙 ค่ากะ (เหมารายเดือน)</h4>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground">{shiftAllowanceEnabled ? "เปิดใช้งาน" : "ปิดใช้งาน"}</span>
+            <Switch checked={shiftAllowanceEnabled} onCheckedChange={setShiftAllowanceEnabled} aria-label="เปิด/ปิด ค่ากะ" />
           </div>
         </div>
-        {payCycle === "custom" && (
+        {shiftAllowanceEnabled ? (
           <div className="space-y-1.5 max-w-xs">
-            <label className="text-xs font-medium text-muted-foreground">วันที่จ่ายเงินเดือน</label>
-            <input type="number" min="1" max="31" value={customPayDay} onChange={(e) => setCustomPayDay(e.target.value)} className={inputClass} />
+            <label className="text-xs font-medium text-muted-foreground">ค่ากะ (บาท/เดือน)</label>
+            <input type="number" value={shiftAllowanceMonthly} onChange={(e) => setShiftAllowanceMonthly(e.target.value)} className={inputClass} />
+            <p className="text-xs text-muted-foreground">จำนวนเงินนี้จะถูกบวกเป็นรายรับในสลิปเงินเดือนทุกเดือน</p>
           </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">ปิดค่ากะ — จะไม่มีการบวกค่ากะในสลิปเงินเดือน</p>
         )}
       </div>
+
+      {/* ── Pay Cycle ── */}
+      <div className="card-base p-5 space-y-4">
+        <div className="flex items-center justify-between">
+          <h4 className="font-semibold flex items-center gap-2">🔄 รอบจ่ายเงิน</h4>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground">{payCycleEnabled ? "เปิดใช้งาน" : "ปิดใช้งาน"}</span>
+            <Switch checked={payCycleEnabled} onCheckedChange={setPayCycleEnabled} aria-label="เปิด/ปิด รอบจ่ายเงิน" />
+          </div>
+        </div>
+        {payCycleEnabled ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">รอบจ่ายเงินเดือน</label>
+              <select value={payCycle} onChange={(e) => setPayCycle(e.target.value)} className={selectClass}>
+                {payCycleOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
+            </div>
+            {payCycle === "custom" && (
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">วันที่จ่ายเงินเดือน</label>
+                <input type="number" min="1" max="31" value={customPayDay} onChange={(e) => setCustomPayDay(e.target.value)} className={inputClass} />
+              </div>
+            )}
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">ปิดรอบจ่ายเงิน — ใช้ค่าเริ่มต้นสิ้นเดือน</p>
+        )}
+      </div>
+
 
       {/* Save Button */}
       <button

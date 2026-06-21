@@ -51,7 +51,7 @@ function calcPayroll(emp: Employee, config: PayrollConfig, att: AttendanceStats,
   const salary = override?.base_salary != null ? Number(override.base_salary) : (Number(emp.salary) || 0);
 
   const hourlyRate = salary / 30 / 8;
-  const computedOt = Math.round(att.otHours * hourlyRate * config.otRateWorkday);
+  const computedOt = config.otEnabled ? Math.round(att.otHours * hourlyRate * config.otRateWorkday) : 0;
   const otPay = override?.ot_pay != null ? Number(override.ot_pay) : computedOt;
   // Diligence is lost when late/absent exceeds the configured thresholds
   const lostByLate = config.deductLate && att.lateDays > config.lateThreshold;
@@ -59,11 +59,14 @@ function calcPayroll(emp: Employee, config: PayrollConfig, att: AttendanceStats,
   const computedDiligence = config.diligenceEnabled && !lostByLate && !lostByAbsent ? config.diligenceAmount : 0;
   const diligence = override?.diligence != null ? Number(override.diligence) : computedDiligence;
 
+  // Shift allowance (flat monthly)
+  const shiftAllowance = config.shiftAllowanceEnabled ? Number(config.shiftAllowanceMonthly) || 0 : 0;
+
   const customItems = (emp.customPayrollItems || []).filter((i) => i.enabled);
   const customIncome = customItems.filter((i) => i.type === "income").reduce((s, i) => s + i.amount, 0);
   const customDeductions = customItems.filter((i) => i.type === "deduction").reduce((s, i) => s + i.amount, 0);
 
-  const grossPay = salary + otPay + diligence + customIncome;
+  const grossPay = salary + otPay + diligence + shiftAllowance + customIncome;
   const computedSsf = config.ssfEnabled ? Math.min(Math.round(salary * config.ssfRate / 100), config.ssfCeiling) : 0;
   const ssf = override?.ssf != null ? Number(override.ssf) : computedSsf;
 
@@ -75,7 +78,7 @@ function calcPayroll(emp: Employee, config: PayrollConfig, att: AttendanceStats,
   const totalDeduct = ssf + monthlyTax + customDeductions;
   const netPay = grossPay - totalDeduct;
 
-  return { salary, otPay, otHours: att.otHours, diligence, grossPay, ssf, monthlyTax, totalDeduct, netPay, att, annualIncome, deductions, customIncome, customDeductions, customItems };
+  return { salary, otPay, otHours: att.otHours, diligence, shiftAllowance, grossPay, ssf, monthlyTax, totalDeduct, netPay, att, annualIncome, deductions, customIncome, customDeductions, customItems };
 }
 
 /* ─── Inline Editable Cell ─── */
@@ -292,8 +295,9 @@ function PayslipDialog({ open, onClose, emp, payroll, config }: { open: boolean;
             <p className="font-semibold text-xs uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-1.5"><TrendingUp className="w-3.5 h-3.5" /> รายได้</p>
             <div className="space-y-1.5">
               <PayslipRow label="เงินเดือน" value={formatCurrency(payroll.salary)} />
-              <PayslipRow label={`ค่าล่วงเวลา (${payroll.otHours} ชม. x${config.otRateWorkday})`} value={formatCurrency(payroll.otPay)} />
+              {config.otEnabled && <PayslipRow label={`ค่าล่วงเวลา (${payroll.otHours} ชม. x${config.otRateWorkday})`} value={formatCurrency(payroll.otPay)} />}
               <PayslipRow label="เบี้ยขยัน" value={formatCurrency(payroll.diligence)} />
+              {config.shiftAllowanceEnabled && payroll.shiftAllowance > 0 && <PayslipRow label="ค่ากะ" value={formatCurrency(payroll.shiftAllowance)} />}
               {customIncomeItems.map((item) => <PayslipRow key={item.id} label={item.name} value={formatCurrency(item.amount)} />)}
               <div className="border-t pt-1.5"><PayslipRow label="รวมรายได้" value={formatCurrency(payroll.grossPay)} bold /></div>
             </div>
