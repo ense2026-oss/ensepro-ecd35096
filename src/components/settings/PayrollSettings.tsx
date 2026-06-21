@@ -64,9 +64,12 @@ const PayrollSettings = () => {
   const [taxMethod, setTaxMethod] = useState<"progressive" | "flat">("progressive");
   const [flatRate, setFlatRate] = useState("5");
 
-  // Shift & Pay Cycle
+  // Shift allowance & Pay Cycle
+  const [shiftAllowanceEnabled, setShiftAllowanceEnabled] = useState(false);
+  const [shiftAllowanceMonthly, setShiftAllowanceMonthly] = useState("0");
   const [shiftAfternoon, setShiftAfternoon] = useState("50");
   const [shiftNight, setShiftNight] = useState("100");
+  const [payCycleEnabled, setPayCycleEnabled] = useState(true);
   const [payCycle, setPayCycle] = useState("end");
   const [customPayDay, setCustomPayDay] = useState("28");
 
