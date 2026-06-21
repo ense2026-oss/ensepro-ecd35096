@@ -41,6 +41,7 @@ const PayrollSettings = () => {
   const [saving, setSaving] = useState(false);
 
   // OT
+  const [otEnabled, setOtEnabled] = useState(true);
   const [otWeekdayRate, setOtWeekdayRate] = useState("1.5");
   const [otHolidayRate, setOtHolidayRate] = useState("3");
   const [otPublicHolidayRate, setOtPublicHolidayRate] = useState("3");
