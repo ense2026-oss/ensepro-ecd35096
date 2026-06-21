@@ -47,6 +47,7 @@ export interface PayrollConfig {
 }
 
 export const DEFAULT_PAYROLL_CONFIG: PayrollConfig = {
+  otEnabled: true,
   otRateWorkday: 1.5,
   otRateHoliday: 3.0,
   otRatePublicHoliday: 3.0,
@@ -62,8 +63,11 @@ export const DEFAULT_PAYROLL_CONFIG: PayrollConfig = {
   ssfRate: 5,
   ssfCeiling: 750,
   taxConfig: { enabled: true, method: "progressive", flatRate: 5 },
+  shiftAllowanceEnabled: false,
+  shiftAllowanceMonthly: 0,
   shiftAllowanceAfternoon: 50,
   shiftAllowanceNight: 100,
+  payCycleEnabled: true,
   payCycle: "end",
   customPayDay: 28,
   templates: [
