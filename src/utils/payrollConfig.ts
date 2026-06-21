@@ -15,6 +15,7 @@ export interface PayrollTemplate {
 
 export interface PayrollConfig {
   // OT
+  otEnabled: boolean;
   otRateWorkday: number;
   otRateHoliday: number;
   otRatePublicHoliday: number;
@@ -32,9 +33,13 @@ export interface PayrollConfig {
   ssfRate: number;
   ssfCeiling: number;
   taxConfig: { enabled: boolean; method: "progressive" | "flat"; flatRate: number };
-  // Shift & pay cycle
+  // Shift allowance (flat monthly)
+  shiftAllowanceEnabled: boolean;
+  shiftAllowanceMonthly: number;
   shiftAllowanceAfternoon: number;
   shiftAllowanceNight: number;
+  // Pay cycle
+  payCycleEnabled: boolean;
   payCycle: string;
   customPayDay: number;
   // Templates
