@@ -295,8 +295,9 @@ function PayslipDialog({ open, onClose, emp, payroll, config }: { open: boolean;
             <p className="font-semibold text-xs uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-1.5"><TrendingUp className="w-3.5 h-3.5" /> รายได้</p>
             <div className="space-y-1.5">
               <PayslipRow label="เงินเดือน" value={formatCurrency(payroll.salary)} />
-              <PayslipRow label={`ค่าล่วงเวลา (${payroll.otHours} ชม. x${config.otRateWorkday})`} value={formatCurrency(payroll.otPay)} />
+              {config.otEnabled && <PayslipRow label={`ค่าล่วงเวลา (${payroll.otHours} ชม. x${config.otRateWorkday})`} value={formatCurrency(payroll.otPay)} />}
               <PayslipRow label="เบี้ยขยัน" value={formatCurrency(payroll.diligence)} />
+              {config.shiftAllowanceEnabled && payroll.shiftAllowance > 0 && <PayslipRow label="ค่ากะ" value={formatCurrency(payroll.shiftAllowance)} />}
               {customIncomeItems.map((item) => <PayslipRow key={item.id} label={item.name} value={formatCurrency(item.amount)} />)}
               <div className="border-t pt-1.5"><PayslipRow label="รวมรายได้" value={formatCurrency(payroll.grossPay)} bold /></div>
             </div>
