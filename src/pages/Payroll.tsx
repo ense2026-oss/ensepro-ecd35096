@@ -51,7 +51,7 @@ function calcPayroll(emp: Employee, config: PayrollConfig, att: AttendanceStats,
   const salary = override?.base_salary != null ? Number(override.base_salary) : (Number(emp.salary) || 0);
 
   const hourlyRate = salary / 30 / 8;
-  const computedOt = Math.round(att.otHours * hourlyRate * config.otRateWorkday);
+  const computedOt = config.otEnabled ? Math.round(att.otHours * hourlyRate * config.otRateWorkday) : 0;
   const otPay = override?.ot_pay != null ? Number(override.ot_pay) : computedOt;
   // Diligence is lost when late/absent exceeds the configured thresholds
   const lostByLate = config.deductLate && att.lateDays > config.lateThreshold;
@@ -59,11 +59,14 @@ function calcPayroll(emp: Employee, config: PayrollConfig, att: AttendanceStats,
   const computedDiligence = config.diligenceEnabled && !lostByLate && !lostByAbsent ? config.diligenceAmount : 0;
   const diligence = override?.diligence != null ? Number(override.diligence) : computedDiligence;
 
+  // Shift allowance (flat monthly)
+  const shiftAllowance = config.shiftAllowanceEnabled ? Number(config.shiftAllowanceMonthly) || 0 : 0;
+
   const customItems = (emp.customPayrollItems || []).filter((i) => i.enabled);
   const customIncome = customItems.filter((i) => i.type === "income").reduce((s, i) => s + i.amount, 0);
   const customDeductions = customItems.filter((i) => i.type === "deduction").reduce((s, i) => s + i.amount, 0);
 
-  const grossPay = salary + otPay + diligence + customIncome;
+  const grossPay = salary + otPay + diligence + shiftAllowance + customIncome;
   const computedSsf = config.ssfEnabled ? Math.min(Math.round(salary * config.ssfRate / 100), config.ssfCeiling) : 0;
   const ssf = override?.ssf != null ? Number(override.ssf) : computedSsf;
 
