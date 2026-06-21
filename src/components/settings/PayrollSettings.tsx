@@ -404,32 +404,55 @@ const PayrollSettings = () => {
         </div>
       </div>
 
-      {/* ── Shift & Pay Cycle ── */}
+      {/* ── Shift Allowance ── */}
       <div className="card-base p-5 space-y-4">
-        <h4 className="font-semibold flex items-center gap-2">🔄 ค่ากะ และรอบจ่ายเงิน</h4>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-muted-foreground">ค่ากะบ่าย (บาท/วัน)</label>
-            <input type="number" value={shiftAfternoon} onChange={(e) => setShiftAfternoon(e.target.value)} className={inputClass} />
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-muted-foreground">ค่ากะดึก (บาท/วัน)</label>
-            <input type="number" value={shiftNight} onChange={(e) => setShiftNight(e.target.value)} className={inputClass} />
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-muted-foreground">รอบจ่ายเงินเดือน</label>
-            <select value={payCycle} onChange={(e) => setPayCycle(e.target.value)} className={selectClass}>
-              {payCycleOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-            </select>
+        <div className="flex items-center justify-between">
+          <h4 className="font-semibold flex items-center gap-2">🪙 ค่ากะ (เหมารายเดือน)</h4>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground">{shiftAllowanceEnabled ? "เปิดใช้งาน" : "ปิดใช้งาน"}</span>
+            <Switch checked={shiftAllowanceEnabled} onCheckedChange={setShiftAllowanceEnabled} aria-label="เปิด/ปิด ค่ากะ" />
           </div>
         </div>
-        {payCycle === "custom" && (
+        {shiftAllowanceEnabled ? (
           <div className="space-y-1.5 max-w-xs">
-            <label className="text-xs font-medium text-muted-foreground">วันที่จ่ายเงินเดือน</label>
-            <input type="number" min="1" max="31" value={customPayDay} onChange={(e) => setCustomPayDay(e.target.value)} className={inputClass} />
+            <label className="text-xs font-medium text-muted-foreground">ค่ากะ (บาท/เดือน)</label>
+            <input type="number" value={shiftAllowanceMonthly} onChange={(e) => setShiftAllowanceMonthly(e.target.value)} className={inputClass} />
+            <p className="text-xs text-muted-foreground">จำนวนเงินนี้จะถูกบวกเป็นรายรับในสลิปเงินเดือนทุกเดือน</p>
           </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">ปิดค่ากะ — จะไม่มีการบวกค่ากะในสลิปเงินเดือน</p>
         )}
       </div>
+
+      {/* ── Pay Cycle ── */}
+      <div className="card-base p-5 space-y-4">
+        <div className="flex items-center justify-between">
+          <h4 className="font-semibold flex items-center gap-2">🔄 รอบจ่ายเงิน</h4>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground">{payCycleEnabled ? "เปิดใช้งาน" : "ปิดใช้งาน"}</span>
+            <Switch checked={payCycleEnabled} onCheckedChange={setPayCycleEnabled} aria-label="เปิด/ปิด รอบจ่ายเงิน" />
+          </div>
+        </div>
+        {payCycleEnabled ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">รอบจ่ายเงินเดือน</label>
+              <select value={payCycle} onChange={(e) => setPayCycle(e.target.value)} className={selectClass}>
+                {payCycleOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
+            </div>
+            {payCycle === "custom" && (
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">วันที่จ่ายเงินเดือน</label>
+                <input type="number" min="1" max="31" value={customPayDay} onChange={(e) => setCustomPayDay(e.target.value)} className={inputClass} />
+              </div>
+            )}
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">ปิดรอบจ่ายเงิน — ใช้ค่าเริ่มต้นสิ้นเดือน</p>
+        )}
+      </div>
+
 
       {/* Save Button */}
       <button
