@@ -122,6 +122,7 @@ const PayrollSettings = () => {
   const handleSave = async () => {
     setSaving(true);
     const payload: PayrollConfig = {
+      otEnabled,
       otRateWorkday: Number(otWeekdayRate),
       otRateHoliday: Number(otHolidayRate),
       otRatePublicHoliday: Number(otPublicHolidayRate),
@@ -137,8 +138,11 @@ const PayrollSettings = () => {
       ssfRate: Number(ssfRate),
       ssfCeiling: Number(ssfCeiling),
       taxConfig: { enabled: taxEnabled, method: taxMethod, flatRate: Number(flatRate) },
+      shiftAllowanceEnabled,
+      shiftAllowanceMonthly: Number(shiftAllowanceMonthly),
       shiftAllowanceAfternoon: Number(shiftAfternoon),
       shiftAllowanceNight: Number(shiftNight),
+      payCycleEnabled,
       payCycle,
       customPayDay: Number(customPayDay),
       templates,
