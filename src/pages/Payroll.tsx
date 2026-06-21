@@ -78,7 +78,7 @@ function calcPayroll(emp: Employee, config: PayrollConfig, att: AttendanceStats,
   const totalDeduct = ssf + monthlyTax + customDeductions;
   const netPay = grossPay - totalDeduct;
 
-  return { salary, otPay, otHours: att.otHours, diligence, grossPay, ssf, monthlyTax, totalDeduct, netPay, att, annualIncome, deductions, customIncome, customDeductions, customItems };
+  return { salary, otPay, otHours: att.otHours, diligence, shiftAllowance, grossPay, ssf, monthlyTax, totalDeduct, netPay, att, annualIncome, deductions, customIncome, customDeductions, customItems };
 }
 
 /* ─── Inline Editable Cell ─── */
