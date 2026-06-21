@@ -178,38 +178,51 @@ const PayrollSettings = () => {
 
       {/* ── OT Settings ── */}
       <div className="card-base p-5 space-y-4">
-        <h4 className="font-semibold flex items-center gap-2">⏱ อัตราค่าล่วงเวลา (OT)</h4>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-muted-foreground">OT วันทำงาน</label>
-            <select value={otWeekdayRate} onChange={(e) => setOtWeekdayRate(e.target.value)} className={selectClass}>
-              {otRateOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-            </select>
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-muted-foreground">OT วันหยุด</label>
-            <select value={otHolidayRate} onChange={(e) => setOtHolidayRate(e.target.value)} className={selectClass}>
-              {otRateOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-            </select>
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-muted-foreground">OT วันหยุดนักขัตฤกษ์</label>
-            <select value={otPublicHolidayRate} onChange={(e) => setOtPublicHolidayRate(e.target.value)} className={selectClass}>
-              {otRateOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-            </select>
-          </div>
-        </div>
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="flex items-center gap-3">
-            <Switch checked={allowHolidayOT} onCheckedChange={setAllowHolidayOT} />
-            <span className="text-sm">อนุญาตให้ทำ OT ในวันหยุด</span>
-          </div>
+        <div className="flex items-center justify-between">
+          <h4 className="font-semibold flex items-center gap-2">⏱ อัตราค่าล่วงเวลา (OT)</h4>
           <div className="flex items-center gap-2">
-            <label className="text-xs font-medium text-muted-foreground whitespace-nowrap">OT สูงสุด/เดือน (ชม.)</label>
-            <input type="number" value={maxOTHours} onChange={(e) => setMaxOTHours(e.target.value)} className={`${inputClass} w-20`} />
+            <span className="text-xs text-muted-foreground">{otEnabled ? "เปิดใช้งาน" : "ปิดใช้งาน"}</span>
+            <Switch checked={otEnabled} onCheckedChange={setOtEnabled} aria-label="เปิด/ปิด การคำนวณค่าล่วงเวลา" />
           </div>
         </div>
+        {otEnabled ? (
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">OT วันทำงาน</label>
+                <select value={otWeekdayRate} onChange={(e) => setOtWeekdayRate(e.target.value)} className={selectClass}>
+                  {otRateOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">OT วันหยุด</label>
+                <select value={otHolidayRate} onChange={(e) => setOtHolidayRate(e.target.value)} className={selectClass}>
+                  {otRateOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">OT วันหยุดนักขัตฤกษ์</label>
+                <select value={otPublicHolidayRate} onChange={(e) => setOtPublicHolidayRate(e.target.value)} className={selectClass}>
+                  {otRateOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </select>
+              </div>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="flex items-center gap-3">
+                <Switch checked={allowHolidayOT} onCheckedChange={setAllowHolidayOT} />
+                <span className="text-sm">อนุญาตให้ทำ OT ในวันหยุด</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <label className="text-xs font-medium text-muted-foreground whitespace-nowrap">OT สูงสุด/เดือน (ชม.)</label>
+                <input type="number" value={maxOTHours} onChange={(e) => setMaxOTHours(e.target.value)} className={`${inputClass} w-20`} />
+              </div>
+            </div>
+          </>
+        ) : (
+          <p className="text-sm text-muted-foreground">ปิดการคำนวณค่าล่วงเวลา — จะไม่มีการคิดค่า OT ในสลิปเงินเดือน</p>
+        )}
       </div>
+
 
       {/* ── Diligence ── */}
       <div className="card-base p-5 space-y-4">
