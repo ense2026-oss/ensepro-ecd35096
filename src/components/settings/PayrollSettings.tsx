@@ -97,8 +97,11 @@ const PayrollSettings = () => {
     setTaxEnabled(config.taxConfig.enabled);
     setTaxMethod(config.taxConfig.method);
     setFlatRate(String(config.taxConfig.flatRate));
+    setShiftAllowanceEnabled(config.shiftAllowanceEnabled);
+    setShiftAllowanceMonthly(String(config.shiftAllowanceMonthly));
     setShiftAfternoon(String(config.shiftAllowanceAfternoon));
     setShiftNight(String(config.shiftAllowanceNight));
+    setPayCycleEnabled(config.payCycleEnabled);
     setPayCycle(config.payCycle);
     setCustomPayDay(String(config.customPayDay));
     setTemplates(config.templates);
