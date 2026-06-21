@@ -79,6 +79,7 @@ const PayrollSettings = () => {
   // Populate form when config loads
   useEffect(() => {
     if (loading) return;
+    setOtEnabled(config.otEnabled);
     setOtWeekdayRate(normalizeOtRateValue(config.otRateWorkday));
     setOtHolidayRate(normalizeOtRateValue(config.otRateHoliday));
     setOtPublicHolidayRate(normalizeOtRateValue(config.otRatePublicHoliday));
