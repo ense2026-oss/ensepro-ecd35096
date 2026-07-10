@@ -197,6 +197,10 @@ const RolesSettings = () => {
       toast({ title: "กรุณากรอกชื่อ Role", variant: "destructive" });
       return;
     }
+    if (!/^[a-zA-Z0-9_ -]+$/.test(form.name.trim())) {
+      toast({ title: "ชื่อ Role ต้องเป็นภาษาอังกฤษเท่านั้น", description: "กรุณาใส่ภาษาไทยในช่องคำอธิบายแทน", variant: "destructive" });
+      return;
+    }
     setSaving(true);
     try {
       const roleName = form.name.toLowerCase();
