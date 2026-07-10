@@ -197,6 +197,10 @@ const RolesSettings = () => {
       toast({ title: "กรุณากรอกชื่อ Role", variant: "destructive" });
       return;
     }
+    if (!/^[a-zA-Z0-9_ -]+$/.test(form.name.trim())) {
+      toast({ title: "ชื่อ Role ต้องเป็นภาษาอังกฤษเท่านั้น", description: "กรุณาใส่ภาษาไทยในช่องคำอธิบายแทน", variant: "destructive" });
+      return;
+    }
     setSaving(true);
     try {
       const roleName = form.name.toLowerCase();
@@ -392,10 +396,10 @@ const RolesSettings = () => {
           <div className="space-y-5 pt-2">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-sm font-semibold mb-1.5">ชื่อ Role</label>
+                <label className="block text-sm font-semibold mb-1.5">ชื่อ Role (ภาษาอังกฤษเท่านั้น)</label>
                 <input
                   value={form.name}
-                  onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                  onChange={(e) => setForm((f) => ({ ...f, name: e.target.value.replace(/[^a-zA-Z0-9_ -]/g, "") }))}
                   placeholder="เช่น Manager"
                   disabled={!!editingRole}
                   className="w-full px-3 py-2.5 text-sm rounded-xl border outline-none bg-muted/30 focus:ring-2 focus:ring-primary/30 transition-shadow disabled:opacity-50"
