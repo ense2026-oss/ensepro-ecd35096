@@ -13,6 +13,7 @@ import { ThaiDatePicker } from "@/components/ui/thai-date-picker";
 import EmployeeAvatar from "@/components/ui/employee-avatar";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import CompanyHolidaysSettings from "@/components/settings/CompanyHolidaysSettings";
+import { cn } from "@/lib/utils";
 import { CalendarOff } from "lucide-react";
 
 interface Pattern {
