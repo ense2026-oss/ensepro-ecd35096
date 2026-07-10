@@ -73,7 +73,7 @@ const Sidebar = ({ collapsed, onToggle, onNavigate }: SidebarProps) => {
   const { programName, programSubtitle, logoUrl, logoOnlyUrl, displayMode } = useBranding();
   const activeLogo = displayMode === "logo-only" ? logoOnlyUrl : logoUrl;
   const { currentUser, role, logout } = useAuth();
-  const { canAccessRoute, isSelfOnly: permSelfOnly } = usePermissions();
+  const { canAccessRoute, isSelfOnly: permSelfOnly, getAllRoles } = usePermissions();
 
   // Module settings from DB with realtime
   const { modules: enabledModules } = useModuleSettings();
@@ -117,6 +117,12 @@ const Sidebar = ({ collapsed, onToggle, onNavigate }: SidebarProps) => {
     manager: "ผู้จัดการ",
     employee: "พนักงาน",
   };
+
+  // Thai description for custom roles comes from role_permissions (getAllRoles)
+  const customRoleDesc = getAllRoles().find(
+    (r) => r.name === userRole.toLowerCase()
+  )?.description;
+
 
   const dynamicBadges: Record<string, number> = {
     "/attendance": attendancePending,
@@ -183,7 +189,7 @@ const Sidebar = ({ collapsed, onToggle, onNavigate }: SidebarProps) => {
               <div className="flex items-center gap-1 mt-0.5">
                 <Shield className="w-3 h-3" style={{ color: "#FF870F" }} />
                 <span className="text-xs" style={{ color: "#FF870F" }}>
-                  {roleLabel[userRole] || userRole}
+                  {roleLabel[userRole] || customRoleDesc || userRole}
                 </span>
               </div>
             </div>

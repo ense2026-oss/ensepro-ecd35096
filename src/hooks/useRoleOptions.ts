@@ -22,8 +22,9 @@ const ROLE_NAME_TO_VALUE: Record<string, string> = {
 const ROLE_ORDER = [
   "executive",
   "manager",
-  "หัวหน้างาน",
+  "team_lead",
   "hr",
+  "personnel",
   "employee",
   "accountant",
   "admin",
