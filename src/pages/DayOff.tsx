@@ -328,7 +328,7 @@ const DayOff = () => {
                   <tr key={emp.id} className="hover:bg-muted/20">
                     <td className={cn("sticky left-0 bg-card py-2 border-b border-r whitespace-nowrap z-10", empColCollapsed ? "pl-0 pr-0 w-px" : "px-3")} style={{borderColor:"hsl(var(--border))"}}>
                       <div className={cn("flex items-center", empColCollapsed ? "gap-1.5" : "gap-2")}>
-                        <span className={cn("text-[10px] text-muted-foreground font-semibold tabular-nums", empColCollapsed ? "pl-1 text-left" : "w-5 text-right")}>{idx + 1}</span>
+                        <span className={cn("text-[10px] text-muted-foreground font-semibold tabular-nums", empColCollapsed ? "pl-0 text-left" : "w-5 text-right")}>{idx + 1}</span>
                         <EmployeeAvatar photoUrl={emp.photoUrl} avatar={emp.avatar} avatarColor={emp.avatarColor} avatarTextColor={emp.avatarTextColor} firstName={emp.firstName} size="sm" />
                         {!empColCollapsed && (
                           <div>
