@@ -333,7 +333,7 @@ const OvertimeManagement = () => {
             <table className="w-full text-xs border-collapse">
               <thead>
                 <tr>
-                  <th className={cn("sticky left-0 top-0 py-2 text-left font-semibold border-b border-r whitespace-nowrap z-30", empColCollapsed ? "px-1 w-px" : "px-3")} style={{ borderColor: "hsl(var(--border))", background: "hsl(var(--card))" }}>
+                  <th className={cn("sticky left-0 top-0 py-2 text-left font-semibold border-b border-r whitespace-nowrap z-30", empColCollapsed ? "pl-0 pr-0 w-px" : "px-3")} style={{ borderColor: "hsl(var(--border))", background: "hsl(var(--card))" }}>
                     <div className={cn("flex items-center gap-2", empColCollapsed ? "justify-start" : "justify-between")}>
                       {!empColCollapsed && <span>พนักงาน</span>}
                       <button onClick={() => setEmpColCollapsed((c) => !c)} className="p-1 rounded-lg hover:bg-muted transition-colors" title={empColCollapsed ? "ขยายคอลัมน์พนักงาน" : "ยุบคอลัมน์พนักงาน"}>
@@ -366,7 +366,7 @@ const OvertimeManagement = () => {
               <tbody>
                 {filteredEmployees.map((emp, idx) => (
                   <tr key={emp.id} className="hover:bg-muted/20">
-                    <td className={cn("sticky left-0 bg-card py-2 border-b border-r whitespace-nowrap z-10", empColCollapsed ? "px-1 w-px" : "px-3")} style={{ borderColor: "hsl(var(--border))" }}>
+                    <td className={cn("sticky left-0 bg-card py-2 border-b border-r whitespace-nowrap z-10", empColCollapsed ? "pl-0 pr-0 w-px" : "px-3")} style={{ borderColor: "hsl(var(--border))" }}>
                       <div className={cn("flex items-center", empColCollapsed ? "gap-1.5" : "gap-2")}>
                         <span className="text-[10px] text-muted-foreground font-semibold w-5 text-right tabular-nums">{idx + 1}</span>
                         <EmployeeAvatar photoUrl={emp.photoUrl} avatar={emp.avatar} avatarColor={emp.avatarColor} avatarTextColor={emp.avatarTextColor} firstName={emp.firstName} size="sm" />
