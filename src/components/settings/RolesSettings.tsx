@@ -119,10 +119,10 @@ const RolesSettings = () => {
     const loadData = async () => {
       setDbLoading(true);
       // Build roles from permissions
-      const roleMap = new Map<string, { desc: string; perms: RolePermission[] }>();
+      const roleMap = new Map<string, { desc: string; order: number; perms: RolePermission[] }>();
       allPermissions.forEach((p) => {
         if (!roleMap.has(p.role_name)) {
-          roleMap.set(p.role_name, { desc: p.role_description, perms: [] });
+          roleMap.set(p.role_name, { desc: p.role_description, order: p.display_order ?? 0, perms: [] });
         }
         roleMap.get(p.role_name)!.perms.push(p);
       });
@@ -147,9 +147,12 @@ const RolesSettings = () => {
           name: key,
           desc: val.desc,
           users: counts[key] || 0,
+          order: val.order,
           permissions: dbToLocal(val.perms),
         });
       });
+      // Show roles in configured display order (fallback to name for ties)
+      roleList.sort((a, b) => a.order - b.order || a.name.localeCompare(b.name));
       setRoles(roleList);
       setDbLoading(false);
     };
