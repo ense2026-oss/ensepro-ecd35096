@@ -329,8 +329,28 @@ const RolesSettings = () => {
             </tr>
           </thead>
           <tbody>
-            {roles.map((role) => (
+            {roles.map((role, index) => (
               <tr key={role.name} className="border-b hover:bg-muted/30 transition-colors" style={{ borderColor: "hsl(var(--border))" }}>
+                <td className="px-2 py-3">
+                  <div className="flex flex-col items-center gap-0.5">
+                    <button
+                      onClick={() => moveRole(index, -1)}
+                      disabled={index === 0 || reordering}
+                      title="เลื่อนขึ้น"
+                      className="p-1 rounded-md hover:bg-muted transition-colors text-muted-foreground disabled:opacity-30 disabled:cursor-not-allowed"
+                    >
+                      <ChevronUp className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => moveRole(index, 1)}
+                      disabled={index === roles.length - 1 || reordering}
+                      title="เลื่อนลง"
+                      className="p-1 rounded-md hover:bg-muted transition-colors text-muted-foreground disabled:opacity-30 disabled:cursor-not-allowed"
+                    >
+                      <ChevronDown className="w-4 h-4" />
+                    </button>
+                  </div>
+                </td>
                 <td className="px-4 py-3">
                   <span className="px-3 py-1 rounded-lg text-xs font-bold" style={{ background: "hsl(var(--primary-light))", color: "hsl(var(--primary))" }}>
                     {role.name}
