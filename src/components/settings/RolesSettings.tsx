@@ -320,6 +320,7 @@ const RolesSettings = () => {
         <table className="w-full">
           <thead>
             <tr className="border-b" style={{ borderColor: "hsl(var(--border))" }}>
+              <th className="text-center px-2 py-3 text-xs font-semibold text-muted-foreground uppercase w-16">ลำดับ</th>
               <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase">Role</th>
               <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase">คำอธิบาย</th>
               <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase">ผู้ใช้</th>
