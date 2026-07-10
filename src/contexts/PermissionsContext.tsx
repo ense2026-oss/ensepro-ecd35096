@@ -24,6 +24,7 @@ export interface RolePermission {
   can_delete: boolean;
   can_approve: boolean;
   scope: string;
+  display_order?: number;
 }
 
 // Module ↔ route mapping
