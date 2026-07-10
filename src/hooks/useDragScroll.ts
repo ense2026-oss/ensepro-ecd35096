@@ -111,7 +111,7 @@ export function useDragScroll<T extends HTMLElement = HTMLDivElement>() {
     const el = node;
     if (!el) return;
     el.style.touchAction = "none";
-    el.style.webkitOverflowScrolling = "touch";
+    el.style.setProperty("-webkit-overflow-scrolling", "touch");
     el.addEventListener("pointerdown", onPointerDown);
     el.addEventListener("pointermove", onPointerMove);
     el.addEventListener("pointerup", endPointer);
