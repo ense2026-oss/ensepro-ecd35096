@@ -5,6 +5,7 @@ import { useEmployees } from "@/contexts/EmployeeContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/contexts/PermissionsContext";
 import { useToast } from "@/hooks/use-toast";
+import { useDragScroll } from "@/hooks/useDragScroll";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import SearchableSelect from "@/components/ui/searchable-select";
 import { ThaiDatePicker } from "@/components/ui/thai-date-picker";
