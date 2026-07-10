@@ -314,11 +314,11 @@ const OvertimeManagement = () => {
               <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded" style={{ background: "hsl(220 80% 90%)" }} />วันหยุดบริษัท</span>
               <span className="flex items-center gap-1.5"><span className="inline-block w-5 h-2 rounded-sm" style={{ background: "linear-gradient(90deg,#2563EB,#7C3AED)" }} />แถบสีล่าง = กะการทำงาน</span>
               {shifts.length > 0 && (
-                <span className="flex items-center gap-2 pl-1 ml-1 border-l" style={{ borderColor: "hsl(var(--border))" }}>
+                <span className="flex flex-wrap items-center gap-x-2 gap-y-1 w-full sm:w-auto sm:pl-1 sm:ml-1 sm:border-l" style={{ borderColor: "hsl(var(--border))" }}>
                   {shifts.map((s) => (
-                    <span key={s.id} className="flex items-center gap-1">
-                      <span className="inline-block w-2.5 h-2.5 rounded-full" style={{ background: s.color }} />
-                      <span className="text-[11px]">{s.name}</span>
+                    <span key={s.id} className="flex items-center gap-1 min-w-0">
+                      <span className="inline-block w-2.5 h-2.5 rounded-full shrink-0" style={{ background: s.color }} />
+                      <span className="text-[11px] truncate">{s.name}</span>
                     </span>
                   ))}
                 </span>
