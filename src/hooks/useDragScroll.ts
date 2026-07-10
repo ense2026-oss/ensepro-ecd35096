@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 /**
  * Enables drag-to-scroll (horizontal + vertical) on a scrollable container.
@@ -6,18 +6,25 @@ import { useCallback, useEffect, useRef } from "react";
  * - Touch: explicit finger-drag panning so swiping always works, even when
  *   native momentum scrolling is blocked by parent elements or touch-action.
  *
- * Attach the returned ref to the element that has `overflow-auto`.
+ * Attach the returned callback ref to the element that has `overflow-auto`.
  */
 export function useDragScroll<T extends HTMLElement = HTMLDivElement>() {
   const ref = useRef<T | null>(null);
+  const [node, setNode] = useState<T | null>(null);
   const state = useRef({
     down: false,
     dragging: false,
+    blockClick: false,
     startX: 0,
     startY: 0,
     scrollLeft: 0,
     scrollTop: 0,
   });
+
+  const setScrollRef = useCallback((el: T | null) => {
+    ref.current = el;
+    setNode(el);
+  }, []);
 
   // ---- Pointer (mouse / pen) ----
   const onPointerDown = useCallback((e: PointerEvent) => {
@@ -44,6 +51,7 @@ export function useDragScroll<T extends HTMLElement = HTMLDivElement>() {
       el.style.cursor = "grabbing";
       el.style.userSelect = "none";
     }
+    state.current.blockClick = true;
     e.preventDefault();
     el.scrollLeft = state.current.scrollLeft - dx;
     el.scrollTop = state.current.scrollTop - dy;
@@ -80,6 +88,7 @@ export function useDragScroll<T extends HTMLElement = HTMLDivElement>() {
     const dy = t.clientY - state.current.startY;
     if (!state.current.dragging && Math.hypot(dx, dy) < 6) return;
     state.current.dragging = true;
+    state.current.blockClick = true;
     // Prevent the page from scrolling / rubber-banding while we pan the grid.
     if (e.cancelable) e.preventDefault();
     el.scrollLeft = state.current.scrollLeft - dx;
@@ -91,9 +100,18 @@ export function useDragScroll<T extends HTMLElement = HTMLDivElement>() {
     state.current.dragging = false;
   }, []);
 
+  const onClickCapture = useCallback((e: MouseEvent) => {
+    if (!state.current.blockClick) return;
+    state.current.blockClick = false;
+    e.preventDefault();
+    e.stopPropagation();
+  }, []);
+
   useEffect(() => {
-    const el = ref.current;
+    const el = node;
     if (!el) return;
+    el.style.touchAction = "none";
+    el.style.webkitOverflowScrolling = "touch";
     el.addEventListener("pointerdown", onPointerDown);
     el.addEventListener("pointermove", onPointerMove);
     el.addEventListener("pointerup", endPointer);
@@ -104,6 +122,7 @@ export function useDragScroll<T extends HTMLElement = HTMLDivElement>() {
     el.addEventListener("touchmove", onTouchMove, { passive: false });
     el.addEventListener("touchend", endTouch);
     el.addEventListener("touchcancel", endTouch);
+    el.addEventListener("click", onClickCapture, true);
     return () => {
       el.removeEventListener("pointerdown", onPointerDown);
       el.removeEventListener("pointermove", onPointerMove);
@@ -115,8 +134,9 @@ export function useDragScroll<T extends HTMLElement = HTMLDivElement>() {
       el.removeEventListener("touchmove", onTouchMove);
       el.removeEventListener("touchend", endTouch);
       el.removeEventListener("touchcancel", endTouch);
+      el.removeEventListener("click", onClickCapture, true);
     };
-  }, [onPointerDown, onPointerMove, endPointer, onTouchStart, onTouchMove, endTouch]);
+  }, [node, onPointerDown, onPointerMove, endPointer, onTouchStart, onTouchMove, endTouch, onClickCapture]);
 
-  return ref;
+  return setScrollRef;
 }
