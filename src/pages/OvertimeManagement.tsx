@@ -102,6 +102,7 @@ const fmtHours = (h: number) => (Number.isInteger(h) ? `${h}` : h.toFixed(1));
 
 const OvertimeManagement = () => {
   const { toast } = useToast();
+  const calendarScrollRef = useDragScroll<HTMLDivElement>();
   const { employees: allEmployees } = useEmployees();
   const { user, role, currentUser } = useAuth();
   const isEmployeeRole = role.toLowerCase() === "employee";
