@@ -1511,6 +1511,7 @@ export type Database = {
           can_edit: boolean
           can_view: boolean
           created_at: string
+          display_order: number
           id: string
           module: string
           role_description: string
@@ -1525,6 +1526,7 @@ export type Database = {
           can_edit?: boolean
           can_view?: boolean
           created_at?: string
+          display_order?: number
           id?: string
           module: string
           role_description?: string
@@ -1539,6 +1541,7 @@ export type Database = {
           can_edit?: boolean
           can_view?: boolean
           created_at?: string
+          display_order?: number
           id?: string
           module?: string
           role_description?: string
