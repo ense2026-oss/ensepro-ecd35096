@@ -73,7 +73,7 @@ const Sidebar = ({ collapsed, onToggle, onNavigate }: SidebarProps) => {
   const { programName, programSubtitle, logoUrl, logoOnlyUrl, displayMode } = useBranding();
   const activeLogo = displayMode === "logo-only" ? logoOnlyUrl : logoUrl;
   const { currentUser, role, logout } = useAuth();
-  const { canAccessRoute, isSelfOnly: permSelfOnly } = usePermissions();
+  const { canAccessRoute, isSelfOnly: permSelfOnly, getAllRoles } = usePermissions();
 
   // Module settings from DB with realtime
   const { modules: enabledModules } = useModuleSettings();
