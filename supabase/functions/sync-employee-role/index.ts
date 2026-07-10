@@ -82,7 +82,7 @@ Deno.serve(async (req) => {
         });
       }
 
-      const appRole = roleMap[newRole] || newRole.toLowerCase();
+      const appRole = roleMap[newRole] || newRole; // base roles map to enum text; custom roles kept verbatim to match role_permissions.role_name
 
       const { data: emp } = await supabaseAdmin
         .from("employees")
@@ -97,21 +97,25 @@ Deno.serve(async (req) => {
         });
       }
 
+      // Base roles map to the app_role enum; custom roles are stored only in role_name.
+      const baseRoles = ["admin", "hr", "manager", "employee", "accountant", "executive"];
+      const enumRole = baseRoles.includes(appRole) ? appRole : null;
+
+      // Replace the user's role entirely (supports switching to/from custom roles)
+      await supabaseAdmin.from("user_roles").delete().eq("user_id", emp.user_id);
+
       const { error: roleError } = await supabaseAdmin
         .from("user_roles")
-        .update({ role: appRole })
-        .eq("user_id", emp.user_id);
+        .insert({ user_id: emp.user_id, role: enumRole, role_name: appRole });
 
       if (roleError) {
         console.error("Role sync error:", roleError);
-        await supabaseAdmin
-          .from("user_roles")
-          .upsert({ user_id: emp.user_id, role: appRole }, { onConflict: "user_id,role" });
       }
 
       await supabaseAdmin.auth.admin.updateUserById(emp.user_id, {
         user_metadata: { role: appRole },
       });
+
 
       console.log(`Role synced: employee ${employeeId} -> ${appRole}`);
       return new Response(JSON.stringify({ ok: true }), {

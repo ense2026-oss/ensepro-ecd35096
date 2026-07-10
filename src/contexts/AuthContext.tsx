@@ -95,12 +95,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const [profileRes, roleRes, empRes] = await Promise.all([
         supabase.from("profiles").select("*").eq("id", userId).maybeSingle(),
-        supabase.from("user_roles").select("role").eq("user_id", userId).maybeSingle(),
+        supabase.from("user_roles").select("role, role_name").eq("user_id", userId).maybeSingle(),
         supabase.from("employees").select("id, photo_url, dept, position, first_name, last_name, avatar, avatar_color, avatar_text_color").eq("user_id", userId).maybeSingle(),
       ]);
 
       const newProfile = profileRes.data as Profile | null;
-      const newRole = (roleRes.data?.role as AppRole) || "employee";
+      // role_name is the source of truth (supports custom roles); fall back to enum role
+      const newRole = ((roleRes.data as any)?.role_name || (roleRes.data as any)?.role || "employee") as AppRole;
       const newEmpId = empRes.data?.id ?? null;
       const newEmpData = empRes.data ?? null;
 
