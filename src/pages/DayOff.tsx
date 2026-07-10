@@ -6,6 +6,7 @@ import { useEmployees } from "@/contexts/EmployeeContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/contexts/PermissionsContext";
 import { useToast } from "@/hooks/use-toast";
+import { useDragScroll } from "@/hooks/useDragScroll";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import SearchableSelect from "@/components/ui/searchable-select";
 import { ThaiDatePicker } from "@/components/ui/thai-date-picker";
@@ -64,6 +65,7 @@ function computeDayoffStatus(empId: string, dateIso: string, dow: number, patter
 
 const DayOff = () => {
   const { toast } = useToast();
+  const calendarScrollRef = useDragScroll<HTMLDivElement>();
   const { employees: allEmployees } = useEmployees();
   const { user, role, currentUser } = useAuth();
   const isEmployeeRole = role.toLowerCase() === "employee";
@@ -287,7 +289,8 @@ const DayOff = () => {
             </div>
           </div>
 
-          <div className="overflow-auto max-h-[calc(100vh-200px)]">
+          <div ref={calendarScrollRef} className="overflow-auto max-h-[calc(100vh-200px)] cursor-grab touch-pan-x touch-pan-y overscroll-x-contain">
+            <p className="sm:hidden text-[10px] text-muted-foreground px-1 pb-1 flex items-center gap-1"><ChevronLeft className="w-3 h-3" />ลากนิ้วเพื่อเลื่อนดูวันที่<ChevronRight className="w-3 h-3" /></p>
             <table className="w-full text-xs border-collapse">
               <thead>
                 <tr>
