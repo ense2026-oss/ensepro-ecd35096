@@ -333,8 +333,8 @@ const OvertimeManagement = () => {
             <table className="w-full text-xs border-collapse">
               <thead>
                 <tr>
-                  <th className="sticky left-0 top-0 px-3 py-2 text-left font-semibold border-b border-r whitespace-nowrap z-30" style={{ borderColor: "hsl(var(--border))", background: "hsl(var(--card))" }}>
-                    <div className="flex items-center justify-between gap-2">
+                  <th className={cn("sticky left-0 top-0 py-2 text-left font-semibold border-b border-r whitespace-nowrap z-30", empColCollapsed ? "px-1 w-px" : "px-3")} style={{ borderColor: "hsl(var(--border))", background: "hsl(var(--card))" }}>
+                    <div className={cn("flex items-center gap-2", empColCollapsed ? "justify-start" : "justify-between")}>
                       {!empColCollapsed && <span>พนักงาน</span>}
                       <button onClick={() => setEmpColCollapsed((c) => !c)} className="p-1 rounded-lg hover:bg-muted transition-colors" title={empColCollapsed ? "ขยายคอลัมน์พนักงาน" : "ยุบคอลัมน์พนักงาน"}>
                         {empColCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
@@ -366,8 +366,8 @@ const OvertimeManagement = () => {
               <tbody>
                 {filteredEmployees.map((emp, idx) => (
                   <tr key={emp.id} className="hover:bg-muted/20">
-                    <td className="sticky left-0 bg-card px-3 py-2 border-b border-r whitespace-nowrap z-10" style={{ borderColor: "hsl(var(--border))" }}>
-                      <div className="flex items-center gap-2">
+                    <td className={cn("sticky left-0 bg-card py-2 border-b border-r whitespace-nowrap z-10", empColCollapsed ? "px-1 w-px" : "px-3")} style={{ borderColor: "hsl(var(--border))" }}>
+                      <div className={cn("flex items-center", empColCollapsed ? "gap-1.5" : "gap-2")}>
                         <span className="text-[10px] text-muted-foreground font-semibold w-5 text-right tabular-nums">{idx + 1}</span>
                         <EmployeeAvatar photoUrl={emp.photoUrl} avatar={emp.avatar} avatarColor={emp.avatarColor} avatarTextColor={emp.avatarTextColor} firstName={emp.firstName} size="sm" />
                         {!empColCollapsed && (
