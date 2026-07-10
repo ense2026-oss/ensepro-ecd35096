@@ -75,6 +75,7 @@ interface RoleData {
   name: string;
   desc: string;
   users: number;
+  order: number;
   permissions: ModulePermissions;
 }
 
