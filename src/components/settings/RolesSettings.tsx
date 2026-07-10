@@ -252,6 +252,40 @@ const RolesSettings = () => {
     setDeleteRole(null);
   };
 
+  const [reordering, setReordering] = useState(false);
+
+  // Move a role up/down and persist the swapped display order to the database
+  const moveRole = async (index: number, dir: -1 | 1) => {
+    const target = index + dir;
+    if (target < 0 || target >= roles.length || reordering) return;
+
+    const a = roles[index];
+    const b = roles[target];
+
+    // Optimistic reorder in the UI
+    const reordered = [...roles];
+    reordered[index] = { ...b, order: a.order };
+    reordered[target] = { ...a, order: b.order };
+    reordered.sort((x, y) => x.order - y.order || x.name.localeCompare(y.name));
+    setRoles(reordered);
+
+    setReordering(true);
+    try {
+      const [{ error: e1 }, { error: e2 }] = await Promise.all([
+        supabase.from("role_permissions").update({ display_order: b.order }).eq("role_name", a.name),
+        supabase.from("role_permissions").update({ display_order: a.order }).eq("role_name", b.name),
+      ]);
+      if (e1 || e2) throw e1 || e2;
+      await refreshPermissions();
+    } catch (e: any) {
+      toast({ title: "จัดลำดับไม่สำเร็จ", description: e.message, variant: "destructive" });
+      await refreshPermissions();
+    } finally {
+      setReordering(false);
+    }
+  };
+
+
   const countModules = (perms: ModulePermissions) =>
     uniqueModuleConfigs.filter((m) => perms[m.key].view).length;
 
