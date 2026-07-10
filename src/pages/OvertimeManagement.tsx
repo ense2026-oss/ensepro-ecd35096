@@ -106,7 +106,7 @@ const OvertimeManagement = () => {
   const isEmployeeRole = role.toLowerCase() === "employee";
   const employeeId = currentUser?.employeeId || null;
   const { canAction, getScope } = usePermissions();
-  const scope = getScope(role, "ot_management");
+  const scope = getScope(role, "ot");
   const employees = useMemo(() => {
     const base = allEmployees.filter((e: any) => (e.role || "").toLowerCase() !== "admin");
     if (scope === "department") return base.filter((e: any) => e.dept && e.dept === currentUser?.dept);
@@ -135,7 +135,7 @@ const OvertimeManagement = () => {
     if (isEmployeeRole && employeeId) setSelectedEmpId(employeeId);
   }, [isEmployeeRole, employeeId]);
 
-  const canEdit = canAction(role, "ot_management", "edit");
+  const canEdit = canAction(role, "ot", "edit");
   const managerName = currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : "ผู้ดูแลระบบ";
 
   const fetchAll = async (showLoading = false) => {
