@@ -127,6 +127,39 @@ const RolesSettings = () => {
         roleMap.get(p.role_name)!.perms.push(p);
       });
 
+      // Auto-heal: ensure every role has a permission record for every current
+      // module. Roles created before a module was introduced would otherwise be
+      // missing rows, causing that module to be denied by default.
+      const healRows: any[] = [];
+      roleMap.forEach((val, roleName) => {
+        const existingModules = new Set(val.perms.map((p) => p.module));
+        uniqueModuleConfigs.forEach((m) => {
+          if (!existingModules.has(m.key)) {
+            healRows.push({
+              role_name: roleName,
+              role_description: val.desc,
+              module: m.key,
+              can_view: false,
+              can_add: false,
+              can_edit: false,
+              can_delete: false,
+              can_approve: false,
+              scope: "self",
+              display_order: val.order,
+            });
+          }
+        });
+      });
+      if (healRows.length > 0) {
+        const { error: healError } = await supabase
+          .from("role_permissions")
+          .upsert(healRows, { onConflict: "role_name,module" });
+        if (!healError) {
+          await refreshPermissions();
+          return; // permissions refreshed -> effect re-runs with complete data
+        }
+      }
+
       // Count employees per role from employees table (source of truth)
       const { data: empData } = await supabase
         .from("employees")
