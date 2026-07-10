@@ -189,7 +189,7 @@ const Sidebar = ({ collapsed, onToggle, onNavigate }: SidebarProps) => {
               <div className="flex items-center gap-1 mt-0.5">
                 <Shield className="w-3 h-3" style={{ color: "#FF870F" }} />
                 <span className="text-xs" style={{ color: "#FF870F" }}>
-                  {roleLabel[userRole] || userRole}
+                  {roleLabel[userRole] || customRoleDesc || userRole}
                 </span>
               </div>
             </div>
