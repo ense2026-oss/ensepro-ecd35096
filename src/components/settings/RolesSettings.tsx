@@ -200,6 +200,11 @@ const RolesSettings = () => {
     setSaving(true);
     try {
       const roleName = form.name.toLowerCase();
+      // Preserve existing order when editing; append new roles to the end
+      const existing = roles.find((r) => r.name === roleName);
+      const order = existing
+        ? existing.order
+        : (roles.length ? Math.max(...roles.map((r) => r.order)) + 1 : 1);
       const rows = uniqueModuleConfigs.map((mod) => ({
         role_name: roleName,
         role_description: form.desc,
@@ -210,6 +215,7 @@ const RolesSettings = () => {
         can_delete: form.permissions[mod.key].delete,
         can_approve: form.permissions[mod.key].approve,
         scope: form.permissions[mod.key].scope,
+        display_order: order,
       }));
       // Upsert by (role_name, module) so the role is never deleted on a failed
       // save and duplicate modules can't violate the unique constraint.
