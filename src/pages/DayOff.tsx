@@ -65,6 +65,7 @@ function computeDayoffStatus(empId: string, dateIso: string, dow: number, patter
 
 const DayOff = () => {
   const { toast } = useToast();
+  const calendarScrollRef = useDragScroll<HTMLDivElement>();
   const { employees: allEmployees } = useEmployees();
   const { user, role, currentUser } = useAuth();
   const isEmployeeRole = role.toLowerCase() === "employee";
