@@ -118,6 +118,12 @@ const Sidebar = ({ collapsed, onToggle, onNavigate }: SidebarProps) => {
     employee: "พนักงาน",
   };
 
+  // Thai description for custom roles comes from role_permissions (getAllRoles)
+  const customRoleDesc = getAllRoles().find(
+    (r) => r.name === userRole.toLowerCase()
+  )?.description;
+
+
   const dynamicBadges: Record<string, number> = {
     "/attendance": attendancePending,
     "/leave": leavePending,
