@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plus, Edit, Trash2, Check, Users, Loader2 } from "lucide-react";
+import { Plus, Edit, Trash2, Check, Users, Loader2, ChevronUp, ChevronDown } from "lucide-react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
@@ -75,6 +75,7 @@ interface RoleData {
   name: string;
   desc: string;
   users: number;
+  order: number;
   permissions: ModulePermissions;
 }
 
@@ -118,10 +119,10 @@ const RolesSettings = () => {
     const loadData = async () => {
       setDbLoading(true);
       // Build roles from permissions
-      const roleMap = new Map<string, { desc: string; perms: RolePermission[] }>();
+      const roleMap = new Map<string, { desc: string; order: number; perms: RolePermission[] }>();
       allPermissions.forEach((p) => {
         if (!roleMap.has(p.role_name)) {
-          roleMap.set(p.role_name, { desc: p.role_description, perms: [] });
+          roleMap.set(p.role_name, { desc: p.role_description, order: p.display_order ?? 0, perms: [] });
         }
         roleMap.get(p.role_name)!.perms.push(p);
       });
@@ -146,9 +147,12 @@ const RolesSettings = () => {
           name: key,
           desc: val.desc,
           users: counts[key] || 0,
+          order: val.order,
           permissions: dbToLocal(val.perms),
         });
       });
+      // Show roles in configured display order (fallback to name for ties)
+      roleList.sort((a, b) => a.order - b.order || a.name.localeCompare(b.name));
       setRoles(roleList);
       setDbLoading(false);
     };
@@ -196,6 +200,11 @@ const RolesSettings = () => {
     setSaving(true);
     try {
       const roleName = form.name.toLowerCase();
+      // Preserve existing order when editing; append new roles to the end
+      const existing = roles.find((r) => r.name === roleName);
+      const order = existing
+        ? existing.order
+        : (roles.length ? Math.max(...roles.map((r) => r.order)) + 1 : 1);
       const rows = uniqueModuleConfigs.map((mod) => ({
         role_name: roleName,
         role_description: form.desc,
@@ -206,6 +215,7 @@ const RolesSettings = () => {
         can_delete: form.permissions[mod.key].delete,
         can_approve: form.permissions[mod.key].approve,
         scope: form.permissions[mod.key].scope,
+        display_order: order,
       }));
       // Upsert by (role_name, module) so the role is never deleted on a failed
       // save and duplicate modules can't violate the unique constraint.
@@ -242,6 +252,40 @@ const RolesSettings = () => {
     setDeleteRole(null);
   };
 
+  const [reordering, setReordering] = useState(false);
+
+  // Move a role up/down and persist the swapped display order to the database
+  const moveRole = async (index: number, dir: -1 | 1) => {
+    const target = index + dir;
+    if (target < 0 || target >= roles.length || reordering) return;
+
+    const a = roles[index];
+    const b = roles[target];
+
+    // Optimistic reorder in the UI
+    const reordered = [...roles];
+    reordered[index] = { ...b, order: a.order };
+    reordered[target] = { ...a, order: b.order };
+    reordered.sort((x, y) => x.order - y.order || x.name.localeCompare(y.name));
+    setRoles(reordered);
+
+    setReordering(true);
+    try {
+      const [{ error: e1 }, { error: e2 }] = await Promise.all([
+        supabase.from("role_permissions").update({ display_order: b.order }).eq("role_name", a.name),
+        supabase.from("role_permissions").update({ display_order: a.order }).eq("role_name", b.name),
+      ]);
+      if (e1 || e2) throw e1 || e2;
+      await refreshPermissions();
+    } catch (e: any) {
+      toast({ title: "จัดลำดับไม่สำเร็จ", description: e.message, variant: "destructive" });
+      await refreshPermissions();
+    } finally {
+      setReordering(false);
+    }
+  };
+
+
   const countModules = (perms: ModulePermissions) =>
     uniqueModuleConfigs.filter((m) => perms[m.key].view).length;
 
@@ -276,6 +320,7 @@ const RolesSettings = () => {
         <table className="w-full">
           <thead>
             <tr className="border-b" style={{ borderColor: "hsl(var(--border))" }}>
+              <th className="text-center px-2 py-3 text-xs font-semibold text-muted-foreground uppercase w-16">ลำดับ</th>
               <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase">Role</th>
               <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase">คำอธิบาย</th>
               <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase">ผู้ใช้</th>
@@ -284,8 +329,28 @@ const RolesSettings = () => {
             </tr>
           </thead>
           <tbody>
-            {roles.map((role) => (
+            {roles.map((role, index) => (
               <tr key={role.name} className="border-b hover:bg-muted/30 transition-colors" style={{ borderColor: "hsl(var(--border))" }}>
+                <td className="px-2 py-3">
+                  <div className="flex flex-col items-center gap-0.5">
+                    <button
+                      onClick={() => moveRole(index, -1)}
+                      disabled={index === 0 || reordering}
+                      title="เลื่อนขึ้น"
+                      className="p-1 rounded-md hover:bg-muted transition-colors text-muted-foreground disabled:opacity-30 disabled:cursor-not-allowed"
+                    >
+                      <ChevronUp className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => moveRole(index, 1)}
+                      disabled={index === roles.length - 1 || reordering}
+                      title="เลื่อนลง"
+                      className="p-1 rounded-md hover:bg-muted transition-colors text-muted-foreground disabled:opacity-30 disabled:cursor-not-allowed"
+                    >
+                      <ChevronDown className="w-4 h-4" />
+                    </button>
+                  </div>
+                </td>
                 <td className="px-4 py-3">
                   <span className="px-3 py-1 rounded-lg text-xs font-bold" style={{ background: "hsl(var(--primary-light))", color: "hsl(var(--primary))" }}>
                     {role.name}

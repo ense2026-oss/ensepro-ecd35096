@@ -24,6 +24,7 @@ export interface RolePermission {
   can_delete: boolean;
   can_approve: boolean;
   scope: string;
+  display_order?: number;
 }
 
 // Module ↔ route mapping
@@ -77,6 +78,7 @@ export const PermissionsProvider: React.FC<{ children: React.ReactNode }> = ({ c
       const { data, error } = await supabase
         .from("role_permissions")
         .select("*")
+        .order("display_order")
         .order("role_name");
       if (error) throw error;
       setPermissions((data as RolePermission[]) || []);
