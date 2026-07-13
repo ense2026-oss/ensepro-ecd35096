@@ -5,6 +5,8 @@ import {
   Phone, Mail, MapPin, ChevronLeft, ChevronRight,
 } from "lucide-react";
 import { useEmployees } from "@/contexts/EmployeeContext";
+import { useOrg } from "@/contexts/OrgContext";
+import type { Position } from "@/contexts/OrgContext";
 import type { Employee } from "@/contexts/EmployeeContext";
 import EmployeeFormDialog from "@/components/employees/EmployeeFormDialog";
 import DeleteEmployeeDialog from "@/components/employees/DeleteEmployeeDialog";
