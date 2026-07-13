@@ -13,12 +13,8 @@ import { useGeolocation, findNearestLocation, type OfficeLocation, type NearestR
 import { supabase } from "@/integrations/supabase/client";
 import { notifyApprovers, getApprovalTiers } from "@/utils/notifications";
 
-// Mock office locations
-const officeLocations: OfficeLocation[] = [
-  { id: 1, name: "สำนักงานใหญ่ กรุงเทพ", lat: "13.7563", lng: "100.5018", radius: 50000, active: true },
-  { id: 2, name: "สาขาเชียงใหม่", lat: "18.7883", lng: "98.9853", radius: 50000, active: true },
-  { id: 3, name: "สาขาภูเก็ต", lat: "7.8804", lng: "98.3923", radius: 50000, active: true },
-];
+// Shared config key — MUST match LocationsSettings.tsx
+const LOCATIONS_SETTINGS_KEY = "office_locations";
 
 const currentShift = { name: "กะเช้า", start: "08:00", end: "17:00" };
 
@@ -120,6 +116,25 @@ const CheckIn = () => {
   const [employeeId, setEmployeeId] = useState<string | null>(null);
   const [legacyShift, setLegacyShift] = useState<string | null>(null);
   const [todayShift, setTodayShift] = useState<typeof currentShift>(currentShift);
+  const [officeLocations, setOfficeLocations] = useState<OfficeLocation[]>([]);
+  const [locationsLoaded, setLocationsLoaded] = useState(false);
+
+  // Load configured office locations (geofence areas) from settings
+  useEffect(() => {
+    const loadLocations = async () => {
+      const { data } = await supabase
+        .from("company_settings")
+        .select("value")
+        .eq("key", LOCATIONS_SETTINGS_KEY)
+        .maybeSingle();
+      if (data?.value && Array.isArray(data.value)) {
+        setOfficeLocations(data.value as unknown as OfficeLocation[]);
+      }
+      setLocationsLoaded(true);
+    };
+    loadLocations();
+  }, []);
+
 
   // Find employee id for current user
   useEffect(() => {
@@ -231,12 +246,17 @@ const CheckIn = () => {
     return () => { supabase.removeChannel(channel); };
   }, [employeeId, fetchOtRecords]);
 
+  const activeLocations = officeLocations.filter((l) => l.active);
+  const hasActiveLocations = activeLocations.length > 0;
+
   const nearest: NearestResult | null =
     geo.lat !== null && geo.lng !== null
       ? findNearestLocation(geo.lat, geo.lng, officeLocations)
       : null;
 
-  const canCheckIn = nearest?.withinRadius === true;
+  // Strict geofence: must have a configured area AND be within its radius.
+  const canCheckIn = hasActiveLocations && nearest?.withinRadius === true;
+
 
   const todayStr = (() => {
     const now = new Date();
@@ -563,8 +583,14 @@ const CheckIn = () => {
             </>
           )}
 
-          {!canCheckIn && !geo.loading && !geo.error && (
-            <p className="text-xs text-destructive text-center max-w-[200px] relative z-10">คุณอยู่นอกพื้นที่ที่กำหนด</p>
+          {!canCheckIn && !geo.loading && !geo.error && locationsLoaded && (
+            <p className="text-xs text-destructive text-center max-w-[220px] relative z-10">
+              {!hasActiveLocations
+                ? "ยังไม่มีพื้นที่เข้างานที่เปิดใช้งาน กรุณาให้ผู้ดูแลระบบกำหนดพื้นที่ก่อน"
+                : nearest
+                ? `คุณอยู่นอกพื้นที่ที่กำหนด (ห่าง ${Math.round(nearest.distance)} ม.)`
+                : "คุณอยู่นอกพื้นที่ที่กำหนด"}
+            </p>
           )}
 
           <DigitalClock />
