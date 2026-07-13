@@ -583,8 +583,14 @@ const CheckIn = () => {
             </>
           )}
 
-          {!canCheckIn && !geo.loading && !geo.error && (
-            <p className="text-xs text-destructive text-center max-w-[200px] relative z-10">คุณอยู่นอกพื้นที่ที่กำหนด</p>
+          {!canCheckIn && !geo.loading && !geo.error && locationsLoaded && (
+            <p className="text-xs text-destructive text-center max-w-[220px] relative z-10">
+              {!hasActiveLocations
+                ? "ยังไม่มีพื้นที่เข้างานที่เปิดใช้งาน กรุณาให้ผู้ดูแลระบบกำหนดพื้นที่ก่อน"
+                : nearest
+                ? `คุณอยู่นอกพื้นที่ที่กำหนด (ห่าง ${Math.round(nearest.distance)} ม.)`
+                : "คุณอยู่นอกพื้นที่ที่กำหนด"}
+            </p>
           )}
 
           <DigitalClock />
