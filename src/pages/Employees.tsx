@@ -5,6 +5,8 @@ import {
   Phone, Mail, MapPin, ChevronLeft, ChevronRight,
 } from "lucide-react";
 import { useEmployees } from "@/contexts/EmployeeContext";
+import { useOrg } from "@/contexts/OrgContext";
+import type { Position } from "@/contexts/OrgContext";
 import type { Employee } from "@/contexts/EmployeeContext";
 import EmployeeFormDialog from "@/components/employees/EmployeeFormDialog";
 import DeleteEmployeeDialog from "@/components/employees/DeleteEmployeeDialog";
@@ -27,6 +29,7 @@ const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
 const Employees = () => {
   const navigate = useNavigate();
   const { employees, addEmployee, updateEmployee, deleteEmployee } = useEmployees();
+  const { affiliations } = useOrg();
   const [search, setSearch] = useState("");
   const [selectedDept, setSelectedDept] = useState("all");
   const [selectedPosition, setSelectedPosition] = useState("all");
@@ -48,11 +51,22 @@ const Employees = () => {
     () => employees.filter((e) => (e.role || "").toLowerCase() !== "admin"),
     [employees]
   );
-  const depts = ["all", ...Array.from(new Set(nonAdmins.map((e) => e.dept).filter(Boolean)))];
+  // Departments come from the canonical affiliations defined in Settings, not from
+  // free-text employee.dept values (which may contain stale/legacy entries).
+  const depts = useMemo(
+    () => ["all", ...affiliations.map((a) => a.name)],
+    [affiliations]
+  );
   const positions = useMemo(() => {
-    const src = selectedDept === "all" ? nonAdmins : nonAdmins.filter((e) => e.dept === selectedDept);
-    return ["all", ...Array.from(new Set(src.map((e) => e.position).filter(Boolean)))];
-  }, [nonAdmins, selectedDept]);
+    const flatten = (list: Position[]): string[] =>
+      list.flatMap((p) => [p.name, ...(p.children ? flatten(p.children) : [])]);
+    if (selectedDept === "all") {
+      const names = affiliations.flatMap((a) => flatten(a.positions));
+      return ["all", ...Array.from(new Set(names))];
+    }
+    const aff = affiliations.find((a) => a.name === selectedDept);
+    return ["all", ...Array.from(new Set(aff ? flatten(aff.positions) : []))];
+  }, [affiliations, selectedDept]);
   const filtered = useMemo(() => nonAdmins.filter((e) => {
     const name = `${e.prefix}${e.firstName} ${e.lastName}`;
     const matchSearch =
