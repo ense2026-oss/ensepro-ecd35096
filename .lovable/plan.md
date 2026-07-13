@@ -1,28 +1,36 @@
-# Fix "ไม่พบข้อมูลพนักงาน" false-negative on employee profile
+# ทำให้ "กำหนดพื้นที่ในการลงเวลา" ใช้งานได้จริง
 
-## Problem
-Opening `/employees/:id` directly (or refreshing) shows "ไม่พบข้อมูลพนักงาน" even for Admin / Executive / HR, even though the employee exists and the user has permission. Database RLS is correct — this is a client-side timing bug in `src/pages/EmployeeProfile.tsx`.
+## ปัญหา
+- **`LocationsSettings.tsx`** เก็บพื้นที่ไว้ใน React state (ค่า mock) เท่านั้น ไม่บันทึกลงฐานข้อมูล — รีเฟรชแล้วหาย ไม่แชร์ไปเครื่อง/ผู้ใช้อื่น
+- **`CheckIn.tsx`** ไม่ได้อ่านพื้นที่ที่ตั้งไว้เลย ใช้ค่า mock ฝังในโค้ด รัศมี 50 กม. ทำให้ geofence ไม่ทำงานจริง — ใครก็ลงเวลาได้ทุกที่
 
-## Root cause
-1. The not-found block renders as soon as `getEmployeeById(id)` is `undefined`, without waiting for `EmployeeContext`'s `loading` flag. On first load the employee list is still empty.
-2. Local `data` state is set only from the one-time `useState` initializer. When the list finishes loading, `employee` becomes defined but `data` stays `null` forever, so the not-found screen never recovers.
+## แนวทาง
+เก็บพื้นที่เข้างานไว้ในตาราง `company_settings` ภายใต้ key `office_locations` (รูปแบบ JSONB array) ตามแพทเทิร์นเดียวกับ `ApprovalSettings` — ไม่ต้องสร้างตารางใหม่ RLS ที่มีอยู่รองรับอยู่แล้ว (admin/hr แก้ไขได้, authenticated อ่านได้)
 
-## Changes (only `src/pages/EmployeeProfile.tsx`)
+## การเปลี่ยนแปลง
 
-1. **Consume the `loading` flag** from `useEmployees()` (already exposed by the context).
+### 1. `src/components/settings/LocationsSettings.tsx` — บันทึกจริง
+- โหลดพื้นที่จาก `company_settings` (`office_locations`) ตอน mount; ถ้ายังไม่มีให้เริ่มจากลิสต์ว่าง (ไม่ใช้ mock defaults อีกต่อไป)
+- upsert กลับลง `company_settings` ทุกครั้งที่ เพิ่ม / แก้ไข / ลบ / สลับเปิด-ปิด (helper `persist(next)` เดียว) เพื่อไม่ให้ข้อมูลหลุด
+- เพิ่มปุ่ม "ใช้ตำแหน่งปัจจุบัน" ในฟอร์ม (ดึง GPS ผ่าน `navigator.geolocation` เติม lat/lng อัตโนมัติ) ให้ตั้งพิกัดง่ายขึ้น
+- ตรวจสอบ lat/lng เป็นตัวเลขที่ถูกต้อง และ radius > 0 ก่อนบันทึก
 
-2. **Show a loading state instead of not-found while data is arriving.** Before the not-found check, render a spinner/placeholder when `loading` is true, or when `employee` is not yet resolved and the list hasn't loaded.
+### 2. `src/pages/CheckIn.tsx` — บังคับพื้นที่แบบเข้ม
+- ลบ mock `officeLocations` ออก แล้วดึงพื้นที่จริงจาก `company_settings` (`office_locations`) เข้า state
+- คำนวณ `nearest` จากพื้นที่ที่ `active` เท่านั้น ด้วยรัศมีจริงที่ตั้งไว้ (ใช้ `findNearestLocation` เดิม)
+- **บังคับเข้ม:** `canCheckIn = nearest?.withinRadius === true` — ถ้าอยู่นอกทุกพื้นที่ ปุ่มลงเวลาเข้า/ออก ถูก disable และกดไม่ได้
+- **กรณีไม่มีพื้นที่เปิดใช้งานเลย:** บล็อกการลงเวลา พร้อมข้อความแจ้งให้ผู้ดูแลตั้งพื้นที่ก่อน
+- ปรับ UI ให้บอกสถานะชัดเจน: ระยะห่างจากพื้นที่ใกล้สุด, "อยู่ในพื้นที่ ✓" / "อยู่นอกพื้นที่ (ห่าง X ม.)", และกรณี GPS ยังโหลด/ถูกปฏิเสธสิทธิ์
+- คงการบันทึก `within_radius: true` เมื่อลงเวลาสำเร็จ (เพราะบล็อกไม่ให้ลงถ้าอยู่นอกพื้นที่)
 
-3. **Sync `data` when `employee` becomes available.** Add a `useEffect` keyed on the employee (e.g. `employee?.id`) that copies the employee into `data` when `data` is still `null` and the user is not mid-edit, so a late-arriving list populates the profile.
+## รายละเอียดทางเทคนิค
+- ไม่ต้องมี migration — `company_settings` และ RLS พร้อมใช้แล้ว
+- ชนิดข้อมูลใช้ `OfficeLocation` เดิมจาก `src/utils/geo.ts` ให้ settings กับ check-in ตรงกัน
+- แชร์ค่า key คงที่ `office_locations` ระหว่างสองไฟล์
+- ใช้ `haversineDistance` / `findNearestLocation` เดิม ไม่แก้ตรรกะระยะทาง
 
-4. **Keep the real not-found path** — only render "ไม่พบข้อมูลพนักงาน" once `loading` is `false` AND the employee is genuinely absent from the loaded list.
-
-## Technical details
-- `EmployeeContext` already exposes `loading`; no context or DB changes needed.
-- Guard order in render: `if (loading && !employee) return <Spinner/>;` then the sync effect ensures `data` is set; the existing `if (!employee || !data)` not-found block stays but is only reached after loading completes.
-- The sync effect must not clobber in-progress edits (skip when `isEditing`).
-
-## Verification
-- Typecheck with `tsgo --noEmit`.
-- Load `/employees/c044ab8b-77d1-423a-b2f6-5f16420c6dbb` directly and on refresh as Executive — profile renders instead of the not-found screen.
-- Confirm a genuinely invalid ID still shows the not-found screen after loading.
+## การตรวจสอบ
+- typecheck ด้วย `tsgo --noEmit`
+- ตั้งพื้นที่ในหน้า `/settings` → พื้นที่เข้างาน แล้วรีเฟรช ต้องยังอยู่ (บันทึกจริง)
+- หน้า `/check-in`: เมื่ออยู่นอกรัศมี ปุ่มลงเวลาถูกปิด กดไม่ได้; เมื่ออยู่ในรัศมี ลงเวลาได้ตามปกติ
+- เมื่อไม่มีพื้นที่เปิดใช้งาน ต้องบล็อกและแจ้งเตือน
