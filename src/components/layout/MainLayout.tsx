@@ -42,9 +42,16 @@ const MainLayout = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const location = useLocation();
+  const mainRef = useRef<HTMLElement>(null);
   const { user, loading, profileReady, currentUser, role } = useAuth();
   const { canAccessRoute, isSelfOnly, loading: permLoading } = usePermissions();
   const { modules: enabledModules, loading: modulesLoading } = useModuleSettings();
+
+  // Reset scroll to the top of the page on every route change
+  useEffect(() => {
+    mainRef.current?.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    window.scrollTo(0, 0);
+  }, [location.pathname]);
 
   // Still bootstrapping auth — show loader, don't redirect
   if (loading || !profileReady) {
