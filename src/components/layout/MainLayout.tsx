@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Outlet, useLocation, Navigate } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import Topbar from "./Topbar";
@@ -42,9 +42,16 @@ const MainLayout = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const location = useLocation();
+  const mainRef = useRef<HTMLElement>(null);
   const { user, loading, profileReady, currentUser, role } = useAuth();
   const { canAccessRoute, isSelfOnly, loading: permLoading } = usePermissions();
   const { modules: enabledModules, loading: modulesLoading } = useModuleSettings();
+
+  // Reset scroll to the top of the page on every route change
+  useEffect(() => {
+    mainRef.current?.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    window.scrollTo(0, 0);
+  }, [location.pathname]);
 
   // Still bootstrapping auth — show loader, don't redirect
   if (loading || !profileReady) {
@@ -120,7 +127,7 @@ const MainLayout = () => {
           pageTitle={pageInfo.title}
           pageSubtitle={pageInfo.subtitle}
         />
-        <main className="flex-1 overflow-y-auto overflow-x-hidden custom-scroll p-4 lg:p-6 pb-24 lg:pb-6" style={{ overflowX: "hidden" }}>
+        <main ref={mainRef} className="flex-1 overflow-y-auto overflow-x-hidden custom-scroll p-4 lg:p-6 pb-24 lg:pb-6" style={{ overflowX: "hidden" }}>
           <Outlet />
         </main>
       </div>
