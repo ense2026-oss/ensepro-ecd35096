@@ -542,35 +542,41 @@ const CheckIn = () => {
           {mode === "ot" && (
             <>
           {otStatus === "ot-none" && (
-            <button
-              onClick={handleOtCheckIn}
-              disabled={geo.loading || !employeeId}
-              className="w-28 h-28 sm:w-32 sm:h-32 rounded-full flex flex-col items-center justify-center gap-1.5 font-bold text-sm sm:text-base transition-all duration-300 disabled:opacity-40 disabled:cursor-not-allowed relative z-10 hover:scale-105"
-              style={{
-                background: "linear-gradient(135deg, hsl(270 70% 60%), hsl(270 70% 45%))",
-                boxShadow: "0 8px 32px hsl(270 70% 45% / 0.4), 0 0 0 6px hsl(270 70% 50% / 0.15)",
-                color: "#fff",
-              }}
-            >
-              <Timer className="w-6 h-6" />
-              เข้า OT
-            </button>
+            <div className="relative flex items-center justify-center">
+              {canCheckIn && <div className="checkin-wave-ring" style={{ "--wave-color": "hsl(270 70% 50%)" } as React.CSSProperties} />}
+              <button
+                onClick={handleOtCheckIn}
+                disabled={!canCheckIn || geo.loading || !employeeId}
+                className="w-28 h-28 sm:w-32 sm:h-32 rounded-full flex flex-col items-center justify-center gap-1.5 font-bold text-sm sm:text-base transition-all duration-300 disabled:opacity-40 disabled:cursor-not-allowed relative z-10 hover:scale-105"
+                style={{
+                  background: canCheckIn ? "linear-gradient(135deg, hsl(270 70% 60%), hsl(270 70% 45%))" : "hsl(var(--muted))",
+                  boxShadow: canCheckIn ? "0 8px 32px hsl(270 70% 45% / 0.4), 0 0 0 6px hsl(270 70% 50% / 0.15)" : "none",
+                  color: canCheckIn ? "#fff" : "hsl(var(--muted-foreground))",
+                }}
+              >
+                <Timer className="w-6 h-6" />
+                เข้า OT
+              </button>
+            </div>
           )}
 
           {otStatus === "ot-in" && (
-            <button
-              onClick={handleOtCheckOut}
-              disabled={geo.loading || !employeeId}
-              className="w-28 h-28 sm:w-32 sm:h-32 rounded-full flex flex-col items-center justify-center gap-1.5 font-bold text-sm sm:text-base transition-all duration-300 disabled:opacity-40 disabled:cursor-not-allowed relative z-10 hover:scale-105"
-              style={{
-                background: "linear-gradient(135deg, hsl(330 70% 60%), hsl(330 70% 45%))",
-                boxShadow: "0 8px 32px hsl(330 70% 45% / 0.4), 0 0 0 6px hsl(330 70% 50% / 0.15)",
-                color: "#fff",
-              }}
-            >
-              <LogOut className="w-6 h-6" />
-              ออก OT
-            </button>
+            <div className="relative flex items-center justify-center">
+              {canCheckIn && <div className="checkin-wave-ring" style={{ "--wave-color": "hsl(330 70% 50%)" } as React.CSSProperties} />}
+              <button
+                onClick={handleOtCheckOut}
+                disabled={!canCheckIn || geo.loading || !employeeId}
+                className="w-28 h-28 sm:w-32 sm:h-32 rounded-full flex flex-col items-center justify-center gap-1.5 font-bold text-sm sm:text-base transition-all duration-300 disabled:opacity-40 disabled:cursor-not-allowed relative z-10 hover:scale-105"
+                style={{
+                  background: canCheckIn ? "linear-gradient(135deg, hsl(330 70% 60%), hsl(330 70% 45%))" : "hsl(var(--muted))",
+                  boxShadow: canCheckIn ? "0 8px 32px hsl(330 70% 45% / 0.4), 0 0 0 6px hsl(330 70% 50% / 0.15)" : "none",
+                  color: canCheckIn ? "#fff" : "hsl(var(--muted-foreground))",
+                }}
+              >
+                <LogOut className="w-6 h-6" />
+                ออก OT
+              </button>
+            </div>
           )}
 
           {otStatus === "ot-out" && (
