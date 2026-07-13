@@ -246,12 +246,17 @@ const CheckIn = () => {
     return () => { supabase.removeChannel(channel); };
   }, [employeeId, fetchOtRecords]);
 
+  const activeLocations = officeLocations.filter((l) => l.active);
+  const hasActiveLocations = activeLocations.length > 0;
+
   const nearest: NearestResult | null =
     geo.lat !== null && geo.lng !== null
       ? findNearestLocation(geo.lat, geo.lng, officeLocations)
       : null;
 
-  const canCheckIn = nearest?.withinRadius === true;
+  // Strict geofence: must have a configured area AND be within its radius.
+  const canCheckIn = hasActiveLocations && nearest?.withinRadius === true;
+
 
   const todayStr = (() => {
     const now = new Date();
