@@ -13,12 +13,8 @@ import { useGeolocation, findNearestLocation, type OfficeLocation, type NearestR
 import { supabase } from "@/integrations/supabase/client";
 import { notifyApprovers, getApprovalTiers } from "@/utils/notifications";
 
-// Mock office locations
-const officeLocations: OfficeLocation[] = [
-  { id: 1, name: "สำนักงานใหญ่ กรุงเทพ", lat: "13.7563", lng: "100.5018", radius: 50000, active: true },
-  { id: 2, name: "สาขาเชียงใหม่", lat: "18.7883", lng: "98.9853", radius: 50000, active: true },
-  { id: 3, name: "สาขาภูเก็ต", lat: "7.8804", lng: "98.3923", radius: 50000, active: true },
-];
+// Shared config key — MUST match LocationsSettings.tsx
+const LOCATIONS_SETTINGS_KEY = "office_locations";
 
 const currentShift = { name: "กะเช้า", start: "08:00", end: "17:00" };
 
