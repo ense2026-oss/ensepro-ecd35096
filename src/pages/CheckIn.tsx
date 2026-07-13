@@ -377,7 +377,7 @@ const CheckIn = () => {
   };
 
   const handleOtCheckIn = async () => {
-    if (!employeeId) return;
+    if (!canCheckIn || !nearest || !employeeId) return;
     const time = nowTime();
     const totalTiers = await getApprovalTiers("ot");
     const { error } = await supabase.from("overtime_requests").insert({
