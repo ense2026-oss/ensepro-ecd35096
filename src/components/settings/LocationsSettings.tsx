@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { MapPin, Plus, Edit, Trash2, X, Check } from "lucide-react";
+import { useState, useEffect } from "react";
+import { MapPin, Plus, Edit, Trash2, Check, LocateFixed, Loader2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -18,30 +18,59 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import type { OfficeLocation } from "@/utils/geo";
 
-interface Location {
-  id: number;
-  name: string;
-  lat: string;
-  lng: string;
-  radius: number;
-  active: boolean;
-}
+// Shared config key — MUST match the key CheckIn.tsx reads.
+export const LOCATIONS_SETTINGS_KEY = "office_locations";
 
-const defaultLocations: Location[] = [
-  { id: 1, name: "สำนักงานใหญ่ กรุงเทพ", lat: "13.7563", lng: "100.5018", radius: 200, active: true },
-  { id: 2, name: "สาขาเชียงใหม่", lat: "18.7883", lng: "98.9853", radius: 150, active: true },
-  { id: 3, name: "สาขาภูเก็ต", lat: "7.8804", lng: "98.3923", radius: 100, active: false },
-];
+type Location = OfficeLocation;
 
 const emptyForm = { name: "", lat: "", lng: "", radius: 100, active: true };
 
 const LocationsSettings = () => {
-  const [locations, setLocations] = useState<Location[]>(defaultLocations);
+  const [locations, setLocations] = useState<Location[]>([]);
+  const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState(emptyForm);
+  const [locating, setLocating] = useState(false);
+
+  // Load persisted locations
+  useEffect(() => {
+    const load = async () => {
+      const { data } = await supabase
+        .from("company_settings")
+        .select("value")
+        .eq("key", LOCATIONS_SETTINGS_KEY)
+        .maybeSingle();
+      if (data?.value && Array.isArray(data.value)) {
+        setLocations(data.value as unknown as Location[]);
+      }
+      setLoading(false);
+    };
+    load();
+  }, []);
+
+  // Persist the full list back to company_settings (single source of truth)
+  const persist = async (next: Location[]) => {
+    setLocations(next);
+    const value = JSON.parse(JSON.stringify(next));
+    const { data: existing } = await supabase
+      .from("company_settings")
+      .select("id")
+      .eq("key", LOCATIONS_SETTINGS_KEY)
+      .maybeSingle();
+    const res = existing
+      ? await supabase.from("company_settings").update({ value }).eq("key", LOCATIONS_SETTINGS_KEY)
+      : await supabase.from("company_settings").insert([{ key: LOCATIONS_SETTINGS_KEY, value }]);
+    if (res.error) {
+      toast({ title: "บันทึกไม่สำเร็จ", description: res.error.message, variant: "destructive" });
+      return false;
+    }
+    return true;
+  };
 
   const openAdd = () => {
     setEditingId(null);
@@ -55,37 +84,85 @@ const LocationsSettings = () => {
     setDialogOpen(true);
   };
 
-  const handleSave = () => {
+  const useCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      toast({ title: "เบราว์เซอร์ไม่รองรับ GPS", variant: "destructive" });
+      return;
+    }
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setForm((f) => ({
+          ...f,
+          lat: pos.coords.latitude.toFixed(6),
+          lng: pos.coords.longitude.toFixed(6),
+        }));
+        setLocating(false);
+        toast({ title: "ดึงตำแหน่งปัจจุบันสำเร็จ" });
+      },
+      (err) => {
+        setLocating(false);
+        toast({
+          title: "ไม่สามารถดึงตำแหน่งได้",
+          description: err.code === 1 ? "กรุณาอนุญาตการเข้าถึงตำแหน่ง" : "ลองใหม่อีกครั้ง",
+          variant: "destructive",
+        });
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+    );
+  };
+
+  const handleSave = async () => {
     if (!form.name.trim() || !form.lat.trim() || !form.lng.trim()) {
       toast({ title: "กรุณากรอกข้อมูลให้ครบถ้วน", variant: "destructive" });
       return;
     }
+    const lat = parseFloat(form.lat);
+    const lng = parseFloat(form.lng);
+    if (Number.isNaN(lat) || lat < -90 || lat > 90 || Number.isNaN(lng) || lng < -180 || lng > 180) {
+      toast({ title: "พิกัดไม่ถูกต้อง", description: "Latitude (-90 ถึง 90), Longitude (-180 ถึง 180)", variant: "destructive" });
+      return;
+    }
+    if (!form.radius || form.radius <= 0) {
+      toast({ title: "รัศมีต้องมากกว่า 0", variant: "destructive" });
+      return;
+    }
+
+    let next: Location[];
     if (editingId !== null) {
-      setLocations((prev) =>
-        prev.map((l) => (l.id === editingId ? { ...l, ...form } : l))
-      );
-      toast({ title: "แก้ไขพื้นที่สำเร็จ", description: form.name });
+      next = locations.map((l) => (l.id === editingId ? { ...l, ...form } : l));
     } else {
       const newId = Math.max(0, ...locations.map((l) => l.id)) + 1;
-      setLocations((prev) => [...prev, { id: newId, ...form }]);
-      toast({ title: "เพิ่มพื้นที่สำเร็จ", description: form.name });
+      next = [...locations, { id: newId, ...form }];
     }
+    const ok = await persist(next);
+    if (!ok) return;
+    toast({ title: editingId ? "แก้ไขพื้นที่สำเร็จ" : "เพิ่มพื้นที่สำเร็จ", description: form.name });
     setDialogOpen(false);
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (deleteId === null) return;
     const loc = locations.find((l) => l.id === deleteId);
-    setLocations((prev) => prev.filter((l) => l.id !== deleteId));
+    const next = locations.filter((l) => l.id !== deleteId);
+    const ok = await persist(next);
     setDeleteId(null);
-    toast({ title: "ลบพื้นที่สำเร็จ", description: loc?.name });
+    if (ok) toast({ title: "ลบพื้นที่สำเร็จ", description: loc?.name });
   };
 
-  const toggleActive = (id: number) => {
-    setLocations((prev) =>
-      prev.map((l) => (l.id === id ? { ...l, active: !l.active } : l))
-    );
+  const toggleActive = async (id: number) => {
+    const next = locations.map((l) => (l.id === id ? { ...l, active: !l.active } : l));
+    await persist(next);
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-16 text-muted-foreground gap-2">
+        <Loader2 className="w-5 h-5 animate-spin" />
+        <span className="text-sm">กำลังโหลดพื้นที่เข้างาน...</span>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -135,7 +212,9 @@ const LocationsSettings = () => {
           </div>
         ))}
         {locations.length === 0 && (
-          <div className="text-center py-10 text-muted-foreground text-sm">ยังไม่มีพื้นที่เข้างาน</div>
+          <div className="text-center py-10 text-muted-foreground text-sm">
+            ยังไม่มีพื้นที่เข้างาน — เพิ่มพื้นที่เพื่อให้พนักงานลงเวลาได้
+          </div>
         )}
       </div>
 
@@ -176,6 +255,15 @@ const LocationsSettings = () => {
                 />
               </div>
             </div>
+            <button
+              type="button"
+              onClick={useCurrentLocation}
+              disabled={locating}
+              className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold border text-primary hover:bg-primary/5 transition-colors disabled:opacity-50"
+            >
+              {locating ? <Loader2 className="w-4 h-4 animate-spin" /> : <LocateFixed className="w-4 h-4" />}
+              ใช้ตำแหน่งปัจจุบัน
+            </button>
             <div>
               <label className="block text-sm font-semibold mb-1.5">รัศมี (เมตร)</label>
               <input
