@@ -38,7 +38,16 @@ import { applyStartupDisplaySettings } from "@/components/settings/DisplaySettin
 // Apply saved display settings on load (personal preferences take precedence)
 applyStartupDisplaySettings();
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 60_000, // serve cached data instantly for 1 min before refetching
+      gcTime: 10 * 60_000, // keep cache 10 min so returning to a page is instant
+      refetchOnWindowFocus: false,
+      retry: 1,
+    },
+  },
+});
 
 // Auth guard component
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
