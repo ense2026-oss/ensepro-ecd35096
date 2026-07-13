@@ -105,8 +105,10 @@ const EmployeeFormDialog = ({ open, onOpenChange, employee, onSave }: EmployeeFo
       return names;
     };
     const aff = affiliations.find((a) => a.name === form.dept);
-    if (aff) return collectNames(aff.positions);
-    return [];
+    if (!aff) return [];
+    // Deduplicate by name: the positions table may contain multiple rows with
+    // the same name (headcount slots), but the dropdown only needs each once.
+    return Array.from(new Set(collectNames(aff.positions)));
   }, [form.dept, affiliations]);
 
   const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
