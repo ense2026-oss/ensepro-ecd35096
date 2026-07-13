@@ -163,11 +163,12 @@ const Employees = () => {
           </div>
           <select value={selectedDept} onChange={(e) => handleDeptChange(e.target.value)}
             className="px-3 py-2.5 text-sm rounded-xl border bg-muted/30 outline-none cursor-pointer">
-            {depts.map((d) => <option key={d} value={d}>{d === "all" ? "ทุกแผนก" : d}</option>)}
+            {depts.map((d) => <option key={d} value={d}>{d === "all" ? "เลือกงาน" : d}</option>)}
           </select>
           <select value={selectedPosition} onChange={(e) => handlePositionChange(e.target.value)}
-            className="px-3 py-2.5 text-sm rounded-xl border bg-muted/30 outline-none cursor-pointer">
-            {positions.map((p) => <option key={p} value={p}>{p === "all" ? "ทุกตำแหน่ง" : p}</option>)}
+            disabled={selectedDept === "all"}
+            className="px-3 py-2.5 text-sm rounded-xl border bg-muted/30 outline-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
+            {positions.map((p) => <option key={p} value={p}>{p === "all" ? (selectedDept === "all" ? "เลือกงานก่อน" : "ทุกตำแหน่ง") : p}</option>)}
           </select>
           <select value={selectedStatus} onChange={(e) => handleStatusChange(e.target.value)}
             className="px-3 py-2.5 text-sm rounded-xl border bg-muted/30 outline-none cursor-pointer">
