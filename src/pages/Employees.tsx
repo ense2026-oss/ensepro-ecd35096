@@ -29,6 +29,7 @@ const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
 const Employees = () => {
   const navigate = useNavigate();
   const { employees, addEmployee, updateEmployee, deleteEmployee } = useEmployees();
+  const { affiliations } = useOrg();
   const [search, setSearch] = useState("");
   const [selectedDept, setSelectedDept] = useState("all");
   const [selectedPosition, setSelectedPosition] = useState("all");
