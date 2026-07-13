@@ -190,14 +190,32 @@ const EmployeeProfile = () => {
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    // Reset input so selecting the same file again still triggers onChange
+    e.target.value = "";
     const photoUrl = await processFileUpload(file, { maxWidth: 400, maxHeight: 400, quality: 0.8 });
     if (!photoUrl) return;
-    setData((d) => d ? { ...d, photoUrl } : d);
-    if (employee) {
-      updateEmployee(employee.id, { photoUrl });
+    if (!employee) return;
+
+    const isOwnProfile = !!currentUser?.employeeId && currentUser.employeeId === employee.id;
+
+    try {
+      if (isOwnProfile) {
+        // Employees can only edit their own record via a safe RPC that updates
+        // just the photo — the direct UPDATE is blocked by RLS for non-admins.
+        const { error } = await supabase.rpc("update_own_employee_photo", { _photo_url: photoUrl });
+        if (error) throw error;
+      } else {
+        // Admin/HR editing someone else's profile uses the normal update path.
+        await updateEmployee(employee.id, { photoUrl });
+      }
+      setData((d) => d ? { ...d, photoUrl } : d);
       toast.success("อัพโหลดรูปภาพสำเร็จ");
+    } catch (err) {
+      console.error("Photo upload failed:", err);
+      toast.error("ไม่สามารถบันทึกรูปภาพได้ กรุณาลองใหม่หรือติดต่อผู้ดูแลระบบ");
     }
   };
+
 
   // Not found
   if (!employee || !data) {
