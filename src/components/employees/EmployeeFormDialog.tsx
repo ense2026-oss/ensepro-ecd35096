@@ -47,19 +47,20 @@ const InputField = ({ label, value, onChange, type = "text", placeholder, requir
 );
 
 type SelectOption = string | { value: string; label: string };
-const SelectField = ({ label, value, onChange, options }: {
-  label: string; value: string; onChange: (v: string) => void; options: SelectOption[];
+const SelectField = ({ label, value, onChange, options, disabled, hint }: {
+  label: string; value: string; onChange: (v: string) => void; options: SelectOption[]; disabled?: boolean; hint?: string;
 }) => (
   <div className="space-y-1.5">
     <label className="text-xs font-medium text-muted-foreground">{label}</label>
-    <select value={value} onChange={(e) => onChange(e.target.value)}
-      className="w-full px-3 py-2 text-sm rounded-xl border border-border bg-muted/30 outline-none focus:ring-2 focus:ring-primary/30 transition-all cursor-pointer">
+    <select value={value} onChange={(e) => onChange(e.target.value)} disabled={disabled}
+      className="w-full px-3 py-2 text-sm rounded-xl border border-border bg-muted/30 outline-none focus:ring-2 focus:ring-primary/30 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
       {options.map((o) => {
         const val = typeof o === "string" ? o : o.value;
         const lbl = typeof o === "string" ? o : o.label;
         return <option key={val} value={val}>{lbl}</option>;
       })}
     </select>
+    {hint && <p className="text-[10px] text-muted-foreground">{hint}</p>}
   </div>
 );
 
@@ -86,11 +87,13 @@ const SectionLabel = ({ children }: { children: React.ReactNode }) => (
 
 const EmployeeFormDialog = ({ open, onOpenChange, employee, onSave }: EmployeeFormDialogProps) => {
   const isEdit = !!employee;
-  const { affiliations, affiliationNames, allPositions } = useOrg();
+  const { affiliations, affiliationNames } = useOrg();
   const ROLE_OPTIONS = useRoleOptions();
   const [form, setForm] = useState<Omit<Employee, "id" | "education" | "workHistory">>(EMPTY);
   const [errors, setErrors] = useState<string[]>([]);
   const photoInputRef = useRef<HTMLInputElement>(null);
+
+  const isDeptSelected = !!form.dept && form.dept !== "-- เลือกสังกัด --";
 
   const filteredPositions = useMemo(() => {
     const collectNames = (positions: { name: string; children?: any[] }[]): string[] => {
@@ -103,8 +106,8 @@ const EmployeeFormDialog = ({ open, onOpenChange, employee, onSave }: EmployeeFo
     };
     const aff = affiliations.find((a) => a.name === form.dept);
     if (aff) return collectNames(aff.positions);
-    return allPositions;
-  }, [form.dept, affiliations, allPositions]);
+    return [];
+  }, [form.dept, affiliations]);
 
   const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -131,6 +134,10 @@ const EmployeeFormDialog = ({ open, onOpenChange, employee, onSave }: EmployeeFo
   }, [open, employee]);
 
   const set = (key: string) => (v: string) => setForm((f) => ({ ...f, [key]: v }));
+
+  // When the department changes, reset the position so it must be re-picked
+  // from the newly selected affiliation's positions.
+  const handleDeptChange = (v: string) => setForm((f) => ({ ...f, dept: v, position: "" }));
 
   const handleSave = () => {
     const errs: string[] = [];
@@ -223,8 +230,16 @@ const EmployeeFormDialog = ({ open, onOpenChange, employee, onSave }: EmployeeFo
           {/* ข้อมูลการทำงาน */}
           <SectionLabel>ข้อมูลการทำงาน</SectionLabel>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <SelectField label="สังกัด (แผนก/หน่วยงาน)" value={form.dept} onChange={set("dept")} options={["-- เลือกสังกัด --", ...affiliationNames]} />
-            <SelectField label="ตำแหน่ง" value={form.position} onChange={set("position")} options={["-- เลือกตำแหน่ง --", ...filteredPositions]} />
+            <SelectField label="สังกัด (แผนก/หน่วยงาน)" value={form.dept} onChange={handleDeptChange} options={["-- เลือกสังกัด --", ...affiliationNames]} />
+            <SelectField
+              label="ตำแหน่ง"
+              value={form.position}
+              onChange={set("position")}
+              disabled={!isDeptSelected}
+              options={isDeptSelected ? ["-- เลือกตำแหน่ง --", ...filteredPositions] : ["-- เลือกสังกัดก่อน --"]}
+              hint={!isDeptSelected ? "กรุณาเลือกสังกัดก่อน" : undefined}
+            />
+
             <SelectField label="ประเภทพนักงาน" value={form.employeeType} onChange={set("employeeType")} options={["พนักงานประจำ", "พนักงานชั่วคราว", "พนักงานทดลองงาน"]} />
             <InputField label="วันที่เริ่มงาน" value={form.startDate} onChange={set("startDate")} placeholder="YYYY-MM-DD" />
             <InputField label="เงินเดือน (บาท)" value={form.salary} onChange={set("salary")} type="number" />
