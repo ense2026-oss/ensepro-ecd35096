@@ -135,6 +135,10 @@ const EmployeeFormDialog = ({ open, onOpenChange, employee, onSave }: EmployeeFo
 
   const set = (key: string) => (v: string) => setForm((f) => ({ ...f, [key]: v }));
 
+  // When the department changes, reset the position so it must be re-picked
+  // from the newly selected affiliation's positions.
+  const handleDeptChange = (v: string) => setForm((f) => ({ ...f, dept: v, position: "" }));
+
   const handleSave = () => {
     const errs: string[] = [];
     if (!form.firstName.trim()) errs.push("กรุณากรอกชื่อ");
