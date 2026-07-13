@@ -229,7 +229,18 @@ const EmployeeProfile = () => {
   };
 
 
-  // Not found
+  // While the employee list is still loading (e.g. direct URL open / refresh),
+  // show a spinner instead of prematurely rendering the "not found" screen.
+  if (loading && (!employee || !data)) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 space-y-4">
+        <div className="w-10 h-10 rounded-full border-2 border-muted border-t-primary animate-spin" />
+        <p className="text-sm text-muted-foreground">กำลังโหลดข้อมูลพนักงาน...</p>
+      </div>
+    );
+  }
+
+  // Not found (only after loading has completed)
   if (!employee || !data) {
     return (
       <div className="flex flex-col items-center justify-center py-20 space-y-4">
