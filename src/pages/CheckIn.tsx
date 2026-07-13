@@ -116,6 +116,25 @@ const CheckIn = () => {
   const [employeeId, setEmployeeId] = useState<string | null>(null);
   const [legacyShift, setLegacyShift] = useState<string | null>(null);
   const [todayShift, setTodayShift] = useState<typeof currentShift>(currentShift);
+  const [officeLocations, setOfficeLocations] = useState<OfficeLocation[]>([]);
+  const [locationsLoaded, setLocationsLoaded] = useState(false);
+
+  // Load configured office locations (geofence areas) from settings
+  useEffect(() => {
+    const loadLocations = async () => {
+      const { data } = await supabase
+        .from("company_settings")
+        .select("value")
+        .eq("key", LOCATIONS_SETTINGS_KEY)
+        .maybeSingle();
+      if (data?.value && Array.isArray(data.value)) {
+        setOfficeLocations(data.value as unknown as OfficeLocation[]);
+      }
+      setLocationsLoaded(true);
+    };
+    loadLocations();
+  }, []);
+
 
   // Find employee id for current user
   useEffect(() => {
