@@ -127,7 +127,7 @@ const MainLayout = () => {
           pageTitle={pageInfo.title}
           pageSubtitle={pageInfo.subtitle}
         />
-        <main className="flex-1 overflow-y-auto overflow-x-hidden custom-scroll p-4 lg:p-6 pb-24 lg:pb-6" style={{ overflowX: "hidden" }}>
+        <main ref={mainRef} className="flex-1 overflow-y-auto overflow-x-hidden custom-scroll p-4 lg:p-6 pb-24 lg:pb-6" style={{ overflowX: "hidden" }}>
           <Outlet />
         </main>
       </div>
