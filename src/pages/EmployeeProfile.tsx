@@ -101,7 +101,7 @@ const STATUS_OPTIONS: SelectOption[] = [
 const EmployeeProfile = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { getEmployeeById, updateEmployee } = useEmployees();
+  const { getEmployeeById, updateEmployee, loading } = useEmployees();
   const { currentUser } = useAuth();
   const { affiliations, orgLevelsFlat } = useOrg();
   const ROLE_OPTIONS = useRoleOptions();
@@ -156,6 +156,18 @@ const EmployeeProfile = () => {
   const [activeTab, setActiveTab] = useState("personal");
   const [isEditing, setIsEditing] = useState(false);
   const [data, setData] = useState(employee ? { ...employee } : null);
+
+  // Sync local data when the employee list finishes loading asynchronously.
+  // The useState initializer above only runs once, so a late-arriving list
+  // (e.g. when the profile is opened directly by URL or refreshed) would
+  // otherwise leave `data` null forever and wrongly show "not found".
+  useEffect(() => {
+    if (isEditing) return;
+    if (employee && !data) {
+      setData({ ...employee });
+    }
+  }, [employee, data, isEditing]);
+
 
   // Fetch photo_url on-demand (not included in list query for performance)
   useEffect(() => {
