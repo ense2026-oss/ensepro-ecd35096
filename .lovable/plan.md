@@ -1,35 +1,28 @@
-## ผลตรวจสอบ: ทำไมพนักงานบางคนล็อกอินไม่ได้
+# Fix "ไม่พบข้อมูลพนักงาน" false-negative on employee profile
 
-ตรวจสอบทั้ง 56 รายชื่อเทียบกับระบบยืนยันตัวตน (auth) และตารางพนักงานแล้ว พบว่า **54 คนมีบัญชีปกติ ยืนยันอีเมลแล้ว และรหัสผ่านที่บันทึกไว้คือ `Password123!`** — กลุ่มนี้ควรล็อกอินได้ มีเพียง **2 รายที่มีปัญหาจริง**:
+## Problem
+Opening `/employees/:id` directly (or refreshing) shows "ไม่พบข้อมูลพนักงาน" even for Admin / Executive / HR, even though the employee exists and the user has permission. Database RLS is correct — this is a client-side timing bug in `src/pages/EmployeeProfile.tsx`.
 
-| ชื่อ | อีเมล | ปัญหา |
-|------|-------|-------|
-| พูลสวัสดิ์ ศรีนาคงาม | `punswat@ensepro.com` | **ยังไม่มีบัญชีในระบบเลย** (มีข้อมูลพนักงาน แต่ไม่ถูกสร้าง account / ไม่ได้เชื่อมกับ user) → ล็อกอินไม่ได้แน่นอน |
-| อัณณ์ชญา พุทธเจริญรัตน์ | `p.aunchaya@gmail.com` | มีบัญชีแล้ว แต่รหัสผ่านที่ตั้งไว้จริงคือ **`Test1234!`** ไม่ใช่ `Password123!` → ถ้าใช้ `Password123!` จะเข้าไม่ได้ |
+## Root cause
+1. The not-found block renders as soon as `getEmployeeById(id)` is `undefined`, without waiting for `EmployeeContext`'s `loading` flag. On first load the employee list is still empty.
+2. Local `data` state is set only from the one-time `useState` initializer. When the list finishes loading, `employee` becomes defined but `data` stays `null` forever, so the not-found screen never recovers.
 
-### ข้อสังเกตเพิ่มเติม (อาจทำให้เข้าใจผิดว่าล็อกอินไม่ได้)
+## Changes (only `src/pages/EmployeeProfile.tsx`)
 
-1. **ระบบล็อกอินใช้ "อีเมล" เท่านั้น ไม่ใช่ username** — ถ้าพนักงานพยายามกรอก username จะเข้าไม่ได้ ต้องกรอกอีเมลเต็ม
-2. **อีเมลที่พิมพ์โดเมนผิดแต่ถูกบันทึกไปแล้ว** ต้องล็อกอินด้วยโดเมนที่ผิดตามที่บันทึก มิฉะนั้นจะเข้าไม่ได้:
-   - `wanchalemtidthamoon@qmail.com` (เป็น **qmail** ไม่ใช่ gmail)
-   - `2128kanet@gmil.com` (เป็น **gmil** ไม่ใช่ gmail)
-   
-   ทั้งสองบัญชีนี้มีอยู่จริงในระบบตามโดเมนที่พิมพ์ผิด ถ้าพนักงานเผลอพิมพ์เป็น gmail.com จะล็อกอินไม่ได้
-3. หมายเหตุ: ค่า `initial_password` เป็นรหัสที่ระบบตั้งให้ตอนสร้าง/รีเซ็ตล่าสุด หากพนักงานเคยเปลี่ยนรหัสเองไปแล้ว รหัสจริงอาจต่างจากนี้
+1. **Consume the `loading` flag** from `useEmployees()` (already exposed by the context).
 
-### แผนการแก้ไข
+2. **Show a loading state instead of not-found while data is arriving.** Before the not-found check, render a spinner/placeholder when `loading` is true, or when `employee` is not yet resolved and the list hasn't loaded.
 
-**1. สร้างบัญชีให้ พูลสวัสดิ์ (`punswat@ensepro.com`)**
-- เรียก edge function `create-employee-auth` เพื่อสร้างบัญชีด้วยรหัส `Password123!`, ยืนยันอีเมลอัตโนมัติ, กำหนด role ตามข้อมูลพนักงาน, เชื่อม `user_id` กับข้อมูลพนักงาน และบันทึก `initial_password`
+3. **Sync `data` when `employee` becomes available.** Add a `useEffect` keyed on the employee (e.g. `employee?.id`) that copies the employee into `data` when `data` is still `null` and the user is not mid-edit, so a late-arriving list populates the profile.
 
-**2. รีเซ็ตรหัสผ่านของ อัณณ์ชญา (`p.aunchaya@gmail.com`)**
-- อัปเดตรหัสผ่านในระบบ auth ให้เป็น `Password123!` และอัปเดต `initial_password` ในตารางพนักงานให้ตรงกัน เพื่อให้ตรงกับรายการที่แจกจ่าย
+4. **Keep the real not-found path** — only render "ไม่พบข้อมูลพนักงาน" once `loading` is `false` AND the employee is genuinely absent from the loaded list.
 
-**3. แก้อีเมลโดเมนพิมพ์ผิด (ยืนยันกับผู้ใช้ก่อน)**
-- ถ้าต้องการ จะแก้ `qmail.com` → `gmail.com` และ `gmil.com` → `gmail.com` ทั้งในระบบ auth และตารางพนักงาน แต่ต้องยืนยันก่อนว่าอีเมลจริงคืออะไร เพราะการแก้จะเปลี่ยนอีเมลที่ใช้ล็อกอิน
+## Technical details
+- `EmployeeContext` already exposes `loading`; no context or DB changes needed.
+- Guard order in render: `if (loading && !employee) return <Spinner/>;` then the sync effect ensures `data` is set; the existing `if (!employee || !data)` not-found block stays but is only reached after loading completes.
+- The sync effect must not clobber in-progress edits (skip when `isEditing`).
 
-**4. ตรวจสอบซ้ำ**
-- หลังแก้ไข query ยืนยันว่าทั้งสองบัญชีมีอยู่ ยืนยันแล้ว และเชื่อมกับพนักงานเรียบร้อย
-
-### สิ่งที่ต้องยืนยันจากผู้ใช้
-- ให้ดำเนินการข้อ 3 (แก้โดเมนอีเมลที่พิมพ์ผิด) ด้วยหรือไม่ และอีเมลจริงของ 2 คนนั้นคืออะไร
+## Verification
+- Typecheck with `tsgo --noEmit`.
+- Load `/employees/c044ab8b-77d1-423a-b2f6-5f16420c6dbb` directly and on refresh as Executive — profile renders instead of the not-found screen.
+- Confirm a genuinely invalid ID still shows the not-found screen after loading.
