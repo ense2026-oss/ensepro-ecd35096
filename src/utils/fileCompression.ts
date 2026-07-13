@@ -121,10 +121,17 @@ export async function processFileUpload(
     try {
       return await compressImage(file, imageOptions);
     } catch {
-      toast.error("ไม่สามารถประมวลผลรูปภาพได้");
+      // Some formats (e.g. HEIC/HEIF from iPhones) can't be decoded by the browser canvas
+      const isHeic = /hei[cf]/i.test(file.type) || /\.(heic|heif)$/i.test(file.name);
+      toast.error(
+        isHeic
+          ? "ไฟล์รูปแบบ HEIC ไม่รองรับ กรุณาแปลงเป็น JPG หรือ PNG ก่อนอัปโหลด"
+          : "ไม่สามารถประมวลผลรูปภาพได้ กรุณาลองไฟล์ JPG หรือ PNG"
+      );
       return null;
     }
   }
+
 
   if (file.type === "application/pdf") {
     if (!validatePDF(file)) return null;
