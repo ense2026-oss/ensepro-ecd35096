@@ -93,6 +93,8 @@ const EmployeeFormDialog = ({ open, onOpenChange, employee, onSave }: EmployeeFo
   const [errors, setErrors] = useState<string[]>([]);
   const photoInputRef = useRef<HTMLInputElement>(null);
 
+  const isDeptSelected = !!form.dept && form.dept !== "-- เลือกสังกัด --";
+
   const filteredPositions = useMemo(() => {
     const collectNames = (positions: { name: string; children?: any[] }[]): string[] => {
       const names: string[] = [];
@@ -104,8 +106,8 @@ const EmployeeFormDialog = ({ open, onOpenChange, employee, onSave }: EmployeeFo
     };
     const aff = affiliations.find((a) => a.name === form.dept);
     if (aff) return collectNames(aff.positions);
-    return allPositions;
-  }, [form.dept, affiliations, allPositions]);
+    return [];
+  }, [form.dept, affiliations]);
 
   const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
