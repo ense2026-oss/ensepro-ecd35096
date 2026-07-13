@@ -402,7 +402,7 @@ const CheckIn = () => {
   };
 
   const handleOtCheckOut = async () => {
-    if (!employeeId || !todayOt) return;
+    if (!canCheckIn || !nearest || !employeeId || !todayOt) return;
     const time = nowTime();
     const hours = calcOtHours(todayOt.startTime, time);
     const { error } = await supabase
