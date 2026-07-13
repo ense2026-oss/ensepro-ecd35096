@@ -51,11 +51,22 @@ const Employees = () => {
     () => employees.filter((e) => (e.role || "").toLowerCase() !== "admin"),
     [employees]
   );
-  const depts = ["all", ...Array.from(new Set(nonAdmins.map((e) => e.dept).filter(Boolean)))];
+  // Departments come from the canonical affiliations defined in Settings, not from
+  // free-text employee.dept values (which may contain stale/legacy entries).
+  const depts = useMemo(
+    () => ["all", ...affiliations.map((a) => a.name)],
+    [affiliations]
+  );
   const positions = useMemo(() => {
-    const src = selectedDept === "all" ? nonAdmins : nonAdmins.filter((e) => e.dept === selectedDept);
-    return ["all", ...Array.from(new Set(src.map((e) => e.position).filter(Boolean)))];
-  }, [nonAdmins, selectedDept]);
+    const flatten = (list: Position[]): string[] =>
+      list.flatMap((p) => [p.name, ...(p.children ? flatten(p.children) : [])]);
+    if (selectedDept === "all") {
+      const names = affiliations.flatMap((a) => flatten(a.positions));
+      return ["all", ...Array.from(new Set(names))];
+    }
+    const aff = affiliations.find((a) => a.name === selectedDept);
+    return ["all", ...Array.from(new Set(aff ? flatten(aff.positions) : []))];
+  }, [affiliations, selectedDept]);
   const filtered = useMemo(() => nonAdmins.filter((e) => {
     const name = `${e.prefix}${e.firstName} ${e.lastName}`;
     const matchSearch =
