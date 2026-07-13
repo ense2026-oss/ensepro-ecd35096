@@ -230,8 +230,16 @@ const EmployeeFormDialog = ({ open, onOpenChange, employee, onSave }: EmployeeFo
           {/* ข้อมูลการทำงาน */}
           <SectionLabel>ข้อมูลการทำงาน</SectionLabel>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <SelectField label="สังกัด (แผนก/หน่วยงาน)" value={form.dept} onChange={set("dept")} options={["-- เลือกสังกัด --", ...affiliationNames]} />
-            <SelectField label="ตำแหน่ง" value={form.position} onChange={set("position")} options={["-- เลือกตำแหน่ง --", ...filteredPositions]} />
+            <SelectField label="สังกัด (แผนก/หน่วยงาน)" value={form.dept} onChange={handleDeptChange} options={["-- เลือกสังกัด --", ...affiliationNames]} />
+            <SelectField
+              label="ตำแหน่ง"
+              value={form.position}
+              onChange={set("position")}
+              disabled={!isDeptSelected}
+              options={isDeptSelected ? ["-- เลือกตำแหน่ง --", ...filteredPositions] : ["-- เลือกสังกัดก่อน --"]}
+              hint={!isDeptSelected ? "กรุณาเลือกสังกัดก่อน" : undefined}
+            />
+
             <SelectField label="ประเภทพนักงาน" value={form.employeeType} onChange={set("employeeType")} options={["พนักงานประจำ", "พนักงานชั่วคราว", "พนักงานทดลองงาน"]} />
             <InputField label="วันที่เริ่มงาน" value={form.startDate} onChange={set("startDate")} placeholder="YYYY-MM-DD" />
             <InputField label="เงินเดือน (บาท)" value={form.salary} onChange={set("salary")} type="number" />
