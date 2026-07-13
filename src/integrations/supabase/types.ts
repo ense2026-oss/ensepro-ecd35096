@@ -1781,6 +1781,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      update_own_employee_photo: {
+        Args: { _photo_url: string }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role:
