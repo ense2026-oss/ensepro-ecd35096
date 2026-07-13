@@ -47,19 +47,20 @@ const InputField = ({ label, value, onChange, type = "text", placeholder, requir
 );
 
 type SelectOption = string | { value: string; label: string };
-const SelectField = ({ label, value, onChange, options }: {
-  label: string; value: string; onChange: (v: string) => void; options: SelectOption[];
+const SelectField = ({ label, value, onChange, options, disabled, hint }: {
+  label: string; value: string; onChange: (v: string) => void; options: SelectOption[]; disabled?: boolean; hint?: string;
 }) => (
   <div className="space-y-1.5">
     <label className="text-xs font-medium text-muted-foreground">{label}</label>
-    <select value={value} onChange={(e) => onChange(e.target.value)}
-      className="w-full px-3 py-2 text-sm rounded-xl border border-border bg-muted/30 outline-none focus:ring-2 focus:ring-primary/30 transition-all cursor-pointer">
+    <select value={value} onChange={(e) => onChange(e.target.value)} disabled={disabled}
+      className="w-full px-3 py-2 text-sm rounded-xl border border-border bg-muted/30 outline-none focus:ring-2 focus:ring-primary/30 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
       {options.map((o) => {
         const val = typeof o === "string" ? o : o.value;
         const lbl = typeof o === "string" ? o : o.label;
         return <option key={val} value={val}>{lbl}</option>;
       })}
     </select>
+    {hint && <p className="text-[10px] text-muted-foreground">{hint}</p>}
   </div>
 );
 
