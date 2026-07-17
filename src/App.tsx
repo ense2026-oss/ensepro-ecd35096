@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useSearchParams } from "react-router-dom";
 import { EmployeeProvider } from "@/contexts/EmployeeContext";
 import { BrandingProvider } from "@/contexts/BrandingContext";
 import { PendingCountsProvider } from "@/contexts/PendingCountsContext";
@@ -33,6 +33,7 @@ import Contracts from "@/pages/Contracts";
 import ContractDetail from "@/pages/ContractDetail";
 import DayOff from "@/pages/DayOff";
 import NotFound from "@/pages/NotFound";
+import OAuthConsent from "@/pages/OAuthConsent";
 import { applyStartupDisplaySettings } from "@/components/settings/DisplaySettings";
 
 // Apply saved display settings on load (personal preferences take precedence)
