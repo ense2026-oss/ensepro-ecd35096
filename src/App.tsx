@@ -81,11 +81,16 @@ const AuthRedirect = () => {
   return <Navigate to={isMobile ? "/check-in" : "/dashboard"} replace />;
 };
 
-// Redirect away from login if already authenticated
+// Redirect away from login if already authenticated. Honor ?next= (same-origin path).
 const LoginRoute = () => {
   const { user, loading } = useAuth();
+  const [params] = useSearchParams();
   if (loading) return null;
-  if (user) return <Navigate to="/dashboard" replace />;
+  if (user) {
+    const raw = params.get("next");
+    const safe = raw && raw.startsWith("/") && !raw.startsWith("//") ? raw : "/dashboard";
+    return <Navigate to={safe} replace />;
+  }
   return <Login />;
 };
 
@@ -93,6 +98,8 @@ const AppRoutes = () => (
   <Routes>
     <Route path="/" element={<AuthRedirect />} />
     <Route path="/login" element={<LoginRoute />} />
+    <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
+
     <Route element={
       <ProtectedRoute>
         <PermissionsProvider>
