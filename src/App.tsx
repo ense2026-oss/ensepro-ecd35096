@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useSearchParams } from "react-router-dom";
 import { EmployeeProvider } from "@/contexts/EmployeeContext";
 import { BrandingProvider } from "@/contexts/BrandingContext";
 import { PendingCountsProvider } from "@/contexts/PendingCountsContext";
@@ -33,6 +33,7 @@ import Contracts from "@/pages/Contracts";
 import ContractDetail from "@/pages/ContractDetail";
 import DayOff from "@/pages/DayOff";
 import NotFound from "@/pages/NotFound";
+import OAuthConsent from "@/pages/OAuthConsent";
 import { applyStartupDisplaySettings } from "@/components/settings/DisplaySettings";
 
 // Apply saved display settings on load (personal preferences take precedence)
@@ -80,11 +81,16 @@ const AuthRedirect = () => {
   return <Navigate to={isMobile ? "/check-in" : "/dashboard"} replace />;
 };
 
-// Redirect away from login if already authenticated
+// Redirect away from login if already authenticated. Honor ?next= (same-origin path).
 const LoginRoute = () => {
   const { user, loading } = useAuth();
+  const [params] = useSearchParams();
   if (loading) return null;
-  if (user) return <Navigate to="/dashboard" replace />;
+  if (user) {
+    const raw = params.get("next");
+    const safe = raw && raw.startsWith("/") && !raw.startsWith("//") ? raw : "/dashboard";
+    return <Navigate to={safe} replace />;
+  }
   return <Login />;
 };
 
@@ -92,6 +98,8 @@ const AppRoutes = () => (
   <Routes>
     <Route path="/" element={<AuthRedirect />} />
     <Route path="/login" element={<LoginRoute />} />
+    <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
+
     <Route element={
       <ProtectedRoute>
         <PermissionsProvider>
