@@ -34,7 +34,7 @@ interface ThaiDatePickerProps {
   displayFormat?: "long" | "short"; // "short" => "1/8/2569"
 }
 
-export function ThaiDatePicker({ value, onChange, placeholder = "เลือกวันที่", className, disabled }: ThaiDatePickerProps) {
+export function ThaiDatePicker({ value, onChange, placeholder = "เลือกวันที่", className, disabled, displayFormat = "long" }: ThaiDatePickerProps) {
   const [open, setOpen] = React.useState(false);
 
   const selectedDate = React.useMemo(() => {
@@ -52,6 +52,8 @@ export function ThaiDatePicker({ value, onChange, placeholder = "เลือก
     }
     setOpen(false);
   };
+
+  const formatThaiDate = displayFormat === "short" ? formatThaiDateShort : formatThaiDateLong;
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
