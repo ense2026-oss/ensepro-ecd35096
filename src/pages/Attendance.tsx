@@ -575,7 +575,7 @@ const Attendance = () => {
               <select
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
-                className="flex-1 min-w-[120px] px-3 py-2 text-sm rounded-xl border bg-muted/30 outline-none cursor-pointer"
+                className="w-fit min-w-fit flex-shrink-0 px-3 py-2 text-sm rounded-xl border bg-muted/30 outline-none cursor-pointer"
               >
                 <option value="all">ทุกสถานะ</option>
                 <option value="present">มาทำงาน</option>
@@ -598,6 +598,26 @@ const Attendance = () => {
                   </button>
                 )}
               </div>
+
+              <select
+                value={filterMonth}
+                onChange={(e) => setFilterMonth(e.target.value)}
+                className="px-3 py-2 text-sm rounded-xl border bg-muted/30 outline-none cursor-pointer w-[140px] flex-shrink-0"
+              >
+                <option value="">ทุกเดือน</option>
+                <option value="01">มกราคม</option>
+                <option value="02">กุมภาพันธ์</option>
+                <option value="03">มีนาคม</option>
+                <option value="04">เมษายน</option>
+                <option value="05">พฤษภาคม</option>
+                <option value="06">มิถุนายน</option>
+                <option value="07">กรกฎาคม</option>
+                <option value="08">สิงหาคม</option>
+                <option value="09">กันยายน</option>
+                <option value="10">ตุลาคม</option>
+                <option value="11">พฤศจิกายน</option>
+                <option value="12">ธันวาคม</option>
+              </select>
             </div>
           </div>
 
