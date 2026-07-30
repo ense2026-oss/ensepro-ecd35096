@@ -222,9 +222,9 @@ const Attendance = () => {
     const matchEmployee = filterEmployee === "all" || a.name === filterEmployee;
     const matchDate = (!dateFrom || a.date >= dateFrom) && (!dateTo || a.date <= dateTo);
     const matchMonth = !filterMonth || a.date.slice(5, 7) === filterMonth;
-    // month and date filters are mutually exclusive in UI, but guard here just in case.
-    if (filterMonth && (dateFrom || dateTo)) return matchSearch && matchStatus && matchEmployee && matchMonth;
-    return matchSearch && matchStatus && matchEmployee && matchDate && matchMonth;
+    // date range takes precedence over month; only one is active at a time.
+    if (dateFrom || dateTo) return matchSearch && matchStatus && matchEmployee && matchDate;
+    return matchSearch && matchStatus && matchEmployee && matchMonth;
   }), [scopedAttendance, search, filterStatus, filterEmployee, dateFrom, dateTo, filterMonth]);
 
   const summary = useMemo(() => ({
