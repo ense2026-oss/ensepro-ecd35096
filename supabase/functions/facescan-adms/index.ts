@@ -362,17 +362,22 @@ Deno.serve(async (req) => {
         .eq("device_id", device.id)
         .eq("status", "queued")
         .order("started_at", { ascending: true })
-        .limit(1);
+        .limit(20);
 
       if (pending && pending.length > 0) {
-        const cmd = pending[0];
+        const lines: string[] = [];
+        for (const cmd of pending) {
+          const payload = (cmd.command_payload ?? {}) as any;
+          const cmdId = payload.cmd_id ?? cmd.id.replace(/-/g, "").slice(0, 9);
+          const body = payload.raw ?? "CHECK";
+          lines.push(`C:${cmdId}:${body}`);
+        }
         await supabaseAdmin
           .from("face_scan_sync_logs")
           .update({ status: "running", started_at: new Date().toISOString() })
-          .eq("id", cmd.id);
-        // Minimal command form; expand as needed for enroll/delete.
-        const cmdText = (cmd.command_payload as any)?.raw || `C:${cmd.id}:CHECK`;
-        return ok(cmdText);
+          .in("id", pending.map((c: any) => c.id));
+        console.log("facescan-adms getrequest", { sn, sent: lines.length });
+        return ok(lines.join("\n"));
       }
       return ok();
     }
@@ -381,8 +386,62 @@ Deno.serve(async (req) => {
     if (action === "devicecmd" && req.method === "POST") {
       const raw = await req.text();
       console.log("facescan-adms devicecmd ack", { sn, raw: raw.slice(0, 500) });
+
+      const acks = raw
+        .split("\n")
+        .map((l) => l.trim())
+        .filter(Boolean)
+        .map((line) => {
+          const kv: Record<string, string> = {};
+          for (const part of line.split("&")) {
+            const i = part.indexOf("=");
+            if (i > 0) kv[part.slice(0, i).trim().toLowerCase()] = part.slice(i + 1).trim();
+          }
+          return { id: kv["id"] || "", ret: kv["return"] ?? "0" };
+        })
+        .filter((a) => a.id);
+
+      for (const ack of acks) {
+        const success = ack.ret === "0" || ack.ret === "";
+        const { data: rows } = await supabaseAdmin
+          .from("face_scan_sync_logs")
+          .select("id, command_payload, message")
+          .eq("device_id", device.id)
+          .eq("status", "running")
+          .contains("command_payload", { cmd_id: ack.id })
+          .limit(1);
+
+        const row = rows?.[0];
+        if (!row) continue;
+        const payload = (row.command_payload ?? {}) as any;
+
+        await supabaseAdmin
+          .from("face_scan_sync_logs")
+          .update({
+            status: success ? "success" : "error",
+            records_synced: success ? 1 : 0,
+            finished_at: new Date().toISOString(),
+            message: `${row.message} — เครื่องตอบกลับ Return=${ack.ret}`,
+          })
+          .eq("id", row.id);
+
+        if (payload.employee_id) {
+          await supabaseAdmin.from("face_scan_enroll_status").upsert(
+            {
+              employee_id: payload.employee_id,
+              device_id: device.id,
+              status: success ? "synced" : "error",
+              synced_at: success ? new Date().toISOString() : null,
+              error_message: success ? "" : `Return=${ack.ret}`,
+              updated_at: new Date().toISOString(),
+            },
+            { onConflict: "employee_id,device_id" }
+          );
+        }
+      }
       return ok();
     }
+
 
     // Unknown action — log it so a wrong relay path is visible instead of silent.
     await writeLog({
