@@ -181,7 +181,7 @@ Deno.serve(async (req) => {
       const config = [
         `GET OPTION FROM: ${sn}`,
         "ATTLOGStamp=None",
-        "OPERLOGStamp=None",
+        "OPERLOGStamp=9999",
         "ATTPHOTOStamp=None",
         "ErrorDelay=30",
         "Delay=30",
@@ -195,21 +195,55 @@ Deno.serve(async (req) => {
       return ok(config);
     }
 
-    // ---- POST /cdata : receive ATTLOG ----
+    // ---- POST /cdata : receive ATTLOG / OPERLOG(USERINFO) ----
     if (action === "cdata" && req.method === "POST") {
       const table = (url.searchParams.get("table") || "").toUpperCase();
       const raw = await req.text();
 
       if (table && table !== "ATTLOG") {
-        // OPERLOG / ATTPHOTO etc. — acknowledge but ignore.
+        // OPERLOG carries "USER PIN=..." rows — the device user list we need
+        // in order to map scanner enroll numbers to employees.
+        const userRows = raw
+          .split("\n")
+          .map((l) => l.trim())
+          .filter((l) => /^USER\s+/i.test(l))
+          .map((line) => {
+            const fields = line.replace(/^USER\s+/i, "").split("\t");
+            const kv: Record<string, string> = {};
+            for (const f of fields) {
+              const i = f.indexOf("=");
+              if (i > 0) kv[f.slice(0, i).trim().toLowerCase()] = f.slice(i + 1).trim();
+            }
+            return {
+              device_id: device.id,
+              pin: (kv["pin"] || kv["pin2"] || "").trim(),
+              name: kv["name"] || "",
+              privilege: kv["pri"] || "",
+              card_no: kv["card"] || "",
+              last_seen_at: new Date().toISOString(),
+            };
+          })
+          .filter((r) => r.pin);
+
+        if (userRows.length > 0) {
+          await supabaseAdmin
+            .from("face_scan_device_users")
+            .upsert(userRows, { onConflict: "device_id,pin" });
+        }
+
         await writeLog({
           device_id: device.id,
-          sync_type: "adms_push",
+          sync_type: userRows.length > 0 ? "adms_userinfo" : "adms_push",
           status: "success",
-          message: `รับข้อมูลชนิด ${table} จาก "${device.name}" (ไม่ใช่ข้อมูลลงเวลา — ข้าม)`,
+          records_synced: userRows.length,
+          message:
+            userRows.length > 0
+              ? `ดึงรายชื่อผู้ใช้จากเครื่อง "${device.name}" ได้ ${userRows.length} รายการ`
+              : `รับข้อมูลชนิด ${table} จาก "${device.name}" (ไม่ใช่ข้อมูลลงเวลา — ข้าม)`,
         });
-        return ok(`OK: 0`);
+        return ok(`OK: ${userRows.length}`);
       }
+
 
       const lines = raw.split("\n").map((l) => l.trim()).filter(Boolean);
       const records = lines
