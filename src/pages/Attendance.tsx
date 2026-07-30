@@ -221,8 +221,9 @@ const Attendance = () => {
     const matchStatus = filterStatus === "all" || a.status === filterStatus;
     const matchEmployee = filterEmployee === "all" || a.name === filterEmployee;
     const matchDate = (!dateFrom || a.date >= dateFrom) && (!dateTo || a.date <= dateTo);
-    return matchSearch && matchStatus && matchEmployee && matchDate;
-  }), [scopedAttendance, search, filterStatus, filterEmployee, dateFrom, dateTo]);
+    const matchMonth = !filterMonth || a.date.slice(0, 7) === filterMonth;
+    return matchSearch && matchStatus && matchEmployee && matchDate && matchMonth;
+  }), [scopedAttendance, search, filterStatus, filterEmployee, dateFrom, dateTo, filterMonth]);
 
   const summary = useMemo(() => ({
     present: scopedAttendance.filter((a) => a.status === "present").length,
