@@ -67,7 +67,7 @@ export function ThaiDatePicker({ value, onChange, placeholder = "เลือก
             className
           )}
         >
-          <CalendarIcon className="mr-2 h-4 w-4 flex-shrink-0" />
+          <CalendarIcon className={cn("mr-2 h-4 w-4 flex-shrink-0", selectedDate && "hidden")} />
           {selectedDate ? formatThaiDate(selectedDate) : placeholder}
         </Button>
       </PopoverTrigger>
