@@ -152,7 +152,7 @@ const FaceScanMapping = ({ devices }: { devices: Device[] }) => {
     });
     setPushing(false);
     if (error) return toast.error("ส่งคำสั่งไม่สำเร็จ: " + error.message);
-    toast.success("ส่งคำสั่งซิงค์รายชื่อเรียบร้อย — Bridge จะดำเนินการในรอบถัดไป (≤30 วินาที)");
+    toast.success("ส่งคำสั่งซิงค์รายชื่อไปเครื่องแล้ว — เครื่องจะรับคำสั่งภายใน 30 วินาที");
   };
 
   return (
