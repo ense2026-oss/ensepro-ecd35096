@@ -11,11 +11,18 @@ const THAI_MONTHS = [
   "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม",
 ];
 
-function formatThaiDate(date: Date): string {
+function formatThaiDateLong(date: Date): string {
   const d = date.getDate();
   const m = THAI_MONTHS[date.getMonth()];
   const y = date.getFullYear() + 543;
   return `${d} ${m} ${y}`;
+}
+
+function formatThaiDateShort(date: Date): string {
+  const d = date.getDate();
+  const m = date.getMonth() + 1;
+  const y = date.getFullYear() + 543;
+  return `${d}/${m}/${y}`;
 }
 
 interface ThaiDatePickerProps {
@@ -24,9 +31,10 @@ interface ThaiDatePickerProps {
   placeholder?: string;
   className?: string;
   disabled?: boolean;
+  displayFormat?: "long" | "short"; // "short" => "1/8/2569"
 }
 
-export function ThaiDatePicker({ value, onChange, placeholder = "เลือกวันที่", className, disabled }: ThaiDatePickerProps) {
+export function ThaiDatePicker({ value, onChange, placeholder = "เลือกวันที่", className, disabled, displayFormat = "long" }: ThaiDatePickerProps) {
   const [open, setOpen] = React.useState(false);
 
   const selectedDate = React.useMemo(() => {
@@ -44,6 +52,8 @@ export function ThaiDatePicker({ value, onChange, placeholder = "เลือก
     }
     setOpen(false);
   };
+
+  const formatThaiDate = displayFormat === "short" ? formatThaiDateShort : formatThaiDateLong;
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
