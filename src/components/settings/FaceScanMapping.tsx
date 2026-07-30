@@ -7,6 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Search, Save, RefreshCw, Send, CheckCircle2, AlertCircle, Clock } from "lucide-react";
 import { toast } from "sonner";
 import EmployeeAvatar from "@/components/ui/employee-avatar";
+import FaceScanDeviceUsers from "@/components/settings/FaceScanDeviceUsers";
+
 
 interface Employee {
   id: string;
