@@ -57,11 +57,12 @@ Deno.serve(async (req) => {
 
     const { data: roles } = await supabaseAdmin
       .from("user_roles")
-      .select("role")
+      .select("role, role_name")
       .eq("user_id", userId);
-    const isAuthorized = (roles ?? []).some(
-      (r: any) => r.role === "admin" || r.role === "hr" || r.role === "executive"
+    const isAuthorized = (roles ?? []).some((r: any) =>
+      ["admin", "hr", "executive"].includes(r.role_name ?? r.role)
     );
+
     if (!isAuthorized) {
       return new Response(JSON.stringify({ error: "Forbidden" }), {
         status: 403,
