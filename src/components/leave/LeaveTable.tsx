@@ -62,12 +62,21 @@ const LeaveTable = ({ records, onApprove, onReject, hideActions = false, current
   return (
     <div className="card-base overflow-hidden">
       <div className="overflow-x-auto">
-        <table className="w-full">
+        <table className="w-full min-w-[900px]" style={{ tableLayout: "fixed" }}>
           <thead>
             <tr className="border-b" style={{ borderColor: "hsl(var(--border))" }}>
-              {["พนักงาน", "ประเภท", "วันที่", "จำนวนวัน", "เหตุผล", "เอกสาร", "สถานะ", "จัดการ"].map((h) => (
-                <th key={h} className="text-left px-4 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">
-                  {h}
+              {[
+                { label: "พนักงาน", width: "w-[140px]" },
+                { label: "ประเภท", width: "w-[110px]" },
+                { label: "วันที่", width: "w-[140px]" },
+                { label: "จำนวนวัน", width: "w-[70px]" },
+                { label: "เหตุผล", width: "w-[160px]" },
+                { label: "เอกสาร", width: "w-[60px]" },
+                { label: "สถานะ", width: "w-[120px]" },
+                { label: "จัดการ", width: "w-[110px]" },
+              ].map((h) => (
+                <th key={h.label} className={`text-left px-3 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap ${h.width}`}>
+                  {h.label}
                 </th>
               ))}
             </tr>
@@ -83,7 +92,7 @@ const LeaveTable = ({ records, onApprove, onReject, hideActions = false, current
               const isOwnPending = row.employeeId === currentEmployeeId && row.status === "pending";
               return (
                 <tr key={row.id} className="border-b hover:bg-muted/30 transition-colors" style={{ borderColor: "hsl(var(--border))" }}>
-                  <td className="px-4 py-3.5">
+                  <td className="px-3 py-2.5">
                     <div className="flex items-center gap-2">
                       <EmployeeAvatar
                         photoUrl={row.photoUrl}
@@ -91,47 +100,46 @@ const LeaveTable = ({ records, onApprove, onReject, hideActions = false, current
                         size="sm"
                         rounded="lg"
                       />
-                      <span className="text-sm font-semibold">{row.name}</span>
+                      <span className="text-sm font-semibold truncate" title={row.name}>{row.name}</span>
                     </div>
                   </td>
-                  <td className="px-4 py-3.5 text-sm">{row.type}</td>
-                  <td className="px-4 py-3.5 text-sm text-muted-foreground whitespace-nowrap">{row.from} – {row.to}</td>
-                  <td className="px-4 py-3.5">
+                  <td className="px-3 py-2.5 text-sm truncate" title={row.type}>{row.type}</td>
+                  <td className="px-3 py-2.5 text-xs text-muted-foreground whitespace-nowrap">{row.from} – {row.to}</td>
+                  <td className="px-3 py-2.5">
                     <span className="text-sm font-bold" style={{ color: "#FF870F" }}>{row.days}</span>
-                    <span className="text-sm text-muted-foreground"> วัน</span>
+                    <span className="text-xs text-muted-foreground"> วัน</span>
                   </td>
-                  <td className="px-4 py-3.5 text-sm text-muted-foreground max-w-32 truncate">{row.reason}</td>
-                  <td className="px-4 py-3.5">
+                  <td className="px-3 py-2.5 text-xs text-muted-foreground truncate" title={row.reason}>{row.reason || "-"}</td>
+                  <td className="px-3 py-2.5">
                     {row.file && row.fileUrl ? (
                       <button
                         onClick={() => handleViewFile(row.fileUrl!)}
-                        className="flex items-center gap-1 text-xs font-medium hover:underline"
+                        className="flex items-center justify-center gap-1 text-xs font-medium hover:underline w-full"
                         style={{ color: "#FF870F" }}
+                        title="ดูไฟล์"
                       >
                         <FileText className="w-3.5 h-3.5" />
-                        ดูไฟล์
                       </button>
                     ) : row.file ? (
-                      <span className="flex items-center gap-1 text-xs font-medium text-muted-foreground">
+                      <span className="flex items-center justify-center gap-1 text-xs font-medium text-muted-foreground w-full" title="มีไฟล์">
                         <FileText className="w-3.5 h-3.5" />
-                        มีไฟล์
                       </span>
                     ) : (
-                      <span className="text-xs text-muted-foreground">-</span>
+                      <span className="text-xs text-muted-foreground w-full text-center block">-</span>
                     )}
                   </td>
-                  <td className="px-4 py-3.5">
-                    <span className="text-xs font-semibold px-2.5 py-1 rounded-full" style={{ background: conf.bg, color: conf.color }}>
+                  <td className="px-3 py-2.5">
+                    <span className="text-xs font-semibold px-2 py-0.5 rounded-full whitespace-nowrap" style={{ background: conf.bg, color: conf.color }}>
                       {conf.label}
                     </span>
                     {row.status === "pending" && (row.totalTiers || 1) > 1 && (
-                      <span className="ml-1.5 text-xs text-muted-foreground">
+                      <span className="ml-1 text-xs text-muted-foreground">
                         ({row.approvedTiers || 0}/{row.totalTiers})
                       </span>
                     )}
                   </td>
-                  <td className="px-4 py-3.5">
-                    <div className="flex gap-1">
+                  <td className="px-3 py-2.5">
+                    <div className="flex gap-0.5">
                       <button onClick={() => setDetail(row)} className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground" title="ดูรายละเอียด">
                         <Eye className="w-4 h-4" />
                       </button>
