@@ -370,34 +370,17 @@ const FaceScanConnectionSettings = () => {
     }
     setRelayTestingId(device.id);
     try {
-      // 1) relay health
-      const health = await fetch(`${base}/health`);
-      const healthText = (await health.text()).trim();
-      if (!health.ok || !/relay ok/i.test(healthText)) {
-        setRelayResults((p) => ({
-          ...p,
-          [device.id]: {
-            ok: false,
-            text: `Relay ตอบกลับผิดปกติที่ /health (HTTP ${health.status} · "${healthText.slice(0, 60)}") — ตรวจว่า deploy โค้ด relay ถูกต้อง`,
-          },
-        }));
-        return;
-      }
-
-      // 2) relay -> edge function passthrough (simulates the device handshake)
-      const hs = await fetch(
-        `${base}/iclock/cdata?SN=${encodeURIComponent(device.serial_number)}&options=all`
+      // Run the test on the server: many relays don't send CORS headers,
+      // so a direct browser fetch would fail with "Failed to fetch".
+      const res = await fetch(
+        `${ADMS_FN_URL}/relaytest?relay=${encodeURIComponent(base)}&sn=${encodeURIComponent(
+          device.serial_number
+        )}`
       );
-      const hsText = (await hs.text()).trim();
-      const passed = hs.ok && hsText.includes("GET OPTION FROM");
+      const data = await res.json();
       setRelayResults((p) => ({
         ...p,
-        [device.id]: {
-          ok: passed,
-          text: passed
-            ? `ครบวงจร ✓ relay ส่งต่อถึงระบบแล้ว และระบบรู้จัก SN นี้ (ดูรายการ handshake ในแท็บ Sync Logs)`
-            : `Relay ทำงาน แต่ระบบยังไม่รู้จัก SN นี้ หรือเครื่องถูกปิดใช้ — ตรวจ Serial Number ให้ตรงกับเครื่องจริง (ตอบกลับ: "${hsText.slice(0, 80)}")`,
-        },
+        [device.id]: { ok: !!data.ok, text: data.text ?? "ไม่ทราบผลลัพธ์" },
       }));
       fetchAll();
     } catch (e: any) {
@@ -405,12 +388,13 @@ const FaceScanConnectionSettings = () => {
         ...p,
         [device.id]: {
           ok: false,
-          text: `ติดต่อ Relay ไม่ได้: ${e?.message ?? "unknown"} — ตรวจว่าโดเมนถูกต้องและ deploy แล้ว`,
+          text: `ทดสอบไม่สำเร็จ: ${e?.message ?? "unknown"}`,
         },
       }));
     } finally {
       setRelayTestingId(null);
     }
+
   };
 
 

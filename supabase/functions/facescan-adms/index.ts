@@ -61,6 +61,60 @@ Deno.serve(async (req) => {
 
   if (action === "ping") return ok();
 
+  // Server-side relay diagnostic (called from the settings UI).
+  // Runs from the server so relays without CORS headers can still be tested.
+  if (action === "relaytest") {
+    let raw = url.searchParams.get("relay") || "";
+    const testSn = url.searchParams.get("sn") || url.searchParams.get("SN") || "";
+    raw = raw.trim().replace(/\/+$/, "");
+    if (!raw) {
+      return new Response(JSON.stringify({ ok: false, stage: "input", text: "ไม่ได้ระบุ Relay URL" }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    if (!/^https?:\/\//i.test(raw)) raw = `https://${raw}`;
+
+    const json = (b: unknown) =>
+      new Response(JSON.stringify(b), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+
+    try {
+      const health = await fetch(`${raw}/health`, { signal: AbortSignal.timeout(12000) });
+      const healthText = (await health.text()).trim();
+      if (!health.ok || !/relay ok/i.test(healthText)) {
+        return json({
+          ok: false,
+          stage: "health",
+          text: `Relay ตอบกลับผิดปกติที่ /health (HTTP ${health.status} · "${healthText.slice(0, 60)}") — ตรวจว่า deploy โค้ด relay ถูกต้อง`,
+        });
+      }
+
+      const hs = await fetch(
+        `${raw}/iclock/cdata?SN=${encodeURIComponent(testSn)}&options=all`,
+        { signal: AbortSignal.timeout(12000) }
+      );
+      const hsText = (await hs.text()).trim();
+      const passed = hs.ok && hsText.includes("GET OPTION FROM");
+      return json({
+        ok: passed,
+        stage: "handshake",
+        text: passed
+          ? "ครบวงจร ✓ relay ส่งต่อถึงระบบแล้ว และระบบรู้จัก SN นี้ (ดูรายการ handshake ในแท็บ Sync Logs)"
+          : `Relay ทำงาน แต่ระบบยังไม่รู้จัก SN นี้ หรือเครื่องถูกปิดใช้ — ตรวจ Serial Number ให้ตรงกับเครื่องจริง (ตอบกลับ: "${hsText.slice(0, 80)}")`,
+      });
+    } catch (e) {
+      return json({
+        ok: false,
+        stage: "network",
+        text: `ติดต่อ Relay ไม่ได้: ${(e as Error)?.message ?? "unknown"} — ตรวจว่าโดเมนถูกต้องและ deploy แล้ว`,
+      });
+    }
+  }
+
+
   const supabaseAdmin = createClient(
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
