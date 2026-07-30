@@ -222,9 +222,9 @@ const Attendance = () => {
     const matchEmployee = filterEmployee === "all" || a.name === filterEmployee;
     const matchDate = (!dateFrom || a.date >= dateFrom) && (!dateTo || a.date <= dateTo);
     const matchMonth = !filterMonth || a.date.slice(5, 7) === filterMonth;
-    // month and date filters are mutually exclusive in UI, but guard here just in case.
-    if (filterMonth && (dateFrom || dateTo)) return matchSearch && matchStatus && matchEmployee && matchMonth;
-    return matchSearch && matchStatus && matchEmployee && matchDate && matchMonth;
+    // date range takes precedence over month; only one is active at a time.
+    if (dateFrom || dateTo) return matchSearch && matchStatus && matchEmployee && matchDate;
+    return matchSearch && matchStatus && matchEmployee && matchMonth;
   }), [scopedAttendance, search, filterStatus, filterEmployee, dateFrom, dateTo, filterMonth]);
 
   const summary = useMemo(() => ({
@@ -621,7 +621,6 @@ const Attendance = () => {
                   placeholder="เริ่มต้น"
                   className="flex-1"
                   displayFormat="short"
-                  disabled={Boolean(filterMonth)}
                 />
                 <span className="text-xs text-muted-foreground">ถึง</span>
                 <ThaiDatePicker
@@ -630,11 +629,10 @@ const Attendance = () => {
                   placeholder="สิ้นสุด"
                   className="flex-1"
                   displayFormat="short"
-                  disabled={Boolean(filterMonth)}
                 />
                 {(dateFrom || dateTo) && (
                   <button
-                    onClick={() => { setDateFrom(""); setDateTo(""); }}
+                    onClick={() => { setDateFrom(""); setDateTo(""); setFilterMonth(new Date().toISOString().slice(5, 7)); }}
                     className="p-2 rounded-lg border hover:bg-muted transition-colors flex-shrink-0"
                     title="ล้างวันที่"
                   >
