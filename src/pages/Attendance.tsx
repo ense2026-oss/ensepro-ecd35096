@@ -621,7 +621,6 @@ const Attendance = () => {
                   placeholder="เริ่มต้น"
                   className="flex-1"
                   displayFormat="short"
-                  disabled={Boolean(filterMonth)}
                 />
                 <span className="text-xs text-muted-foreground">ถึง</span>
                 <ThaiDatePicker
@@ -630,11 +629,10 @@ const Attendance = () => {
                   placeholder="สิ้นสุด"
                   className="flex-1"
                   displayFormat="short"
-                  disabled={Boolean(filterMonth)}
                 />
                 {(dateFrom || dateTo) && (
                   <button
-                    onClick={() => { setDateFrom(""); setDateTo(""); }}
+                    onClick={() => { setDateFrom(""); setDateTo(""); setFilterMonth(new Date().toISOString().slice(5, 7)); }}
                     className="p-2 rounded-lg border hover:bg-muted transition-colors flex-shrink-0"
                     title="ล้างวันที่"
                   >
