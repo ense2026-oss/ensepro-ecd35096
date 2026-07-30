@@ -83,6 +83,7 @@ const Attendance = () => {
   const employeeDropdownRef = useRef<HTMLDivElement>(null);
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [filterMonth, setFilterMonth] = useState("");
   const [activeView, setActiveView] = useState<"attendance" | "requests">("attendance");
 
   // Edit dialog
@@ -220,8 +221,9 @@ const Attendance = () => {
     const matchStatus = filterStatus === "all" || a.status === filterStatus;
     const matchEmployee = filterEmployee === "all" || a.name === filterEmployee;
     const matchDate = (!dateFrom || a.date >= dateFrom) && (!dateTo || a.date <= dateTo);
-    return matchSearch && matchStatus && matchEmployee && matchDate;
-  }), [scopedAttendance, search, filterStatus, filterEmployee, dateFrom, dateTo]);
+    const matchMonth = !filterMonth || a.date.slice(5, 7) === filterMonth;
+    return matchSearch && matchStatus && matchEmployee && matchDate && matchMonth;
+  }), [scopedAttendance, search, filterStatus, filterEmployee, dateFrom, dateTo, filterMonth]);
 
   const summary = useMemo(() => ({
     present: scopedAttendance.filter((a) => a.status === "present").length,
@@ -573,7 +575,7 @@ const Attendance = () => {
               <select
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
-                className="flex-1 min-w-[120px] px-3 py-2 text-sm rounded-xl border bg-muted/30 outline-none cursor-pointer"
+                className="w-fit min-w-fit flex-shrink-0 px-3 py-2 text-sm rounded-xl border bg-muted/30 outline-none cursor-pointer"
               >
                 <option value="all">ทุกสถานะ</option>
                 <option value="present">มาทำงาน</option>
@@ -596,6 +598,26 @@ const Attendance = () => {
                   </button>
                 )}
               </div>
+
+              <select
+                value={filterMonth}
+                onChange={(e) => setFilterMonth(e.target.value)}
+                className="px-3 py-2 text-sm rounded-xl border bg-muted/30 outline-none cursor-pointer w-[140px] flex-shrink-0"
+              >
+                <option value="">ทุกเดือน</option>
+                <option value="01">มกราคม</option>
+                <option value="02">กุมภาพันธ์</option>
+                <option value="03">มีนาคม</option>
+                <option value="04">เมษายน</option>
+                <option value="05">พฤษภาคม</option>
+                <option value="06">มิถุนายน</option>
+                <option value="07">กรกฎาคม</option>
+                <option value="08">สิงหาคม</option>
+                <option value="09">กันยายน</option>
+                <option value="10">ตุลาคม</option>
+                <option value="11">พฤศจิกายน</option>
+                <option value="12">ธันวาคม</option>
+              </select>
             </div>
           </div>
 
