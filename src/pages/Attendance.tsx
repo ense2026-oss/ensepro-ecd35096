@@ -221,7 +221,7 @@ const Attendance = () => {
     const matchStatus = filterStatus === "all" || a.status === filterStatus;
     const matchEmployee = filterEmployee === "all" || a.name === filterEmployee;
     const matchDate = (!dateFrom || a.date >= dateFrom) && (!dateTo || a.date <= dateTo);
-    const matchMonth = !filterMonth || a.date.slice(0, 7) === filterMonth;
+    const matchMonth = !filterMonth || a.date.slice(5, 7) === filterMonth;
     return matchSearch && matchStatus && matchEmployee && matchDate && matchMonth;
   }), [scopedAttendance, search, filterStatus, filterEmployee, dateFrom, dateTo, filterMonth]);
 
