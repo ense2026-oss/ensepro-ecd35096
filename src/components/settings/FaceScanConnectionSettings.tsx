@@ -60,6 +60,7 @@ interface Device {
   serial_number: string;
   connection_mode: string;
   adms_last_seen: string | null;
+  relay_url: string;
 }
 
 interface BridgeToken {
@@ -106,6 +107,7 @@ const FaceScanConnectionSettings = () => {
     enabled: true,
     serial_number: "",
     connection_mode: "adms",
+    relay_url: "",
   });
 
   // Delete device confirm
@@ -119,6 +121,16 @@ const FaceScanConnectionSettings = () => {
 
   // Test connection state
   const [testingDeviceId, setTestingDeviceId] = useState<string | null>(null);
+
+  // Diagnostics state
+  const [endpointCheck, setEndpointCheck] = useState<
+    { ok: boolean; text: string } | null
+  >(null);
+  const [checkingEndpoint, setCheckingEndpoint] = useState(false);
+  const [relayTestingId, setRelayTestingId] = useState<string | null>(null);
+  const [relayResults, setRelayResults] = useState<
+    Record<string, { ok: boolean; text: string }>
+  >({});
 
   const fetchAll = async () => {
     setLoading(true);
@@ -175,6 +187,7 @@ const FaceScanConnectionSettings = () => {
       enabled: true,
       serial_number: "",
       connection_mode: "adms",
+      relay_url: "",
     });
     setDeviceDialogOpen(true);
   };
@@ -192,6 +205,7 @@ const FaceScanConnectionSettings = () => {
       enabled: d.enabled,
       serial_number: d.serial_number ?? "",
       connection_mode: d.connection_mode ?? "adms",
+      relay_url: d.relay_url ?? "",
     });
     setDeviceDialogOpen(true);
   };
@@ -313,6 +327,93 @@ const FaceScanConnectionSettings = () => {
     }
   };
 
+  // --- Diagnostics -----------------------------------------------------
+  const normalizeRelay = (raw: string) => {
+    let v = (raw || "").trim().replace(/\/+$/, "");
+    if (!v) return "";
+    if (!/^https?:\/\//i.test(v)) v = `https://${v}`;
+    return v;
+  };
+
+  const checkEndpoint = async () => {
+    setCheckingEndpoint(true);
+    setEndpointCheck(null);
+    try {
+      const res = await fetch(`${ADMS_FN_URL}/ping`);
+      const body = (await res.text()).trim();
+      const good = res.ok && body.toUpperCase().startsWith("OK");
+      setEndpointCheck({
+        ok: good,
+        text: good
+          ? `Endpoint พร้อมรับข้อมูล (HTTP ${res.status} · ตอบ "${body}")`
+          : `Endpoint ตอบผิดปกติ (HTTP ${res.status} · "${body.slice(0, 80)}")`,
+      });
+    } catch (e: any) {
+      setEndpointCheck({
+        ok: false,
+        text: `ติดต่อ Endpoint ไม่ได้: ${e?.message ?? "unknown"}`,
+      });
+    } finally {
+      setCheckingEndpoint(false);
+    }
+  };
+
+  const testRelay = async (device: Device) => {
+    const base = normalizeRelay(device.relay_url);
+    if (!base) {
+      toast.error("ยังไม่ได้กรอก Relay URL ของเครื่องนี้ — กดแก้ไขเครื่องเพื่อกรอก");
+      return;
+    }
+    if (!device.serial_number) {
+      toast.error("ยังไม่ได้กรอก Serial Number (SN) ของเครื่องนี้");
+      return;
+    }
+    setRelayTestingId(device.id);
+    try {
+      // 1) relay health
+      const health = await fetch(`${base}/health`);
+      const healthText = (await health.text()).trim();
+      if (!health.ok || !/relay ok/i.test(healthText)) {
+        setRelayResults((p) => ({
+          ...p,
+          [device.id]: {
+            ok: false,
+            text: `Relay ตอบกลับผิดปกติที่ /health (HTTP ${health.status} · "${healthText.slice(0, 60)}") — ตรวจว่า deploy โค้ด relay ถูกต้อง`,
+          },
+        }));
+        return;
+      }
+
+      // 2) relay -> edge function passthrough (simulates the device handshake)
+      const hs = await fetch(
+        `${base}/iclock/cdata?SN=${encodeURIComponent(device.serial_number)}&options=all`
+      );
+      const hsText = (await hs.text()).trim();
+      const passed = hs.ok && hsText.includes("GET OPTION FROM");
+      setRelayResults((p) => ({
+        ...p,
+        [device.id]: {
+          ok: passed,
+          text: passed
+            ? `ครบวงจร ✓ relay ส่งต่อถึงระบบแล้ว และระบบรู้จัก SN นี้ (ดูรายการ handshake ในแท็บ Sync Logs)`
+            : `Relay ทำงาน แต่ระบบยังไม่รู้จัก SN นี้ หรือเครื่องถูกปิดใช้ — ตรวจ Serial Number ให้ตรงกับเครื่องจริง (ตอบกลับ: "${hsText.slice(0, 80)}")`,
+        },
+      }));
+      fetchAll();
+    } catch (e: any) {
+      setRelayResults((p) => ({
+        ...p,
+        [device.id]: {
+          ok: false,
+          text: `ติดต่อ Relay ไม่ได้: ${e?.message ?? "unknown"} — ตรวจว่าโดเมนถูกต้องและ deploy แล้ว`,
+        },
+      }));
+    } finally {
+      setRelayTestingId(null);
+    }
+  };
+
+
   const pullLogs = async (device: Device) => {
     const days = parseInt(prompt("ดึงข้อมูลย้อนหลังกี่วัน? (1-30)", "7") ?? "0", 10);
     if (!days || days < 1 || days > 30) return;
@@ -426,18 +527,33 @@ tick();
 
   const admsRelayScript = `const ADMS_FN_URL = "${ADMS_FN_URL}";
 
+const CORS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "*",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+};
+
 Deno.serve(async (req) => {
   const url = new URL(req.url);
+  if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS });
+
   if (url.pathname === "/" || url.pathname === "/health") {
-    return new Response("FaceScan ADMS relay OK", { status: 200 });
+    return new Response("FaceScan ADMS relay OK", {
+      status: 200,
+      headers: { ...CORS, "Content-Type": "text/plain; charset=utf-8" },
+    });
   }
   const match = url.pathname.match(/\\/iclock\\/([^/]+)/i);
-  if (!match) return new Response("Not found", { status: 404 });
+  if (!match) return new Response("Not found", { status: 404, headers: CORS });
 
   const target = \`\${ADMS_FN_URL}/\${match[1]}\${url.search}\`;
   const init = {
     method: req.method,
-    headers: { "Content-Type": req.headers.get("Content-Type") || "text/plain" },
+    headers: {
+      "Content-Type": req.headers.get("Content-Type") || "text/plain",
+      "User-Agent": req.headers.get("User-Agent") || "adms-relay",
+      "x-forwarded-for": req.headers.get("x-forwarded-for") || "unknown",
+    },
   };
   if (req.method !== "GET" && req.method !== "HEAD") init.body = await req.text();
 
@@ -446,10 +562,10 @@ Deno.serve(async (req) => {
     const body = await res.text();
     return new Response(body, {
       status: res.status,
-      headers: { "Content-Type": "text/plain; charset=utf-8" },
+      headers: { ...CORS, "Content-Type": "text/plain; charset=utf-8" },
     });
   } catch (_e) {
-    return new Response("OK", { status: 200 });
+    return new Response("OK", { status: 200, headers: CORS });
   }
 });`;
 
@@ -585,14 +701,37 @@ Deno.serve(async (req) => {
 
         {/* DEVICES */}
         <TabsContent value="devices" className="space-y-3">
-          <div className="flex justify-between items-center">
+          <div className="flex justify-between items-center gap-2 flex-wrap">
             <p className="text-sm text-muted-foreground">
               {devices.length} เครื่อง {loading && "(กำลังโหลด...)"}
             </p>
-            <Button onClick={openNewDevice} size="sm">
-              <Plus className="w-4 h-4 mr-1" /> เพิ่มเครื่อง
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={checkEndpoint} disabled={checkingEndpoint}>
+                {checkingEndpoint ? (
+                  <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                ) : (
+                  <Activity className="w-4 h-4 mr-1" />
+                )}
+                ตรวจสอบ Endpoint
+              </Button>
+              <Button onClick={openNewDevice} size="sm">
+                <Plus className="w-4 h-4 mr-1" /> เพิ่มเครื่อง
+              </Button>
+            </div>
           </div>
+
+          {endpointCheck && (
+            <div
+              className={`rounded-md border p-2 text-xs ${
+                endpointCheck.ok
+                  ? "border-green-500/30 bg-green-500/10 text-green-700 dark:text-green-400"
+                  : "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-400"
+              }`}
+            >
+              {endpointCheck.ok ? "✅ " : "❌ "}
+              {endpointCheck.text}
+            </div>
+          )}
 
           <div className="grid gap-3">
             {devices.map((d) => (
@@ -625,6 +764,10 @@ Deno.serve(async (req) => {
                             <span className="font-medium text-foreground">เห็นล่าสุด:</span>{" "}
                             {formatDateTime(d.adms_last_seen)}
                           </div>
+                          <div className="col-span-2 break-all">
+                            <span className="font-medium text-foreground">Relay:</span>{" "}
+                            {d.relay_url || "— (ยังไม่ได้กรอก)"}
+                          </div>
                         </>
                       ) : (
                         <>
@@ -644,6 +787,45 @@ Deno.serve(async (req) => {
                         {formatDateTime(d.last_sync_at)}
                       </div>
                     </div>
+
+                    {d.connection_mode === "adms" && (
+                      <div className="mt-3 space-y-2">
+                        {!d.adms_last_seen && (
+                          <div className="rounded-md border border-amber-500/30 bg-amber-500/10 p-2 text-xs text-amber-700 dark:text-amber-400">
+                            ⚠️ ยังไม่เคยมีข้อมูลเข้ามาจากเครื่องนี้ — แปลว่าเครื่องยังส่งไม่ถึงระบบ
+                            (ตรวจว่า deploy relay แล้ว และตั้งค่า Cloud Server ในเครื่องเป็นโดเมน relay + Port 443 + HTTPS ON)
+                          </div>
+                        )}
+                        <div className="flex flex-wrap gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => testRelay(d)}
+                            disabled={relayTestingId === d.id}
+                            className="gap-1.5"
+                          >
+                            {relayTestingId === d.id ? (
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            ) : (
+                              <Wifi className="w-3.5 h-3.5" />
+                            )}
+                            ทดสอบ Relay
+                          </Button>
+                        </div>
+                        {relayResults[d.id] && (
+                          <div
+                            className={`rounded-md border p-2 text-xs ${
+                              relayResults[d.id].ok
+                                ? "border-green-500/30 bg-green-500/10 text-green-700 dark:text-green-400"
+                                : "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-400"
+                            }`}
+                          >
+                            {relayResults[d.id].ok ? "✅ " : "❌ "}
+                            {relayResults[d.id].text}
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                   <div className="flex gap-1">
                     {d.connection_mode === "bridge" && (
@@ -947,6 +1129,20 @@ Deno.serve(async (req) => {
                   <p className="text-xs text-muted-foreground mt-1">
                     SN ต้องตรงกับเครื่องจริง (ดูที่เมนู Info ของเครื่อง) — ใช้ระบุตัวตนเมื่อเครื่อง push เข้ามา
                   </p>
+                  <div className="mt-3">
+                    <Label>Relay URL</Label>
+                    <Input
+                      value={deviceForm.relay_url}
+                      onChange={(e) =>
+                        setDeviceForm({ ...deviceForm, relay_url: e.target.value.trim() })
+                      }
+                      placeholder="เช่น ense-facescan.deno.dev"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      โดเมนของ relay ที่ deploy ไว้ (ค่าเดียวกับที่กรอกในเมนู Cloud Server ของเครื่อง)
+                      — ใช้สำหรับปุ่ม "ทดสอบ Relay"
+                    </p>
+                  </div>
                 </div>
               )}
 

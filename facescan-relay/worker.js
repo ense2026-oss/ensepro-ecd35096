@@ -5,23 +5,43 @@
 const ADMS_FN_URL =
   "https://typckluzuzpxznrlrprq.supabase.co/functions/v1/facescan-adms";
 
+const CORS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "*",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+};
+
 export default {
   async fetch(request) {
     const url = new URL(request.url);
 
+    if (request.method === "OPTIONS") {
+      return new Response(null, { status: 204, headers: CORS });
+    }
+
     if (url.pathname === "/" || url.pathname === "/health") {
-      return new Response("FaceScan ADMS relay OK", { status: 200 });
+      return new Response("FaceScan ADMS relay OK", {
+        status: 200,
+        headers: { ...CORS, "Content-Type": "text/plain; charset=utf-8" },
+      });
     }
 
     const match = url.pathname.match(/\/iclock\/([^/]+)/i);
-    if (!match) return new Response("Not found", { status: 404 });
+    if (!match) return new Response("Not found", { status: 404, headers: CORS });
 
     const action = match[1];
     const target = `${ADMS_FN_URL}/${action}${url.search}`;
 
     const init = {
       method: request.method,
-      headers: { "Content-Type": request.headers.get("Content-Type") || "text/plain" },
+      headers: {
+        "Content-Type": request.headers.get("Content-Type") || "text/plain",
+        "User-Agent": request.headers.get("User-Agent") || "adms-relay",
+        "x-forwarded-for":
+          request.headers.get("cf-connecting-ip") ||
+          request.headers.get("x-forwarded-for") ||
+          "unknown",
+      },
     };
     if (request.method !== "GET" && request.method !== "HEAD") {
       init.body = await request.text();
@@ -32,10 +52,10 @@ export default {
       const body = await res.text();
       return new Response(body, {
         status: res.status,
-        headers: { "Content-Type": "text/plain; charset=utf-8" },
+        headers: { ...CORS, "Content-Type": "text/plain; charset=utf-8" },
       });
     } catch (err) {
-      return new Response("OK", { status: 200 });
+      return new Response("OK", { status: 200, headers: CORS });
     }
   },
 };

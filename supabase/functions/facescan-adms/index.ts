@@ -45,12 +45,39 @@ Deno.serve(async (req) => {
   const action = (segments[segments.length - 1] || "").toLowerCase();
   const sn = url.searchParams.get("SN") || url.searchParams.get("sn") || "";
 
+  // Origin fingerprint — helps prove that a request really came from the scanner
+  // (through the relay) rather than from a browser test.
+  const origin = {
+    ip:
+      req.headers.get("x-forwarded-for") ??
+      req.headers.get("cf-connecting-ip") ??
+      "unknown",
+    user_agent: req.headers.get("user-agent") ?? "unknown",
+    method: req.method,
+    path: url.pathname,
+    query: url.search,
+    received_at: new Date().toISOString(),
+  };
+
   if (action === "ping") return ok();
 
   const supabaseAdmin = createClient(
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
   );
+
+  const writeLog = async (row: Record<string, unknown>) => {
+    try {
+      await supabaseAdmin.from("face_scan_sync_logs").insert({
+        records_synced: 0,
+        command_payload: { origin },
+        finished_at: new Date().toISOString(),
+        ...row,
+      });
+    } catch (_e) {
+      // best-effort diagnostics only
+    }
+  };
 
   try {
     // Identify the device by Serial Number.
@@ -72,19 +99,12 @@ Deno.serve(async (req) => {
       const reason = !device
         ? `เครื่องส่งข้อมูลเข้ามาแล้ว แต่ไม่พบ SN นี้ในระบบ (SN="${sn || "ว่าง"}") — ตรวจ Serial Number ให้ตรงกับเครื่องในแท็บ "เครื่องสแกน"`
         : `เครื่อง SN="${sn}" ส่งข้อมูลเข้ามา แต่ถูกตั้งค่าเป็น "ปิดใช้" — เปิดใช้งานเครื่องก่อน`;
-      try {
-        await supabaseAdmin.from("face_scan_sync_logs").insert({
-          device_id: device?.id ?? null,
-          sync_type: "adms_handshake",
-          status: "error",
-          records_synced: 0,
-          message: `[${req.method} /${action}] ${reason}`,
-          command_payload: {},
-          finished_at: new Date().toISOString(),
-        });
-      } catch (_e) {
-        // best-effort diagnostics only
-      }
+      await writeLog({
+        device_id: device?.id ?? null,
+        sync_type: "adms_handshake",
+        status: "error",
+        message: `[${req.method} /${action}] ${reason}`,
+      });
       return ok();
     }
 
@@ -98,19 +118,12 @@ Deno.serve(async (req) => {
     if (action === "cdata" && req.method === "GET") {
       // Record a successful handshake so the user can confirm in Sync Logs that
       // the device is talking to us (even before any punch is scanned).
-      try {
-        await supabaseAdmin.from("face_scan_sync_logs").insert({
-          device_id: device.id,
-          sync_type: "adms_handshake",
-          status: "success",
-          records_synced: 0,
-          message: `เครื่อง "${device.name}" (SN=${sn}) เชื่อมต่อสำเร็จ (handshake) — พร้อมรับข้อมูลการสแกน`,
-          command_payload: {},
-          finished_at: new Date().toISOString(),
-        });
-      } catch (_e) {
-        // best-effort diagnostics only
-      }
+      await writeLog({
+        device_id: device.id,
+        sync_type: "adms_handshake",
+        status: "success",
+        message: `เครื่อง "${device.name}" (SN=${sn}) เชื่อมต่อสำเร็จ (handshake) — พร้อมรับข้อมูลการสแกน`,
+      });
       const config = [
         `GET OPTION FROM: ${sn}`,
         "ATTLOGStamp=None",
@@ -135,6 +148,12 @@ Deno.serve(async (req) => {
 
       if (table && table !== "ATTLOG") {
         // OPERLOG / ATTPHOTO etc. — acknowledge but ignore.
+        await writeLog({
+          device_id: device.id,
+          sync_type: "adms_push",
+          status: "success",
+          message: `รับข้อมูลชนิด ${table} จาก "${device.name}" (ไม่ใช่ข้อมูลลงเวลา — ข้าม)`,
+        });
         return ok(`OK: 0`);
       }
 
@@ -151,6 +170,18 @@ Deno.serve(async (req) => {
         })
         .filter((r) => r.enroll_number && r.datetime);
 
+      if (records.length === 0) {
+        // The device reached us but sent nothing usable — still log it so the
+        // connection itself is visibly confirmed.
+        await writeLog({
+          device_id: device.id,
+          sync_type: "adms_push",
+          status: "success",
+          message: `เครื่อง "${device.name}" ส่ง POST เข้ามาแล้ว แต่ไม่มีแถวข้อมูลการสแกน (การเชื่อมต่อใช้งานได้)`,
+        });
+        return ok("OK: 0");
+      }
+
       const { data: log } = await supabaseAdmin
         .from("face_scan_sync_logs")
         .insert({
@@ -159,6 +190,7 @@ Deno.serve(async (req) => {
           status: "running",
           records_synced: 0,
           message: `ADMS push: ${records.length} rows`,
+          command_payload: { origin },
         })
         .select()
         .single();
@@ -206,6 +238,7 @@ Deno.serve(async (req) => {
         if (!insErr) inserted++;
       }
 
+      const unmapped = [...new Set(skipped)];
       if (log) {
         await supabaseAdmin
           .from("face_scan_sync_logs")
@@ -213,7 +246,12 @@ Deno.serve(async (req) => {
             status: "success",
             records_synced: inserted,
             finished_at: new Date().toISOString(),
-            message: `Inserted ${inserted}/${records.length}. Unmapped: ${skipped.length}`,
+            message:
+              `บันทึกแล้ว ${inserted}/${records.length} รายการ` +
+              (unmapped.length
+                ? ` · ข้าม ${skipped.length} รายการเพราะยังไม่ผูกรหัสพนักงาน (รหัสในเครื่อง: ${unmapped.slice(0, 10).join(", ")})`
+                : ""),
+            command_payload: { origin, unmapped },
           })
           .eq("id", log.id);
       }
@@ -258,7 +296,13 @@ Deno.serve(async (req) => {
       return ok();
     }
 
-    // Default: acknowledge so the device stays happy.
+    // Unknown action — log it so a wrong relay path is visible instead of silent.
+    await writeLog({
+      device_id: device.id,
+      sync_type: "adms_handshake",
+      status: "error",
+      message: `ได้รับ request ที่ไม่รู้จัก [${req.method} /${action}] จาก "${device.name}" — ตรวจการตั้งค่า path ของ relay`,
+    });
     return ok();
   } catch (err) {
     console.error("facescan-adms error", err);

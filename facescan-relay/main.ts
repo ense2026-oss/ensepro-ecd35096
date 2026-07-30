@@ -18,18 +18,32 @@
 const ADMS_FN_URL =
   "https://typckluzuzpxznrlrprq.supabase.co/functions/v1/facescan-adms";
 
+// Allow the HR web app to run connectivity tests from the browser.
+const CORS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "*",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+};
+
 Deno.serve(async (req: Request) => {
   const url = new URL(req.url);
 
+  if (req.method === "OPTIONS") {
+    return new Response(null, { status: 204, headers: CORS });
+  }
+
   // Health check
   if (url.pathname === "/" || url.pathname === "/health") {
-    return new Response("FaceScan ADMS relay OK", { status: 200 });
+    return new Response("FaceScan ADMS relay OK", {
+      status: 200,
+      headers: { ...CORS, "Content-Type": "text/plain; charset=utf-8" },
+    });
   }
 
   // Only relay the device's /iclock/* traffic.
   const match = url.pathname.match(/\/iclock\/([^/]+)/i);
   if (!match) {
-    return new Response("Not found", { status: 404 });
+    return new Response("Not found", { status: 404, headers: CORS });
   }
 
   const action = match[1]; // cdata | getrequest | devicecmd | ping
@@ -38,7 +52,14 @@ Deno.serve(async (req: Request) => {
   // Forward method, body and a couple of useful headers.
   const init: RequestInit = {
     method: req.method,
-    headers: { "Content-Type": req.headers.get("Content-Type") || "text/plain" },
+    headers: {
+      "Content-Type": req.headers.get("Content-Type") || "text/plain",
+      "User-Agent": req.headers.get("User-Agent") || "adms-relay",
+      "x-forwarded-for":
+        req.headers.get("x-forwarded-for") ||
+        req.headers.get("cf-connecting-ip") ||
+        "unknown",
+    },
   };
   if (req.method !== "GET" && req.method !== "HEAD") {
     init.body = await req.text();
@@ -49,11 +70,11 @@ Deno.serve(async (req: Request) => {
     const body = await res.text();
     return new Response(body, {
       status: res.status,
-      headers: { "Content-Type": "text/plain; charset=utf-8" },
+      headers: { ...CORS, "Content-Type": "text/plain; charset=utf-8" },
     });
   } catch (err) {
     console.error("relay error", err);
     // ADMS devices retry on errors; reply OK to avoid tight error loops.
-    return new Response("OK", { status: 200 });
+    return new Response("OK", { status: 200, headers: CORS });
   }
 });
