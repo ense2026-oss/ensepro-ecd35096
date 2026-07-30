@@ -11,10 +11,17 @@ const corsHeaders = {
 
 const ALLOWED_TYPES = new Set([
   "enroll_push",
+  "pull_users",
   "pull_logs",
   "delete_user",
   "test_connection",
 ]);
+
+const shortId = () =>
+  Math.floor(Math.random() * 900000000 + 100000000).toString();
+
+const sanitize = (v: string) => v.replace(/[\t\r\n]/g, " ").trim();
+
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
