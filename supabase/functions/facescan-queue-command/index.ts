@@ -11,10 +11,17 @@ const corsHeaders = {
 
 const ALLOWED_TYPES = new Set([
   "enroll_push",
+  "pull_users",
   "pull_logs",
   "delete_user",
   "test_connection",
 ]);
+
+const shortId = () =>
+  Math.floor(Math.random() * 900000000 + 100000000).toString();
+
+const sanitize = (v: string) => v.replace(/[\t\r\n]/g, " ").trim();
+
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -50,11 +57,12 @@ Deno.serve(async (req) => {
 
     const { data: roles } = await supabaseAdmin
       .from("user_roles")
-      .select("role")
+      .select("role, role_name")
       .eq("user_id", userId);
-    const isAuthorized = (roles ?? []).some(
-      (r: any) => r.role === "admin" || r.role === "hr" || r.role === "executive"
+    const isAuthorized = (roles ?? []).some((r: any) =>
+      ["admin", "hr", "executive"].includes(r.role_name ?? r.role)
     );
+
     if (!isAuthorized) {
       return new Response(JSON.stringify({ error: "Forbidden" }), {
         status: 403,
@@ -76,10 +84,97 @@ Deno.serve(async (req) => {
 
     const messages: Record<string, string> = {
       enroll_push: deviceId ? "Push รายชื่อพนักงานไปเครื่อง" : "Push รายชื่อพนักงานไปทุกเครื่อง",
+      pull_users: "ดึงรายชื่อผู้ใช้จากเครื่อง",
       pull_logs: "ดึง check-in/out logs จากเครื่อง",
       delete_user: "ลบผู้ใช้จากเครื่อง",
       test_connection: "ทดสอบการเชื่อมต่อ",
     };
+
+    // Target devices (ADMS devices poll /getrequest for these commands).
+    let deviceQuery = supabaseAdmin
+      .from("face_scan_devices")
+      .select("id, name, connection_mode")
+      .eq("enabled", true);
+    if (deviceId) deviceQuery = deviceQuery.eq("id", deviceId);
+    const { data: devices } = await deviceQuery;
+    const admsDevices = (devices ?? []).filter((d: any) => d.connection_mode === "adms");
+
+    // --- Real ADMS command queueing ---
+    if ((syncType === "pull_users" || syncType === "enroll_push") && admsDevices.length > 0) {
+      const rows: any[] = [];
+
+      if (syncType === "pull_users") {
+        for (const d of admsDevices) {
+          rows.push({
+            device_id: d.id,
+            sync_type: "pull_users",
+            status: "queued",
+            records_synced: 0,
+            message: `ขอรายชื่อผู้ใช้จากเครื่อง "${d.name}"`,
+            command_payload: { cmd_id: shortId(), raw: "DATA QUERY USERINFO PIN=" },
+          });
+          rows.push({
+            device_id: d.id,
+            sync_type: "pull_users",
+            status: "queued",
+            records_synced: 0,
+            message: `สั่งให้เครื่อง "${d.name}" อัปโหลดข้อมูลค้าง (CHECK)`,
+            command_payload: { cmd_id: shortId(), raw: "CHECK" },
+          });
+        }
+      } else {
+        const { data: employees } = await supabaseAdmin
+          .from("employees")
+          .select("id, first_name, last_name, face_scan_id, status")
+          .eq("status", "active")
+          .neq("face_scan_id", "");
+
+        const list = employees ?? [];
+        if (list.length === 0) {
+          return new Response(
+            JSON.stringify({ error: "ยังไม่มีพนักงานที่ผูกรหัสเครื่องสแกน" }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        for (const d of admsDevices) {
+          for (const e of list as any[]) {
+            const pin = sanitize(String(e.face_scan_id));
+            const name = sanitize(`${e.first_name} ${e.last_name}`);
+            rows.push({
+              device_id: d.id,
+              sync_type: "enroll_push",
+              status: "queued",
+              records_synced: 0,
+              message: `ส่งชื่อ "${name}" (PIN=${pin}) ไปเครื่อง "${d.name}"`,
+              command_payload: {
+                cmd_id: shortId(),
+                employee_id: e.id,
+                raw: `DATA UPDATE USERINFO PIN=${pin}\tName=${name}\tPri=0\tPasswd=\tCard=\tGrp=1\tTZ=0000000000000000`,
+              },
+            });
+          }
+          await supabaseAdmin.from("face_scan_enroll_status").upsert(
+            (list as any[]).map((e) => ({
+              employee_id: e.id,
+              device_id: d.id,
+              status: "pending",
+              error_message: "",
+              updated_at: new Date().toISOString(),
+            })),
+            { onConflict: "employee_id,device_id" }
+          );
+        }
+      }
+
+      const { error: insErr } = await supabaseAdmin.from("face_scan_sync_logs").insert(rows);
+      if (insErr) throw insErr;
+
+      return new Response(
+        JSON.stringify({ success: true, queued: rows.length, devices: admsDevices.length }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     const { data: log, error } = await supabaseAdmin
       .from("face_scan_sync_logs")
@@ -98,6 +193,7 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ success: true, log_id: log.id }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
+
   } catch (err) {
     console.error("facescan-queue-command error", err);
     return new Response(

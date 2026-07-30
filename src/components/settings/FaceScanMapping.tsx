@@ -7,6 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Search, Save, RefreshCw, Send, CheckCircle2, AlertCircle, Clock } from "lucide-react";
 import { toast } from "sonner";
 import EmployeeAvatar from "@/components/ui/employee-avatar";
+import FaceScanDeviceUsers from "@/components/settings/FaceScanDeviceUsers";
+
 
 interface Employee {
   id: string;
@@ -150,11 +152,12 @@ const FaceScanMapping = ({ devices }: { devices: Device[] }) => {
     });
     setPushing(false);
     if (error) return toast.error("ส่งคำสั่งไม่สำเร็จ: " + error.message);
-    toast.success("ส่งคำสั่งซิงค์รายชื่อเรียบร้อย — Bridge จะดำเนินการในรอบถัดไป (≤30 วินาที)");
+    toast.success("ส่งคำสั่งซิงค์รายชื่อไปเครื่องแล้ว — เครื่องจะรับคำสั่งภายใน 30 วินาที");
   };
 
   return (
     <div className="space-y-4">
+      <FaceScanDeviceUsers devices={devices} onChanged={fetchAll} />
       {!loading && linkedCount < employees.length && (
         <div className="rounded-md border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-700 dark:text-amber-400">
           ⚠️ ตอนนี้ผูกรหัสเครื่องสแกนแล้ว <strong>{linkedCount}</strong> จาก{" "}
@@ -163,6 +166,7 @@ const FaceScanMapping = ({ devices }: { devices: Device[] }) => {
           (ดูจำนวนที่ถูกข้ามได้ในแท็บ Sync Logs)
         </div>
       )}
+
       {/* Top stats / actions */}
       <Card className="p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">

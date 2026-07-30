@@ -902,6 +902,60 @@ export type Database = {
         }
         Relationships: []
       }
+      face_scan_device_users: {
+        Row: {
+          card_no: string
+          created_at: string
+          device_id: string
+          id: string
+          last_seen_at: string
+          matched_employee_id: string | null
+          name: string
+          pin: string
+          privilege: string
+          updated_at: string
+        }
+        Insert: {
+          card_no?: string
+          created_at?: string
+          device_id: string
+          id?: string
+          last_seen_at?: string
+          matched_employee_id?: string | null
+          name?: string
+          pin: string
+          privilege?: string
+          updated_at?: string
+        }
+        Update: {
+          card_no?: string
+          created_at?: string
+          device_id?: string
+          id?: string
+          last_seen_at?: string
+          matched_employee_id?: string | null
+          name?: string
+          pin?: string
+          privilege?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "face_scan_device_users_device_id_fkey"
+            columns: ["device_id"]
+            isOneToOne: false
+            referencedRelation: "face_scan_devices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "face_scan_device_users_matched_employee_id_fkey"
+            columns: ["matched_employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       face_scan_devices: {
         Row: {
           adms_last_seen: string | null
