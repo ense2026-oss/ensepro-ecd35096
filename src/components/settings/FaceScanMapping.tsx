@@ -155,6 +155,7 @@ const FaceScanMapping = ({ devices }: { devices: Device[] }) => {
 
   return (
     <div className="space-y-4">
+      <FaceScanDeviceUsers devices={devices} onChanged={fetchAll} />
       {!loading && linkedCount < employees.length && (
         <div className="rounded-md border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-700 dark:text-amber-400">
           ⚠️ ตอนนี้ผูกรหัสเครื่องสแกนแล้ว <strong>{linkedCount}</strong> จาก{" "}
@@ -163,6 +164,7 @@ const FaceScanMapping = ({ devices }: { devices: Device[] }) => {
           (ดูจำนวนที่ถูกข้ามได้ในแท็บ Sync Logs)
         </div>
       )}
+
       {/* Top stats / actions */}
       <Card className="p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
