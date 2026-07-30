@@ -333,8 +333,8 @@ const OvertimeManagement = () => {
             <table className="w-full text-xs border-collapse">
               <thead>
                 <tr>
-                  <th className={cn("sticky left-0 top-0 py-2 text-left font-semibold border-b border-r whitespace-nowrap z-30", empColCollapsed ? "pl-0 pr-0 w-px" : "px-3")} style={{ borderColor: "hsl(var(--border))", background: "hsl(var(--card))" }}>
-                    <div className={cn("flex items-center gap-2", empColCollapsed ? "justify-start" : "justify-between")}>
+                  <th className={cn("sticky left-0 top-0 py-2 text-left font-semibold border-b border-r whitespace-nowrap z-30", empColCollapsed ? "px-0 w-px" : "px-3")} style={{ borderColor: "hsl(var(--border))", background: "hsl(var(--card))" }}>
+                    <div className={cn("flex items-center", empColCollapsed ? "justify-center" : "justify-between gap-2")}>
                       {!empColCollapsed && <span>พนักงาน</span>}
                       <button onClick={() => setEmpColCollapsed((c) => !c)} className="p-1 rounded-lg hover:bg-muted transition-colors" title={empColCollapsed ? "ขยายคอลัมน์พนักงาน" : "ยุบคอลัมน์พนักงาน"}>
                         {empColCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
