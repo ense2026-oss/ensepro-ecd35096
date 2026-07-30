@@ -222,6 +222,8 @@ const Attendance = () => {
     const matchEmployee = filterEmployee === "all" || a.name === filterEmployee;
     const matchDate = (!dateFrom || a.date >= dateFrom) && (!dateTo || a.date <= dateTo);
     const matchMonth = !filterMonth || a.date.slice(5, 7) === filterMonth;
+    // month and date filters are mutually exclusive in UI, but guard here just in case.
+    if (filterMonth && (dateFrom || dateTo)) return matchSearch && matchStatus && matchEmployee && matchMonth;
     return matchSearch && matchStatus && matchEmployee && matchDate && matchMonth;
   }), [scopedAttendance, search, filterStatus, filterEmployee, dateFrom, dateTo, filterMonth]);
 
@@ -584,25 +586,18 @@ const Attendance = () => {
                 <option value="leave">ลางาน</option>
               </select>
 
-              <div className="flex items-center gap-1.5 flex-1 min-w-[280px]">
-                <ThaiDatePicker value={dateFrom} onChange={setDateFrom} placeholder="เริ่มต้น" className="flex-1" displayFormat="short" />
-                <span className="text-xs text-muted-foreground">ถึง</span>
-                <ThaiDatePicker value={dateTo} onChange={setDateTo} placeholder="สิ้นสุด" className="flex-1" displayFormat="short" />
-                {(dateFrom || dateTo) && (
-                  <button
-                    onClick={() => { setDateFrom(""); setDateTo(""); }}
-                    className="p-2 rounded-lg border hover:bg-muted transition-colors flex-shrink-0"
-                    title="ล้างวันที่"
-                  >
-                    <X className="w-3.5 h-3.5 text-muted-foreground" />
-                  </button>
-                )}
-              </div>
-
               <select
                 value={filterMonth}
-                onChange={(e) => setFilterMonth(e.target.value)}
-                className="px-3 py-2 text-sm rounded-xl border bg-muted/30 outline-none cursor-pointer w-[140px] flex-shrink-0"
+                onChange={(e) => {
+                  const month = e.target.value;
+                  setFilterMonth(month);
+                  if (month) {
+                    setDateFrom("");
+                    setDateTo("");
+                  }
+                }}
+                disabled={Boolean(dateFrom || dateTo)}
+                className="px-3 py-2 text-sm rounded-xl border bg-muted/30 outline-none cursor-pointer w-[140px] flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <option value="">ทุกเดือน</option>
                 <option value="01">มกราคม</option>
@@ -618,6 +613,35 @@ const Attendance = () => {
                 <option value="11">พฤศจิกายน</option>
                 <option value="12">ธันวาคม</option>
               </select>
+
+              <div className="flex items-center gap-1.5 flex-1 min-w-[280px]">
+                <ThaiDatePicker
+                  value={dateFrom}
+                  onChange={(v) => { setDateFrom(v); if (v) setFilterMonth(""); }}
+                  placeholder="เริ่มต้น"
+                  className="flex-1"
+                  displayFormat="short"
+                  disabled={Boolean(filterMonth)}
+                />
+                <span className="text-xs text-muted-foreground">ถึง</span>
+                <ThaiDatePicker
+                  value={dateTo}
+                  onChange={(v) => { setDateTo(v); if (v) setFilterMonth(""); }}
+                  placeholder="สิ้นสุด"
+                  className="flex-1"
+                  displayFormat="short"
+                  disabled={Boolean(filterMonth)}
+                />
+                {(dateFrom || dateTo) && (
+                  <button
+                    onClick={() => { setDateFrom(""); setDateTo(""); }}
+                    className="p-2 rounded-lg border hover:bg-muted transition-colors flex-shrink-0"
+                    title="ล้างวันที่"
+                  >
+                    <X className="w-3.5 h-3.5 text-muted-foreground" />
+                  </button>
+                )}
+              </div>
             </div>
           </div>
 
