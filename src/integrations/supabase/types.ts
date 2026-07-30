@@ -916,6 +916,7 @@ export type Database = {
           last_sync_at: string | null
           machine_number: number
           name: string
+          relay_url: string
           serial_number: string
           server_ip: string
           server_port: number
@@ -934,6 +935,7 @@ export type Database = {
           last_sync_at?: string | null
           machine_number?: number
           name?: string
+          relay_url?: string
           serial_number?: string
           server_ip?: string
           server_port?: number
@@ -952,6 +954,7 @@ export type Database = {
           last_sync_at?: string | null
           machine_number?: number
           name?: string
+          relay_url?: string
           serial_number?: string
           server_ip?: string
           server_port?: number

@@ -1,0 +1,1 @@
+ALTER TABLE public.face_scan_devices ADD COLUMN IF NOT EXISTS relay_url text NOT NULL DEFAULT '';
