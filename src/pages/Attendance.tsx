@@ -583,9 +583,9 @@ const Attendance = () => {
               </select>
 
               <div className="flex items-center gap-1.5 flex-1 min-w-[280px]">
-                <ThaiDatePicker value={dateFrom} onChange={setDateFrom} placeholder="เริ่มต้น" className="flex-1" />
+                <ThaiDatePicker value={dateFrom} onChange={setDateFrom} placeholder="เริ่มต้น" className="flex-1" displayFormat="short" />
                 <span className="text-xs text-muted-foreground">ถึง</span>
-                <ThaiDatePicker value={dateTo} onChange={setDateTo} placeholder="สิ้นสุด" className="flex-1" />
+                <ThaiDatePicker value={dateTo} onChange={setDateTo} placeholder="สิ้นสุด" className="flex-1" displayFormat="short" />
                 {(dateFrom || dateTo) && (
                   <button
                     onClick={() => { setDateFrom(""); setDateTo(""); }}
