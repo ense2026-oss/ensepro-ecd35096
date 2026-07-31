@@ -194,11 +194,10 @@ const Attendance = () => {
       const from = toISODate(r.date_from);
       const to = toISODate(r.date_to) || from;
       if (!from || !to) return;
-      const cur = new Date(from + "T00:00:00");
-      const end = new Date(to + "T00:00:00");
-      while (cur <= end) {
-        lm[`${r.employee_id}|${cur.toISOString().slice(0, 10)}`] = r.leave_type_name || "ลางาน";
-        cur.setDate(cur.getDate() + 1);
+      let cur = from;
+      while (cur <= to) {
+        lm[`${r.employee_id}|${cur}`] = r.leave_type_name || "ลางาน";
+        cur = addDaysLocal(cur, 1);
       }
     });
     setLeaveMap(lm);
