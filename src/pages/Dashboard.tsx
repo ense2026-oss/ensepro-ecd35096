@@ -554,10 +554,27 @@ const Dashboard = () => {
         return { name: lt.name, quota: lt.quota, used, color: lt.color || DEFAULT_LEAVE_COLOR };
       });
 
-    const recentRequests = [
-      ...myLeaves.map((l) => ({ id: l.id, type: "leave" as const, label: l.leave_type_name, date: l.date_from, status: l.status, created: l.created_at })),
-      ...myOT.map((o) => ({ id: o.id, type: "ot" as const, label: `OT ${o.hours} ชม.`, date: o.date, status: o.status, created: o.created_at })),
-    ].sort((a, b) => b.created.localeCompare(a.created)).slice(0, 5);
+    const recentLeaves = [...myLeaves]
+      .sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)))
+      .slice(0, 5)
+      .map((l) => ({ id: l.id, label: l.leave_type_name, date: l.date_from, status: l.status }));
+
+    const recentOT = [...myOT]
+      .sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)))
+      .slice(0, 5)
+      .map((o) => ({ id: o.id, label: `OT ${o.hours} ชม.`, date: o.date, status: o.status }));
+
+    const upcomingHolidays = [
+      ...companyHolidays.map((h) => ({ id: `h-${h.date}`, label: h.name, date: h.date, kind: "company" as const })),
+      ...upcomingMyDayoffs.map((d) => ({ id: `d-${d.iso}`, label: d.label, date: d.iso, kind: "personal" as const })),
+    ].sort((a, b) => a.date.localeCompare(b.date)).slice(0, 5);
+
+    const statusBadge = (status: string) => (
+      <span className={`text-xs font-medium px-2 py-0.5 rounded-full shrink-0 ${status === "approved" ? "badge-present" : status === "pending" ? "badge-late" : "badge-absent"}`}>
+        {status === "approved" ? "อนุมัติ" : status === "pending" ? "รออนุมัติ" : "ไม่อนุมัติ"}
+      </span>
+    );
+
 
     return (
       <div className="space-y-6">
