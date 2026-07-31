@@ -748,24 +748,24 @@ const Attendance = () => {
         /* ═══ Requests View ═══ */
         <div className="card-base overflow-hidden">
           <div className="p-4 border-b" style={{ borderColor: "hsl(var(--border))" }}>
-            <h3 className="text-sm font-bold">รายการคำขอแก้ไขเวลา ({editRequests.length})</h3>
+            <h3 className="text-sm font-bold">รายการคำขอแก้ไขเวลา ({filteredRequests.length})</h3>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b" style={{ borderColor: "hsl(var(--border))" }}>
-                  {["พนักงาน", "วันที่", "เวลาเดิม", "เวลาใหม่", "เหตุผล", "สถานะ", ""].map((h) => (
-                    <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
+                  {["วันที่", "พนักงาน", "เวลาเดิม", "เวลาใหม่", "เหตุผล", "สถานะ", ""].map((h, i) => (
+                    <th key={`${h}-${i}`} className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {editRequests.map((req) => {
+                {filteredRequests.map((req) => {
                   const rs = reqStatusConf[req.status];
                   return (
                     <tr key={req.id} className="border-b hover:bg-muted/30 transition-colors" style={{ borderColor: "hsl(var(--border))" }}>
+                      <td className="px-4 py-3 text-sm font-medium whitespace-nowrap">{formatThaiShort(req.date)}</td>
                       <td className="px-4 py-3 text-sm font-semibold">{req.employeeName}</td>
-                      <td className="px-4 py-3 text-sm text-muted-foreground">{req.date}</td>
                       <td className="px-4 py-3 text-sm text-muted-foreground">{req.originalCheckIn} - {req.originalCheckOut}</td>
                       <td className="px-4 py-3 text-sm font-medium" style={{ color: "#FF870F" }}>{req.newCheckIn} - {req.newCheckOut}</td>
                       <td className="px-4 py-3 text-sm text-muted-foreground max-w-[200px] truncate">{req.reason}</td>
@@ -780,7 +780,7 @@ const Attendance = () => {
                     </tr>
                   );
                 })}
-                {editRequests.length === 0 && (
+                {filteredRequests.length === 0 && (
                   <tr><td colSpan={7} className="text-center py-10 text-sm text-muted-foreground">ไม่มีคำขอแก้ไขเวลา</td></tr>
                 )}
               </tbody>
