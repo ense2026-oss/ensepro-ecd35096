@@ -693,8 +693,8 @@ const Attendance = () => {
       </div>
 
       {/* Filters — shared by both views, identical for every role */}
-      <div className="card-base p-4">
-        <div className="flex flex-wrap items-center gap-2.5">
+      <div className="card-base p-3">
+        <div className="flex flex-wrap items-center gap-2">
 
               <div className="relative flex-1 min-w-[140px]" ref={employeeDropdownRef}>
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none z-10" />
@@ -708,7 +708,7 @@ const Attendance = () => {
                     setShowEmployeeDropdown(true);
                   }}
                   onFocus={() => setShowEmployeeDropdown(true)}
-                  className="w-full pl-9 pr-7 py-2 text-sm rounded-xl border bg-muted/30 outline-none"
+                  className="w-full pl-9 pr-7 py-1.5 text-sm rounded-xl border bg-muted/30 outline-none"
                 />
                 {filterEmployee !== "all" && (
                   <button
@@ -722,7 +722,7 @@ const Attendance = () => {
                   <div className="absolute top-full left-0 right-0 mt-1 bg-popover border rounded-xl shadow-lg z-50 max-h-52 overflow-y-auto">
                     <button
                       onClick={() => { setFilterEmployee("all"); setEmployeeSearch(""); setShowEmployeeDropdown(false); }}
-                      className="w-full text-left px-3 py-2 text-sm hover:bg-muted transition-colors text-muted-foreground"
+                      className="w-full text-left px-3 py-1.5 text-sm hover:bg-muted transition-colors text-muted-foreground"
                     >
                       พนักงานทั้งหมด
                     </button>
@@ -730,7 +730,7 @@ const Attendance = () => {
                       <button
                         key={name}
                         onClick={() => { setFilterEmployee(name); setEmployeeSearch(""); setShowEmployeeDropdown(false); }}
-                        className="w-full text-left px-3 py-2 text-sm hover:bg-muted transition-colors font-medium"
+                        className="w-full text-left px-3 py-1.5 text-sm hover:bg-muted transition-colors font-medium"
                       >
                         {name}
                       </button>
