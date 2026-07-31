@@ -547,11 +547,10 @@ const Attendance = () => {
         </button>
       </div>
 
-      {activeView === "attendance" ? (
-        <>
-          {/* Filters */}
-          <div className="card-base p-4">
-            <div className="flex flex-wrap items-center gap-2.5">
+      {/* Filters — shared by both views, identical for every role */}
+      <div className="card-base p-4">
+        <div className="flex flex-wrap items-center gap-2.5">
+
               <div className="relative flex-1 min-w-[140px]" ref={employeeDropdownRef}>
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none z-10" />
                 <input
