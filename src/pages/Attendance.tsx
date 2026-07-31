@@ -604,7 +604,7 @@ const Attendance = () => {
   };
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-3">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -634,24 +634,24 @@ const Attendance = () => {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {Object.entries(summary).map(([key, val]) => {
           const conf = statusConf[key];
           const Icon = conf.icon;
           return (
             <div
               key={key}
-              className="card-base p-4 cursor-pointer transition-all duration-200"
+              className="card-base p-2.5 cursor-pointer transition-all duration-200"
               style={{ borderLeft: `4px solid ${conf.color}` }}
               onClick={() => setFilterStatus(filterStatus === key ? "all" : key)}
             >
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-muted-foreground font-medium">{conf.label}</p>
-                  <p className="text-2xl font-bold font-display mt-1" style={{ color: conf.color }}>{val}</p>
+                  <p className="text-[11px] text-muted-foreground font-medium">{conf.label}</p>
+                  <p className="text-xl font-bold font-display mt-0.5" style={{ color: conf.color }}>{val}</p>
                 </div>
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: conf.bg }}>
-                  <Icon className="w-5 h-5" style={{ color: conf.color }} />
+                <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: conf.bg }}>
+                  <Icon className="w-4 h-4" style={{ color: conf.color }} />
                 </div>
               </div>
             </div>
