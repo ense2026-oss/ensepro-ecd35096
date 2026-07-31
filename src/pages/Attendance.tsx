@@ -98,6 +98,8 @@ const Attendance = () => {
   const { canAction, getScope } = usePermissions();
   const canApproveTime = canAction(role, 'attendance', 'approve');
   const canEditTime = canAction(role, 'attendance', 'edit');
+  // ทุกคนสามารถ "ขอแก้ไขเวลา" ของตัวเองได้ แม้ไม่มีสิทธิ์แก้ไขของผู้อื่น
+  const canRequestOwnEdit = true;
   const attendanceScope = getScope(role, 'attendance');
   const canExport = attendanceScope !== 'self';
   const { setAttendancePending } = usePendingCounts();
