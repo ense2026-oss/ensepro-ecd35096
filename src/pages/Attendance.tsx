@@ -834,38 +834,38 @@ const Attendance = () => {
                     const Icon = conf.icon;
                     return (
                       <tr key={row.id} className="border-b hover:bg-muted/30 transition-colors" style={{ borderColor: "hsl(var(--border))" }}>
-                        <td className="px-4 py-3.5 text-sm font-medium whitespace-nowrap">{formatThaiShort(row.date)}</td>
-                        <td className="px-4 py-3.5">
-                          <div className="flex items-center gap-3">
+                        <td className="px-3 py-1.5 text-sm font-medium whitespace-nowrap">{formatThaiShort(row.date)}</td>
+                        <td className="px-3 py-1.5">
+                          <div className="flex items-center gap-2">
                             <EmployeeAvatar photoUrl={row.photoUrl} firstName={row.name} size="sm" rounded="lg" />
                             <p className="text-sm font-semibold">{row.name}</p>
                           </div>
                         </td>
 
-                        <td className="px-4 py-3.5 text-sm text-muted-foreground">{row.dept}</td>
-                        <td className="px-4 py-3.5">
+                        <td className="px-3 py-1.5 text-sm text-muted-foreground">{row.dept}</td>
+                        <td className="px-3 py-1.5">
                           <span className={`text-sm font-medium ${row.late ? "text-orange-500" : "text-foreground"}`}>
                             {row.checkIn}
-                            {row.late && <span className="ml-1 text-xs text-orange-500">(สาย)</span>}
+                            {row.late && <span className="ml-1 text-[10px] text-orange-500">(สาย)</span>}
                           </span>
                         </td>
-                        <td className="px-4 py-3.5 text-sm">{row.checkOut}</td>
-                        <td className="px-4 py-3.5">
+                        <td className="px-3 py-1.5 text-sm">{row.checkOut}</td>
+                        <td className="px-3 py-1.5">
                           {row.ot > 0 ? (
                             <span className="text-sm font-semibold" style={{ color: "hsl(90 100% 30%)" }}>+{row.ot} ชม.</span>
                           ) : (
                             <span className="text-sm text-muted-foreground">-</span>
                           )}
                         </td>
-                        <td className="px-4 py-3.5">
-                          <div className="flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full w-fit" style={{ background: conf.bg, color: conf.color }}>
-                            <Icon className="w-3.5 h-3.5" style={{ color: conf.color }} />
+                        <td className="px-3 py-1.5">
+                          <div className="flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full w-fit" style={{ background: conf.bg, color: conf.color }}>
+                            <Icon className="w-3 h-3" style={{ color: conf.color }} />
                             {row.note || conf.label}
                           </div>
                         </td>
-                        <td className="px-4 py-3.5">
+                        <td className="px-3 py-1.5">
                           {canEditTime && row.status !== "holiday" && row.status !== "dayoff" ? (
-                            <button onClick={() => openEdit(row)} className="text-xs font-medium px-2.5 py-1.5 rounded-lg border hover:bg-muted transition-colors flex items-center gap-1">
+                            <button onClick={() => openEdit(row)} className="text-[11px] font-medium px-2 py-1 rounded-lg border hover:bg-muted transition-colors flex items-center gap-1">
                               <RotateCcw className="w-3 h-3" />
                               แก้ไขเวลา
                             </button>
