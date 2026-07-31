@@ -899,12 +899,13 @@ const Attendance = () => {
               <tbody>
                 {filteredRequests.map((req) => {
                   const rs = reqStatusConf[req.status];
+                  const reqEmployee = employees.find((e) => e.id === req.employeeId);
                   return (
                     <tr key={req.id} className="border-b hover:bg-muted/30 transition-colors" style={{ borderColor: "hsl(var(--border))" }}>
                       <td className="px-3 py-1.5 text-sm font-medium whitespace-nowrap">{formatThaiShort(req.date)}</td>
                       <td className="px-3 py-1.5">
                         <div className="flex items-center justify-center">
-                          <EmployeeAvatar photoUrl={req.photoUrl} firstName={req.employeeName} size="sm" rounded="lg" />
+                          <EmployeeAvatar photoUrl={reqEmployee?.photoUrl} firstName={req.employeeName} size="sm" rounded="lg" />
                         </div>
                       </td>
                       <td className="px-3 py-1.5 text-sm text-muted-foreground">{req.originalCheckIn} - {req.originalCheckOut}</td>
