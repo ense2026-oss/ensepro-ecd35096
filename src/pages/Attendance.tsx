@@ -661,37 +661,40 @@ const Attendance = () => {
                     <X className="w-3.5 h-3.5 text-muted-foreground" />
                   </button>
                 )}
-              </div>
-            </div>
-          </div>
+        </div>
+      </div>
 
+      {activeView === "attendance" ? (
+        <>
           {/* Table */}
           <div className="card-base overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
                   <tr className="border-b" style={{ borderColor: "hsl(var(--border))" }}>
-                    {["พนักงาน", "แผนก", "เวลาเข้า", "เวลาออก", "OT (ชม.)", "สถานะ", ""].map((h) => (
-                      <th key={h} className="text-left px-4 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
+                    {["วันที่", "พนักงาน", "แผนก", "เวลาเข้า", "เวลาออก", "OT (ชม.)", "สถานะ", ""].map((h, i) => (
+                      <th key={`${h}-${i}`} className="text-left px-4 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {loading ? (
-                    <tr><td colSpan={7} className="text-center py-10 text-sm text-muted-foreground">กำลังโหลด...</td></tr>
+                    <tr><td colSpan={8} className="text-center py-10 text-sm text-muted-foreground">กำลังโหลด...</td></tr>
                   ) : filtered.length === 0 ? (
-                    <tr><td colSpan={7} className="text-center py-10 text-sm text-muted-foreground">ไม่พบข้อมูล</td></tr>
+                    <tr><td colSpan={8} className="text-center py-10 text-sm text-muted-foreground">ไม่พบข้อมูล</td></tr>
                   ) : filtered.map((row) => {
                     const conf = statusConf[row.status] || statusConf.present;
                     const Icon = conf.icon;
                     return (
                       <tr key={row.id} className="border-b hover:bg-muted/30 transition-colors" style={{ borderColor: "hsl(var(--border))" }}>
+                        <td className="px-4 py-3.5 text-sm font-medium whitespace-nowrap">{formatThaiShort(row.date)}</td>
                         <td className="px-4 py-3.5">
                           <div className="flex items-center gap-3">
                             <EmployeeAvatar photoUrl={row.photoUrl} firstName={row.name} size="sm" rounded="lg" />
                             <p className="text-sm font-semibold">{row.name}</p>
                           </div>
                         </td>
+
                         <td className="px-4 py-3.5 text-sm text-muted-foreground">{row.dept}</td>
                         <td className="px-4 py-3.5">
                           <span className={`text-sm font-medium ${row.late ? "text-orange-500" : "text-foreground"}`}>
