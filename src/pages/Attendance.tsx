@@ -416,7 +416,7 @@ const Attendance = () => {
       return;
     }
     addEditRequest({
-      attendanceId: editingRow.id,
+      attendanceId: editingRow.virtual ? undefined : editingRow.id,
       employeeId: editingRow.employeeId,
       employeeName: editingRow.name,
       date: editingRow.date,
