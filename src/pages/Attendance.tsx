@@ -28,6 +28,8 @@ interface AttendanceRecord {
   status: string;
   late: boolean;
   ot: number;
+  virtual?: boolean;
+  note?: string;
 }
 
 const statusConf: Record<string, { label: string; icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>; color: string; bg: string }> = {
@@ -35,6 +37,8 @@ const statusConf: Record<string, { label: string; icon: React.ComponentType<{ cl
   late: { label: "มาสาย", icon: Clock, color: "#FF870F", bg: "hsl(31 100% 93%)" },
   absent: { label: "ขาดงาน", icon: XCircle, color: "hsl(0 84% 50%)", bg: "hsl(0 84% 95%)" },
   leave: { label: "ลางาน", icon: CalendarIcon, color: "hsl(220 90% 45%)", bg: "hsl(220 90% 93%)" },
+  dayoff: { label: "วันหยุด", icon: CalendarDays, color: "hsl(260 40% 45%)", bg: "hsl(260 40% 94%)" },
+  holiday: { label: "วันหยุดบริษัท", icon: CalendarDays, color: "hsl(260 40% 45%)", bg: "hsl(260 40% 94%)" },
 };
 
 const reqStatusConf: Record<string, { label: string; color: string; bg: string }> = {
