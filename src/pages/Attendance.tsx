@@ -113,7 +113,7 @@ const Attendance = () => {
   const employeeDropdownRef = useRef<HTMLDivElement>(null);
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
-  const [filterMonth, setFilterMonth] = useState(() => new Date().toISOString().slice(5, 7));
+  const [filterMonth, setFilterMonth] = useState(currentMonthLocal);
   const [activeView, setActiveView] = useState<"attendance" | "requests">("attendance");
 
   // Edit dialog
