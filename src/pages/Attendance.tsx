@@ -881,6 +881,8 @@ const Attendance = () => {
                           </span>
                         </td>
                         <td className="px-3 py-1.5 text-sm">{row.checkOut}</td>
+                        <td className="px-3 py-1.5 text-sm font-mono" style={{ color: row.otIn ? "hsl(270 70% 45%)" : undefined }}>{row.otIn || "-"}</td>
+                        <td className="px-3 py-1.5 text-sm font-mono" style={{ color: row.otOut ? "hsl(330 70% 45%)" : undefined }}>{row.otOut || "-"}</td>
                         <td className="px-3 py-1.5">
                           {row.ot > 0 ? (
                             <span className="text-sm font-semibold" style={{ color: "hsl(90 100% 30%)" }}>+{row.ot} ชม.</span>
