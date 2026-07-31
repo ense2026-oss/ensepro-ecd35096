@@ -820,7 +820,7 @@ const Attendance = () => {
                 <thead>
                   <tr className="border-b" style={{ borderColor: "hsl(var(--border))" }}>
                     {["วันที่", "พนักงาน", "แผนก", "เวลาเข้า", "เวลาออก", "OT (ชม.)", "สถานะ", ""].map((h, i) => (
-                      <th key={`${h}-${i}`} className="text-left px-4 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
+                      <th key={`${h}-${i}`} className="text-left px-3 py-2 text-[11px] font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
                 </thead>
