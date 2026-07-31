@@ -390,6 +390,8 @@ const Attendance = () => {
           status,
           late: false,
           ot: otMap[`${selectedEmployee.id}|${iso}`] || 0,
+          otIn: otTimeMap[`${selectedEmployee.id}|${iso}`]?.start || "",
+          otOut: otTimeMap[`${selectedEmployee.id}|${iso}`]?.end || "",
           virtual: true,
           note: leaveName || holidayName || undefined,
         });
@@ -400,7 +402,7 @@ const Attendance = () => {
     // Respect the status filter on generated rows too.
     const result = filterStatus === "all" ? rows : rows.filter((r) => r.status === filterStatus);
     return result;
-  }, [selectedEmployee, filtered, dateFrom, dateTo, filterMonth, leaveMap, holidayMap, isDayoffFor, otMap, filterStatus]);
+  }, [selectedEmployee, filtered, dateFrom, dateTo, filterMonth, leaveMap, holidayMap, isDayoffFor, otMap, otTimeMap, filterStatus]);
 
 
   // Time-edit requests use the exact same filter set for every role.
