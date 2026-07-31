@@ -661,8 +661,10 @@ const Attendance = () => {
                     <X className="w-3.5 h-3.5 text-muted-foreground" />
                   </button>
                 )}
+          </div>
         </div>
       </div>
+
 
       {activeView === "attendance" ? (
         <>
