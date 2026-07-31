@@ -62,6 +62,14 @@ const toISODate = (dateStr: string): string | null => {
   return null;
 };
 
+// "yyyy-MM-dd" (or Thai short) → "1 ก.ค. 2569"
+const formatThaiShort = (dateStr: string): string => {
+  const iso = toISODate(dateStr);
+  if (!iso) return dateStr || "-";
+  const [y, m, d] = iso.split("-");
+  return `${parseInt(d, 10)} ${THAI_MONTHS_SHORT[parseInt(m, 10) - 1]} ${parseInt(y, 10) + 543}`;
+};
+
 const Attendance = () => {
   const { employees } = useEmployees();
   const { role, user, currentUser } = useAuth();
