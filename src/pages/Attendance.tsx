@@ -225,7 +225,28 @@ const Attendance = () => {
     // date range takes precedence over month; only one is active at a time.
     if (dateFrom || dateTo) return matchSearch && matchStatus && matchEmployee && matchDate;
     return matchSearch && matchStatus && matchEmployee && matchMonth;
-  }), [scopedAttendance, search, filterStatus, filterEmployee, dateFrom, dateTo, filterMonth]);
+  }).sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : a.name.localeCompare(b.name))),
+  [scopedAttendance, search, filterStatus, filterEmployee, dateFrom, dateTo, filterMonth]);
+
+  // Time-edit requests use the exact same filter set for every role.
+  const filteredRequests = useMemo(() => {
+    return editRequests
+      .filter((r) => {
+        const iso = toISODate(r.date) || "";
+        const matchEmployee = filterEmployee === "all" || r.employeeName === filterEmployee;
+        const matchSearch = !search || r.employeeName.includes(search);
+        if (dateFrom || dateTo) {
+          return matchEmployee && matchSearch && (!dateFrom || iso >= dateFrom) && (!dateTo || iso <= dateTo);
+        }
+        return matchEmployee && matchSearch && (!filterMonth || iso.slice(5, 7) === filterMonth);
+      })
+      .sort((a, b) => {
+        const ai = toISODate(a.date) || "";
+        const bi = toISODate(b.date) || "";
+        return ai < bi ? -1 : ai > bi ? 1 : 0;
+      });
+  }, [editRequests, filterEmployee, search, dateFrom, dateTo, filterMonth]);
+
 
   const summary = useMemo(() => ({
     present: scopedAttendance.filter((a) => a.status === "present").length,
