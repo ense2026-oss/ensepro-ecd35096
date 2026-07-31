@@ -902,16 +902,16 @@ const Attendance = () => {
                   const rs = reqStatusConf[req.status];
                   return (
                     <tr key={req.id} className="border-b hover:bg-muted/30 transition-colors" style={{ borderColor: "hsl(var(--border))" }}>
-                      <td className="px-4 py-3 text-sm font-medium whitespace-nowrap">{formatThaiShort(req.date)}</td>
-                      <td className="px-4 py-3 text-sm font-semibold">{req.employeeName}</td>
-                      <td className="px-4 py-3 text-sm text-muted-foreground">{req.originalCheckIn} - {req.originalCheckOut}</td>
-                      <td className="px-4 py-3 text-sm font-medium" style={{ color: "#FF870F" }}>{req.newCheckIn} - {req.newCheckOut}</td>
-                      <td className="px-4 py-3 text-sm text-muted-foreground max-w-[200px] truncate">{req.reason}</td>
-                      <td className="px-4 py-3">
-                        <span className="text-xs font-semibold px-2.5 py-1 rounded-full" style={{ background: rs.bg, color: rs.color }}>{rs.label}</span>
+                      <td className="px-3 py-1.5 text-sm font-medium whitespace-nowrap">{formatThaiShort(req.date)}</td>
+                      <td className="px-3 py-1.5 text-sm font-semibold">{req.employeeName}</td>
+                      <td className="px-3 py-1.5 text-sm text-muted-foreground">{req.originalCheckIn} - {req.originalCheckOut}</td>
+                      <td className="px-3 py-1.5 text-sm font-medium" style={{ color: "#FF870F" }}>{req.newCheckIn} - {req.newCheckOut}</td>
+                      <td className="px-3 py-1.5 text-sm text-muted-foreground max-w-[200px] truncate">{req.reason}</td>
+                      <td className="px-3 py-1.5">
+                        <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full" style={{ background: rs.bg, color: rs.color }}>{rs.label}</span>
                       </td>
-                      <td className="px-4 py-3">
-                        <button onClick={() => openDetail(req)} className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground" title="ดูรายละเอียด">
+                      <td className="px-3 py-1.5">
+                        <button onClick={() => openDetail(req)} className="p-1 rounded-lg hover:bg-muted transition-colors text-muted-foreground" title="ดูรายละเอียด">
                           <Eye className="w-4 h-4" />
                         </button>
                       </td>
