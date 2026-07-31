@@ -98,6 +98,8 @@ const Attendance = () => {
   const { canAction, getScope } = usePermissions();
   const canApproveTime = canAction(role, 'attendance', 'approve');
   const canEditTime = canAction(role, 'attendance', 'edit');
+  // ทุกคนสามารถ "ขอแก้ไขเวลา" ของตัวเองได้ แม้ไม่มีสิทธิ์แก้ไขของผู้อื่น
+  const canRequestOwnEdit = true;
   const attendanceScope = getScope(role, 'attendance');
   const canExport = attendanceScope !== 'self';
   const { setAttendancePending } = usePendingCounts();
@@ -627,7 +629,7 @@ const Attendance = () => {
           <h2 className="text-xl font-bold font-display">บันทึกเวลาเข้าออกงาน</h2>
           <p className="text-sm text-muted-foreground mt-0.5">ข้อมูลจากฐานข้อมูล</p>
         </div>
-        {(canExport || canEditTime) && (
+        {(canExport || canEditTime || canRequestOwnEdit) && (
           <div className="flex items-center gap-2">
             {canExport && (
               <button className="flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-medium hover:bg-muted transition-colors">
@@ -635,7 +637,7 @@ const Attendance = () => {
                 Export Excel
               </button>
             )}
-            {canEditTime && (
+            {(canEditTime || canRequestOwnEdit) && (
               <button
                 onClick={openNewRequest}
                 className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold"
@@ -879,7 +881,7 @@ const Attendance = () => {
                           </div>
                         </td>
                         <td className="px-3 py-1.5">
-                          {canEditTime && row.status !== "holiday" && row.status !== "dayoff" ? (
+                          {(canEditTime || row.employeeId === currentUser?.employeeId) && row.status !== "holiday" && row.status !== "dayoff" ? (
                             <button onClick={() => openEdit(row)} className="text-[11px] font-medium px-2 py-1 rounded-lg border hover:bg-muted transition-colors flex items-center gap-1">
                               <RotateCcw className="w-3 h-3" />
                               แก้ไขเวลา
