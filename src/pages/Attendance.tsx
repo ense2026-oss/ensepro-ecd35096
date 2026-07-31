@@ -826,9 +826,9 @@ const Attendance = () => {
                 </thead>
                 <tbody>
                   {loading ? (
-                    <tr><td colSpan={8} className="text-center py-10 text-sm text-muted-foreground">กำลังโหลด...</td></tr>
+                    <tr><td colSpan={8} className="text-center py-6 text-sm text-muted-foreground">กำลังโหลด...</td></tr>
                   ) : displayRows.length === 0 ? (
-                    <tr><td colSpan={8} className="text-center py-10 text-sm text-muted-foreground">ไม่พบข้อมูล</td></tr>
+                    <tr><td colSpan={8} className="text-center py-6 text-sm text-muted-foreground">ไม่พบข้อมูล</td></tr>
                   ) : displayRows.map((row) => {
                     const conf = statusConf[row.status] || statusConf.present;
                     const Icon = conf.icon;
@@ -918,9 +918,9 @@ const Attendance = () => {
                     </tr>
                   );
                 })}
-                {filteredRequests.length === 0 && (
-                  <tr><td colSpan={7} className="text-center py-10 text-sm text-muted-foreground">ไม่มีคำขอแก้ไขเวลา</td></tr>
-                )}
+                  {filteredRequests.length === 0 && (
+                    <tr><td colSpan={7} className="text-center py-6 text-sm text-muted-foreground">ไม่มีคำขอแก้ไขเวลา</td></tr>
+                  )}
               </tbody>
             </table>
           </div>
