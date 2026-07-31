@@ -28,6 +28,8 @@ interface AttendanceRecord {
   status: string;
   late: boolean;
   ot: number;
+  virtual?: boolean;
+  note?: string;
 }
 
 const statusConf: Record<string, { label: string; icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>; color: string; bg: string }> = {
@@ -35,6 +37,8 @@ const statusConf: Record<string, { label: string; icon: React.ComponentType<{ cl
   late: { label: "มาสาย", icon: Clock, color: "#FF870F", bg: "hsl(31 100% 93%)" },
   absent: { label: "ขาดงาน", icon: XCircle, color: "hsl(0 84% 50%)", bg: "hsl(0 84% 95%)" },
   leave: { label: "ลางาน", icon: CalendarIcon, color: "hsl(220 90% 45%)", bg: "hsl(220 90% 93%)" },
+  dayoff: { label: "วันหยุด", icon: CalendarDays, color: "hsl(260 40% 45%)", bg: "hsl(260 40% 94%)" },
+  holiday: { label: "วันหยุดบริษัท", icon: CalendarDays, color: "hsl(260 40% 45%)", bg: "hsl(260 40% 94%)" },
 };
 
 const reqStatusConf: Record<string, { label: string; color: string; bg: string }> = {
@@ -153,6 +157,47 @@ const Attendance = () => {
     setOtMap(map);
   }, []);
 
+  // Leave days / company holidays / personal day-off patterns — used to label days with no record.
+  const [leaveMap, setLeaveMap] = useState<Record<string, string>>({});
+  const [holidayMap, setHolidayMap] = useState<Record<string, string>>({});
+  const [dayoffPatterns, setDayoffPatterns] = useState<any[]>([]);
+  const [dayoffOverrides, setDayoffOverrides] = useState<Record<string, boolean>>({});
+
+  const fetchCalendarContext = useCallback(async () => {
+    const [leaveRes, holidayRes, patternRes, overrideRes] = await Promise.all([
+      supabase.from("leave_requests").select("employee_id, leave_type_name, date_from, date_to, status").neq("status", "rejected"),
+      supabase.from("company_holidays").select("date, name"),
+      supabase.from("employee_dayoff_patterns").select("employee_id, weekdays, effective_from, effective_to"),
+      supabase.from("employee_dayoff_overrides").select("employee_id, date, is_dayoff"),
+    ]);
+
+    const lm: Record<string, string> = {};
+    (leaveRes.data ?? []).forEach((r: any) => {
+      const from = toISODate(r.date_from);
+      const to = toISODate(r.date_to) || from;
+      if (!from || !to) return;
+      const cur = new Date(from + "T00:00:00");
+      const end = new Date(to + "T00:00:00");
+      while (cur <= end) {
+        lm[`${r.employee_id}|${cur.toISOString().slice(0, 10)}`] = r.leave_type_name || "ลางาน";
+        cur.setDate(cur.getDate() + 1);
+      }
+    });
+    setLeaveMap(lm);
+
+    const hm: Record<string, string> = {};
+    (holidayRes.data ?? []).forEach((h: any) => { hm[h.date] = h.name; });
+    setHolidayMap(hm);
+
+    setDayoffPatterns(patternRes.data ?? []);
+    const om: Record<string, boolean> = {};
+    (overrideRes.data ?? []).forEach((o: any) => { om[`${o.employee_id}|${o.date}`] = o.is_dayoff; });
+    setDayoffOverrides(om);
+  }, []);
+
+  useEffect(() => { fetchCalendarContext(); }, [fetchCalendarContext]);
+
+
   const debouncedFetchAttendance = useCallback(() => {
     if (attendanceRealtimeRef.current) clearTimeout(attendanceRealtimeRef.current);
     attendanceRealtimeRef.current = setTimeout(() => {
@@ -224,6 +269,19 @@ const Attendance = () => {
     setAttendancePending(editRequests.filter((r) => r.status === "pending").length);
   }, [editRequests, setAttendancePending]);
 
+  // Default the employee filter to the signed-in user (admin/hr/manager/executive included).
+  const selfFilterInit = useRef(false);
+  useEffect(() => {
+    if (selfFilterInit.current) return;
+    const myName = `${currentUser?.firstName ?? ""} ${currentUser?.lastName ?? ""}`.trim();
+    if (!myName || allNames.length === 0) return;
+    selfFilterInit.current = true;
+    if (allNames.includes(myName)) {
+      setFilterEmployee(myName);
+      setEmployeeSearch(myName);
+    }
+  }, [allNames, currentUser?.firstName, currentUser?.lastName]);
+
   const filtered = useMemo(() => scopedAttendance.filter((a) => {
     const matchSearch = a.name.includes(search) || a.dept.includes(search);
     const matchStatus = filterStatus === "all" || a.status === filterStatus;
@@ -235,6 +293,85 @@ const Attendance = () => {
     return matchSearch && matchStatus && matchEmployee && matchMonth;
   }).sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : a.name.localeCompare(b.name))),
   [scopedAttendance, search, filterStatus, filterEmployee, dateFrom, dateTo, filterMonth]);
+
+  // Selected employee (one person) → fill every day of the selected period, even without a record.
+  const selectedEmployee = useMemo(() => {
+    if (filterEmployee === "all") return null;
+    const fromAttendance = scopedAttendance.find((a) => a.name === filterEmployee);
+    if (fromAttendance) return { id: fromAttendance.employeeId, name: fromAttendance.name, dept: fromAttendance.dept, photoUrl: fromAttendance.photoUrl };
+    const emp = employees.find((e: any) => `${e.firstName ?? e.first_name} ${e.lastName ?? e.last_name}` === filterEmployee);
+    return emp ? { id: (emp as any).id, name: filterEmployee, dept: (emp as any).dept || "", photoUrl: (emp as any).photoUrl || (emp as any).photo_url } : null;
+  }, [filterEmployee, scopedAttendance, employees]);
+
+  const isDayoffFor = useCallback((empId: string, iso: string) => {
+    const override = dayoffOverrides[`${empId}|${iso}`];
+    if (override !== undefined) return override;
+    const dow = new Date(iso + "T00:00:00").getDay();
+    return dayoffPatterns.some((p: any) =>
+      p.employee_id === empId &&
+      (p.weekdays || []).includes(dow) &&
+      p.effective_from <= iso &&
+      (!p.effective_to || p.effective_to >= iso)
+    );
+  }, [dayoffOverrides, dayoffPatterns]);
+
+  // Full-period rows: real records + generated rows for days with no record.
+  const displayRows = useMemo(() => {
+    if (!selectedEmployee) return filtered;
+
+    const today = new Date().toISOString().slice(0, 10);
+    let start: string, end: string;
+    if (dateFrom || dateTo) {
+      start = dateFrom || dateTo;
+      end = dateTo || dateFrom;
+    } else if (filterMonth) {
+      const year = new Date().getFullYear();
+      const m = parseInt(filterMonth, 10);
+      start = `${year}-${filterMonth}-01`;
+      end = new Date(year, m, 0).toISOString().slice(0, 10);
+    } else {
+      return filtered;
+    }
+    if (end > today) end = today;
+    if (start > end) return filtered;
+
+    const byDate = new Map(filtered.map((r) => [r.date, r]));
+    const rows: AttendanceRecord[] = [];
+    const cur = new Date(start + "T00:00:00");
+    const stop = new Date(end + "T00:00:00");
+    while (cur <= stop) {
+      const iso = cur.toISOString().slice(0, 10);
+      const existing = byDate.get(iso);
+      if (existing) {
+        rows.push(existing);
+      } else {
+        const leaveName = leaveMap[`${selectedEmployee.id}|${iso}`];
+        const holidayName = holidayMap[iso];
+        const status = leaveName ? "leave" : holidayName ? "holiday" : isDayoffFor(selectedEmployee.id, iso) ? "dayoff" : "absent";
+        rows.push({
+          id: `virtual-${iso}`,
+          employeeId: selectedEmployee.id,
+          name: selectedEmployee.name,
+          photoUrl: selectedEmployee.photoUrl,
+          dept: selectedEmployee.dept,
+          date: iso,
+          checkIn: "-",
+          checkOut: "-",
+          status,
+          late: false,
+          ot: otMap[`${selectedEmployee.id}|${iso}`] || 0,
+          virtual: true,
+          note: leaveName || holidayName || undefined,
+        });
+      }
+      cur.setDate(cur.getDate() + 1);
+    }
+
+    // Respect the status filter on generated rows too.
+    const result = filterStatus === "all" ? rows : rows.filter((r) => r.status === filterStatus);
+    return result;
+  }, [selectedEmployee, filtered, dateFrom, dateTo, filterMonth, leaveMap, holidayMap, isDayoffFor, otMap, filterStatus]);
+
 
   // Time-edit requests use the exact same filter set for every role.
   const filteredRequests = useMemo(() => {
@@ -279,7 +416,7 @@ const Attendance = () => {
       return;
     }
     addEditRequest({
-      attendanceId: editingRow.id,
+      attendanceId: editingRow.virtual ? undefined : editingRow.id,
       employeeId: editingRow.employeeId,
       employeeName: editingRow.name,
       date: editingRow.date,
@@ -690,9 +827,9 @@ const Attendance = () => {
                 <tbody>
                   {loading ? (
                     <tr><td colSpan={8} className="text-center py-10 text-sm text-muted-foreground">กำลังโหลด...</td></tr>
-                  ) : filtered.length === 0 ? (
+                  ) : displayRows.length === 0 ? (
                     <tr><td colSpan={8} className="text-center py-10 text-sm text-muted-foreground">ไม่พบข้อมูล</td></tr>
-                  ) : filtered.map((row) => {
+                  ) : displayRows.map((row) => {
                     const conf = statusConf[row.status] || statusConf.present;
                     const Icon = conf.icon;
                     return (
@@ -723,11 +860,11 @@ const Attendance = () => {
                         <td className="px-4 py-3.5">
                           <div className="flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full w-fit" style={{ background: conf.bg, color: conf.color }}>
                             <Icon className="w-3.5 h-3.5" style={{ color: conf.color }} />
-                            {conf.label}
+                            {row.note || conf.label}
                           </div>
                         </td>
                         <td className="px-4 py-3.5">
-                          {canEditTime ? (
+                          {canEditTime && row.status !== "holiday" && row.status !== "dayoff" ? (
                             <button onClick={() => openEdit(row)} className="text-xs font-medium px-2.5 py-1.5 rounded-lg border hover:bg-muted transition-colors flex items-center gap-1">
                               <RotateCcw className="w-3 h-3" />
                               แก้ไขเวลา
@@ -736,6 +873,7 @@ const Attendance = () => {
                             <span className="text-xs text-muted-foreground">-</span>
                           )}
                         </td>
+
                       </tr>
                     );
                   })}
