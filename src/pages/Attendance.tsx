@@ -337,7 +337,7 @@ const Attendance = () => {
   const displayRows = useMemo(() => {
     if (!selectedEmployee) return filtered;
 
-    const today = new Date().toISOString().slice(0, 10);
+    const today = todayLocal();
     let start: string, end: string;
     if (dateFrom || dateTo) {
       start = dateFrom || dateTo;
@@ -346,7 +346,7 @@ const Attendance = () => {
       const year = new Date().getFullYear();
       const m = parseInt(filterMonth, 10);
       start = `${year}-${filterMonth}-01`;
-      end = new Date(year, m, 0).toISOString().slice(0, 10);
+      end = lastDayOfMonthLocal(year, m);
     } else {
       return filtered;
     }
@@ -355,10 +355,9 @@ const Attendance = () => {
 
     const byDate = new Map(filtered.map((r) => [r.date, r]));
     const rows: AttendanceRecord[] = [];
-    const cur = new Date(start + "T00:00:00");
-    const stop = new Date(end + "T00:00:00");
-    while (cur <= stop) {
-      const iso = cur.toISOString().slice(0, 10);
+    let cur = start;
+    while (cur <= end) {
+      const iso = cur;
       const existing = byDate.get(iso);
       if (existing) {
         rows.push(existing);
@@ -382,7 +381,7 @@ const Attendance = () => {
           note: leaveName || holidayName || undefined,
         });
       }
-      cur.setDate(cur.getDate() + 1);
+      cur = addDaysLocal(cur, 1);
     }
 
     // Respect the status filter on generated rows too.
