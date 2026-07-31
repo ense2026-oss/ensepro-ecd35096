@@ -28,6 +28,8 @@ interface AttendanceRecord {
   status: string;
   late: boolean;
   ot: number;
+  otIn?: string;
+  otOut?: string;
   virtual?: boolean;
   note?: string;
 }
@@ -106,6 +108,7 @@ const Attendance = () => {
   const { editRequests, addEditRequest, updateRequestStatus } = useTimeEditRequests();
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
   const [otMap, setOtMap] = useState<Record<string, number>>({});
+  const [otTimeMap, setOtTimeMap] = useState<Record<string, { start: string; end: string }>>({});
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
