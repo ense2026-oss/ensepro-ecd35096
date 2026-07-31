@@ -554,10 +554,27 @@ const Dashboard = () => {
         return { name: lt.name, quota: lt.quota, used, color: lt.color || DEFAULT_LEAVE_COLOR };
       });
 
-    const recentRequests = [
-      ...myLeaves.map((l) => ({ id: l.id, type: "leave" as const, label: l.leave_type_name, date: l.date_from, status: l.status, created: l.created_at })),
-      ...myOT.map((o) => ({ id: o.id, type: "ot" as const, label: `OT ${o.hours} ชม.`, date: o.date, status: o.status, created: o.created_at })),
-    ].sort((a, b) => b.created.localeCompare(a.created)).slice(0, 5);
+    const recentLeaves = [...myLeaves]
+      .sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)))
+      .slice(0, 5)
+      .map((l) => ({ id: l.id, label: l.leave_type_name, date: l.date_from, status: l.status }));
+
+    const recentOT = [...myOT]
+      .sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)))
+      .slice(0, 5)
+      .map((o) => ({ id: o.id, label: `OT ${o.hours} ชม.`, date: o.date, status: o.status }));
+
+    const upcomingHolidays = [
+      ...companyHolidays.map((h) => ({ id: `h-${h.date}`, label: h.name, date: h.date, kind: "company" as const })),
+      ...upcomingMyDayoffs.map((d) => ({ id: `d-${d.iso}`, label: d.label, date: d.iso, kind: "personal" as const })),
+    ].sort((a, b) => a.date.localeCompare(b.date)).slice(0, 5);
+
+    const statusBadge = (status: string) => (
+      <span className={`text-xs font-medium px-2 py-0.5 rounded-full shrink-0 ${status === "approved" ? "badge-present" : status === "pending" ? "badge-late" : "badge-absent"}`}>
+        {status === "approved" ? "อนุมัติ" : status === "pending" ? "รออนุมัติ" : "ไม่อนุมัติ"}
+      </span>
+    );
+
 
     return (
       <div className="space-y-6">
@@ -589,33 +606,91 @@ const Dashboard = () => {
             </div>
           </div>
         </div>
-        <div className="card-base p-5">
-          <h3 className="font-bold font-display mb-4">คำขอล่าสุดของฉัน</h3>
-          <div className="space-y-3">
-            {loading ? (
-              Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-12 w-full rounded-xl" />)
-            ) : recentRequests.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-4">ยังไม่มีคำขอ</p>
-            ) : (
-              recentRequests.map((r) => (
-                <div key={r.id} className="flex items-center justify-between p-3 rounded-xl hover:bg-muted/50 transition-colors">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${r.type === "leave" ? "bg-orange-100 text-orange-600" : "bg-blue-100 text-blue-600"}`}>
-                      {r.type === "leave" ? <Calendar className="w-4 h-4" /> : <Clock className="w-4 h-4" />}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* คำขอลา */}
+          <div className="card-base p-5">
+            <h3 className="font-bold font-display mb-4">คำขอลา</h3>
+            <div className="space-y-3">
+              {loading ? (
+                Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-12 w-full rounded-xl" />)
+              ) : recentLeaves.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-4">ยังไม่มีคำขอลา</p>
+              ) : (
+                recentLeaves.map((r) => (
+                  <div key={r.id} className="flex items-center justify-between gap-2 p-3 rounded-xl hover:bg-muted/50 transition-colors">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-orange-100 text-orange-600 shrink-0">
+                        <Calendar className="w-4 h-4" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium truncate">{r.label}</p>
+                        <p className="text-xs text-muted-foreground">{r.date}</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-sm font-medium">{r.label}</p>
-                      <p className="text-xs text-muted-foreground">{r.date}</p>
-                    </div>
+                    {statusBadge(r.status)}
                   </div>
-                  <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${r.status === "approved" ? "badge-present" : r.status === "pending" ? "badge-late" : "badge-absent"}`}>
-                    {r.status === "approved" ? "อนุมัติ" : r.status === "pending" ? "รออนุมัติ" : "ไม่อนุมัติ"}
-                  </span>
-                </div>
-              ))
-            )}
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* คำขอโอที */}
+          <div className="card-base p-5">
+            <h3 className="font-bold font-display mb-4">คำขอโอที</h3>
+            <div className="space-y-3">
+              {loading ? (
+                Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-12 w-full rounded-xl" />)
+              ) : recentOT.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-4">ยังไม่มีคำขอโอที</p>
+              ) : (
+                recentOT.map((r) => (
+                  <div key={r.id} className="flex items-center justify-between gap-2 p-3 rounded-xl hover:bg-muted/50 transition-colors">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-blue-100 text-blue-600 shrink-0">
+                        <Clock className="w-4 h-4" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium truncate">{r.label}</p>
+                        <p className="text-xs text-muted-foreground">{r.date}</p>
+                      </div>
+                    </div>
+                    {statusBadge(r.status)}
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* วันหยุด */}
+          <div className="card-base p-5">
+            <h3 className="font-bold font-display mb-4">วันหยุด</h3>
+            <div className="space-y-3">
+              {loading ? (
+                Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-12 w-full rounded-xl" />)
+              ) : upcomingHolidays.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-4">ไม่มีวันหยุดที่จะถึง</p>
+              ) : (
+                upcomingHolidays.map((h) => (
+                  <div key={h.id} className="flex items-center justify-between gap-2 p-3 rounded-xl hover:bg-muted/50 transition-colors">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${h.kind === "company" ? "bg-green-100 text-green-600" : "bg-purple-100 text-purple-600"}`}>
+                        <Calendar className="w-4 h-4" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium truncate">{h.label}</p>
+                        <p className="text-xs text-muted-foreground">{format(new Date(h.date), "d MMM yyyy", { locale: th })}</p>
+                      </div>
+                    </div>
+                    <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-muted text-muted-foreground shrink-0">
+                      {h.kind === "company" ? "บริษัท" : "ส่วนตัว"}
+                    </span>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
         </div>
+
       </div>
     );
   }
