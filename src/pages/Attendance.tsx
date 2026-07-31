@@ -269,6 +269,19 @@ const Attendance = () => {
     setAttendancePending(editRequests.filter((r) => r.status === "pending").length);
   }, [editRequests, setAttendancePending]);
 
+  // Default the employee filter to the signed-in user (admin/hr/manager/executive included).
+  const selfFilterInit = useRef(false);
+  useEffect(() => {
+    if (selfFilterInit.current) return;
+    const myName = `${currentUser?.firstName ?? ""} ${currentUser?.lastName ?? ""}`.trim();
+    if (!myName || allNames.length === 0) return;
+    selfFilterInit.current = true;
+    if (allNames.includes(myName)) {
+      setFilterEmployee(myName);
+      setEmployeeSearch(myName);
+    }
+  }, [allNames, currentUser?.firstName, currentUser?.lastName]);
+
   const filtered = useMemo(() => scopedAttendance.filter((a) => {
     const matchSearch = a.name.includes(search) || a.dept.includes(search);
     const matchStatus = filterStatus === "all" || a.status === filterStatus;
@@ -280,6 +293,85 @@ const Attendance = () => {
     return matchSearch && matchStatus && matchEmployee && matchMonth;
   }).sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : a.name.localeCompare(b.name))),
   [scopedAttendance, search, filterStatus, filterEmployee, dateFrom, dateTo, filterMonth]);
+
+  // Selected employee (one person) → fill every day of the selected period, even without a record.
+  const selectedEmployee = useMemo(() => {
+    if (filterEmployee === "all") return null;
+    const fromAttendance = scopedAttendance.find((a) => a.name === filterEmployee);
+    if (fromAttendance) return { id: fromAttendance.employeeId, name: fromAttendance.name, dept: fromAttendance.dept, photoUrl: fromAttendance.photoUrl };
+    const emp = employees.find((e: any) => `${e.firstName ?? e.first_name} ${e.lastName ?? e.last_name}` === filterEmployee);
+    return emp ? { id: (emp as any).id, name: filterEmployee, dept: (emp as any).dept || "", photoUrl: (emp as any).photoUrl || (emp as any).photo_url } : null;
+  }, [filterEmployee, scopedAttendance, employees]);
+
+  const isDayoffFor = useCallback((empId: string, iso: string) => {
+    const override = dayoffOverrides[`${empId}|${iso}`];
+    if (override !== undefined) return override;
+    const dow = new Date(iso + "T00:00:00").getDay();
+    return dayoffPatterns.some((p: any) =>
+      p.employee_id === empId &&
+      (p.weekdays || []).includes(dow) &&
+      p.effective_from <= iso &&
+      (!p.effective_to || p.effective_to >= iso)
+    );
+  }, [dayoffOverrides, dayoffPatterns]);
+
+  // Full-period rows: real records + generated rows for days with no record.
+  const displayRows = useMemo(() => {
+    if (!selectedEmployee) return filtered;
+
+    const today = new Date().toISOString().slice(0, 10);
+    let start: string, end: string;
+    if (dateFrom || dateTo) {
+      start = dateFrom || dateTo;
+      end = dateTo || dateFrom;
+    } else if (filterMonth) {
+      const year = new Date().getFullYear();
+      const m = parseInt(filterMonth, 10);
+      start = `${year}-${filterMonth}-01`;
+      end = new Date(year, m, 0).toISOString().slice(0, 10);
+    } else {
+      return filtered;
+    }
+    if (end > today) end = today;
+    if (start > end) return filtered;
+
+    const byDate = new Map(filtered.map((r) => [r.date, r]));
+    const rows: AttendanceRecord[] = [];
+    const cur = new Date(start + "T00:00:00");
+    const stop = new Date(end + "T00:00:00");
+    while (cur <= stop) {
+      const iso = cur.toISOString().slice(0, 10);
+      const existing = byDate.get(iso);
+      if (existing) {
+        rows.push(existing);
+      } else {
+        const leaveName = leaveMap[`${selectedEmployee.id}|${iso}`];
+        const holidayName = holidayMap[iso];
+        const status = leaveName ? "leave" : holidayName ? "holiday" : isDayoffFor(selectedEmployee.id, iso) ? "dayoff" : "absent";
+        rows.push({
+          id: `virtual-${iso}`,
+          employeeId: selectedEmployee.id,
+          name: selectedEmployee.name,
+          photoUrl: selectedEmployee.photoUrl,
+          dept: selectedEmployee.dept,
+          date: iso,
+          checkIn: "-",
+          checkOut: "-",
+          status,
+          late: false,
+          ot: otMap[`${selectedEmployee.id}|${iso}`] || 0,
+          virtual: true,
+          note: leaveName || holidayName || undefined,
+        });
+      }
+      cur.setDate(cur.getDate() + 1);
+    }
+
+    // Respect the status filter on generated rows too.
+    const result = filterStatus === "all" ? rows : rows.filter((r) => r.status === filterStatus);
+    return result;
+  }, [selectedEmployee, filtered, dateFrom, dateTo, filterMonth, leaveMap, holidayMap, isDayoffFor, otMap, filterStatus]);
+
 
   // Time-edit requests use the exact same filter set for every role.
   const filteredRequests = useMemo(() => {
