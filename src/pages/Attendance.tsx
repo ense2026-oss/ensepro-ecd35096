@@ -28,6 +28,8 @@ interface AttendanceRecord {
   status: string;
   late: boolean;
   ot: number;
+  otIn?: string;
+  otOut?: string;
   virtual?: boolean;
   note?: string;
 }
@@ -106,6 +108,7 @@ const Attendance = () => {
   const { editRequests, addEditRequest, updateRequestStatus } = useTimeEditRequests();
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
   const [otMap, setOtMap] = useState<Record<string, number>>({});
+  const [otTimeMap, setOtTimeMap] = useState<Record<string, { start: string; end: string }>>({});
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
@@ -167,14 +170,21 @@ const Attendance = () => {
   const fetchOvertime = useCallback(async () => {
     const { data, error } = await supabase
       .from("overtime_requests")
-      .select("employee_id, date, hours, status");
+      .select("employee_id, date, hours, status, start_time, end_time");
     if (error) return;
     const map: Record<string, number> = {};
+    const timeMap: Record<string, { start: string; end: string }> = {};
     (data ?? []).forEach((r: any) => {
       const key = `${r.employee_id}|${r.date}`;
       map[key] = (map[key] || 0) + (Number(r.hours) || 0);
+      const prev = timeMap[key];
+      timeMap[key] = {
+        start: prev?.start || r.start_time || "",
+        end: r.end_time || prev?.end || "",
+      };
     });
     setOtMap(map);
+    setOtTimeMap(timeMap);
   }, []);
 
   // Leave days / company holidays / personal day-off patterns — used to label days with no record.
@@ -247,10 +257,12 @@ const Attendance = () => {
   const attendanceWithOt = useMemo(
     () =>
       attendance.map((a) => {
-        const otFromRequests = otMap[`${a.employeeId}|${a.date}`] || 0;
-        return { ...a, ot: otFromRequests || a.ot };
+        const key = `${a.employeeId}|${a.date}`;
+        const otFromRequests = otMap[key] || 0;
+        const t = otTimeMap[key];
+        return { ...a, ot: otFromRequests || a.ot, otIn: t?.start || "", otOut: t?.end || "" };
       }),
-    [attendance, otMap]
+    [attendance, otMap, otTimeMap]
   );
 
   // Enforce the configured permission scope on the client (defense-in-depth + correct counts).
@@ -378,6 +390,8 @@ const Attendance = () => {
           status,
           late: false,
           ot: otMap[`${selectedEmployee.id}|${iso}`] || 0,
+          otIn: otTimeMap[`${selectedEmployee.id}|${iso}`]?.start || "",
+          otOut: otTimeMap[`${selectedEmployee.id}|${iso}`]?.end || "",
           virtual: true,
           note: leaveName || holidayName || undefined,
         });
@@ -388,7 +402,7 @@ const Attendance = () => {
     // Respect the status filter on generated rows too.
     const result = filterStatus === "all" ? rows : rows.filter((r) => r.status === filterStatus);
     return result;
-  }, [selectedEmployee, filtered, dateFrom, dateTo, filterMonth, leaveMap, holidayMap, isDayoffFor, otMap, filterStatus]);
+  }, [selectedEmployee, filtered, dateFrom, dateTo, filterMonth, leaveMap, holidayMap, isDayoffFor, otMap, otTimeMap, filterStatus]);
 
 
   // Time-edit requests use the exact same filter set for every role.
@@ -837,16 +851,16 @@ const Attendance = () => {
               <table className="w-full">
                 <thead>
                   <tr className="border-b" style={{ borderColor: "hsl(var(--border))" }}>
-                    {["วันที่", "พนักงาน", "แผนก", "เวลาเข้า", "เวลาออก", "OT (ชม.)", "สถานะ", ""].map((h, i) => (
+                    {["วันที่", "พนักงาน", "แผนก", "เวลาเข้า", "เวลาออก", "เข้าโอที", "ออกโอที", "OT (ชม.)", "สถานะ", ""].map((h, i) => (
                       <th key={`${h}-${i}`} className="text-left px-3 py-2 text-[11px] font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {loading ? (
-                    <tr><td colSpan={8} className="text-center py-6 text-sm text-muted-foreground">กำลังโหลด...</td></tr>
+                    <tr><td colSpan={10} className="text-center py-6 text-sm text-muted-foreground">กำลังโหลด...</td></tr>
                   ) : displayRows.length === 0 ? (
-                    <tr><td colSpan={8} className="text-center py-6 text-sm text-muted-foreground">ไม่พบข้อมูล</td></tr>
+                    <tr><td colSpan={10} className="text-center py-6 text-sm text-muted-foreground">ไม่พบข้อมูล</td></tr>
                   ) : displayRows.map((row) => {
                     const conf = statusConf[row.status] || statusConf.present;
                     const Icon = conf.icon;
@@ -867,6 +881,8 @@ const Attendance = () => {
                           </span>
                         </td>
                         <td className="px-3 py-1.5 text-sm">{row.checkOut}</td>
+                        <td className="px-3 py-1.5 text-sm font-mono" style={{ color: row.otIn ? "hsl(270 70% 45%)" : undefined }}>{row.otIn || "-"}</td>
+                        <td className="px-3 py-1.5 text-sm font-mono" style={{ color: row.otOut ? "hsl(330 70% 45%)" : undefined }}>{row.otOut || "-"}</td>
                         <td className="px-3 py-1.5">
                           {row.ot > 0 ? (
                             <span className="text-sm font-semibold" style={{ color: "hsl(90 100% 30%)" }}>+{row.ot} ชม.</span>
