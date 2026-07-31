@@ -74,6 +74,24 @@ const formatThaiShort = (dateStr: string): string => {
   return `${parseInt(d, 10)} ${THAI_MONTHS_SHORT[parseInt(m, 10) - 1]} ${parseInt(y, 10) + 543}`;
 };
 
+const todayLocal = (): string => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+};
+
+const addDaysLocal = (dateStr: string, days: number): string => {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const date = new Date(y, m - 1, d + days);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+};
+
+const lastDayOfMonthLocal = (year: number, month: number): string => {
+  const lastDay = new Date(year, month, 0).getDate();
+  return `${year}-${String(month).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
+};
+
+const currentMonthLocal = (): string => String(new Date().getMonth() + 1).padStart(2, "0");
+
 const Attendance = () => {
   const { employees } = useEmployees();
   const { role, user, currentUser } = useAuth();
@@ -95,7 +113,7 @@ const Attendance = () => {
   const employeeDropdownRef = useRef<HTMLDivElement>(null);
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
-  const [filterMonth, setFilterMonth] = useState(() => new Date().toISOString().slice(5, 7));
+  const [filterMonth, setFilterMonth] = useState(currentMonthLocal);
   const [activeView, setActiveView] = useState<"attendance" | "requests">("attendance");
 
   // Edit dialog
@@ -176,11 +194,10 @@ const Attendance = () => {
       const from = toISODate(r.date_from);
       const to = toISODate(r.date_to) || from;
       if (!from || !to) return;
-      const cur = new Date(from + "T00:00:00");
-      const end = new Date(to + "T00:00:00");
-      while (cur <= end) {
-        lm[`${r.employee_id}|${cur.toISOString().slice(0, 10)}`] = r.leave_type_name || "ลางาน";
-        cur.setDate(cur.getDate() + 1);
+      let cur = from;
+      while (cur <= to) {
+        lm[`${r.employee_id}|${cur}`] = r.leave_type_name || "ลางาน";
+        cur = addDaysLocal(cur, 1);
       }
     });
     setLeaveMap(lm);
@@ -319,7 +336,7 @@ const Attendance = () => {
   const displayRows = useMemo(() => {
     if (!selectedEmployee) return filtered;
 
-    const today = new Date().toISOString().slice(0, 10);
+    const today = todayLocal();
     let start: string, end: string;
     if (dateFrom || dateTo) {
       start = dateFrom || dateTo;
@@ -328,7 +345,7 @@ const Attendance = () => {
       const year = new Date().getFullYear();
       const m = parseInt(filterMonth, 10);
       start = `${year}-${filterMonth}-01`;
-      end = new Date(year, m, 0).toISOString().slice(0, 10);
+      end = lastDayOfMonthLocal(year, m);
     } else {
       return filtered;
     }
@@ -337,10 +354,9 @@ const Attendance = () => {
 
     const byDate = new Map(filtered.map((r) => [r.date, r]));
     const rows: AttendanceRecord[] = [];
-    const cur = new Date(start + "T00:00:00");
-    const stop = new Date(end + "T00:00:00");
-    while (cur <= stop) {
-      const iso = cur.toISOString().slice(0, 10);
+    let cur = start;
+    while (cur <= end) {
+      const iso = cur;
       const existing = byDate.get(iso);
       if (existing) {
         rows.push(existing);
@@ -364,7 +380,7 @@ const Attendance = () => {
           note: leaveName || holidayName || undefined,
         });
       }
-      cur.setDate(cur.getDate() + 1);
+      cur = addDaysLocal(cur, 1);
     }
 
     // Respect the status filter on generated rows too.
@@ -799,7 +815,7 @@ const Attendance = () => {
                 />
                 {(dateFrom || dateTo) && (
                   <button
-                    onClick={() => { setDateFrom(""); setDateTo(""); setFilterMonth(new Date().toISOString().slice(5, 7)); }}
+                    onClick={() => { setDateFrom(""); setDateTo(""); setFilterMonth(currentMonthLocal()); }}
                     className="p-2 rounded-lg border hover:bg-muted transition-colors flex-shrink-0"
                     title="ล้างวันที่"
                   >
