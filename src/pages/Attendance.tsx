@@ -885,18 +885,18 @@ const Attendance = () => {
       ) : (
         /* ═══ Requests View ═══ */
         <div className="card-base overflow-hidden">
-          <div className="p-4 border-b" style={{ borderColor: "hsl(var(--border))" }}>
+          <div className="p-3 border-b" style={{ borderColor: "hsl(var(--border))" }}>
             <h3 className="text-sm font-bold">รายการคำขอแก้ไขเวลา ({filteredRequests.length})</h3>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead>
-                <tr className="border-b" style={{ borderColor: "hsl(var(--border))" }}>
-                  {["วันที่", "พนักงาน", "เวลาเดิม", "เวลาใหม่", "เหตุผล", "สถานะ", ""].map((h, i) => (
-                    <th key={`${h}-${i}`} className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
-                  ))}
-                </tr>
-              </thead>
+                <thead>
+                  <tr className="border-b" style={{ borderColor: "hsl(var(--border))" }}>
+                    {["วันที่", "พนักงาน", "เวลาเดิม", "เวลาใหม่", "เหตุผล", "สถานะ", ""].map((h, i) => (
+                      <th key={`${h}-${i}`} className="text-left px-3 py-2 text-[11px] font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
               <tbody>
                 {filteredRequests.map((req) => {
                   const rs = reqStatusConf[req.status];
