@@ -860,11 +860,11 @@ const Attendance = () => {
                         <td className="px-4 py-3.5">
                           <div className="flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full w-fit" style={{ background: conf.bg, color: conf.color }}>
                             <Icon className="w-3.5 h-3.5" style={{ color: conf.color }} />
-                            {conf.label}
+                            {row.note || conf.label}
                           </div>
                         </td>
                         <td className="px-4 py-3.5">
-                          {canEditTime ? (
+                          {canEditTime && row.status !== "holiday" && row.status !== "dayoff" ? (
                             <button onClick={() => openEdit(row)} className="text-xs font-medium px-2.5 py-1.5 rounded-lg border hover:bg-muted transition-colors flex items-center gap-1">
                               <RotateCcw className="w-3 h-3" />
                               แก้ไขเวลา
@@ -873,6 +873,7 @@ const Attendance = () => {
                             <span className="text-xs text-muted-foreground">-</span>
                           )}
                         </td>
+
                       </tr>
                     );
                   })}
