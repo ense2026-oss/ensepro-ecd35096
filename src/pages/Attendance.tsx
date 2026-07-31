@@ -62,6 +62,14 @@ const toISODate = (dateStr: string): string | null => {
   return null;
 };
 
+// "yyyy-MM-dd" (or Thai short) → "1 ก.ค. 2569"
+const formatThaiShort = (dateStr: string): string => {
+  const iso = toISODate(dateStr);
+  if (!iso) return dateStr || "-";
+  const [y, m, d] = iso.split("-");
+  return `${parseInt(d, 10)} ${THAI_MONTHS_SHORT[parseInt(m, 10) - 1]} ${parseInt(y, 10) + 543}`;
+};
+
 const Attendance = () => {
   const { employees } = useEmployees();
   const { role, user, currentUser } = useAuth();
@@ -225,7 +233,28 @@ const Attendance = () => {
     // date range takes precedence over month; only one is active at a time.
     if (dateFrom || dateTo) return matchSearch && matchStatus && matchEmployee && matchDate;
     return matchSearch && matchStatus && matchEmployee && matchMonth;
-  }), [scopedAttendance, search, filterStatus, filterEmployee, dateFrom, dateTo, filterMonth]);
+  }).sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : a.name.localeCompare(b.name))),
+  [scopedAttendance, search, filterStatus, filterEmployee, dateFrom, dateTo, filterMonth]);
+
+  // Time-edit requests use the exact same filter set for every role.
+  const filteredRequests = useMemo(() => {
+    return editRequests
+      .filter((r) => {
+        const iso = toISODate(r.date) || "";
+        const matchEmployee = filterEmployee === "all" || r.employeeName === filterEmployee;
+        const matchSearch = !search || r.employeeName.includes(search);
+        if (dateFrom || dateTo) {
+          return matchEmployee && matchSearch && (!dateFrom || iso >= dateFrom) && (!dateTo || iso <= dateTo);
+        }
+        return matchEmployee && matchSearch && (!filterMonth || iso.slice(5, 7) === filterMonth);
+      })
+      .sort((a, b) => {
+        const ai = toISODate(a.date) || "";
+        const bi = toISODate(b.date) || "";
+        return ai < bi ? -1 : ai > bi ? 1 : 0;
+      });
+  }, [editRequests, filterEmployee, search, dateFrom, dateTo, filterMonth]);
+
 
   const summary = useMemo(() => ({
     present: scopedAttendance.filter((a) => a.status === "present").length,
@@ -526,11 +555,10 @@ const Attendance = () => {
         </button>
       </div>
 
-      {activeView === "attendance" ? (
-        <>
-          {/* Filters */}
-          <div className="card-base p-4">
-            <div className="flex flex-wrap items-center gap-2.5">
+      {/* Filters — shared by both views, identical for every role */}
+      <div className="card-base p-4">
+        <div className="flex flex-wrap items-center gap-2.5">
+
               <div className="relative flex-1 min-w-[140px]" ref={employeeDropdownRef}>
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none z-10" />
                 <input
@@ -574,17 +602,19 @@ const Attendance = () => {
                 )}
               </div>
 
-              <select
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
-                className="w-fit min-w-fit flex-shrink-0 px-3 py-2 text-sm rounded-xl border bg-muted/30 outline-none cursor-pointer"
-              >
-                <option value="all">ทุกสถานะ</option>
-                <option value="present">มาทำงาน</option>
-                <option value="late">มาสาย</option>
-                <option value="absent">ขาดงาน</option>
-                <option value="leave">ลางาน</option>
-              </select>
+              {activeView === "attendance" && (
+                <select
+                  value={filterStatus}
+                  onChange={(e) => setFilterStatus(e.target.value)}
+                  className="w-fit min-w-fit flex-shrink-0 px-3 py-2 text-sm rounded-xl border bg-muted/30 outline-none cursor-pointer"
+                >
+                  <option value="all">ทุกสถานะ</option>
+                  <option value="present">มาทำงาน</option>
+                  <option value="late">มาสาย</option>
+                  <option value="absent">ขาดงาน</option>
+                  <option value="leave">ลางาน</option>
+                </select>
+              )}
 
               <select
                 value={filterMonth}
@@ -639,37 +669,42 @@ const Attendance = () => {
                     <X className="w-3.5 h-3.5 text-muted-foreground" />
                   </button>
                 )}
-              </div>
-            </div>
           </div>
+        </div>
+      </div>
 
+
+      {activeView === "attendance" ? (
+        <>
           {/* Table */}
           <div className="card-base overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
                   <tr className="border-b" style={{ borderColor: "hsl(var(--border))" }}>
-                    {["พนักงาน", "แผนก", "เวลาเข้า", "เวลาออก", "OT (ชม.)", "สถานะ", ""].map((h) => (
-                      <th key={h} className="text-left px-4 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
+                    {["วันที่", "พนักงาน", "แผนก", "เวลาเข้า", "เวลาออก", "OT (ชม.)", "สถานะ", ""].map((h, i) => (
+                      <th key={`${h}-${i}`} className="text-left px-4 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {loading ? (
-                    <tr><td colSpan={7} className="text-center py-10 text-sm text-muted-foreground">กำลังโหลด...</td></tr>
+                    <tr><td colSpan={8} className="text-center py-10 text-sm text-muted-foreground">กำลังโหลด...</td></tr>
                   ) : filtered.length === 0 ? (
-                    <tr><td colSpan={7} className="text-center py-10 text-sm text-muted-foreground">ไม่พบข้อมูล</td></tr>
+                    <tr><td colSpan={8} className="text-center py-10 text-sm text-muted-foreground">ไม่พบข้อมูล</td></tr>
                   ) : filtered.map((row) => {
                     const conf = statusConf[row.status] || statusConf.present;
                     const Icon = conf.icon;
                     return (
                       <tr key={row.id} className="border-b hover:bg-muted/30 transition-colors" style={{ borderColor: "hsl(var(--border))" }}>
+                        <td className="px-4 py-3.5 text-sm font-medium whitespace-nowrap">{formatThaiShort(row.date)}</td>
                         <td className="px-4 py-3.5">
                           <div className="flex items-center gap-3">
                             <EmployeeAvatar photoUrl={row.photoUrl} firstName={row.name} size="sm" rounded="lg" />
                             <p className="text-sm font-semibold">{row.name}</p>
                           </div>
                         </td>
+
                         <td className="px-4 py-3.5 text-sm text-muted-foreground">{row.dept}</td>
                         <td className="px-4 py-3.5">
                           <span className={`text-sm font-medium ${row.late ? "text-orange-500" : "text-foreground"}`}>
@@ -713,24 +748,24 @@ const Attendance = () => {
         /* ═══ Requests View ═══ */
         <div className="card-base overflow-hidden">
           <div className="p-4 border-b" style={{ borderColor: "hsl(var(--border))" }}>
-            <h3 className="text-sm font-bold">รายการคำขอแก้ไขเวลา ({editRequests.length})</h3>
+            <h3 className="text-sm font-bold">รายการคำขอแก้ไขเวลา ({filteredRequests.length})</h3>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b" style={{ borderColor: "hsl(var(--border))" }}>
-                  {["พนักงาน", "วันที่", "เวลาเดิม", "เวลาใหม่", "เหตุผล", "สถานะ", ""].map((h) => (
-                    <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
+                  {["วันที่", "พนักงาน", "เวลาเดิม", "เวลาใหม่", "เหตุผล", "สถานะ", ""].map((h, i) => (
+                    <th key={`${h}-${i}`} className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {editRequests.map((req) => {
+                {filteredRequests.map((req) => {
                   const rs = reqStatusConf[req.status];
                   return (
                     <tr key={req.id} className="border-b hover:bg-muted/30 transition-colors" style={{ borderColor: "hsl(var(--border))" }}>
+                      <td className="px-4 py-3 text-sm font-medium whitespace-nowrap">{formatThaiShort(req.date)}</td>
                       <td className="px-4 py-3 text-sm font-semibold">{req.employeeName}</td>
-                      <td className="px-4 py-3 text-sm text-muted-foreground">{req.date}</td>
                       <td className="px-4 py-3 text-sm text-muted-foreground">{req.originalCheckIn} - {req.originalCheckOut}</td>
                       <td className="px-4 py-3 text-sm font-medium" style={{ color: "#FF870F" }}>{req.newCheckIn} - {req.newCheckOut}</td>
                       <td className="px-4 py-3 text-sm text-muted-foreground max-w-[200px] truncate">{req.reason}</td>
@@ -745,7 +780,7 @@ const Attendance = () => {
                     </tr>
                   );
                 })}
-                {editRequests.length === 0 && (
+                {filteredRequests.length === 0 && (
                   <tr><td colSpan={7} className="text-center py-10 text-sm text-muted-foreground">ไม่มีคำขอแก้ไขเวลา</td></tr>
                 )}
               </tbody>
