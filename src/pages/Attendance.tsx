@@ -74,6 +74,24 @@ const formatThaiShort = (dateStr: string): string => {
   return `${parseInt(d, 10)} ${THAI_MONTHS_SHORT[parseInt(m, 10) - 1]} ${parseInt(y, 10) + 543}`;
 };
 
+const todayLocal = (): string => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+};
+
+const addDaysLocal = (dateStr: string, days: number): string => {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const date = new Date(y, m - 1, d + days);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+};
+
+const lastDayOfMonthLocal = (year: number, month: number): string => {
+  const lastDay = new Date(year, month, 0).getDate();
+  return `${year}-${String(month).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
+};
+
+const currentMonthLocal = (): string => String(new Date().getMonth() + 1).padStart(2, "0");
+
 const Attendance = () => {
   const { employees } = useEmployees();
   const { role, user, currentUser } = useAuth();
