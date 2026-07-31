@@ -827,9 +827,9 @@ const Attendance = () => {
                 <tbody>
                   {loading ? (
                     <tr><td colSpan={8} className="text-center py-10 text-sm text-muted-foreground">กำลังโหลด...</td></tr>
-                  ) : filtered.length === 0 ? (
+                  ) : displayRows.length === 0 ? (
                     <tr><td colSpan={8} className="text-center py-10 text-sm text-muted-foreground">ไม่พบข้อมูล</td></tr>
-                  ) : filtered.map((row) => {
+                  ) : displayRows.map((row) => {
                     const conf = statusConf[row.status] || statusConf.present;
                     const Icon = conf.icon;
                     return (
