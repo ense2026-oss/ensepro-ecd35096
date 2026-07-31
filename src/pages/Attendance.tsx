@@ -170,14 +170,21 @@ const Attendance = () => {
   const fetchOvertime = useCallback(async () => {
     const { data, error } = await supabase
       .from("overtime_requests")
-      .select("employee_id, date, hours, status");
+      .select("employee_id, date, hours, status, start_time, end_time");
     if (error) return;
     const map: Record<string, number> = {};
+    const timeMap: Record<string, { start: string; end: string }> = {};
     (data ?? []).forEach((r: any) => {
       const key = `${r.employee_id}|${r.date}`;
       map[key] = (map[key] || 0) + (Number(r.hours) || 0);
+      const prev = timeMap[key];
+      timeMap[key] = {
+        start: prev?.start || r.start_time || "",
+        end: r.end_time || prev?.end || "",
+      };
     });
     setOtMap(map);
+    setOtTimeMap(timeMap);
   }, []);
 
   // Leave days / company holidays / personal day-off patterns — used to label days with no record.
