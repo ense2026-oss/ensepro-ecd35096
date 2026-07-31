@@ -157,6 +157,47 @@ const Attendance = () => {
     setOtMap(map);
   }, []);
 
+  // Leave days / company holidays / personal day-off patterns — used to label days with no record.
+  const [leaveMap, setLeaveMap] = useState<Record<string, string>>({});
+  const [holidayMap, setHolidayMap] = useState<Record<string, string>>({});
+  const [dayoffPatterns, setDayoffPatterns] = useState<any[]>([]);
+  const [dayoffOverrides, setDayoffOverrides] = useState<Record<string, boolean>>({});
+
+  const fetchCalendarContext = useCallback(async () => {
+    const [leaveRes, holidayRes, patternRes, overrideRes] = await Promise.all([
+      supabase.from("leave_requests").select("employee_id, leave_type_name, date_from, date_to, status").neq("status", "rejected"),
+      supabase.from("company_holidays").select("date, name"),
+      supabase.from("employee_dayoff_patterns").select("employee_id, weekdays, effective_from, effective_to"),
+      supabase.from("employee_dayoff_overrides").select("employee_id, date, is_dayoff"),
+    ]);
+
+    const lm: Record<string, string> = {};
+    (leaveRes.data ?? []).forEach((r: any) => {
+      const from = toISODate(r.date_from);
+      const to = toISODate(r.date_to) || from;
+      if (!from || !to) return;
+      const cur = new Date(from + "T00:00:00");
+      const end = new Date(to + "T00:00:00");
+      while (cur <= end) {
+        lm[`${r.employee_id}|${cur.toISOString().slice(0, 10)}`] = r.leave_type_name || "ลางาน";
+        cur.setDate(cur.getDate() + 1);
+      }
+    });
+    setLeaveMap(lm);
+
+    const hm: Record<string, string> = {};
+    (holidayRes.data ?? []).forEach((h: any) => { hm[h.date] = h.name; });
+    setHolidayMap(hm);
+
+    setDayoffPatterns(patternRes.data ?? []);
+    const om: Record<string, boolean> = {};
+    (overrideRes.data ?? []).forEach((o: any) => { om[`${o.employee_id}|${o.date}`] = o.is_dayoff; });
+    setDayoffOverrides(om);
+  }, []);
+
+  useEffect(() => { fetchCalendarContext(); }, [fetchCalendarContext]);
+
+
   const debouncedFetchAttendance = useCallback(() => {
     if (attendanceRealtimeRef.current) clearTimeout(attendanceRealtimeRef.current);
     attendanceRealtimeRef.current = setTimeout(() => {
