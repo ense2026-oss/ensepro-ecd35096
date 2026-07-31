@@ -836,9 +836,8 @@ const Attendance = () => {
                       <tr key={row.id} className="border-b hover:bg-muted/30 transition-colors" style={{ borderColor: "hsl(var(--border))" }}>
                         <td className="px-3 py-1.5 text-sm font-medium whitespace-nowrap">{formatThaiShort(row.date)}</td>
                         <td className="px-3 py-1.5">
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center justify-center">
                             <EmployeeAvatar photoUrl={row.photoUrl} firstName={row.name} size="sm" rounded="lg" />
-                            <p className="text-sm font-semibold">{row.name}</p>
                           </div>
                         </td>
 
@@ -900,10 +899,15 @@ const Attendance = () => {
               <tbody>
                 {filteredRequests.map((req) => {
                   const rs = reqStatusConf[req.status];
+                  const reqEmployee = employees.find((e) => e.id === req.employeeId);
                   return (
                     <tr key={req.id} className="border-b hover:bg-muted/30 transition-colors" style={{ borderColor: "hsl(var(--border))" }}>
                       <td className="px-3 py-1.5 text-sm font-medium whitespace-nowrap">{formatThaiShort(req.date)}</td>
-                      <td className="px-3 py-1.5 text-sm font-semibold">{req.employeeName}</td>
+                      <td className="px-3 py-1.5">
+                        <div className="flex items-center justify-center">
+                          <EmployeeAvatar photoUrl={reqEmployee?.photoUrl} firstName={req.employeeName} size="sm" rounded="lg" />
+                        </div>
+                      </td>
                       <td className="px-3 py-1.5 text-sm text-muted-foreground">{req.originalCheckIn} - {req.originalCheckOut}</td>
                       <td className="px-3 py-1.5 text-sm font-medium" style={{ color: "#FF870F" }}>{req.newCheckIn} - {req.newCheckOut}</td>
                       <td className="px-3 py-1.5 text-sm text-muted-foreground max-w-[200px] truncate">{req.reason}</td>
