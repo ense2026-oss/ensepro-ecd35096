@@ -257,10 +257,12 @@ const Attendance = () => {
   const attendanceWithOt = useMemo(
     () =>
       attendance.map((a) => {
-        const otFromRequests = otMap[`${a.employeeId}|${a.date}`] || 0;
-        return { ...a, ot: otFromRequests || a.ot };
+        const key = `${a.employeeId}|${a.date}`;
+        const otFromRequests = otMap[key] || 0;
+        const t = otTimeMap[key];
+        return { ...a, ot: otFromRequests || a.ot, otIn: t?.start || "", otOut: t?.end || "" };
       }),
-    [attendance, otMap]
+    [attendance, otMap, otTimeMap]
   );
 
   // Enforce the configured permission scope on the client (defense-in-depth + correct counts).
