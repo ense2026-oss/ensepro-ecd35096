@@ -594,17 +594,19 @@ const Attendance = () => {
                 )}
               </div>
 
-              <select
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
-                className="w-fit min-w-fit flex-shrink-0 px-3 py-2 text-sm rounded-xl border bg-muted/30 outline-none cursor-pointer"
-              >
-                <option value="all">ทุกสถานะ</option>
-                <option value="present">มาทำงาน</option>
-                <option value="late">มาสาย</option>
-                <option value="absent">ขาดงาน</option>
-                <option value="leave">ลางาน</option>
-              </select>
+              {activeView === "attendance" && (
+                <select
+                  value={filterStatus}
+                  onChange={(e) => setFilterStatus(e.target.value)}
+                  className="w-fit min-w-fit flex-shrink-0 px-3 py-2 text-sm rounded-xl border bg-muted/30 outline-none cursor-pointer"
+                >
+                  <option value="all">ทุกสถานะ</option>
+                  <option value="present">มาทำงาน</option>
+                  <option value="late">มาสาย</option>
+                  <option value="absent">ขาดงาน</option>
+                  <option value="leave">ลางาน</option>
+                </select>
+              )}
 
               <select
                 value={filterMonth}
