@@ -815,7 +815,7 @@ const Attendance = () => {
                 />
                 {(dateFrom || dateTo) && (
                   <button
-                    onClick={() => { setDateFrom(""); setDateTo(""); setFilterMonth(new Date().toISOString().slice(5, 7)); }}
+                    onClick={() => { setDateFrom(""); setDateTo(""); setFilterMonth(currentMonthLocal()); }}
                     className="p-2 rounded-lg border hover:bg-muted transition-colors flex-shrink-0"
                     title="ล้างวันที่"
                   >
