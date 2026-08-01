@@ -834,6 +834,7 @@ const Attendance = () => {
           </div>
         </div>
       </div>
+      )}
 
 
       {activeView === "attendance" ? (
