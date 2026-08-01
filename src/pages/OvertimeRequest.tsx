@@ -609,7 +609,8 @@ const OvertimeRequest = () => {
                 <th className="text-left px-4 py-3 font-semibold text-muted-foreground">พนักงาน</th>
                 <th className="text-left px-4 py-3 font-semibold text-muted-foreground hidden md:table-cell">แผนก</th>
                 <th className="text-left px-4 py-3 font-semibold text-muted-foreground">วันที่</th>
-                <th className="text-left px-4 py-3 font-semibold text-muted-foreground hidden lg:table-cell">เวลา</th>
+                <th className="text-left px-4 py-3 font-semibold text-muted-foreground hidden lg:table-cell">เวลาที่ขอ</th>
+                <th className="text-left px-4 py-3 font-semibold text-muted-foreground hidden lg:table-cell">เวลาจริง</th>
                 <th className="text-center px-4 py-3 font-semibold text-muted-foreground">ชม.</th>
                 <th className="text-center px-4 py-3 font-semibold text-muted-foreground hidden sm:table-cell">ประเภท</th>
                 <th className="text-center px-4 py-3 font-semibold text-muted-foreground">สถานะ</th>
@@ -618,10 +619,10 @@ const OvertimeRequest = () => {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={8} className="text-center py-12 text-muted-foreground">กำลังโหลด...</td></tr>
+                <tr><td colSpan={9} className="text-center py-12 text-muted-foreground">กำลังโหลด...</td></tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="text-center py-12 text-muted-foreground">
+                  <td colSpan={9} className="text-center py-12 text-muted-foreground">
                     <AlertCircle className="w-8 h-8 mx-auto mb-2 opacity-40" />
                     <p>ไม่พบรายการคำขอ OT</p>
                   </td>
@@ -641,6 +642,13 @@ const OvertimeRequest = () => {
                     <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">{req.department}</td>
                     <td className="px-4 py-3">{req.date}</td>
                     <td className="px-4 py-3 hidden lg:table-cell font-mono text-xs">{req.startTime} - {req.endTime}</td>
+                    <td className="px-4 py-3 hidden lg:table-cell font-mono text-xs">
+                      {req.actualIn || req.actualOut ? (
+                        <span className="text-primary font-semibold">{req.actualIn || "-"} - {req.actualOut || "-"}</span>
+                      ) : (
+                        <span className="text-muted-foreground">ยังไม่บันทึก</span>
+                      )}
+                    </td>
                     <td className="px-4 py-3 text-center font-bold">{req.hours}</td>
                     <td className="px-4 py-3 text-center hidden sm:table-cell">
                       <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${typeCfg.className}`}>{typeCfg.label}</span>
@@ -701,7 +709,8 @@ const OvertimeRequest = () => {
                 </div>
                 <div className="grid grid-cols-2 gap-3 p-3 rounded-xl bg-muted/40">
                   <div><p className="text-xs text-muted-foreground mb-1">วันที่</p><p className="text-sm font-semibold">{detailReq.date}</p></div>
-                  <div><p className="text-xs text-muted-foreground mb-1">เวลา</p><p className="text-sm font-semibold font-mono">{detailReq.startTime} - {detailReq.endTime}</p></div>
+                  <div><p className="text-xs text-muted-foreground mb-1">เวลาที่ขอ</p><p className="text-sm font-semibold font-mono">{detailReq.startTime} - {detailReq.endTime}</p></div>
+                  <div className="col-span-2"><p className="text-xs text-muted-foreground mb-1">เวลาที่ทำจริง</p><p className="text-sm font-semibold font-mono">{detailReq.actualIn || detailReq.actualOut ? `${detailReq.actualIn || "-"} - ${detailReq.actualOut || "-"}` : "ยังไม่บันทึก"}</p></div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div><p className="text-xs text-muted-foreground mb-1">ชั่วโมง OT</p><p className="text-base font-bold text-primary">{detailReq.hours} ชม.</p></div>
