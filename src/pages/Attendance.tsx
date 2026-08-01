@@ -406,13 +406,15 @@ const Attendance = () => {
 
 
   // Time-edit requests: show every request (no employee/month/date filtering).
+  // Pending requests appear first, then sorted newest → oldest by createdAt.
   const filteredRequests = useMemo(() => {
     return editRequests
       .filter((r) => !search || r.employeeName.includes(search))
       .sort((a, b) => {
-        const ai = toISODate(a.date) || "";
-        const bi = toISODate(b.date) || "";
-        return ai < bi ? -1 : ai > bi ? 1 : 0;
+        const pendingA = a.status === "pending" ? 1 : 0;
+        const pendingB = b.status === "pending" ? 1 : 0;
+        if (pendingA !== pendingB) return pendingB - pendingA;
+        return (b.createdAt || "") > (a.createdAt || "") ? 1 : -1;
       });
   }, [editRequests, search]);
 
