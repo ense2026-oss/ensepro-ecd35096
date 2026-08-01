@@ -405,24 +405,16 @@ const Attendance = () => {
   }, [selectedEmployee, filtered, dateFrom, dateTo, filterMonth, leaveMap, holidayMap, isDayoffFor, otMap, otTimeMap, filterStatus]);
 
 
-  // Time-edit requests use the exact same filter set for every role.
+  // Time-edit requests: show every request (no employee/month/date filtering).
   const filteredRequests = useMemo(() => {
     return editRequests
-      .filter((r) => {
-        const iso = toISODate(r.date) || "";
-        const matchEmployee = filterEmployee === "all" || r.employeeName === filterEmployee;
-        const matchSearch = !search || r.employeeName.includes(search);
-        if (dateFrom || dateTo) {
-          return matchEmployee && matchSearch && (!dateFrom || iso >= dateFrom) && (!dateTo || iso <= dateTo);
-        }
-        return matchEmployee && matchSearch && (!filterMonth || iso.slice(5, 7) === filterMonth);
-      })
+      .filter((r) => !search || r.employeeName.includes(search))
       .sort((a, b) => {
         const ai = toISODate(a.date) || "";
         const bi = toISODate(b.date) || "";
         return ai < bi ? -1 : ai > bi ? 1 : 0;
       });
-  }, [editRequests, filterEmployee, search, dateFrom, dateTo, filterMonth]);
+  }, [editRequests, search]);
 
 
   const summary = useMemo(() => ({
@@ -724,7 +716,8 @@ const Attendance = () => {
         </button>
       </div>
 
-      {/* Filters — shared by both views, identical for every role */}
+      {/* Filters — attendance view only; the requests tab always shows every request */}
+      {activeView === "attendance" && (
       <div className="card-base p-3">
         <div className="flex flex-wrap items-center gap-2">
 
@@ -841,6 +834,7 @@ const Attendance = () => {
           </div>
         </div>
       </div>
+      )}
 
 
       {activeView === "attendance" ? (
