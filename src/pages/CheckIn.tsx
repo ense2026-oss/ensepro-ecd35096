@@ -760,8 +760,8 @@ const CheckIn = () => {
                     <td className="py-3 pl-2">{formatThaiDate(r.date)}</td>
                     <td className="py-3 font-mono">{r.checkIn}</td>
                     <td className="py-3 font-mono">{r.checkOut ?? "-"}</td>
-                    <td className="py-3 font-mono" style={{ color: ot?.startTime ? "hsl(270 70% 45%)" : undefined }}>{ot?.startTime || "-"}</td>
-                    <td className="py-3 font-mono" style={{ color: ot?.endTime ? "hsl(330 70% 45%)" : undefined }}>{ot?.endTime || "-"}</td>
+                    <td className="py-3 font-mono" style={{ color: (r.otActualIn || ot?.startTime) ? "hsl(270 70% 45%)" : undefined }}>{r.otActualIn || ot?.startTime || "-"}</td>
+                    <td className="py-3 font-mono" style={{ color: (r.otActualOut || ot?.endTime) ? "hsl(330 70% 45%)" : undefined }}>{r.otActualOut || ot?.endTime || "-"}</td>
                     <td className="py-3">
                       {r.location === "-" || !r.location ? (
                         <span className="text-muted-foreground">-</span>
