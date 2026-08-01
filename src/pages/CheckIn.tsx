@@ -399,18 +399,31 @@ const CheckIn = () => {
       navigate("/overtime");
       return;
     }
-    if (!todayRecord) {
-      toast({ title: "ยังไม่ได้ลงเวลาเข้างานวันนี้", description: "กรุณาลงเวลาเข้างานก่อนบันทึกเวลาโอที", variant: "destructive" });
-      return;
-    }
     const time = nowTime();
-    const { error } = await supabase
-      .from("check_in_records")
-      .update({ ot_actual_in: time })
-      .eq("id", todayRecord.id);
-    if (error) {
-      toast({ title: "เกิดข้อผิดพลาด", description: error.message, variant: "destructive" });
-      return;
+    // OT can happen before the regular work check-in — create the day's record if needed
+    if (!todayRecord) {
+      const { error: insertError } = await supabase.from("check_in_records").insert({
+        employee_id: employeeId,
+        date: todayStr,
+        check_in: "-",
+        location: nearest.location.name,
+        within_radius: true,
+        source: "gps",
+        ot_actual_in: time,
+      });
+      if (insertError) {
+        toast({ title: "เกิดข้อผิดพลาด", description: insertError.message, variant: "destructive" });
+        return;
+      }
+    } else {
+      const { error } = await supabase
+        .from("check_in_records")
+        .update({ ot_actual_in: time })
+        .eq("id", todayRecord.id);
+      if (error) {
+        toast({ title: "เกิดข้อผิดพลาด", description: error.message, variant: "destructive" });
+        return;
+      }
     }
     fetchHistory();
     toast({ title: "บันทึกเวลาเข้าโอทีจริงสำเร็จ", description: `เวลา ${time}` });
@@ -431,6 +444,7 @@ const CheckIn = () => {
     const hours = calcOtHours(todayOtIn, time);
     toast({ title: "บันทึกเวลาออกโอทีจริงสำเร็จ", description: `เวลา ${time} (${hours} ชม.)` });
   };
+
 
   const status = todayCheckOut ? "checked-out" : todayCheckIn ? "checked-in" : "not-checked";
 
