@@ -338,9 +338,36 @@ const OvertimeRequest = () => {
     setOvertimePending(pendingCount);
   }, [pendingCount, setOvertimePending]);
 
+  const allNames = useMemo(
+    () => Array.from(new Set(userRequests.map((r) => r.employeeName).filter(Boolean))).sort(),
+    [userRequests]
+  );
+  const filteredEmployeeOptions = useMemo(
+    () => (employeeSearch ? allNames.filter((n) => n.includes(employeeSearch)) : allNames),
+    [allNames, employeeSearch]
+  );
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (employeeDropdownRef.current && !employeeDropdownRef.current.contains(e.target as Node)) {
+        setShowEmployeeDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
   const filtered = userRequests.filter((r) => {
     if (statusFilter !== "all" && r.status !== statusFilter) return false;
     if (typeFilter !== "all" && r.type !== typeFilter) return false;
+    if (filterEmployee !== "all" && r.employeeName !== filterEmployee) return false;
+    const baseDate = String(r.date || "").split("~")[0].trim();
+    if (dateFrom || dateTo) {
+      if (dateFrom && baseDate < dateFrom) return false;
+      if (dateTo && baseDate > dateTo) return false;
+    } else if (filterMonth && baseDate.slice(5, 7) !== filterMonth) {
+      return false;
+    }
     if (search) {
       const q = search.toLowerCase();
       return r.employeeName.toLowerCase().includes(q) || r.department.toLowerCase().includes(q);
