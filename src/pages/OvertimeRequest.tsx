@@ -622,7 +622,7 @@ const OvertimeRequest = () => {
                 <th className="text-left px-4 py-3 font-semibold text-muted-foreground">วันที่</th>
                 <th className="text-left px-4 py-3 font-semibold text-muted-foreground hidden lg:table-cell">เวลาที่ขอ</th>
                 <th className="text-left px-4 py-3 font-semibold text-muted-foreground hidden lg:table-cell">เวลาจริง</th>
-                <th className="text-center px-4 py-3 font-semibold text-muted-foreground">ชม.</th>
+                <th className="text-center px-4 py-3 font-semibold text-muted-foreground">ชม. (ที่ขอ)</th>
                 <th className="text-center px-4 py-3 font-semibold text-muted-foreground hidden sm:table-cell">ประเภท</th>
                 <th className="text-center px-4 py-3 font-semibold text-muted-foreground">สถานะ</th>
                 <th className="text-center px-4 py-3 font-semibold text-muted-foreground">จัดการ</th>
