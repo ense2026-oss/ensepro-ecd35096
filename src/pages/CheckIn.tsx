@@ -174,6 +174,8 @@ const CheckIn = () => {
         withinRadius: r.within_radius,
         source: r.source as "gps" | "face_scan",
         remark: r.remark,
+        otActualIn: r.ot_actual_in,
+        otActualOut: r.ot_actual_out,
       })));
     }
   }, [employeeId]);
