@@ -98,6 +98,7 @@ const DigitalClock = () => {
 };
 
 const CheckIn = () => {
+  const navigate = useNavigate();
   const geo = useGeolocation();
   const { addEditRequest } = useTimeEditRequests();
   const { currentUser } = useAuth();
