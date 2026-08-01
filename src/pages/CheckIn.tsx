@@ -12,7 +12,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogBody, DialogFooter } from "@/components/ui/dialog";
 import { useGeolocation, findNearestLocation, type OfficeLocation, type NearestResult } from "@/utils/geo";
 import { supabase } from "@/integrations/supabase/client";
-import { notifyApprovers, getApprovalTiers } from "@/utils/notifications";
+
 
 // Shared config key — MUST match LocationsSettings.tsx
 const LOCATIONS_SETTINGS_KEY = "office_locations";
