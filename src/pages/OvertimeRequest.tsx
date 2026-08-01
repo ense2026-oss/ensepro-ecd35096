@@ -28,6 +28,9 @@ interface OTRequest {
   date: string;
   startTime: string;
   endTime: string;
+  actualIn?: string | null;
+  actualOut?: string | null;
+
   hours: number;
   type: OTType;
   reason: string;
@@ -239,31 +242,48 @@ const OvertimeRequest = () => {
   const [loading, setLoading] = useState(true);
 
   const fetchRequests = useCallback(async () => {
-    const { data } = await supabase
-      .from("overtime_requests")
-      .select("*, employees(first_name, last_name, dept, photo_url)")
-      .order("created_at", { ascending: false });
+    const [{ data }, { data: actuals }] = await Promise.all([
+      supabase
+        .from("overtime_requests")
+        .select("*, employees(first_name, last_name, dept, photo_url)")
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("check_in_records")
+        .select("employee_id, date, ot_actual_in, ot_actual_out"),
+    ]);
+    const actualMap = new Map<string, { in: string | null; out: string | null }>();
+    (actuals || []).forEach((a: any) => {
+      if (!a.ot_actual_in && !a.ot_actual_out) return;
+      actualMap.set(`${a.employee_id}|${a.date}`, { in: a.ot_actual_in, out: a.ot_actual_out });
+    });
     if (data) {
-      setRequests(data.map((r: any) => ({
-        id: r.id,
-        employeeId: r.employee_id,
-        employeeName: r.employees ? `${r.employees.first_name} ${r.employees.last_name}` : "",
-        photoUrl: r.employees?.photo_url || undefined,
-        department: r.employees?.dept || "",
-        date: r.date,
-        startTime: r.start_time,
-        endTime: r.end_time,
-        hours: Number(r.hours) || 0,
-        type: r.ot_type as OTType,
-        reason: r.reason,
-        status: r.status as OTStatus,
-        createdAt: r.created_at,
-        approvedBy: r.approved_by,
-        currentTier: r.current_tier || 1,
-        approvedTiers: r.approved_tiers || 0,
-        totalTiers: r.total_tiers || 1,
-      })));
+      setRequests(data.map((r: any) => {
+        const baseDate = String(r.date || "").split("~")[0].trim();
+        const actual = actualMap.get(`${r.employee_id}|${baseDate}`);
+        return {
+          id: r.id,
+          employeeId: r.employee_id,
+          employeeName: r.employees ? `${r.employees.first_name} ${r.employees.last_name}` : "",
+          photoUrl: r.employees?.photo_url || undefined,
+          department: r.employees?.dept || "",
+          date: r.date,
+          startTime: r.start_time,
+          endTime: r.end_time,
+          actualIn: actual?.in || null,
+          actualOut: actual?.out || null,
+          hours: Number(r.hours) || 0,
+          type: r.ot_type as OTType,
+          reason: r.reason,
+          status: r.status as OTStatus,
+          createdAt: r.created_at,
+          approvedBy: r.approved_by,
+          currentTier: r.current_tier || 1,
+          approvedTiers: r.approved_tiers || 0,
+          totalTiers: r.total_tiers || 1,
+        };
+      }));
     }
+
     setLoading(false);
   }, []);
 
@@ -589,7 +609,8 @@ const OvertimeRequest = () => {
                 <th className="text-left px-4 py-3 font-semibold text-muted-foreground">พนักงาน</th>
                 <th className="text-left px-4 py-3 font-semibold text-muted-foreground hidden md:table-cell">แผนก</th>
                 <th className="text-left px-4 py-3 font-semibold text-muted-foreground">วันที่</th>
-                <th className="text-left px-4 py-3 font-semibold text-muted-foreground hidden lg:table-cell">เวลา</th>
+                <th className="text-left px-4 py-3 font-semibold text-muted-foreground hidden lg:table-cell">เวลาที่ขอ</th>
+                <th className="text-left px-4 py-3 font-semibold text-muted-foreground hidden lg:table-cell">เวลาจริง</th>
                 <th className="text-center px-4 py-3 font-semibold text-muted-foreground">ชม.</th>
                 <th className="text-center px-4 py-3 font-semibold text-muted-foreground hidden sm:table-cell">ประเภท</th>
                 <th className="text-center px-4 py-3 font-semibold text-muted-foreground">สถานะ</th>
@@ -598,10 +619,10 @@ const OvertimeRequest = () => {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={8} className="text-center py-12 text-muted-foreground">กำลังโหลด...</td></tr>
+                <tr><td colSpan={9} className="text-center py-12 text-muted-foreground">กำลังโหลด...</td></tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="text-center py-12 text-muted-foreground">
+                  <td colSpan={9} className="text-center py-12 text-muted-foreground">
                     <AlertCircle className="w-8 h-8 mx-auto mb-2 opacity-40" />
                     <p>ไม่พบรายการคำขอ OT</p>
                   </td>
@@ -621,6 +642,13 @@ const OvertimeRequest = () => {
                     <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">{req.department}</td>
                     <td className="px-4 py-3">{req.date}</td>
                     <td className="px-4 py-3 hidden lg:table-cell font-mono text-xs">{req.startTime} - {req.endTime}</td>
+                    <td className="px-4 py-3 hidden lg:table-cell font-mono text-xs">
+                      {req.actualIn || req.actualOut ? (
+                        <span className="text-primary font-semibold">{req.actualIn || "-"} - {req.actualOut || "-"}</span>
+                      ) : (
+                        <span className="text-muted-foreground">ยังไม่บันทึก</span>
+                      )}
+                    </td>
                     <td className="px-4 py-3 text-center font-bold">{req.hours}</td>
                     <td className="px-4 py-3 text-center hidden sm:table-cell">
                       <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${typeCfg.className}`}>{typeCfg.label}</span>
@@ -681,7 +709,8 @@ const OvertimeRequest = () => {
                 </div>
                 <div className="grid grid-cols-2 gap-3 p-3 rounded-xl bg-muted/40">
                   <div><p className="text-xs text-muted-foreground mb-1">วันที่</p><p className="text-sm font-semibold">{detailReq.date}</p></div>
-                  <div><p className="text-xs text-muted-foreground mb-1">เวลา</p><p className="text-sm font-semibold font-mono">{detailReq.startTime} - {detailReq.endTime}</p></div>
+                  <div><p className="text-xs text-muted-foreground mb-1">เวลาที่ขอ</p><p className="text-sm font-semibold font-mono">{detailReq.startTime} - {detailReq.endTime}</p></div>
+                  <div className="col-span-2"><p className="text-xs text-muted-foreground mb-1">เวลาที่ทำจริง</p><p className="text-sm font-semibold font-mono">{detailReq.actualIn || detailReq.actualOut ? `${detailReq.actualIn || "-"} - ${detailReq.actualOut || "-"}` : "ยังไม่บันทึก"}</p></div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div><p className="text-xs text-muted-foreground mb-1">ชั่วโมง OT</p><p className="text-base font-bold text-primary">{detailReq.hours} ชม.</p></div>
