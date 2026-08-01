@@ -242,31 +242,48 @@ const OvertimeRequest = () => {
   const [loading, setLoading] = useState(true);
 
   const fetchRequests = useCallback(async () => {
-    const { data } = await supabase
-      .from("overtime_requests")
-      .select("*, employees(first_name, last_name, dept, photo_url)")
-      .order("created_at", { ascending: false });
+    const [{ data }, { data: actuals }] = await Promise.all([
+      supabase
+        .from("overtime_requests")
+        .select("*, employees(first_name, last_name, dept, photo_url)")
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("check_in_records")
+        .select("employee_id, date, ot_actual_in, ot_actual_out"),
+    ]);
+    const actualMap = new Map<string, { in: string | null; out: string | null }>();
+    (actuals || []).forEach((a: any) => {
+      if (!a.ot_actual_in && !a.ot_actual_out) return;
+      actualMap.set(`${a.employee_id}|${a.date}`, { in: a.ot_actual_in, out: a.ot_actual_out });
+    });
     if (data) {
-      setRequests(data.map((r: any) => ({
-        id: r.id,
-        employeeId: r.employee_id,
-        employeeName: r.employees ? `${r.employees.first_name} ${r.employees.last_name}` : "",
-        photoUrl: r.employees?.photo_url || undefined,
-        department: r.employees?.dept || "",
-        date: r.date,
-        startTime: r.start_time,
-        endTime: r.end_time,
-        hours: Number(r.hours) || 0,
-        type: r.ot_type as OTType,
-        reason: r.reason,
-        status: r.status as OTStatus,
-        createdAt: r.created_at,
-        approvedBy: r.approved_by,
-        currentTier: r.current_tier || 1,
-        approvedTiers: r.approved_tiers || 0,
-        totalTiers: r.total_tiers || 1,
-      })));
+      setRequests(data.map((r: any) => {
+        const baseDate = String(r.date || "").split("~")[0].trim();
+        const actual = actualMap.get(`${r.employee_id}|${baseDate}`);
+        return {
+          id: r.id,
+          employeeId: r.employee_id,
+          employeeName: r.employees ? `${r.employees.first_name} ${r.employees.last_name}` : "",
+          photoUrl: r.employees?.photo_url || undefined,
+          department: r.employees?.dept || "",
+          date: r.date,
+          startTime: r.start_time,
+          endTime: r.end_time,
+          actualIn: actual?.in || null,
+          actualOut: actual?.out || null,
+          hours: Number(r.hours) || 0,
+          type: r.ot_type as OTType,
+          reason: r.reason,
+          status: r.status as OTStatus,
+          createdAt: r.created_at,
+          approvedBy: r.approved_by,
+          currentTier: r.current_tier || 1,
+          approvedTiers: r.approved_tiers || 0,
+          totalTiers: r.total_tiers || 1,
+        };
+      }));
     }
+
     setLoading(false);
   }, []);
 
