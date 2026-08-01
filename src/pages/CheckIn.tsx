@@ -389,51 +389,45 @@ const CheckIn = () => {
     return Math.max(0, Math.round(diff * 10) / 10);
   };
 
+  // OT clock-in/out ONLY records the ACTUAL time on the check-in record.
+  // Creating an OT request is done exclusively through the overtime request page.
   const handleOtCheckIn = async () => {
     if (!canCheckIn || !nearest || !employeeId) return;
+    if (!approvedOtToday) {
+      navigate("/overtime");
+      return;
+    }
+    if (!todayRecord) {
+      toast({ title: "ยังไม่ได้ลงเวลาเข้างานวันนี้", description: "กรุณาลงเวลาเข้างานก่อนบันทึกเวลาโอที", variant: "destructive" });
+      return;
+    }
     const time = nowTime();
-    const totalTiers = await getApprovalTiers("ot");
-    const { error } = await supabase.from("overtime_requests").insert({
-      employee_id: employeeId,
-      date: todayStr,
-      start_time: time,
-      end_time: "",
-      hours: 0,
-      ot_type: "workday",
-      reason: "บันทึก OT จากหน้าเช็คอิน",
-      status: "pending",
-      current_tier: 1,
-      approved_tiers: 0,
-      total_tiers: totalTiers,
-    });
+    const { error } = await supabase
+      .from("check_in_records")
+      .update({ ot_actual_in: time })
+      .eq("id", todayRecord.id);
     if (error) {
       toast({ title: "เกิดข้อผิดพลาด", description: error.message, variant: "destructive" });
       return;
     }
-    fetchOtRecords();
-    toast({ title: "บันทึกเวลาเข้า OT สำเร็จ", description: `เวลา ${time}` });
+    fetchHistory();
+    toast({ title: "บันทึกเวลาเข้าโอทีจริงสำเร็จ", description: `เวลา ${time}` });
   };
 
   const handleOtCheckOut = async () => {
-    if (!canCheckIn || !nearest || !employeeId || !todayOt) return;
+    if (!canCheckIn || !nearest || !employeeId || !todayRecord || !todayOtIn) return;
     const time = nowTime();
-    const hours = calcOtHours(todayOt.startTime, time);
     const { error } = await supabase
-      .from("overtime_requests")
-      .update({ end_time: time, hours })
-      .eq("id", todayOt.id);
+      .from("check_in_records")
+      .update({ ot_actual_out: time })
+      .eq("id", todayRecord.id);
     if (error) {
       toast({ title: "เกิดข้อผิดพลาด", description: error.message, variant: "destructive" });
       return;
     }
-    fetchOtRecords();
-    toast({ title: "บันทึกเวลาออก OT สำเร็จ", description: `เวลา ${time} (${hours} ชม.) — ส่งคำขอรออนุมัติ` });
-    notifyApprovers({
-      type: "ot",
-      title: "คำขอ OT ใหม่",
-      description: `${currentEmployee.name} บันทึก OT ${todayOt.startTime}-${time} (${hours} ชม.) จากหน้าเช็คอิน`,
-      targetEmployee: currentEmployee.name,
-    });
+    fetchHistory();
+    const hours = calcOtHours(todayOtIn, time);
+    toast({ title: "บันทึกเวลาออกโอทีจริงสำเร็จ", description: `เวลา ${time} (${hours} ชม.)` });
   };
 
   const status = todayCheckOut ? "checked-out" : todayCheckIn ? "checked-in" : "not-checked";
