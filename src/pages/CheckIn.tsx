@@ -110,7 +110,6 @@ const CheckIn = () => {
     department: currentUser?.dept || "",
     phone: "",
     email: currentUser?.email || "",
-    initials: currentUser?.firstName?.charAt(0) || "",
     photoUrl: currentUser?.photoUrl || "",
     firstName: currentUser?.firstName || "",
   };
