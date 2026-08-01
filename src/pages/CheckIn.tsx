@@ -274,15 +274,24 @@ const CheckIn = () => {
   const todayCheckIn = todayRecord?.checkIn && todayRecord.checkIn !== "-" ? todayRecord.checkIn : null;
   const todayCheckOut = todayRecord?.checkOut && todayRecord.checkOut !== "-" ? todayRecord.checkOut : null;
 
-  // OT map by date + today's OT record (latest open / latest of the day)
+  // OT map by date (prefer approved request of that date)
   const otByDate = otRecords.reduce<Record<string, OTRecord>>((acc, r) => {
-    if (!acc[r.date]) acc[r.date] = r;
+    const cur = acc[r.date];
+    if (!cur || (cur.status !== "approved" && r.status === "approved")) acc[r.date] = r;
     return acc;
   }, {});
   const todayOt = otByDate[todayStr] || null;
-  const todayOtIn = todayOt?.startTime && todayOt.startTime !== "" ? todayOt.startTime : null;
-  const todayOtOut = todayOt?.endTime && todayOt.endTime !== "" ? todayOt.endTime : null;
-  const otStatus = todayOtOut ? "ot-out" : todayOtIn ? "ot-in" : "ot-none";
+  const approvedOtToday = todayOt && todayOt.status === "approved" ? todayOt : null;
+  const pendingOtToday = todayOt && todayOt.status === "pending" ? todayOt : null;
+  // Actual OT clock times are stored on the check-in record (never on the request)
+  const todayOtIn = todayRecord?.otActualIn || null;
+  const todayOtOut = todayRecord?.otActualOut || null;
+  const otStatus: "ot-no-request" | "ot-pending" | "ot-none" | "ot-in" | "ot-out" =
+    todayOtOut ? "ot-out"
+    : todayOtIn ? "ot-in"
+    : approvedOtToday ? "ot-none"
+    : pendingOtToday ? "ot-pending"
+    : "ot-no-request";
 
   // Time edit request
   const [editOpen, setEditOpen] = useState(false);
