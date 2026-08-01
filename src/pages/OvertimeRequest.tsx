@@ -54,6 +54,8 @@ const statusConfig: Record<OTStatus, { label: string; icon: typeof CheckCircle2;
   rejected: { label: "ไม่อนุมัติ", icon: XCircle, className: "badge-absent" },
 };
 
+const currentMonthLocal = (): string => String(new Date().getMonth() + 1).padStart(2, "0");
+
 // คำนวณชั่วโมง OT ที่ทำจริงจากเวลาเข้า-ออกจริง
 const calcActualHours = (inTime?: string | null, outTime?: string | null): number | null => {
   if (!inTime || !outTime || inTime === "-" || outTime === "-") return null;
