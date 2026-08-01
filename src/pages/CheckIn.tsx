@@ -550,6 +550,38 @@ const CheckIn = () => {
 
           {mode === "ot" && (
             <>
+          {otStatus === "ot-no-request" && (
+            <div className="flex flex-col items-center gap-3 relative z-10">
+              <button
+                onClick={() => navigate("/overtime")}
+                className="w-28 h-28 sm:w-32 sm:h-32 rounded-full flex flex-col items-center justify-center gap-1.5 font-bold text-sm sm:text-base transition-all duration-300 hover:scale-105"
+                style={{
+                  background: "linear-gradient(135deg, hsl(270 70% 60%), hsl(270 70% 45%))",
+                  boxShadow: "0 8px 32px hsl(270 70% 45% / 0.35), 0 0 0 6px hsl(270 70% 50% / 0.15)",
+                  color: "#fff",
+                }}
+              >
+                <Timer className="w-6 h-6" />
+                ยื่นคำขอโอที
+              </button>
+              <p className="text-xs text-muted-foreground text-center max-w-[240px]">
+                ต้องยื่นคำขอโอทีผ่านระบบและได้รับอนุมัติก่อน จึงจะบันทึกเวลาเข้า–ออกโอทีได้
+              </p>
+            </div>
+          )}
+
+          {otStatus === "ot-pending" && (
+            <div className="flex flex-col items-center gap-3 relative z-10">
+              <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full flex flex-col items-center justify-center gap-1.5" style={{ background: "linear-gradient(135deg, hsl(270 70% 92%), hsl(330 70% 90%))", color: "hsl(270 70% 45%)", boxShadow: "0 0 0 6px hsl(270 70% 50% / 0.1)" }}>
+                <Hourglass className="w-6 h-6" />
+                <span className="font-bold text-sm">รออนุมัติ</span>
+              </div>
+              <p className="text-xs text-muted-foreground text-center max-w-[240px]">
+                คำขอโอทีวันนี้รออนุมัติ — เมื่ออนุมัติแล้วจึงบันทึกเวลาโอทีได้
+              </p>
+            </div>
+          )}
+
           {otStatus === "ot-none" && (
             <div className="relative flex items-center justify-center">
               {canCheckIn && <div className="checkin-wave-ring" style={{ "--wave-color": "hsl(270 70% 50%)" } as React.CSSProperties} />}
@@ -590,8 +622,8 @@ const CheckIn = () => {
 
           {otStatus === "ot-out" && (
             <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full flex flex-col items-center justify-center gap-1.5 relative z-10" style={{ background: "linear-gradient(135deg, hsl(270 70% 92%), hsl(330 70% 90%))", color: "hsl(270 70% 45%)", boxShadow: "0 0 0 6px hsl(270 70% 50% / 0.1)" }}>
-              <Hourglass className="w-6 h-6" />
-              <span className="font-bold text-sm">รออนุมัติ</span>
+              <CheckCircle className="w-6 h-6" />
+              <span className="font-bold text-sm text-center leading-tight">บันทึกโอที<br />เรียบร้อย</span>
             </div>
           )}
 
