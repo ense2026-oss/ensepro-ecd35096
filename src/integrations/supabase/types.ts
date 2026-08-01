@@ -165,6 +165,8 @@ export type Database = {
           employee_id: string
           id: string
           location: string
+          ot_actual_in: string | null
+          ot_actual_out: string | null
           remark: string | null
           source: string
           within_radius: boolean
@@ -177,6 +179,8 @@ export type Database = {
           employee_id: string
           id?: string
           location?: string
+          ot_actual_in?: string | null
+          ot_actual_out?: string | null
           remark?: string | null
           source?: string
           within_radius?: boolean
@@ -189,6 +193,8 @@ export type Database = {
           employee_id?: string
           id?: string
           location?: string
+          ot_actual_in?: string | null
+          ot_actual_out?: string | null
           remark?: string | null
           source?: string
           within_radius?: boolean
