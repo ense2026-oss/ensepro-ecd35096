@@ -716,7 +716,8 @@ const Attendance = () => {
         </button>
       </div>
 
-      {/* Filters — shared by both views, identical for every role */}
+      {/* Filters — attendance view only; the requests tab always shows every request */}
+      {activeView === "attendance" && (
       <div className="card-base p-3">
         <div className="flex flex-wrap items-center gap-2">
 
