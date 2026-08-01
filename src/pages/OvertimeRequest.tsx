@@ -649,7 +649,14 @@ const OvertimeRequest = () => {
                         <span className="text-muted-foreground">ยังไม่บันทึก</span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-center font-bold">{req.hours}</td>
+                    <td className="px-4 py-3 text-center font-bold">
+                      {calcActualHours(req.actualIn, req.actualOut) !== null ? (
+                        <span className="text-primary">{calcActualHours(req.actualIn, req.actualOut)}</span>
+                      ) : (
+                        <span className="text-muted-foreground">-</span>
+                      )}
+                      <span className="text-muted-foreground font-normal"> ({req.hours})</span>
+                    </td>
                     <td className="px-4 py-3 text-center hidden sm:table-cell">
                       <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${typeCfg.className}`}>{typeCfg.label}</span>
                     </td>
