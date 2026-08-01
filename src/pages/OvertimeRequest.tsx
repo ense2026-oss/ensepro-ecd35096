@@ -54,6 +54,17 @@ const statusConfig: Record<OTStatus, { label: string; icon: typeof CheckCircle2;
   rejected: { label: "ไม่อนุมัติ", icon: XCircle, className: "badge-absent" },
 };
 
+// คำนวณชั่วโมง OT ที่ทำจริงจากเวลาเข้า-ออกจริง
+const calcActualHours = (inTime?: string | null, outTime?: string | null): number | null => {
+  if (!inTime || !outTime || inTime === "-" || outTime === "-") return null;
+  const [ih, im] = inTime.split(":").map(Number);
+  const [oh, om] = outTime.split(":").map(Number);
+  if ([ih, im, oh, om].some((n) => Number.isNaN(n))) return null;
+  let mins = oh * 60 + om - (ih * 60 + im);
+  if (mins < 0) mins += 24 * 60;
+  return Math.round((mins / 60) * 100) / 100;
+};
+
 // --- OT Request Form Dialog ---
 const OTRequestDialog = ({ open, onClose, onSubmit }: {
   open: boolean;
