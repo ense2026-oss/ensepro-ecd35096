@@ -665,9 +665,13 @@ const CheckIn = () => {
           <div className="absolute top-0 right-0 w-32 h-32 rounded-bl-[100%] opacity-10" style={{ background: "linear-gradient(135deg, #FF870F, #FFFF0F)" }} />
 
           <div className="flex items-start gap-3 relative z-10">
-            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center text-2xl font-bold flex-shrink-0" style={{ background: "linear-gradient(135deg, hsl(31 100% 90%), hsl(31 100% 80%))", color: "#FF870F" }}>
-              {currentEmployee.initials}
-            </div>
+            <EmployeeAvatar
+              photoUrl={currentEmployee.photoUrl}
+              firstName={currentEmployee.firstName}
+              size="xl"
+              rounded="2xl"
+              className="border-2 border-white/50 shadow-sm"
+            />
             <div className="flex-1 min-w-0">
               <h2 className="text-sm sm:text-base font-bold font-display">{currentEmployee.name}</h2>
               <p className="text-xs font-semibold" style={{ color: "#FF870F" }}>{currentEmployee.position}</p>
