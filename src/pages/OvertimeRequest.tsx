@@ -28,6 +28,9 @@ interface OTRequest {
   date: string;
   startTime: string;
   endTime: string;
+  actualIn?: string | null;
+  actualOut?: string | null;
+
   hours: number;
   type: OTType;
   reason: string;
