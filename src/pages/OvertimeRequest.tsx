@@ -54,6 +54,17 @@ const statusConfig: Record<OTStatus, { label: string; icon: typeof CheckCircle2;
   rejected: { label: "ไม่อนุมัติ", icon: XCircle, className: "badge-absent" },
 };
 
+// คำนวณชั่วโมง OT ที่ทำจริงจากเวลาเข้า-ออกจริง
+const calcActualHours = (inTime?: string | null, outTime?: string | null): number | null => {
+  if (!inTime || !outTime || inTime === "-" || outTime === "-") return null;
+  const [ih, im] = inTime.split(":").map(Number);
+  const [oh, om] = outTime.split(":").map(Number);
+  if ([ih, im, oh, om].some((n) => Number.isNaN(n))) return null;
+  let mins = oh * 60 + om - (ih * 60 + im);
+  if (mins < 0) mins += 24 * 60;
+  return Math.round((mins / 60) * 100) / 100;
+};
+
 // --- OT Request Form Dialog ---
 const OTRequestDialog = ({ open, onClose, onSubmit }: {
   open: boolean;
@@ -611,7 +622,7 @@ const OvertimeRequest = () => {
                 <th className="text-left px-4 py-3 font-semibold text-muted-foreground">วันที่</th>
                 <th className="text-left px-4 py-3 font-semibold text-muted-foreground hidden lg:table-cell">เวลาที่ขอ</th>
                 <th className="text-left px-4 py-3 font-semibold text-muted-foreground hidden lg:table-cell">เวลาจริง</th>
-                <th className="text-center px-4 py-3 font-semibold text-muted-foreground">ชม.</th>
+                <th className="text-center px-4 py-3 font-semibold text-muted-foreground">ชม. (ที่ขอ)</th>
                 <th className="text-center px-4 py-3 font-semibold text-muted-foreground hidden sm:table-cell">ประเภท</th>
                 <th className="text-center px-4 py-3 font-semibold text-muted-foreground">สถานะ</th>
                 <th className="text-center px-4 py-3 font-semibold text-muted-foreground">จัดการ</th>
@@ -649,7 +660,14 @@ const OvertimeRequest = () => {
                         <span className="text-muted-foreground">ยังไม่บันทึก</span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-center font-bold">{req.hours}</td>
+                    <td className="px-4 py-3 text-center font-bold">
+                      {calcActualHours(req.actualIn, req.actualOut) !== null ? (
+                        <span className="text-primary">{calcActualHours(req.actualIn, req.actualOut)}</span>
+                      ) : (
+                        <span className="text-muted-foreground">-</span>
+                      )}
+                      <span className="text-muted-foreground font-normal"> ({req.hours})</span>
+                    </td>
                     <td className="px-4 py-3 text-center hidden sm:table-cell">
                       <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${typeCfg.className}`}>{typeCfg.label}</span>
                     </td>
