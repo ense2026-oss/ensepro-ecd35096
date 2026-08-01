@@ -244,6 +244,13 @@ const OvertimeRequest = () => {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<OTStatus | "all">("all");
   const [typeFilter, setTypeFilter] = useState<OTType | "all">("all");
+  const [filterEmployee, setFilterEmployee] = useState("all");
+  const [employeeSearch, setEmployeeSearch] = useState("");
+  const [showEmployeeDropdown, setShowEmployeeDropdown] = useState(false);
+  const employeeDropdownRef = useRef<HTMLDivElement>(null);
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [filterMonth, setFilterMonth] = useState(currentMonthLocal);
   const { setOvertimePending } = usePendingCounts();
   const { currentUser, role, user } = useAuth();
   const { canAction, getScope } = usePermissions();
