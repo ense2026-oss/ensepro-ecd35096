@@ -28,6 +28,8 @@ interface CheckInRecord {
   withinRadius: boolean;
   source: "gps" | "face_scan";
   remark?: string;
+  otActualIn?: string | null;
+  otActualOut?: string | null;
 }
 
 interface OTRecord {
