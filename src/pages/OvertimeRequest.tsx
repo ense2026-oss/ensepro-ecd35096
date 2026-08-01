@@ -621,30 +621,114 @@ const OvertimeRequest = () => {
         })}
       </div>
 
-      {/* Search + Type filter */}
-      <div className="card-base p-3 flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="ค้นหาชื่อพนักงาน, แผนก..."
-            className="w-full h-10 pl-9 pr-3 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-          />
-        </div>
-        <div className="relative">
+      {/* Filters — same set as the attendance page */}
+      <div className="card-base p-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="relative flex-1 min-w-[140px]" ref={employeeDropdownRef}>
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none z-10" />
+            <input
+              type="text"
+              placeholder="กรองพนักงาน..."
+              value={filterEmployee === "all" ? employeeSearch : filterEmployee}
+              onChange={(e) => {
+                setEmployeeSearch(e.target.value);
+                setFilterEmployee("all");
+                setShowEmployeeDropdown(true);
+              }}
+              onFocus={() => setShowEmployeeDropdown(true)}
+              className="w-full pl-9 pr-7 py-1.5 text-sm rounded-xl border bg-muted/30 outline-none"
+            />
+            {filterEmployee !== "all" && (
+              <button
+                onClick={() => { setFilterEmployee("all"); setEmployeeSearch(""); }}
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded hover:bg-muted"
+              >
+                <X className="w-3.5 h-3.5 text-muted-foreground" />
+              </button>
+            )}
+            {showEmployeeDropdown && filteredEmployeeOptions.length > 0 && (
+              <div className="absolute top-full left-0 right-0 mt-1 bg-popover border rounded-xl shadow-lg z-50 max-h-52 overflow-y-auto">
+                <button
+                  onClick={() => { setFilterEmployee("all"); setEmployeeSearch(""); setShowEmployeeDropdown(false); }}
+                  className="w-full text-left px-3 py-1.5 text-sm hover:bg-muted transition-colors text-muted-foreground"
+                >
+                  พนักงานทั้งหมด
+                </button>
+                {filteredEmployeeOptions.map((name) => (
+                  <button
+                    key={name}
+                    onClick={() => { setFilterEmployee(name); setEmployeeSearch(""); setShowEmployeeDropdown(false); }}
+                    className="w-full text-left px-3 py-1.5 text-sm hover:bg-muted transition-colors font-medium"
+                  >
+                    {name}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
           <select
             value={typeFilter}
             onChange={(e) => setTypeFilter(e.target.value as OTType | "all")}
-            className="h-10 pl-3 pr-8 rounded-xl border border-border bg-background text-sm appearance-none focus:outline-none focus:ring-2 focus:ring-primary/30"
+            className="w-fit min-w-fit flex-shrink-0 px-2.5 py-1.5 text-sm rounded-xl border bg-muted/30 outline-none cursor-pointer"
           >
             <option value="all">ทุกประเภท</option>
             <option value="workday">วันทำงาน</option>
             <option value="holiday">วันหยุด</option>
             <option value="special">กรณีพิเศษ</option>
           </select>
-          <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+
+          <select
+            value={filterMonth}
+            onChange={(e) => {
+              const month = e.target.value;
+              setFilterMonth(month);
+              if (month) { setDateFrom(""); setDateTo(""); }
+            }}
+            disabled={Boolean(dateFrom || dateTo)}
+            className="px-2.5 py-1.5 text-sm rounded-xl border bg-muted/30 outline-none cursor-pointer w-[140px] flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <option value="">ทุกเดือน</option>
+            <option value="01">มกราคม</option>
+            <option value="02">กุมภาพันธ์</option>
+            <option value="03">มีนาคม</option>
+            <option value="04">เมษายน</option>
+            <option value="05">พฤษภาคม</option>
+            <option value="06">มิถุนายน</option>
+            <option value="07">กรกฎาคม</option>
+            <option value="08">สิงหาคม</option>
+            <option value="09">กันยายน</option>
+            <option value="10">ตุลาคม</option>
+            <option value="11">พฤศจิกายน</option>
+            <option value="12">ธันวาคม</option>
+          </select>
+
+          <div className="flex items-center gap-1.5 flex-1 min-w-[280px]">
+            <ThaiDatePicker
+              value={dateFrom}
+              onChange={(v) => { setDateFrom(v); if (v) setFilterMonth(""); }}
+              placeholder="เริ่มต้น"
+              className="flex-1"
+              displayFormat="short"
+            />
+            <span className="text-xs text-muted-foreground">ถึง</span>
+            <ThaiDatePicker
+              value={dateTo}
+              onChange={(v) => { setDateTo(v); if (v) setFilterMonth(""); }}
+              placeholder="สิ้นสุด"
+              className="flex-1"
+              displayFormat="short"
+            />
+            {(dateFrom || dateTo) && (
+              <button
+                onClick={() => { setDateFrom(""); setDateTo(""); setFilterMonth(currentMonthLocal()); }}
+                className="p-2 rounded-lg border hover:bg-muted transition-colors flex-shrink-0"
+                title="ล้างวันที่"
+              >
+                <X className="w-3.5 h-3.5 text-muted-foreground" />
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
