@@ -311,7 +311,17 @@ const OvertimeRequest = () => {
     fetchRequests();
   }, [fetchRequests]);
 
+  // Reset month/date filters when entering the pending tab so all months show by default
+  useEffect(() => {
+    if (statusFilter === "pending") {
+      setFilterMonth("");
+      setDateFrom("");
+      setDateTo("");
+    }
+  }, [statusFilter]);
+
   // Realtime subscription for overtime_requests
+
   useEffect(() => {
     const channel = supabase
       .channel("ot-realtime")
@@ -721,7 +731,7 @@ const OvertimeRequest = () => {
             />
             {(dateFrom || dateTo) && (
               <button
-                onClick={() => { setDateFrom(""); setDateTo(""); setFilterMonth(currentMonthLocal()); }}
+                onClick={() => { setDateFrom(""); setDateTo(""); setFilterMonth(statusFilter === "pending" ? "" : currentMonthLocal()); }}
                 className="p-2 rounded-lg border hover:bg-muted transition-colors flex-shrink-0"
                 title="ล้างวันที่"
               >
