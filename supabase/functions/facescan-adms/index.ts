@@ -162,11 +162,17 @@ Deno.serve(async (req) => {
       return ok();
     }
 
-    // Mark device as seen.
-    await supabaseAdmin
-      .from("face_scan_devices")
-      .update({ adms_last_seen: new Date().toISOString(), last_status: "success" })
-      .eq("id", device.id);
+    // A self-test comes from our own server (settings UI), NOT from the scanner.
+    // It must never be counted as "the device is online".
+    const isSelfTest = url.searchParams.get("selftest") === "1";
+
+    // Mark device as seen (real device traffic only).
+    if (!isSelfTest) {
+      await supabaseAdmin
+        .from("face_scan_devices")
+        .update({ adms_last_seen: new Date().toISOString(), last_status: "success" })
+        .eq("id", device.id);
+    }
 
     // ---- GET /cdata : handshake / config ----
     if (action === "cdata" && req.method === "GET") {
@@ -176,7 +182,9 @@ Deno.serve(async (req) => {
         device_id: device.id,
         sync_type: "adms_handshake",
         status: "success",
-        message: `เครื่อง "${device.name}" (SN=${sn}) เชื่อมต่อสำเร็จ (handshake) — พร้อมรับข้อมูลการสแกน`,
+        message: isSelfTest
+          ? `ทดสอบ Relay สำเร็จ (ไม่ใช่เครื่องจริง) — SN=${sn} ถูกต้อง ระบบพร้อมรับข้อมูลจากเครื่อง "${device.name}"`
+          : `เครื่อง "${device.name}" (SN=${sn}) เชื่อมต่อสำเร็จ (handshake) — พร้อมรับข้อมูลการสแกน`,
       });
       const config = [
         `GET OPTION FROM: ${sn}`,
