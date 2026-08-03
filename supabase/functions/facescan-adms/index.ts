@@ -93,7 +93,7 @@ Deno.serve(async (req) => {
       }
 
       const hs = await fetch(
-        `${raw}/iclock/cdata?SN=${encodeURIComponent(testSn)}&options=all`,
+        `${raw}/iclock/cdata?SN=${encodeURIComponent(testSn)}&options=all&selftest=1`,
         { signal: AbortSignal.timeout(12000) }
       );
       const hsText = (await hs.text()).trim();
@@ -102,7 +102,7 @@ Deno.serve(async (req) => {
         ok: passed,
         stage: "handshake",
         text: passed
-          ? "ครบวงจร ✓ relay ส่งต่อถึงระบบแล้ว และระบบรู้จัก SN นี้ (ดูรายการ handshake ในแท็บ Sync Logs)"
+          ? "Relay + ระบบพร้อมใช้งาน ✓ (นี่คือการทดสอบจากเซิร์ฟเวอร์ ไม่ใช่ตัวเครื่องจริง) — ขั้นต่อไปต้องตั้งค่า ADMS/Cloud Server ในเมนูเครื่องสแกนให้ชี้มาที่ Relay URL นี้ แล้วรีสตาร์ทเครื่อง"
           : `Relay ทำงาน แต่ระบบยังไม่รู้จัก SN นี้ หรือเครื่องถูกปิดใช้ — ตรวจ Serial Number ให้ตรงกับเครื่องจริง (ตอบกลับ: "${hsText.slice(0, 80)}")`,
       });
     } catch (e) {
