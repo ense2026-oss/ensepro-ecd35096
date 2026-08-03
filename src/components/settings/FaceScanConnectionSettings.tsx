@@ -775,9 +775,18 @@ Deno.serve(async (req) => {
                     {d.connection_mode === "adms" && (
                       <div className="mt-3 space-y-2">
                         {!d.adms_last_seen && (
-                          <div className="rounded-md border border-amber-500/30 bg-amber-500/10 p-2 text-xs text-amber-700 dark:text-amber-400">
-                            ⚠️ ยังไม่เคยมีข้อมูลเข้ามาจากเครื่องนี้ — แปลว่าเครื่องยังส่งไม่ถึงระบบ
-                            (ตรวจว่า deploy relay แล้ว และตั้งค่า Cloud Server ในเครื่องเป็นโดเมน relay + Port 443 + HTTPS ON)
+                          <div className="rounded-md border border-amber-500/30 bg-amber-500/10 p-2 text-xs text-amber-700 dark:text-amber-400 space-y-1">
+                            <div className="font-semibold">⚠️ ตัวเครื่องยังไม่เคยติดต่อเข้ามาเลย (ปุ่ม "ทดสอบ Relay" เป็นการทดสอบจากเซิร์ฟเวอร์ ไม่ใช่ตัวเครื่อง)</div>
+                            <div>ต้องตั้งค่าที่ตัวเครื่องสแกน: เมนู → Comm./เครือข่าย → Cloud Server / ADMS</div>
+                            <div>
+                              • Server Address:{" "}
+                              <code className="break-all">
+                                {(d.relay_url || "").replace(/^https?:\/\//, "").replace(/\/+$/, "") || "— ยังไม่ได้กรอก Relay URL"}
+                              </code>{" "}
+                              (กรอกเฉพาะโดเมน ไม่ต้องใส่ https://)
+                            </div>
+                            <div>• Server Port: 443 · Enable Domain Name / HTTPS: ON · Proxy: OFF</div>
+                            <div>• ตรวจว่าเครื่องต่อเน็ตออกอินเทอร์เน็ตได้ แล้วรีสตาร์ทเครื่อง 1 ครั้ง</div>
                           </div>
                         )}
                         <div className="flex flex-wrap gap-2">
