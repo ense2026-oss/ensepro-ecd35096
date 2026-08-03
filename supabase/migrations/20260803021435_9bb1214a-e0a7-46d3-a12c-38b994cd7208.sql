@@ -1,0 +1,1 @@
+UPDATE public.face_scan_devices SET adms_last_seen = NULL, last_status = 'pending' WHERE connection_mode = 'adms';
