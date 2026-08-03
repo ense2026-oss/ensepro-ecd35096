@@ -311,7 +311,17 @@ const OvertimeRequest = () => {
     fetchRequests();
   }, [fetchRequests]);
 
+  // Reset month/date filters when entering the pending tab so all months show by default
+  useEffect(() => {
+    if (statusFilter === "pending") {
+      setFilterMonth("");
+      setDateFrom("");
+      setDateTo("");
+    }
+  }, [statusFilter]);
+
   // Realtime subscription for overtime_requests
+
   useEffect(() => {
     const channel = supabase
       .channel("ot-realtime")
