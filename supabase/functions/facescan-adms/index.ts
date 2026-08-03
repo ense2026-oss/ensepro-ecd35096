@@ -93,7 +93,7 @@ Deno.serve(async (req) => {
       }
 
       const hs = await fetch(
-        `${raw}/iclock/cdata?SN=${encodeURIComponent(testSn)}&options=all`,
+        `${raw}/iclock/cdata?SN=${encodeURIComponent(testSn)}&options=all&selftest=1`,
         { signal: AbortSignal.timeout(12000) }
       );
       const hsText = (await hs.text()).trim();
@@ -102,7 +102,7 @@ Deno.serve(async (req) => {
         ok: passed,
         stage: "handshake",
         text: passed
-          ? "ครบวงจร ✓ relay ส่งต่อถึงระบบแล้ว และระบบรู้จัก SN นี้ (ดูรายการ handshake ในแท็บ Sync Logs)"
+          ? "Relay + ระบบพร้อมใช้งาน ✓ (นี่คือการทดสอบจากเซิร์ฟเวอร์ ไม่ใช่ตัวเครื่องจริง) — ขั้นต่อไปต้องตั้งค่า ADMS/Cloud Server ในเมนูเครื่องสแกนให้ชี้มาที่ Relay URL นี้ แล้วรีสตาร์ทเครื่อง"
           : `Relay ทำงาน แต่ระบบยังไม่รู้จัก SN นี้ หรือเครื่องถูกปิดใช้ — ตรวจ Serial Number ให้ตรงกับเครื่องจริง (ตอบกลับ: "${hsText.slice(0, 80)}")`,
       });
     } catch (e) {
@@ -162,11 +162,17 @@ Deno.serve(async (req) => {
       return ok();
     }
 
-    // Mark device as seen.
-    await supabaseAdmin
-      .from("face_scan_devices")
-      .update({ adms_last_seen: new Date().toISOString(), last_status: "success" })
-      .eq("id", device.id);
+    // A self-test comes from our own server (settings UI), NOT from the scanner.
+    // It must never be counted as "the device is online".
+    const isSelfTest = url.searchParams.get("selftest") === "1";
+
+    // Mark device as seen (real device traffic only).
+    if (!isSelfTest) {
+      await supabaseAdmin
+        .from("face_scan_devices")
+        .update({ adms_last_seen: new Date().toISOString(), last_status: "success" })
+        .eq("id", device.id);
+    }
 
     // ---- GET /cdata : handshake / config ----
     if (action === "cdata" && req.method === "GET") {
@@ -176,7 +182,9 @@ Deno.serve(async (req) => {
         device_id: device.id,
         sync_type: "adms_handshake",
         status: "success",
-        message: `เครื่อง "${device.name}" (SN=${sn}) เชื่อมต่อสำเร็จ (handshake) — พร้อมรับข้อมูลการสแกน`,
+        message: isSelfTest
+          ? `ทดสอบ Relay สำเร็จ (ไม่ใช่เครื่องจริง) — SN=${sn} ถูกต้อง ระบบพร้อมรับข้อมูลจากเครื่อง "${device.name}"`
+          : `เครื่อง "${device.name}" (SN=${sn}) เชื่อมต่อสำเร็จ (handshake) — พร้อมรับข้อมูลการสแกน`,
       });
       const config = [
         `GET OPTION FROM: ${sn}`,
