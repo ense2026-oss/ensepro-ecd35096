@@ -277,7 +277,7 @@ const Sidebar = ({ collapsed, onToggle, onNavigate }: SidebarProps) => {
       {/* Toggle button */}
       <button
         onClick={onToggle}
-        className="absolute -right-3 top-20 w-6 h-6 rounded-full flex items-center justify-center transition-all duration-200 z-10"
+        className="absolute -right-3 top-5 w-6 h-6 rounded-full flex items-center justify-center transition-all duration-200 z-10"
         style={{
           background: "hsl(var(--primary))",
           border: "2px solid hsl(var(--background))",
