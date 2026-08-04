@@ -115,7 +115,7 @@ const MainLayout = () => {
         <Sidebar collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed(!sidebarCollapsed)} />
       </div>
       <div
-        className={`fixed inset-y-0 left-0 z-50 lg:hidden transition-transform duration-300 ease-in-out overflow-visible ${
+        className={`fixed inset-y-0 left-0 z-[60] lg:hidden transition-transform duration-300 ease-in-out overflow-visible ${
           mobileSidebarOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
