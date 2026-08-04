@@ -255,7 +255,20 @@ const LeaveCalendarDialog: React.FC<LeaveCalendarDialogProps> = ({
                         )}
                       </div>
 
-                      <div className="flex flex-col gap-0.5 sm:gap-1 overflow-hidden min-h-0">
+                      {/* Mobile: colored dots */}
+                      <div className="flex sm:hidden flex-wrap items-center justify-center gap-1 pt-0.5">
+                        {dayLeaves.map((l) => (
+                          <span
+                            key={l.id}
+                            className="w-2 h-2 rounded-full shrink-0"
+                            style={{ background: colorMap.get(l.type) || "hsl(var(--primary))" }}
+                            title={`${l.name} · ${l.type}`}
+                          />
+                        ))}
+                      </div>
+
+                      {/* Desktop: avatar chips */}
+                      <div className="hidden sm:flex flex-col gap-1 overflow-hidden min-h-0">
                         {dayLeaves.slice(0, 3).map((l) => (
                           <div
                             key={l.id}
@@ -276,6 +289,7 @@ const LeaveCalendarDialog: React.FC<LeaveCalendarDialogProps> = ({
                           </span>
                         )}
                       </div>
+
 
                     </>
                   )}
