@@ -106,7 +106,7 @@ const MainLayout = () => {
   return (
     <div className="flex h-screen overflow-hidden bg-background">
       <div
-        className={`fixed inset-0 bg-black/50 z-40 lg:hidden transition-opacity duration-300 ${
+        className={`fixed inset-0 bg-black/50 z-[55] lg:hidden transition-opacity duration-300 ${
           mobileSidebarOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
         }`}
         onClick={() => setMobileSidebarOpen(false)}
