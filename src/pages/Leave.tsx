@@ -438,7 +438,7 @@ const Leave = () => {
 
       <LeaveQuotaCards leaveTypes={leaveTypes} />
 
-      <div className="flex items-center justify-between gap-1 sm:gap-2 sm:justify-start sm:flex-wrap">
+      <div className="flex items-center gap-1 sm:gap-2 overflow-x-auto no-scrollbar">
         {[
           { key: "all", label: "ทั้งหมด" },
           { key: "pending", label: "รออนุมัติ" },
@@ -450,7 +450,7 @@ const Leave = () => {
             <button
               key={f.key}
               onClick={() => setFilterStatus(f.key)}
-              className="px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-xl text-xs sm:text-sm font-medium transition-all relative flex-1 sm:flex-none"
+              className="flex-1 sm:flex-none px-1.5 sm:px-3 py-1.5 sm:py-2 rounded-xl text-[10px] sm:text-xs font-medium whitespace-nowrap transition-all relative min-w-0"
               style={{
                 background: filterStatus === f.key ? "hsl(var(--primary))" : "hsl(var(--card))",
                 color: filterStatus === f.key ? "hsl(var(--primary-foreground))" : "hsl(var(--foreground))",
@@ -461,8 +461,8 @@ const Leave = () => {
               {f.label}
               {f.key === "pending" && count > 0 && (
                 <span
-                  className="absolute -top-2 -right-2 text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center"
-                  style={{ background: "#ef4444", color: "#fff", fontSize: "10px" }}
+                  className="absolute -top-2 -right-2 text-[10px] font-bold w-4 h-4 sm:w-5 sm:h-5 rounded-full flex items-center justify-center"
+                  style={{ background: "#ef4444", color: "#fff" }}
                 >
                   {count}
                 </span>
