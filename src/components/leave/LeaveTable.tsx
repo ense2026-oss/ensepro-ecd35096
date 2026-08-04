@@ -62,17 +62,17 @@ const LeaveTable = ({ records, onApprove, onReject, hideActions = false, current
   return (
     <div className="card-base overflow-hidden">
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[900px]" style={{ tableLayout: "fixed" }}>
+        <table className="w-full md:min-w-[900px]" style={{ tableLayout: "fixed" }}>
           <thead>
             <tr className="border-b" style={{ borderColor: "hsl(var(--border))" }}>
               {[
                 { label: "พนักงาน", width: "w-[140px]" },
                 { label: "ประเภท", width: "w-[110px]" },
-                { label: "วันที่", width: "w-[140px]" },
-                { label: "จำนวนวัน", width: "w-[70px]" },
-                { label: "เหตุผล", width: "w-[160px]" },
-                { label: "เอกสาร", width: "w-[60px]" },
-                { label: "สถานะ", width: "w-[120px]" },
+                { label: "วันที่", width: "hidden md:table-cell w-[140px]" },
+                { label: "จำนวนวัน", width: "hidden md:table-cell w-[70px]" },
+                { label: "เหตุผล", width: "hidden md:table-cell w-[160px]" },
+                { label: "เอกสาร", width: "hidden md:table-cell w-[60px]" },
+                { label: "สถานะ", width: "hidden md:table-cell w-[120px]" },
                 { label: "จัดการ", width: "w-[110px]" },
               ].map((h) => (
                 <th key={h.label} className={`text-left px-3 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap ${h.width}`}>
