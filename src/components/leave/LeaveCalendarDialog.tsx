@@ -249,7 +249,7 @@ const LeaveCalendarDialog: React.FC<LeaveCalendarDialogProps> = ({
                         </span>
 
                         {dayLeaves.length > 0 && (
-                          <span className="text-sm font-bold text-muted-foreground">
+                          <span className="hidden sm:block text-sm font-bold text-muted-foreground">
                             {dayLeaves.length}
                           </span>
                         )}
