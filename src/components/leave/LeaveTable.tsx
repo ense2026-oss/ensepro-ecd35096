@@ -62,17 +62,17 @@ const LeaveTable = ({ records, onApprove, onReject, hideActions = false, current
   return (
     <div className="card-base overflow-hidden">
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[900px]" style={{ tableLayout: "fixed" }}>
+        <table className="w-full md:min-w-[900px]" style={{ tableLayout: "fixed" }}>
           <thead>
             <tr className="border-b" style={{ borderColor: "hsl(var(--border))" }}>
               {[
                 { label: "พนักงาน", width: "w-[140px]" },
                 { label: "ประเภท", width: "w-[110px]" },
-                { label: "วันที่", width: "w-[140px]" },
-                { label: "จำนวนวัน", width: "w-[70px]" },
-                { label: "เหตุผล", width: "w-[160px]" },
-                { label: "เอกสาร", width: "w-[60px]" },
-                { label: "สถานะ", width: "w-[120px]" },
+                { label: "วันที่", width: "hidden md:table-cell w-[140px]" },
+                { label: "จำนวนวัน", width: "hidden md:table-cell w-[70px]" },
+                { label: "เหตุผล", width: "hidden md:table-cell w-[160px]" },
+                { label: "เอกสาร", width: "hidden md:table-cell w-[60px]" },
+                { label: "สถานะ", width: "hidden md:table-cell w-[120px]" },
                 { label: "จัดการ", width: "w-[110px]" },
               ].map((h) => (
                 <th key={h.label} className={`text-left px-3 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap ${h.width}`}>
@@ -104,13 +104,13 @@ const LeaveTable = ({ records, onApprove, onReject, hideActions = false, current
                     </div>
                   </td>
                   <td className="px-3 py-2.5 text-sm truncate" title={row.type}>{row.type}</td>
-                  <td className="px-3 py-2.5 text-xs text-muted-foreground whitespace-nowrap">{row.from} – {row.to}</td>
-                  <td className="px-3 py-2.5">
+                  <td className="hidden md:table-cell px-3 py-2.5 text-xs text-muted-foreground whitespace-nowrap">{row.from} – {row.to}</td>
+                  <td className="hidden md:table-cell px-3 py-2.5">
                     <span className="text-sm font-bold" style={{ color: "#FF870F" }}>{row.days}</span>
                     <span className="text-xs text-muted-foreground"> วัน</span>
                   </td>
-                  <td className="px-3 py-2.5 text-xs text-muted-foreground truncate" title={row.reason}>{row.reason || "-"}</td>
-                  <td className="px-3 py-2.5">
+                  <td className="hidden md:table-cell px-3 py-2.5 text-xs text-muted-foreground truncate" title={row.reason}>{row.reason || "-"}</td>
+                  <td className="hidden md:table-cell px-3 py-2.5">
                     {row.file && row.fileUrl ? (
                       <button
                         onClick={() => handleViewFile(row.fileUrl!)}
@@ -128,7 +128,7 @@ const LeaveTable = ({ records, onApprove, onReject, hideActions = false, current
                       <span className="text-xs text-muted-foreground w-full text-center block">-</span>
                     )}
                   </td>
-                  <td className="px-3 py-2.5">
+                  <td className="hidden md:table-cell px-3 py-2.5">
                     <span className="text-xs font-semibold px-2 py-0.5 rounded-full whitespace-nowrap" style={{ background: conf.bg, color: conf.color }}>
                       {conf.label}
                     </span>

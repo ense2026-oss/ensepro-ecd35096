@@ -409,24 +409,28 @@ const Leave = () => {
           <button
             onClick={() => setCalendarOpen(true)}
             className="flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-medium hover:bg-muted transition-colors"
+            aria-label="ปฏิทินวันลา"
+            title="ปฏิทินวันลา"
           >
             <CalendarDays className="w-4 h-4" />
-            ปฏิทินวันลา
+            <span className="hidden sm:inline">ปฏิทินวันลา</span>
           </button>
           {scope !== "self" && (
-            <button className="flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-medium hover:bg-muted transition-colors">
+            <button className="flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-medium hover:bg-muted transition-colors" aria-label="Export" title="Export">
               <Download className="w-4 h-4" />
-              Export
+              <span className="hidden sm:inline">Export</span>
             </button>
           )}
           {canAdd && (
             <button
               onClick={() => { setEditingRecord(null); setDialogOpen(true); }}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold"
+              className="flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl text-sm font-bold"
               style={{ background: "linear-gradient(135deg, hsl(var(--primary)), hsl(31 100% 60%))", color: "hsl(var(--primary-foreground))", boxShadow: "0 4px 12px hsl(var(--primary) / 0.3)" }}
+              aria-label="ยื่นคำขอลา"
+              title="ยื่นคำขอลา"
             >
               <Plus className="w-4 h-4" />
-              ยื่นคำขอลา
+              <span className="hidden sm:inline">ยื่นคำขอลา</span>
             </button>
           )}
         </div>
