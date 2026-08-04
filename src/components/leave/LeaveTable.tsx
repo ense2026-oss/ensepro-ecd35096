@@ -104,13 +104,13 @@ const LeaveTable = ({ records, onApprove, onReject, hideActions = false, current
                     </div>
                   </td>
                   <td className="px-3 py-2.5 text-sm truncate" title={row.type}>{row.type}</td>
-                  <td className="px-3 py-2.5 text-xs text-muted-foreground whitespace-nowrap">{row.from} – {row.to}</td>
-                  <td className="px-3 py-2.5">
+                  <td className="hidden md:table-cell px-3 py-2.5 text-xs text-muted-foreground whitespace-nowrap">{row.from} – {row.to}</td>
+                  <td className="hidden md:table-cell px-3 py-2.5">
                     <span className="text-sm font-bold" style={{ color: "#FF870F" }}>{row.days}</span>
                     <span className="text-xs text-muted-foreground"> วัน</span>
                   </td>
-                  <td className="px-3 py-2.5 text-xs text-muted-foreground truncate" title={row.reason}>{row.reason || "-"}</td>
-                  <td className="px-3 py-2.5">
+                  <td className="hidden md:table-cell px-3 py-2.5 text-xs text-muted-foreground truncate" title={row.reason}>{row.reason || "-"}</td>
+                  <td className="hidden md:table-cell px-3 py-2.5">
                     {row.file && row.fileUrl ? (
                       <button
                         onClick={() => handleViewFile(row.fileUrl!)}
@@ -128,7 +128,7 @@ const LeaveTable = ({ records, onApprove, onReject, hideActions = false, current
                       <span className="text-xs text-muted-foreground w-full text-center block">-</span>
                     )}
                   </td>
-                  <td className="px-3 py-2.5">
+                  <td className="hidden md:table-cell px-3 py-2.5">
                     <span className="text-xs font-semibold px-2 py-0.5 rounded-full whitespace-nowrap" style={{ background: conf.bg, color: conf.color }}>
                       {conf.label}
                     </span>
