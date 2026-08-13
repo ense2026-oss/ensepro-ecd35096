@@ -827,6 +827,9 @@ const Attendance = () => {
                   <option value="late">มาสาย</option>
                   <option value="absent">ขาดงาน</option>
                   <option value="leave">ลางาน</option>
+                  <option value="dayoff">วันหยุด</option>
+                  <option value="holiday">วันหยุดบริษัท</option>
+
                 </select>
               )}
 
