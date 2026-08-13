@@ -3,6 +3,7 @@ import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { registerThaiFont } from "@/utils/thaiFontLoader";
+import { renderPayslipLetter, type PayslipLetterItem } from "@/utils/payslipLetter";
 import { createExcelWithHeader, addExcelHeader } from "@/utils/excelHeader";
 import { supabase } from "@/integrations/supabase/client";
 import type { Employee } from "@/contexts/EmployeeContext";
