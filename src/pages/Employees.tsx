@@ -2,8 +2,9 @@ import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Search, Plus, Download, Upload, MoreHorizontal, Eye, Edit, Trash2,
-  Phone, Mail, MapPin, ChevronLeft, ChevronRight,
+  Phone, Mail, MapPin, ChevronLeft, ChevronRight, ListFilter,
 } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { useEmployees } from "@/contexts/EmployeeContext";
 import { useOrg } from "@/contexts/OrgContext";
 import type { Position } from "@/contexts/OrgContext";
@@ -16,6 +17,7 @@ import EmployeeStatsCards from "@/components/employees/EmployeeStatsCards";
 import EmployeeAvatar from "@/components/ui/employee-avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogBody, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
 
 const statusConfig: Record<string, { label: string; className: string }> = {
@@ -28,6 +30,7 @@ const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
 
 const Employees = () => {
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const { employees, addEmployee, updateEmployee, deleteEmployee } = useEmployees();
   const { affiliations } = useOrg();
   const [search, setSearch] = useState("");
@@ -45,6 +48,7 @@ const Employees = () => {
   const [deletingEmployee, setDeletingEmployee] = useState<Employee | null>(null);
   const [importOpen, setImportOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
+  const [filterDialogOpen, setFilterDialogOpen] = useState(false);
 
   // Exclude admins — they are managed in Settings → ผู้ดูแลระบบ
   const nonAdmins = useMemo(
@@ -142,6 +146,34 @@ const Employees = () => {
     return pages;
   };
 
+  const showAsCards = isMobile || viewMode === "card";
+
+  const FilterControls = () => (
+    <div className="flex flex-col gap-3">
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <input type="text" placeholder="ค้นหาชื่อ, ตำแหน่ง, อีเมล..." value={search} onChange={(e) => handleSearch(e.target.value)}
+          className="w-full pl-10 pr-4 py-2.5 text-sm rounded-xl border bg-muted/30 outline-none focus:ring-2 transition-all" />
+      </div>
+      <select value={selectedDept} onChange={(e) => handleDeptChange(e.target.value)}
+        className="w-full px-3 py-2.5 text-sm rounded-xl border bg-muted/30 outline-none cursor-pointer">
+        {depts.map((d) => <option key={d} value={d}>{d === "all" ? "เลือกงาน" : d}</option>)}
+      </select>
+      <select value={selectedPosition} onChange={(e) => handlePositionChange(e.target.value)}
+        disabled={selectedDept === "all"}
+        className="w-full px-3 py-2.5 text-sm rounded-xl border bg-muted/30 outline-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
+        {positions.map((p) => <option key={p} value={p}>{p === "all" ? (selectedDept === "all" ? "เลือกงานก่อน" : "ทุกตำแหน่ง") : p}</option>)}
+      </select>
+      <select value={selectedStatus} onChange={(e) => handleStatusChange(e.target.value)}
+        className="w-full px-3 py-2.5 text-sm rounded-xl border bg-muted/30 outline-none cursor-pointer">
+        <option value="all">ทุกสถานะ</option>
+        <option value="active">ทำงานปกติ</option>
+        <option value="leave">ลาพัก</option>
+        <option value="inactive">พ้นสภาพ</option>
+      </select>
+    </div>
+  );
+
   return (
     <div className="space-y-5">
       {/* Header */}
@@ -151,6 +183,12 @@ const Employees = () => {
           <p className="hidden sm:block text-sm text-muted-foreground mt-0.5">พนักงานทั้งหมด {nonAdmins.length} คน</p>
         </div>
         <div className="flex items-center gap-2">
+          {isMobile && (
+            <button onClick={() => setFilterDialogOpen(true)} aria-label="ตัวกรอง" title="ตัวกรอง"
+              className="flex items-center justify-center gap-2 h-10 w-10 rounded-xl border text-sm font-medium hover:bg-muted transition-colors">
+              <ListFilter className="w-4 h-4" />
+            </button>
+          )}
           <button onClick={() => setImportOpen(true)} aria-label="นำเข้า" title="นำเข้า" className="flex items-center justify-center gap-2 h-10 w-10 sm:w-auto sm:px-3 sm:py-2 rounded-xl border text-sm font-medium hover:bg-muted transition-colors">
             <Upload className="w-4 h-4" /> <span className="hidden sm:inline">นำเข้า</span>
           </button>
@@ -167,8 +205,8 @@ const Employees = () => {
       {/* Stats */}
       <EmployeeStatsCards {...stats} />
 
-      {/* Filters */}
-      <div className="card-base p-4">
+      {/* Filters — desktop only */}
+      <div className="hidden sm:block card-base p-4">
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -191,7 +229,7 @@ const Employees = () => {
             <option value="leave">ลาพัก</option>
             <option value="inactive">พ้นสภาพ</option>
           </select>
-          <div className="flex items-center gap-1 border rounded-xl p-1">
+          <div className="hidden md:flex items-center gap-1 border rounded-xl p-1">
             <button onClick={() => setViewMode("table")}
               className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${viewMode === "table" ? "text-primary-foreground" : "text-muted-foreground"}`}
               style={{ background: viewMode === "table" ? "hsl(var(--primary))" : "transparent" }}>ตาราง</button>
@@ -202,8 +240,26 @@ const Employees = () => {
         </div>
       </div>
 
+      {/* Mobile Filter Dialog */}
+      <Dialog open={filterDialogOpen} onOpenChange={setFilterDialogOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>ตัวกรอง</DialogTitle>
+            <DialogDescription className="sr-only">ตัวกรองรายชื่อพนักงาน</DialogDescription>
+          </DialogHeader>
+          <DialogBody>
+            <FilterControls />
+          </DialogBody>
+          <DialogFooter>
+            <button onClick={() => setFilterDialogOpen(false)} className="w-full sm:w-auto px-4 py-2 rounded-xl text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors">
+              แสดงผล
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Table View */}
-      {viewMode === "table" && (
+      {!isMobile && viewMode === "table" && (
         <div className="card-base overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
@@ -299,7 +355,7 @@ const Employees = () => {
       )}
 
       {/* Card View */}
-      {viewMode === "card" && (
+      {showAsCards && (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {paginatedData.map((emp) => {
