@@ -549,58 +549,64 @@ const OvertimeRequest = () => {
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-row items-center justify-between gap-3">
         <div>
           <h2 className="text-xl font-bold font-display">ขอทำงานโอที</h2>
-          <p className="text-sm text-muted-foreground mt-0.5">ยื่นคำขอ ติดตาม และอนุมัติการทำงานล่วงเวลา</p>
+          <p className="hidden sm:block text-sm text-muted-foreground mt-0.5">ยื่นคำขอ ติดตาม และอนุมัติการทำงานล่วงเวลา</p>
         </div>
         <div className="flex items-center gap-2">
           {role !== "employee" && (
-            <button className="flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-medium hover:bg-muted transition-colors">
+            <button
+              aria-label="Export"
+              title="Export"
+              className="flex items-center justify-center gap-2 h-10 w-10 sm:w-auto sm:px-3 sm:py-2 rounded-xl border text-sm font-medium hover:bg-muted transition-colors"
+            >
               <Download className="w-4 h-4" />
-              Export
+              <span className="hidden sm:inline">Export</span>
             </button>
           )}
           <button
             onClick={() => setShowForm(true)}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold"
+            aria-label="ยื่นขอ OT"
+            title="ยื่นขอ OT"
+            className="flex items-center justify-center gap-2 h-10 w-10 sm:w-auto sm:px-4 sm:py-2 rounded-xl text-sm font-bold"
             style={{ background: "linear-gradient(135deg, hsl(var(--primary)), hsl(31 100% 60%))", color: "hsl(var(--primary-foreground))", boxShadow: "0 4px 12px hsl(var(--primary) / 0.3)" }}
           >
             <Plus className="w-4 h-4" />
-            ยื่นขอ OT
+            <span className="hidden sm:inline">ยื่นขอ OT</span>
           </button>
         </div>
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <StatCarousel>
         {[
-          { name: "คำขอทั้งหมด", value: stats.total, color: "#FF870F", bg: "hsl(31 100% 93%)", icon: FileText, filterKey: "all" },
-          { name: "รออนุมัติ", value: stats.pending, color: "#FF870F", bg: "hsl(31 100% 93%)", icon: Hourglass, filterKey: "pending" },
-          { name: "อนุมัติแล้ว", value: stats.approved, color: "hsl(90 100% 30%)", bg: "hsl(90 100% 92%)", icon: CheckCircle2, filterKey: "approved" },
-          { name: "ชม. OT รวม", value: stats.totalHours, color: "hsl(220 90% 45%)", bg: "hsl(220 90% 93%)", icon: TrendingUp, filterKey: "" },
+          { name: "คำขอทั้งหมด", value: stats.total, subtitle: "คำขอ OT ของฉัน", color: "#FF870F", bg: "hsl(31 100% 93%)", icon: FileText, filterKey: "all" },
+          { name: "รออนุมัติ", value: stats.pending, subtitle: "รอการอนุมัติ", color: "#FF870F", bg: "hsl(31 100% 93%)", icon: Hourglass, filterKey: "pending" },
+          { name: "อนุมัติแล้ว", value: stats.approved, subtitle: "ได้รับอนุมัติ", color: "hsl(90 100% 30%)", bg: "hsl(90 100% 92%)", icon: CheckCircle2, filterKey: "approved" },
+          { name: "ชม. OT รวม", value: stats.totalHours, subtitle: "ชั่วโมงที่อนุมัติ", color: "hsl(220 90% 45%)", bg: "hsl(220 90% 93%)", icon: TrendingUp, filterKey: "" },
         ].map((card) => {
           const Icon = card.icon;
           return (
             <div
               key={card.name}
-              className="card-base p-4 cursor-pointer transition-all duration-200"
-              style={{ borderLeft: `4px solid ${card.color}` }}
+              className="card-base p-3 sm:p-5 cursor-pointer transition-all duration-200 animate-fade-in h-full"
               onClick={() => card.filterKey && setStatusFilter(statusFilter === card.filterKey ? "all" : card.filterKey as OTStatus | "all")}
             >
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-muted-foreground font-medium">{card.name}</p>
-                  <p className="text-2xl font-bold font-display mt-1" style={{ color: card.color }}>{card.value}</p>
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-[11px] sm:text-sm text-muted-foreground font-medium leading-tight">{card.name}</p>
+                  <p className="text-xl sm:text-3xl font-bold font-display mt-0.5 sm:mt-1" style={{ color: card.color }}>{card.value}</p>
+                  <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1 leading-tight">{card.subtitle}</p>
                 </div>
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: card.bg }}>
-                  <Icon className="w-5 h-5" style={{ color: card.color }} />
+                <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: card.bg }}>
+                  <Icon className="w-4 h-4 sm:w-6 sm:h-6" style={{ color: card.color }} />
                 </div>
               </div>
             </div>
           );
         })}
-      </div>
+      </StatCarousel>
 
       {/* Filter tabs */}
       <div className="flex items-center justify-between gap-1 sm:gap-2 sm:justify-start sm:flex-wrap">
