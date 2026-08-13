@@ -817,10 +817,10 @@ const Payroll = () => {
               <option key={y} value={y}>{y + 543}</option>
             ))}
           </select>
-          <button onClick={() => { exportAllPayslipsExcel(employees); toast.success("ส่งออกสลิปเงินเดือนทั้งหมด Excel สำเร็จ"); }} className="flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-medium hover:bg-muted transition-colors">
+          <button onClick={async () => { await primePayrollExportData(selectedYear, selectedMonth); exportAllPayslipsExcel(employees); toast.success("ส่งออกสลิปเงินเดือนทั้งหมด Excel สำเร็จ"); }} className="flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-medium hover:bg-muted transition-colors">
             <Download className="w-4 h-4" /> Export Excel
           </button>
-          <button onClick={async () => { await exportPnd1Pdf(employees, THAI_MONTHS[selectedMonth - 1], String(thaiYear)); toast.success("ส่งออก ภ.ง.ด.1 PDF สำเร็จ"); }} className="flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-medium hover:bg-muted transition-colors">
+          <button onClick={async () => { await primePayrollExportData(selectedYear, selectedMonth); await exportPnd1Pdf(employees, THAI_MONTHS[selectedMonth - 1], String(thaiYear)); toast.success("ส่งออก ภ.ง.ด.1 PDF สำเร็จ"); }} className="flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-medium hover:bg-muted transition-colors">
             <FileText className="w-4 h-4" /> ภ.ง.ด.1 PDF
           </button>
         </div>
