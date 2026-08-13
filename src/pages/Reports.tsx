@@ -5,7 +5,7 @@ import {
   calculateAnnualIncome, calculateMonthlyTax, formatCurrency,
   DEFAULT_TAX_DEDUCTION, type TaxConfig,
 } from "@/utils/taxCalculation";
-import { exportPnd1Excel, exportPnd1Pdf, exportAllPayslipsExcel } from "@/utils/exportPayroll";
+import { exportPnd1Excel, exportPnd1Pdf, exportAllPayslipsExcel, primePayrollExportData } from "@/utils/exportPayroll";
 import {
   exportLeaveSummaryExcel, exportLeaveSummaryPdf,
   exportLeaveBalanceExcel, exportLeaveBalancePdf,
