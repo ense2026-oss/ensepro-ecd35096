@@ -21,6 +21,7 @@ import ContractSettings from "@/components/settings/ContractSettings";
 import ModuleSettings from "@/components/settings/ModuleSettings";
 import AffiliationSettings from "@/components/settings/AffiliationSettings";
 import CompanyHolidaysSettings from "@/components/settings/CompanyHolidaysSettings";
+import EmployeeFieldOptionsSettings from "@/components/settings/EmployeeFieldOptionsSettings";
 
 const ALL_TABS = [
   { id: "company", label: "ข้อมูลบริษัท", icon: Building2 },
@@ -74,7 +75,14 @@ const Settings = () => {
   const renderContent = () => {
     switch (activeTab) {
       case "company":
-        return <CompanySettings />;
+        return (
+          <div className="space-y-8">
+            <CompanySettings />
+            <div className="border-t pt-6">
+              <EmployeeFieldOptionsSettings />
+            </div>
+          </div>
+        );
       case "affiliations":
         return <AffiliationSettings />;
 

@@ -266,7 +266,7 @@ const EmployeeFormDialog = ({ open, onOpenChange, employee, onSave }: EmployeeFo
           {/* ข้อมูลพื้นฐาน */}
           <SectionLabel>ข้อมูลพื้นฐาน</SectionLabel>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <SelectField label="คำนำหน้า" value={form.prefix} onChange={set("prefix")} options={["นาย", "นาง", "นางสาว", "ดร.", "ผศ.ดร."]} />
+            <SelectField label="คำนำหน้า" value={form.prefix} onChange={set("prefix")} options={fieldOptions.prefixes} />
             <SelectField label="เพศ" value={form.gender || "ชาย"} onChange={set("gender")} options={["ชาย", "หญิง", "อื่นๆ"]} />
             <InputField label="ชื่อ" value={form.firstName} onChange={set("firstName")} required />
             <InputField label="นามสกุล" value={form.lastName} onChange={set("lastName")} required />
@@ -274,7 +274,7 @@ const EmployeeFormDialog = ({ open, onOpenChange, employee, onSave }: EmployeeFo
             <InputField label="วันเกิด" value={form.birthDate} onChange={set("birthDate")} placeholder="YYYY-MM-DD" />
             <InputField label="เลขบัตรประชาชน" value={form.nationalId} onChange={set("nationalId")} placeholder="X-XXXX-XXXXX-XX-X" />
             <SelectField label="สัญชาติ" value={form.nationality} onChange={set("nationality")} options={["ไทย", "อื่นๆ"]} />
-            <SelectField label="ศาสนา" value={form.religion} onChange={set("religion")} options={["พุทธ", "คริสต์", "อิสลาม", "ฮินดู", "อื่นๆ"]} />
+            <SelectField label="ศาสนา" value={form.religion} onChange={set("religion")} options={fieldOptions.religions} />
             <SelectField label="หมู่เลือด" value={form.bloodGroup} onChange={set("bloodGroup")} options={["A", "B", "AB", "O"]} />
             <InputField label="วันออกบัตร" value={form.idIssueDate} onChange={set("idIssueDate")} placeholder="YYYY-MM-DD" />
             <InputField label="วันหมดอายุบัตร" value={form.idExpireDate} onChange={set("idExpireDate")} placeholder="YYYY-MM-DD" />
@@ -342,7 +342,7 @@ const EmployeeFormDialog = ({ open, onOpenChange, employee, onSave }: EmployeeFo
           {/* ข้อมูลครอบครัว */}
           <SectionLabel>ข้อมูลครอบครัว</SectionLabel>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <SelectField label="สถานภาพสมรส" value={form.maritalStatus} onChange={set("maritalStatus")} options={["โสด", "สมรส", "หย่าร้าง", "หม้าย"]} />
+            <SelectField label="สถานภาพสมรส" value={form.maritalStatus} onChange={set("maritalStatus")} options={fieldOptions.maritalStatuses} />
             <InputField label="ชื่อคู่สมรส" value={form.spouseName} onChange={set("spouseName")} />
             <InputField label="เบอร์โทรคู่สมรส" value={form.spousePhone} onChange={set("spousePhone")} type="tel" />
             <div />
