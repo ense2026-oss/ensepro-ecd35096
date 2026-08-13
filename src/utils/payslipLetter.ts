@@ -1,0 +1,191 @@
+/* ───────── Payslip letter layout (blueprint style) for jsPDF ───────── */
+import jsPDF from "jspdf";
+import { supabase } from "@/integrations/supabase/client";
+import { formatCurrency } from "@/utils/taxCalculation";
+import letterheadAsset from "@/assets/payslip-letterhead.jpg.asset.json";
+
+const THAI_MONTHS = [
+  "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน",
+  "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม",
+];
+
+export interface PayslipLetterItem { label: string; amount: number }
+
+export interface PayslipLetterData {
+  employeeName: string;
+  monthLabel: string;      // e.g. "สิงหาคม"
+  yearBE: number | string; // e.g. 2569
+  incomes: PayslipLetterItem[];
+  deductions: PayslipLetterItem[];
+  totalIncome: number;   // รวมเงินได้ (สุทธิหลังหัก)
+  netPay: number;        // เงินโอนเข้าบัญชี
+}
+
+interface LetterSettings {
+  companyName: string;
+  signerName: string;
+  signerTitle: string;
+  headerImageUrl: string;
+}
+
+const DEFAULTS: LetterSettings = {
+  companyName: "บริษัท พลังงานนครพิงค์ จำกัด",
+  signerName: "(นางสาวสุรีย์ ดียปรีชา)",
+  signerTitle: "พนักงานการเงิน",
+  headerImageUrl: letterheadAsset.url,
+};
+
+async function fetchLetterSettings(): Promise<LetterSettings> {
+  try {
+    const { data } = await supabase
+      .from("company_settings")
+      .select("key,value")
+      .in("key", ["company", "branding", "payslip_letter"]);
+    const map: Record<string, any> = {};
+    (data || []).forEach((r: any) => { map[r.key] = r.value; });
+    const letter = map.payslip_letter || {};
+    return {
+      companyName: letter.companyName || map.company?.name || map.company?.companyName || DEFAULTS.companyName,
+      signerName: letter.signerName || DEFAULTS.signerName,
+      signerTitle: letter.signerTitle || DEFAULTS.signerTitle,
+      headerImageUrl: letter.headerImageUrl || DEFAULTS.headerImageUrl,
+    };
+  } catch {
+    return DEFAULTS;
+  }
+}
+
+async function toDataUrl(url: string): Promise<{ dataUrl: string; format: string } | null> {
+  try {
+    const res = await fetch(url);
+    const blob = await res.blob();
+    const format = blob.type.includes("png") ? "PNG" : "JPEG";
+    return await new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve({ dataUrl: reader.result as string, format });
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return null;
+  }
+}
+
+const RED: [number, number, number] = [204, 0, 0];
+const BLACK: [number, number, number] = [0, 0, 0];
+
+/** Draw the payslip as a formal Thai letter (blueprint layout). */
+export async function renderPayslipLetter(doc: jsPDF, d: PayslipLetterData): Promise<void> {
+  const cfg = await fetchLetterSettings();
+  const pageW = doc.internal.pageSize.getWidth();
+  const M = 14;                       // page margin
+  const contentW = pageW - M * 2;
+
+  /* ── Header image inside bordered box ── */
+  const imgH = (contentW * 265) / 1920;
+  const boxH = Math.max(imgH + 8, 26);
+  doc.setDrawColor(0, 0, 0);
+  doc.setLineWidth(0.8);
+  doc.rect(M, 10, contentW, boxH, "S");
+  const img = await toDataUrl(cfg.headerImageUrl);
+  if (img) {
+    try {
+      doc.addImage(img.dataUrl, img.format, M + 4, 10 + (boxH - imgH) / 2, contentW - 8, imgH);
+    } catch { /* ignore */ }
+  }
+
+  let y = 10 + boxH + 18;
+
+  /* ── Date (top-right) ── */
+  const today = new Date();
+  const dateStr = `${today.getDate()} ${THAI_MONTHS[today.getMonth()]} ${String(today.getFullYear() + 543).slice(-2)}`;
+  doc.setFont("THSarabunNew", "bold");
+  doc.setFontSize(16);
+  doc.setTextColor(...BLACK);
+  doc.text(dateStr, pageW - M, y, { align: "right" });
+
+  /* ── เรียน ── */
+  doc.text(`เรียน  ${d.employeeName}`, M, y + 4);
+
+  /* ── Intro line ── */
+  y += 20;
+  doc.setFont("THSarabunNew", "normal");
+  doc.setFontSize(15);
+  const intro = `ทาง ${cfg.companyName} ขอแจ้งยอดการคำนวนเงินเดือน ประจำเดือน `;
+  const introW = doc.getTextWidth(intro);
+  const period = `${d.monthLabel} ${d.yearBE}`;
+  const periodW = doc.getTextWidth(period);
+  const tail = " ดังนี้";
+  const startX = Math.max(M, (pageW - (introW + periodW + doc.getTextWidth(tail))) / 2);
+  doc.text(intro, startX, y);
+  doc.setTextColor(...RED);
+  doc.text(period, startX + introW, y);
+  doc.setTextColor(...BLACK);
+  doc.text(tail, startX + introW + periodW, y);
+
+  /* ── Amount box ── */
+  const boxTop = y + 8;
+  const boxBottom = 250;
+  doc.setLineWidth(0.5);
+  doc.rect(M, boxTop, contentW, boxBottom - boxTop, "S");
+
+  const labelX = M + 26;
+  const groupX = M + 12;
+  const amountX = pageW - M - 34;   // right edge of numbers
+  const unitX = pageW - M - 30;
+  let ry = boxTop + 14;
+
+  const line = (label: string, amount: number, group?: string) => {
+    doc.setFont("THSarabunNew", "bold");
+    doc.setFontSize(15);
+    doc.setTextColor(...BLACK);
+    if (group) doc.text(group, groupX, ry);
+    doc.text(label, labelX, ry);
+    doc.setTextColor(...RED);
+    doc.text(formatCurrency(amount), amountX, ry, { align: "right" });
+    doc.setTextColor(...BLACK);
+    doc.text("บาท", unitX, ry);
+    ry += 7;
+  };
+
+  d.incomes.forEach((it, i) => line(it.label, it.amount, i === 1 ? "บวก" : undefined));
+  ry += 6;
+  d.deductions.forEach((it, i) => line(it.label, it.amount, i === 0 ? "หัก" : undefined));
+
+  /* ── รวมเงินได้ (bottom of box) ── */
+  const sumY = boxBottom - 12;
+  doc.setFont("THSarabunNew", "bold");
+  doc.setFontSize(16);
+  doc.text("รวมเงินได้", labelX, sumY);
+  doc.text(formatCurrency(d.totalIncome), amountX, sumY, { align: "right" });
+  doc.text("บาท", unitX, sumY);
+
+  /* ── Closing lines ── */
+  let cy = boxBottom + 12;
+  doc.setFont("THSarabunNew", "normal");
+  doc.setFontSize(15);
+  const c1a = "ดังนั้นคงเหลือเงินได้เพื่อนำเข้าบัญชีเงินเดือน ";
+  const c1aW = doc.getTextWidth(c1a);
+  const mLabel = `${d.monthLabel}`;
+  const mW = doc.getTextWidth(mLabel);
+  const c1b = " เป็นเงิน ";
+  const c1bW = doc.getTextWidth(c1b);
+  const netStr = `${formatCurrency(d.netPay)} บาท`;
+  const cx = Math.max(M, (pageW - (c1aW + mW + c1bW + doc.getTextWidth(netStr))) / 2);
+  doc.text(c1a, cx, cy);
+  doc.setTextColor(...RED);
+  doc.text(mLabel, cx + c1aW, cy);
+  doc.setTextColor(...BLACK);
+  doc.text(c1b, cx + c1aW + mW, cy);
+  doc.setTextColor(...RED);
+  doc.text(netStr, cx + c1aW + mW + c1bW, cy);
+  doc.setTextColor(...BLACK);
+
+  cy += 9;
+  doc.text("จึงเรียนมาเพื่อทราบ หากมีข้อสงสัยประการใด  ให้ติดต่อฝ่ายการเงิน", cx, cy);
+
+  /* ── Signature ── */
+  cy += 20;
+  doc.text(cfg.signerName, pageW / 2 + 20, cy, { align: "center" });
+  doc.text(cfg.signerTitle, pageW / 2 + 20, cy + 7, { align: "center" });
+}
