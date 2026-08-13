@@ -166,33 +166,58 @@ const EmployeeFormDialog = ({ open, onOpenChange, employee, onSave }: EmployeeFo
         setForm(EMPTY);
       }
       setErrors([]);
+      setSaving(false);
     }
   }, [open, employee]);
 
+  // Align the stored role with the exact value used by the settings page
+  // (e.g. "hr" stored on an employee resolves to the "HR" option).
+  useEffect(() => {
+    if (!open || !form.role || !ROLE_OPTIONS.length) return;
+    const matched = matchRoleOption(ROLE_OPTIONS, form.role);
+    if (matched && matched.value !== form.role) {
+      setForm((f) => ({ ...f, role: matched.value }));
+    }
+  }, [open, form.role, ROLE_OPTIONS]);
+
   const set = (key: string) => (v: string) => setForm((f) => ({ ...f, [key]: v }));
+  const setNumber = (key: string) => (v: string) =>
+    setForm((f) => ({ ...f, [key]: Math.max(0, Number(v) || 0) }));
 
   // When the department changes, reset the position so it must be re-picked
   // from the newly selected affiliation's positions.
   const handleDeptChange = (v: string) => setForm((f) => ({ ...f, dept: v, position: "" }));
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const errs: string[] = [];
     if (!form.firstName.trim()) errs.push("กรุณากรอกชื่อ");
     if (!form.lastName.trim()) errs.push("กรุณากรอกนามสกุล");
     if (!form.dept.trim() || form.dept === "-- เลือกสังกัด --") errs.push("กรุณาเลือกสังกัด");
     if (!form.position.trim() || form.position === "-- เลือกตำแหน่ง --") errs.push("กรุณาเลือกตำแหน่ง");
+    if (form.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim()))
+      errs.push("รูปแบบอีเมลไม่ถูกต้อง");
+    if (!isEdit && !form.email.trim()) errs.push("กรุณากรอกอีเมล เพื่อสร้างบัญชีเข้าใช้งานให้พนักงาน");
+    if (!form.role.trim() || isUnknownRole) errs.push("กรุณาเลือกสิทธิ์การใช้งานจากรายการในหน้าตั้งค่า");
     if (errs.length) { setErrors(errs); return; }
 
     const avatar = form.firstName.charAt(0) || "?";
     const hue = Math.floor(Math.random() * 360);
-    onSave({
-      ...form,
-      avatar,
-      avatarColor: isEdit ? form.avatarColor : `hsl(${hue} 70% 90%)`,
-      avatarTextColor: isEdit ? form.avatarTextColor : `hsl(${hue} 70% 35%)`,
-      username: form.username || `${form.firstName.toLowerCase()}.${form.lastName.charAt(0).toLowerCase()}`,
-    });
-    onOpenChange(false);
+    setSaving(true);
+    try {
+      await onSave({
+        ...form,
+        email: form.email.trim(),
+        avatar,
+        avatarColor: isEdit ? form.avatarColor : `hsl(${hue} 70% 90%)`,
+        avatarTextColor: isEdit ? form.avatarTextColor : `hsl(${hue} 70% 35%)`,
+        username: form.username || `${form.firstName.toLowerCase()}.${form.lastName.charAt(0).toLowerCase()}`,
+      });
+      onOpenChange(false);
+    } catch (err: any) {
+      setErrors([err?.message || "บันทึกไม่สำเร็จ กรุณาลองใหม่อีกครั้ง"]);
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
