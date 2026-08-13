@@ -196,6 +196,12 @@ const Reports = () => {
   const [empHiringTrend, setEmpHiringTrend] = useState<any[]>([]);
   const [empLoading, setEmpLoading] = useState(false);
 
+  // --- Real Attendance data ---
+  const [attTableData, setAttTableData] = useState<any[]>([]);
+  const [attSummaryData, setAttSummaryData] = useState<any[]>([]);
+  const [attMonthlyChart, setAttMonthlyChart] = useState<any[]>([]);
+  const [attLoading, setAttLoading] = useState(false);
+
   // --- Real Payroll data ---
   const [payrollSummaryData, setPayrollSummaryData] = useState<any[]>([]);
   const [taxCumulativeData, setTaxCumulativeData] = useState<any[]>([]);
