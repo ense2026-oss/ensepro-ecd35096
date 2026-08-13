@@ -1008,6 +1008,7 @@ const Payroll = () => {
                           if (snap) {
                             await exportPayslipPdfFromSnapshot(emp, snap, THAI_MONTHS[selectedMonth - 1], thaiYear, onProgress);
                           } else {
+                            await primePayrollExportData(selectedYear, selectedMonth);
                             await exportPayslipPdf(emp, THAI_MONTHS[selectedMonth - 1], thaiYear, onProgress);
                           }
                         } catch (e: any) {
