@@ -49,14 +49,14 @@ const Contracts = () => {
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div>
+      <div className="flex flex-row items-center justify-between gap-3">
+        <div className="min-w-0">
           <h2 className="text-xl font-bold font-display">{pageTitle}</h2>
-          <p className="text-sm text-muted-foreground mt-0.5">{pageDesc}</p>
+          <p className="hidden sm:block text-sm text-muted-foreground mt-0.5">{pageDesc}</p>
         </div>
         {canAddContract && (
-          <Button onClick={() => { setEditContract(null); setFormOpen(true); }} className="gap-1.5">
-            <Plus className="w-4 h-4" />สร้างสัญญาใหม่
+          <Button onClick={() => { setEditContract(null); setFormOpen(true); }} aria-label="สร้างสัญญาใหม่" title="สร้างสัญญาใหม่" className="gap-1.5 h-10 w-10 p-0 sm:w-auto sm:px-4">
+            <Plus className="w-4 h-4" /><span className="hidden sm:inline">สร้างสัญญาใหม่</span>
           </Button>
         )}
       </div>
