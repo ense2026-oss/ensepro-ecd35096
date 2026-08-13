@@ -643,6 +643,15 @@ const Attendance = () => {
         </div>
         {(canExport || canEditTime || canRequestOwnEdit) && (
           <div className="flex items-center gap-2">
+            {canEditTime && (
+              <button
+                onClick={() => setImportOpen(true)}
+                className="flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-medium hover:bg-muted transition-colors"
+              >
+                <Upload className="w-4 h-4" />
+                นำเข้าจากเครื่องสแกน
+              </button>
+            )}
             {canExport && (
               <button className="flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-medium hover:bg-muted transition-colors">
                 <Download className="w-4 h-4" />
@@ -662,6 +671,7 @@ const Attendance = () => {
           </div>
         )}
       </div>
+
 
       {/* Summary Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
