@@ -1,4 +1,5 @@
 import { Calendar } from "lucide-react";
+import StatCarousel from "@/components/ui/stat-carousel";
 
 export interface LeaveType {
   id: string;
@@ -16,7 +17,7 @@ interface LeaveQuotaCardsProps {
 
 const LeaveQuotaCards = ({ leaveTypes }: LeaveQuotaCardsProps) => {
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+    <StatCarousel className="grid grid-cols-2 lg:grid-cols-4 gap-3">
       {leaveTypes.map((lt) => {
         const remaining = lt.quota - lt.used;
         const pct = lt.quota > 0 ? Math.round((lt.used / lt.quota) * 100) : 0;

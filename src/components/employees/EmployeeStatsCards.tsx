@@ -1,4 +1,5 @@
 import { Users, UserCheck, UserX, Building2 } from "lucide-react";
+import StatCarousel from "@/components/ui/stat-carousel";
 
 interface EmployeeStatsProps {
   total: number;
@@ -49,7 +50,7 @@ const EmployeeStatsCards = ({ total, active, onLeave, inactive, departments }: E
   ];
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+    <StatCarousel className="grid grid-cols-2 lg:grid-cols-4 gap-3">
       {stats.map((stat) => (
         <div
           key={stat.label}
