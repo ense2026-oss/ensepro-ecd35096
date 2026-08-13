@@ -183,3 +183,69 @@ export function exportTaxAnnualExcel(pnd1Rows: any[], filterYear: string) {
     fileName: `Tax_Annual_${filterYear}.xlsx`,
   });
 }
+
+/* ═══════════════════ ATTENDANCE REPORTS ═══════════════════ */
+export function exportAttendanceReportExcel(
+  rows: any[],
+  reportName: string,
+  filterMonth: string,
+  filterYear: string
+) {
+  const headers = ["ลำดับที่", "ชื่อ-สกุล", "แผนก", "วันที่", "เข้างาน", "ออกงาน", "ชั่วโมง", "OT (ชม.)", "สถานะ"];
+  const total = rows.length;
+  const body: (string | number)[][] = rows.map((r, i) => [
+    i + 1,
+    r.name ?? "-",
+    r.dept ?? "-",
+    r.date ?? "-",
+    r.checkIn ?? "-",
+    r.checkOut ?? "-",
+    r.hours ?? "-",
+    Number(r.otHours) || 0,
+    r.status ?? "-",
+  ]);
+  body.push(["", `รวมทั้งหมด ${total} รายการ`, "", "", "", "", "", "", ""]);
+
+  createExcelWithHeader({
+    sheetName: "บันทึกเวลา",
+    title: reportName,
+    subtitle: `ประจำเดือน ${filterMonth} พ.ศ. ${filterYear}`,
+    dateRange: `วันที่ออกรายงาน: ${today()}`,
+    headers,
+    rows: body,
+    colWidths: [8, 26, 18, 14, 10, 10, 10, 10, 14],
+    fileName: `Attendance_Report_${filterMonth}_${filterYear}.xlsx`,
+  });
+}
+
+export function exportAttendanceSummaryExcel(
+  rows: any[],
+  reportName: string,
+  filterMonth: string,
+  filterYear: string
+) {
+  const headers = ["ลำดับที่", "ชื่อ-สกุล", "แผนก", "มาทำงาน (วัน)", "มาสาย (วัน)", "ขาดงาน (วัน)", "ลา (วัน)", "OT (ชม.)"];
+  const body: (string | number)[][] = rows.map((r, i) => [
+    i + 1,
+    r.name ?? "-",
+    r.dept ?? "-",
+    Number(r.workDays) || 0,
+    Number(r.lateDays) || 0,
+    Number(r.absentDays) || 0,
+    Number(r.leaveDays) || 0,
+    Number(r.otHours) || 0,
+  ]);
+  const sum = (k: string) => rows.reduce((s, r: any) => s + (Number(r[k]) || 0), 0);
+  body.push(["", "รวม", "", sum("workDays"), sum("lateDays"), sum("absentDays"), sum("leaveDays"), Math.round(sum("otHours") * 100) / 100]);
+
+  createExcelWithHeader({
+    sheetName: "สรุปเข้างาน",
+    title: reportName,
+    subtitle: `ประจำเดือน ${filterMonth} พ.ศ. ${filterYear}`,
+    dateRange: `วันที่ออกรายงาน: ${today()}`,
+    headers,
+    rows: body,
+    colWidths: [8, 26, 18, 14, 14, 14, 12, 12],
+    fileName: `Attendance_Summary_${filterMonth}_${filterYear}.xlsx`,
+  });
+}
