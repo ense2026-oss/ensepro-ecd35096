@@ -1669,8 +1669,8 @@ const Reports = () => {
                       </tr>
                     ))}
                   </tbody>
-
-              </table>
+                </table>
+              )
             )}
             {cat === "overtime" && (
               <table className="w-full text-sm">
