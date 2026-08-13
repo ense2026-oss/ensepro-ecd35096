@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { usePendingCounts } from "@/contexts/PendingCountsContext";
 import { useTimeEditRequests, type AppNotification } from "@/contexts/TimeEditContext";
 import { useAuth } from "@/contexts/AuthContext";
+import StatCarousel from "@/components/ui/stat-carousel";
 import { usePermissions } from "@/contexts/PermissionsContext";
 import {
   Bell,
@@ -122,21 +123,21 @@ const Notifications = () => {
   return (
     <div className="space-y-6 w-full overflow-hidden">
       {/* Stat cards */}
-      <div className={`grid grid-cols-2 ${hasApprovalAccess ? "lg:grid-cols-4" : "lg:grid-cols-3"} gap-4`}>
+      <StatCarousel className={`grid grid-cols-2 ${hasApprovalAccess ? "lg:grid-cols-4" : "lg:grid-cols-3"} gap-4`}>
         {statCards.map((s) => (
-          <div key={s.title} className="card-base p-5 animate-fade-in">
+          <div key={s.title} className="card-base p-3 sm:p-5 animate-fade-in h-full">
             <div className="flex items-start justify-between mb-2">
-              <div>
-                <p className="text-sm text-muted-foreground font-medium">{s.title}</p>
-                <p className="text-3xl font-bold font-display mt-1" style={{ color: s.color }}>{s.value}</p>
+              <div className="min-w-0">
+                <p className="text-[11px] sm:text-sm text-muted-foreground font-medium leading-tight">{s.title}</p>
+                <p className="text-xl sm:text-3xl font-bold font-display mt-0.5 sm:mt-1" style={{ color: s.color }}>{s.value}</p>
               </div>
-              <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: s.bg }}>
-                <s.icon className="w-6 h-6" style={{ color: s.color }} />
+              <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: s.bg }}>
+                <s.icon className="w-4 h-4 sm:w-6 sm:h-6" style={{ color: s.color }} />
               </div>
             </div>
           </div>
         ))}
-      </div>
+      </StatCarousel>
 
       {/* Main content */}
       <div className={`grid grid-cols-1 ${hasApprovalAccess ? "lg:grid-cols-3" : ""} gap-6`}>

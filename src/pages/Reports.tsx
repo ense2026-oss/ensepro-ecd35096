@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import StatCarousel from "@/components/ui/stat-carousel";
 import { useEmployees } from "@/contexts/EmployeeContext";
 import {
   calculateAnnualIncome, calculateMonthlyTax, formatCurrency,
@@ -1101,27 +1102,27 @@ const Reports = () => {
     return (
       <div className="space-y-6 animate-fade-in">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="flex items-center gap-3">
+        <div className="flex flex-row items-center justify-between gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             <button
               onClick={() => setSelectedReport(null)}
               className="p-2 rounded-xl hover:bg-muted transition-colors"
             >
               <ChevronRight className="w-5 h-5 rotate-180" />
             </button>
-            <div>
-              <h2 className="text-lg font-bold font-display">{currentReport.name}</h2>
-              <p className="text-sm text-muted-foreground">{currentReport.description}</p>
+            <div className="min-w-0">
+              <h2 className="text-lg font-bold font-display truncate">{currentReport.name}</h2>
+              <p className="hidden sm:block text-sm text-muted-foreground">{currentReport.description}</p>
             </div>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
-            <button onClick={() => handleExport("excel")} className="report-export-btn">
+            <button onClick={() => handleExport("excel")} aria-label="Export Excel" title="Export Excel" className="report-export-btn h-10 w-10 justify-center px-0 sm:w-auto sm:px-3">
               <FileSpreadsheet className="w-4 h-4" />
-              <span>Excel</span>
+              <span className="hidden sm:inline">Excel</span>
             </button>
-            <button onClick={() => handleExport("pdf")} className="report-export-btn">
+            <button onClick={() => handleExport("pdf")} aria-label="Export PDF" title="Export PDF" className="report-export-btn h-10 w-10 justify-center px-0 sm:w-auto sm:px-3">
               <FileText className="w-4 h-4" />
-              <span>PDF</span>
+              <span className="hidden sm:inline">PDF</span>
             </button>
           </div>
         </div>
@@ -2088,7 +2089,7 @@ const Reports = () => {
   return (
     <div className="space-y-6">
       {/* Summary cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
+      <StatCarousel className="grid grid-cols-2 lg:grid-cols-6 gap-4" basis="basis-[60%]">
         {categories.map((cat) => {
           const count = reportTypes.filter((r) => r.category === cat.key).length;
           return (
@@ -2114,7 +2115,7 @@ const Reports = () => {
             </button>
           );
         })}
-      </div>
+      </StatCarousel>
 
       {/* Report detail or list */}
       {selectedReport ? (
