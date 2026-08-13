@@ -45,7 +45,7 @@ const LeaveQuotaCards = ({ leaveTypes }: LeaveQuotaCardsProps) => {
           </div>
         );
       })}
-    </div>
+    </StatCarousel>
   );
 };
 

@@ -69,7 +69,7 @@ const EmployeeStatsCards = ({ total, active, onLeave, inactive, departments }: E
           <div className={`absolute -bottom-4 -right-4 w-20 h-20 rounded-full ${stat.iconBg} opacity-30`} />
         </div>
       ))}
-    </div>
+    </StatCarousel>
   );
 };
 
