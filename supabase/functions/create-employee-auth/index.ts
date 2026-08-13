@@ -42,23 +42,20 @@ Deno.serve(async (req) => {
       auth: { autoRefreshToken: false, persistSession: false },
     });
 
-    // Map role string to app_role enum value
-    const roleMap: Record<string, string> = {
-      "Admin": "admin",
-      "HR": "hr",
-      "Manager": "manager",
-      "Employee": "employee",
-      "Accountant": "accountant",
-      "Executive": "executive",
-    };
-    const appRole = roleMap[role] || "employee";
+    // Normalize the role coming from the employee form. Base roles map to the
+    // app_role enum; custom roles from the settings page are kept verbatim in
+    // role_name only (role enum stays null).
+    const baseRoles = ["admin", "hr", "manager", "employee", "accountant", "executive"];
+    const appRole = (role || "employee").toString().trim();
+    const roleName = baseRoles.includes(appRole.toLowerCase()) ? appRole.toLowerCase() : appRole;
+    const enumRole = baseRoles.includes(roleName) ? roleName : null;
 
     // Create auth user
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email,
       password,
       email_confirm: true,
-      user_metadata: { full_name: fullName || email, role: appRole },
+      user_metadata: { full_name: fullName || email, role: roleName },
     });
 
     if (authError) {
