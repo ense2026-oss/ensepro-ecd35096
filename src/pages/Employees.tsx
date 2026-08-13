@@ -104,12 +104,12 @@ const Employees = () => {
   const handleEdit = (emp: Employee) => { setEditingEmployee(emp); setFormOpen(true); };
   const handleDeleteClick = (emp: Employee) => { setDeletingEmployee(emp); setDeleteOpen(true); };
 
-  const handleFormSave = (data: Omit<Employee, "id" | "education" | "workHistory">) => {
+  const handleFormSave = async (data: Omit<Employee, "id" | "education" | "workHistory">) => {
     if (editingEmployee) {
-      updateEmployee(editingEmployee.id, data);
+      await updateEmployee(editingEmployee.id, data);
       toast.success("แก้ไขข้อมูลพนักงานสำเร็จ");
     } else {
-      addEmployee({ ...data, education: [], workHistory: [] } as Omit<Employee, "id">);
+      await addEmployee({ ...data, education: [], workHistory: [] } as Omit<Employee, "id">);
       toast.success("เพิ่มพนักงานสำเร็จ");
     }
   };
