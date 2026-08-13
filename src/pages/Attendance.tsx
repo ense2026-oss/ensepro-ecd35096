@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import { usePendingCounts } from "@/contexts/PendingCountsContext";
-import { Search, Download, CheckCircle, XCircle, Clock, AlertCircle, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Save, X, FileText, Check, RotateCcw, CalendarDays, Eye } from "lucide-react";
+import { Search, Download, CheckCircle, XCircle, Clock, AlertCircle, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Save, X, FileText, Check, RotateCcw, CalendarDays, Eye, Upload } from "lucide-react";
 import { ThaiDatePicker } from "@/components/ui/thai-date-picker";
 import { format } from "date-fns";
 import { useEmployees } from "@/contexts/EmployeeContext";
@@ -15,6 +15,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/contexts/PermissionsContext";
 import { notifyRequester, notifyTierApprover } from "@/utils/notifications";
 import EmployeeAvatar from "@/components/ui/employee-avatar";
+import FaceScanFileImportDialog from "@/components/attendance/FaceScanFileImportDialog";
+
 
 interface AttendanceRecord {
   id: string;
@@ -120,6 +122,8 @@ const Attendance = () => {
   const [dateTo, setDateTo] = useState("");
   const [filterMonth, setFilterMonth] = useState(currentMonthLocal);
   const [activeView, setActiveView] = useState<"attendance" | "requests">("attendance");
+  const [importOpen, setImportOpen] = useState(false);
+
 
   // Edit dialog
   const [editOpen, setEditOpen] = useState(false);
@@ -639,6 +643,15 @@ const Attendance = () => {
         </div>
         {(canExport || canEditTime || canRequestOwnEdit) && (
           <div className="flex items-center gap-2">
+            {canEditTime && (
+              <button
+                onClick={() => setImportOpen(true)}
+                className="flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-medium hover:bg-muted transition-colors"
+              >
+                <Upload className="w-4 h-4" />
+                นำเข้าจากเครื่องสแกน
+              </button>
+            )}
             {canExport && (
               <button className="flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-medium hover:bg-muted transition-colors">
                 <Download className="w-4 h-4" />
@@ -658,6 +671,7 @@ const Attendance = () => {
           </div>
         )}
       </div>
+
 
       {/* Summary Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -1123,8 +1137,19 @@ const Attendance = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* ═══ Face Scan File Import Dialog ═══ */}
+      <FaceScanFileImportDialog
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        onImported={() => {
+          fetchAttendance();
+          fetchOvertime();
+        }}
+      />
     </div>
   );
 };
 
 export default Attendance;
+
