@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import SearchableSelect from "@/components/ui/searchable-select";
 import { useEmployees } from "@/contexts/EmployeeContext";
 import { useContracts, Contract, ContractType } from "@/contexts/ContractContext";
+import { usePermissions } from "@/contexts/PermissionsContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 
