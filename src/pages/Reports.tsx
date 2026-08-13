@@ -855,6 +855,97 @@ const Reports = () => {
     }
   }, [filterYear]);
 
+  // --- Fetch Attendance data (real records) ---
+  const fetchAttendanceData = useCallback(async () => {
+    setAttLoading(true);
+    try {
+      const ceYear = parseInt(filterYear) - 543;
+      const monthNum = monthIndexMap[filterMonth] || 1;
+
+      const { data, error } = await supabase
+        .from("attendance_records")
+        .select("*, employees!attendance_records_employee_id_fkey(first_name, last_name, username, dept)")
+        .gte("date", `${ceYear}-01-01`)
+        .lte("date", `${ceYear}-12-31`)
+        .order("date", { ascending: false });
+      if (error) throw error;
+
+      const statusLabel: Record<string, string> = {
+        present: "ปกติ", normal: "ปกติ", late: "สาย", absent: "ขาดงาน",
+        leave: "ลางาน", dayoff: "วันหยุด", holiday: "วันหยุด",
+      };
+
+      const all = (data || []).map((r: any) => {
+        const emp = r.employees;
+        const parsed = parseThaiDate(r.date);
+        const toMin = (t: string) => {
+          const [h, m] = String(t || "").split(":").map(Number);
+          return Number.isFinite(h) ? h * 60 + (m || 0) : NaN;
+        };
+        const inM = toMin(r.check_in);
+        const outM = toMin(r.check_out);
+        let hours = "-";
+        if (Number.isFinite(inM) && Number.isFinite(outM)) {
+          let diff = outM - inM;
+          if (diff < 0) diff += 24 * 60;
+          hours = `${Math.floor(diff / 60)}:${String(diff % 60).padStart(2, "0")}`;
+        }
+        return {
+          id: r.id,
+          employeeId: r.employee_id,
+          name: emp ? `${emp.first_name} ${emp.last_name}` : "ไม่ทราบ",
+          dept: emp?.dept || "-",
+          date: parsed ? `${String(parsed.day).padStart(2, "0")}/${String(parsed.month).padStart(2, "0")}/${parsed.ceYear + 543}` : r.date,
+          month: parsed?.month ?? 0,
+          checkIn: r.check_in || "-",
+          checkOut: r.check_out || "-",
+          hours,
+          otHours: Number(r.ot_hours) || 0,
+          late: !!r.late,
+          rawStatus: r.status,
+          status: r.late && r.status !== "absent" && r.status !== "leave" ? "สาย" : (statusLabel[r.status] || r.status),
+        };
+      });
+
+      // Monthly chart for the whole year
+      const chart = monthShortNames.map((label, i) => {
+        const rows = all.filter((r) => r.month === i + 1);
+        return {
+          month: label,
+          ปกติ: rows.filter((r) => !r.late && r.rawStatus !== "absent" && r.rawStatus !== "leave" && r.rawStatus !== "dayoff").length,
+          สาย: rows.filter((r) => r.late).length,
+          ขาด: rows.filter((r) => r.rawStatus === "absent").length,
+        };
+      });
+      setAttMonthlyChart(chart);
+
+      // Selected month rows
+      let rows = all.filter((r) => r.month === monthNum);
+      if (selectedReport === "att-late") rows = rows.filter((r) => r.late);
+      else if (selectedReport === "att-ot") rows = rows.filter((r) => r.otHours > 0);
+      setAttTableData(rows);
+
+      // Per-employee summary for the selected month
+      const monthRows = all.filter((r) => r.month === monthNum);
+      const byEmp = new Map<string, any>();
+      monthRows.forEach((r) => {
+        const cur = byEmp.get(r.employeeId) || { name: r.name, dept: r.dept, workDays: 0, lateDays: 0, absentDays: 0, leaveDays: 0, otHours: 0 };
+        if (r.rawStatus === "absent") cur.absentDays += 1;
+        else if (r.rawStatus === "leave") cur.leaveDays += 1;
+        else if (r.rawStatus !== "dayoff") cur.workDays += 1;
+        if (r.late) cur.lateDays += 1;
+        cur.otHours = Math.round((cur.otHours + r.otHours) * 100) / 100;
+        byEmp.set(r.employeeId, cur);
+      });
+      setAttSummaryData(Array.from(byEmp.values()).sort((a, b) => a.name.localeCompare(b.name, "th")));
+    } catch (err) {
+      console.error("Error fetching attendance data:", err);
+    } finally {
+      setAttLoading(false);
+    }
+  }, [filterYear, filterMonth, selectedReport]);
+
+
   useEffect(() => {
     if (selectedReport === "leave-summary") fetchLeaveData();
     else if (selectedReport === "leave-balance") fetchLeaveBalance();
