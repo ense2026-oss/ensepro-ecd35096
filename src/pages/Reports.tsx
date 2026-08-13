@@ -119,27 +119,9 @@ const categories: { key: ReportCategory; label: string; icon: React.ElementType;
   { key: "payroll", label: "เงินเดือน/ภาษี", icon: Banknote, color: "#0ea5e9" },
 ];
 
-// --- Mock chart data ---
-const attendanceMonthly = [
-  { month: "ม.ค.", ปกติ: 420, สาย: 18, ขาด: 5 },
-  { month: "ก.พ.", ปกติ: 410, สาย: 22, ขาด: 8 },
-  { month: "มี.ค.", ปกติ: 430, สาย: 15, ขาด: 3 },
-  { month: "เม.ย.", ปกติ: 400, สาย: 25, ขาด: 10 },
-  { month: "พ.ค.", ปกติ: 425, สาย: 20, ขาด: 6 },
-  { month: "มิ.ย.", ปกติ: 435, สาย: 12, ขาด: 4 },
-];
-
 const defaultLeavePieColors = ["#FF870F", "#9CA3AF", "#87FF0F", "#E5E5E5", "#3b82f6", "#a855f7", "#ef4444", "#14b8a6"];
 
-// Mock data removed - employee data now fetched from database
-
-const mockAttendanceTable = [
-  { id: "EMP-001", name: "สมชาย ใจดี", date: "20/02/2569", checkIn: "08:02", checkOut: "17:15", status: "ปกติ", hours: "9:13" },
-  { id: "EMP-002", name: "สมหญิง รักงาน", date: "20/02/2569", checkIn: "08:45", checkOut: "17:30", status: "สาย", hours: "8:45" },
-  { id: "EMP-003", name: "วิชัย เก่งกาจ", date: "20/02/2569", checkIn: "07:55", checkOut: "18:00", status: "ปกติ", hours: "10:05" },
-  { id: "EMP-004", name: "นภา สดใส", date: "20/02/2569", checkIn: "09:10", checkOut: "17:00", status: "สาย", hours: "7:50" },
-  { id: "EMP-005", name: "ประภาส มั่นคง", date: "20/02/2569", checkIn: "08:00", checkOut: "17:00", status: "ปกติ", hours: "9:00" },
-];
+// All report data is fetched from the database (no mock data).
 
 // mockLeaveTable removed - now fetched from database
 
