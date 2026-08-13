@@ -1137,8 +1137,19 @@ const Attendance = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* ═══ Face Scan File Import Dialog ═══ */}
+      <FaceScanFileImportDialog
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        onImported={() => {
+          fetchAttendance();
+          fetchOvertime();
+        }}
+      />
     </div>
   );
 };
 
 export default Attendance;
+
