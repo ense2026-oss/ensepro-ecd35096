@@ -7,6 +7,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/contexts/PermissionsContext";
 import { SETTINGS_TAB_TO_MODULE } from "@/lib/settingsModules";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Carousel, CarouselContent, CarouselItem } from "@/components/ui/carousel";
+
 import LocationsSettings from "@/components/settings/LocationsSettings";
 import RolesSettings from "@/components/settings/RolesSettings";
 import AdminsSettings from "@/components/settings/AdminsSettings";
@@ -138,32 +140,37 @@ const Settings = () => {
         {/* Tab nav */}
         <div className="lg:w-56 flex-shrink-0 lg:sticky lg:top-4 lg:self-start">
           {isMobile ? (
-            /* Mobile: icon-only tabs in a single row */
-            <div className="card-base p-2 flex justify-between">
-              {tabs.map((tab) => {
-                const isActive = activeTab === tab.id;
-                return (
-                  <Tooltip key={tab.id}>
-                    <TooltipTrigger asChild>
-                      <button
-                        onClick={() => setActiveTab(tab.id)}
-                        className="flex items-center justify-center w-9 h-9 rounded-xl transition-all"
-                        style={{
-                          background: isActive ? "hsl(var(--primary))" : "transparent",
-                          color: isActive ? "hsl(var(--primary-foreground))" : "hsl(var(--muted-foreground))",
-                          boxShadow: isActive ? "0 4px 12px hsl(var(--primary) / 0.3)" : "none",
-                        }}
-                      >
-                        <tab.icon className="w-4.5 h-4.5" />
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom" className="text-xs">
-                      {tab.label}
-                    </TooltipContent>
-                  </Tooltip>
-                );
-              })}
-            </div>
+            /* Mobile: horizontal swipeable icon tabs */
+            <Carousel opts={{ align: "start", dragFree: true }} className="-mx-5">
+              <CarouselContent className="-ml-3 px-5">
+                {tabs.map((tab) => {
+                  const isActive = activeTab === tab.id;
+                  return (
+                    <CarouselItem key={tab.id} className="pl-3 basis-[22%] min-w-[72px] max-w-[90px]">
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
+                            onClick={() => setActiveTab(tab.id)}
+                            className="w-full flex flex-col items-center justify-center gap-1.5 py-2 rounded-xl transition-all"
+                            style={{
+                              background: isActive ? "hsl(var(--primary))" : "transparent",
+                              color: isActive ? "hsl(var(--primary-foreground))" : "hsl(var(--muted-foreground))",
+                              boxShadow: isActive ? "0 4px 12px hsl(var(--primary) / 0.3)" : "none",
+                            }}
+                          >
+                            <tab.icon className="w-5 h-5" />
+                            <span className="text-[10px] leading-tight text-center line-clamp-2 px-1">{tab.label}</span>
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom" className="text-xs">
+                          {tab.label}
+                        </TooltipContent>
+                      </Tooltip>
+                    </CarouselItem>
+                  );
+                })}
+              </CarouselContent>
+            </Carousel>
           ) : (
             /* Desktop: full sidebar nav */
             <div className="card-base p-2 space-y-1">
