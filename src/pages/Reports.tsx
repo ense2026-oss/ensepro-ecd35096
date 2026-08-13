@@ -1588,41 +1588,88 @@ const Reports = () => {
               </table>
             )}
             {cat === "attendance" && (
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="bg-muted/50">
-                    <th className="text-left px-4 py-3 font-semibold">ลำดับที่</th>
-                    <th className="text-left px-4 py-3 font-semibold">ชื่อ-สกุล</th>
-                    <th className="text-left px-4 py-3 font-semibold">วันที่</th>
-                    <th className="text-left px-4 py-3 font-semibold">เข้างาน</th>
-                    <th className="text-left px-4 py-3 font-semibold">ออกงาน</th>
-                    <th className="text-left px-4 py-3 font-semibold">ชั่วโมง</th>
-                    <th className="text-left px-4 py-3 font-semibold">สถานะ</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {mockAttendanceTable.map((row, i) => (
-                    <tr key={row.id} className="border-t border-border hover:bg-muted/30 transition-colors">
-                      <td className="px-4 py-3 text-center">{mockAttendanceTable.length - i}</td>
-                      <td className="px-4 py-3 font-medium">{row.name}</td>
-                      <td className="px-4 py-3">{row.date}</td>
-                      <td className="px-4 py-3">{row.checkIn}</td>
-                      <td className="px-4 py-3">{row.checkOut}</td>
-                      <td className="px-4 py-3">{row.hours}</td>
-                      <td className="px-4 py-3">
-                        <span
-                          className="px-2 py-0.5 rounded-full text-xs font-medium"
-                          style={{
-                            background: row.status === "ปกติ" ? "hsl(var(--accent-green) / 0.15)" : "hsl(31 100% 95%)",
-                            color: row.status === "ปกติ" ? "#4CAF50" : "#FF870F",
-                          }}
-                        >
-                          {row.status}
-                        </span>
-                      </td>
+              selectedReport === "att-monthly" ? (
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-muted/50">
+                      <th className="text-left px-4 py-3 font-semibold">ลำดับที่</th>
+                      <th className="text-left px-4 py-3 font-semibold">ชื่อ-สกุล</th>
+                      <th className="text-left px-4 py-3 font-semibold">แผนก</th>
+                      <th className="text-left px-4 py-3 font-semibold">มาทำงาน</th>
+                      <th className="text-left px-4 py-3 font-semibold">มาสาย</th>
+                      <th className="text-left px-4 py-3 font-semibold">ขาดงาน</th>
+                      <th className="text-left px-4 py-3 font-semibold">ลา</th>
+                      <th className="text-left px-4 py-3 font-semibold">OT (ชม.)</th>
                     </tr>
-                  ))}
-                </tbody>
+                  </thead>
+                  <tbody>
+                    {attLoading ? (
+                      <tr><td colSpan={8} className="px-4 py-8 text-center text-muted-foreground">กำลังโหลด...</td></tr>
+                    ) : attSummaryData.length === 0 ? (
+                      <tr><td colSpan={8} className="px-4 py-8 text-center text-muted-foreground">ไม่มีข้อมูล</td></tr>
+                    ) : attSummaryData.map((row: any, i: number) => (
+                      <tr key={i} className="border-t border-border hover:bg-muted/30 transition-colors">
+                        <td className="px-4 py-3 text-center">{i + 1}</td>
+                        <td className="px-4 py-3 font-medium">{row.name}</td>
+                        <td className="px-4 py-3">{row.dept}</td>
+                        <td className="px-4 py-3">{row.workDays}</td>
+                        <td className="px-4 py-3">{row.lateDays}</td>
+                        <td className="px-4 py-3">{row.absentDays}</td>
+                        <td className="px-4 py-3">{row.leaveDays}</td>
+                        <td className="px-4 py-3">{row.otHours}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : (
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-muted/50">
+                      <th className="text-left px-4 py-3 font-semibold">ลำดับที่</th>
+                      <th className="text-left px-4 py-3 font-semibold">ชื่อ-สกุล</th>
+                      <th className="text-left px-4 py-3 font-semibold">แผนก</th>
+                      <th className="text-left px-4 py-3 font-semibold">วันที่</th>
+                      <th className="text-left px-4 py-3 font-semibold">เข้างาน</th>
+                      <th className="text-left px-4 py-3 font-semibold">ออกงาน</th>
+                      <th className="text-left px-4 py-3 font-semibold">ชั่วโมง</th>
+                      <th className="text-left px-4 py-3 font-semibold">OT (ชม.)</th>
+                      <th className="text-left px-4 py-3 font-semibold">สถานะ</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {attLoading ? (
+                      <tr><td colSpan={9} className="px-4 py-8 text-center text-muted-foreground">กำลังโหลด...</td></tr>
+                    ) : attTableData.length === 0 ? (
+                      <tr><td colSpan={9} className="px-4 py-8 text-center text-muted-foreground">ไม่มีข้อมูล</td></tr>
+                    ) : attTableData.map((row: any, i: number) => (
+                      <tr key={row.id} className="border-t border-border hover:bg-muted/30 transition-colors">
+                        <td className="px-4 py-3 text-center">{i + 1}</td>
+                        <td className="px-4 py-3 font-medium">{row.name}</td>
+                        <td className="px-4 py-3">{row.dept}</td>
+                        <td className="px-4 py-3">{row.date}</td>
+                        <td className="px-4 py-3">{row.checkIn}</td>
+                        <td className="px-4 py-3">{row.checkOut}</td>
+                        <td className="px-4 py-3">{row.hours}</td>
+                        <td className="px-4 py-3">{row.otHours || "-"}</td>
+                        <td className="px-4 py-3">
+                          <span
+                            className="px-2 py-0.5 rounded-full text-xs font-medium"
+                            style={{
+                              background: row.status === "ปกติ"
+                                ? "hsl(var(--accent-green) / 0.15)"
+                                : row.status === "ขาดงาน"
+                                  ? "hsl(0 80% 95%)"
+                                  : "hsl(31 100% 95%)",
+                              color: row.status === "ปกติ" ? "#4CAF50" : row.status === "ขาดงาน" ? "#ef4444" : "#FF870F",
+                            }}
+                          >
+                            {row.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+
               </table>
             )}
             {cat === "overtime" && (
