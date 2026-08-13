@@ -1,17 +1,17 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogBody, DialogFooter } from "@/components/ui/dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Save, X, ScanFace, Upload, Camera } from "lucide-react";
+import { Save, X, ScanFace, Upload, Camera, Loader2 } from "lucide-react";
 import type { Employee } from "@/contexts/EmployeeContext";
 import { useOrg } from "@/contexts/OrgContext";
-import { useRoleOptions } from "@/hooks/useRoleOptions";
+import { useRoleOptions, matchRoleOption } from "@/hooks/useRoleOptions";
 import { processFileUpload } from "@/utils/fileCompression";
+import { supabase } from "@/integrations/supabase/client";
 
 interface EmployeeFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   employee?: Employee | null;
-  onSave: (data: Omit<Employee, "id" | "education" | "workHistory">) => void;
+  onSave: (data: Omit<Employee, "id" | "education" | "workHistory">) => Promise<void> | void;
 }
 
 const EMPTY: Omit<Employee, "id" | "education" | "workHistory"> = {
