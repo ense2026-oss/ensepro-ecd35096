@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useCallback, useEffect, use
 import { TaxDeduction, DEFAULT_TAX_DEDUCTION } from "@/utils/taxCalculation";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 
 /* ───────────────────── Types ───────────────────── */
 export interface EducationRecord {
@@ -404,11 +405,17 @@ export const EmployeeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     // Sync role to user_roles if role changed
     if (data.role !== undefined) {
       try {
-        await supabase.functions.invoke("sync-employee-role", {
+        const { data: syncData, error: syncError } = await supabase.functions.invoke("sync-employee-role", {
           body: { action: "sync_role", employeeId: id, newRole: data.role },
         });
-      } catch (syncErr) {
+        if (syncError || syncData?.error) {
+          toast.warning("บันทึกข้อมูลแล้ว แต่ซิงก์สิทธิ์ไม่สำเร็จ: " + (syncData?.error || syncError?.message));
+        } else if (syncData?.message === "No linked auth account") {
+          toast.warning("บันทึกข้อมูลแล้ว แต่พนักงานยังไม่มีบัญชีเข้าใช้งาน สิทธิ์จะมีผลเมื่อสร้างบัญชีแล้ว");
+        }
+      } catch (syncErr: any) {
         console.error("Role sync failed:", syncErr);
+        toast.warning("บันทึกข้อมูลแล้ว แต่ซิงก์สิทธิ์ไม่สำเร็จ");
       }
     }
 

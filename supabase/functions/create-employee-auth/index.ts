@@ -42,23 +42,20 @@ Deno.serve(async (req) => {
       auth: { autoRefreshToken: false, persistSession: false },
     });
 
-    // Map role string to app_role enum value
-    const roleMap: Record<string, string> = {
-      "Admin": "admin",
-      "HR": "hr",
-      "Manager": "manager",
-      "Employee": "employee",
-      "Accountant": "accountant",
-      "Executive": "executive",
-    };
-    const appRole = roleMap[role] || "employee";
+    // Normalize the role coming from the employee form. Base roles map to the
+    // app_role enum; custom roles from the settings page are kept verbatim in
+    // role_name only (role enum stays null).
+    const baseRoles = ["admin", "hr", "manager", "employee", "accountant", "executive"];
+    const appRole = (role || "employee").toString().trim();
+    const roleName = baseRoles.includes(appRole.toLowerCase()) ? appRole.toLowerCase() : appRole;
+    const enumRole = baseRoles.includes(roleName) ? roleName : null;
 
     // Create auth user
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email,
       password,
       email_confirm: true,
-      user_metadata: { full_name: fullName || email, role: appRole },
+      user_metadata: { full_name: fullName || email, role: roleName },
     });
 
     if (authError) {
@@ -85,21 +82,17 @@ Deno.serve(async (req) => {
       console.error("Profile upsert error:", JSON.stringify(profileError));
     }
 
-    // Manually create user_role if trigger doesn't exist
-    const { error: roleError } = await supabaseAdmin
-      .from("user_roles")
-      .upsert({
-        user_id: userId,
-        role: appRole,
-      }, { onConflict: "user_id,role" });
+    // Replace any role rows created by the signup trigger with the chosen role
+    await supabaseAdmin.from("user_roles").delete().eq("user_id", userId);
+
+    const { error: roleError } = await supabaseAdmin.from("user_roles").insert({
+      user_id: userId,
+      role: enumRole,
+      role_name: roleName,
+    });
 
     if (roleError) {
-      console.error("Role upsert error:", JSON.stringify(roleError));
-      // Try insert instead
-      await supabaseAdmin.from("user_roles").insert({
-        user_id: userId,
-        role: appRole,
-      });
+      console.error("Role insert error:", JSON.stringify(roleError));
     }
 
     // Link employee record to auth user and save initial password

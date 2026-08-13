@@ -1,17 +1,17 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogBody, DialogFooter } from "@/components/ui/dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Save, X, ScanFace, Upload, Camera } from "lucide-react";
+import { Save, X, ScanFace, Upload, Camera, Loader2 } from "lucide-react";
 import type { Employee } from "@/contexts/EmployeeContext";
 import { useOrg } from "@/contexts/OrgContext";
-import { useRoleOptions } from "@/hooks/useRoleOptions";
+import { useRoleOptions, matchRoleOption } from "@/hooks/useRoleOptions";
 import { processFileUpload } from "@/utils/fileCompression";
+import { supabase } from "@/integrations/supabase/client";
 
 interface EmployeeFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   employee?: Employee | null;
-  onSave: (data: Omit<Employee, "id" | "education" | "workHistory">) => void;
+  onSave: (data: Omit<Employee, "id" | "education" | "workHistory">) => Promise<void> | void;
 }
 
 const EMPTY: Omit<Employee, "id" | "education" | "workHistory"> = {
@@ -22,7 +22,7 @@ const EMPTY: Omit<Employee, "id" | "education" | "workHistory"> = {
   phone: "", email: "", address: "",
   dept: "", position: "", employeeType: "พนักงานประจำ",
   startDate: "", trialEndDate: "", contractEndDate: "",
-  shift: "กะเช้า 08:00-17:00", faceScanId: "", salary: "", status: "active",
+  shift: "", faceScanId: "", salary: "", status: "active",
   bankAccount: "", driverLicense: "",
   homeAddress: "", maritalStatus: "โสด",
   spouseName: "", spousePhone: "",
@@ -91,9 +91,43 @@ const EmployeeFormDialog = ({ open, onOpenChange, employee, onSave }: EmployeeFo
   const ROLE_OPTIONS = useRoleOptions();
   const [form, setForm] = useState<Omit<Employee, "id" | "education" | "workHistory">>(EMPTY);
   const [errors, setErrors] = useState<string[]>([]);
+  const [saving, setSaving] = useState(false);
+  const [shiftNames, setShiftNames] = useState<string[]>([]);
   const photoInputRef = useRef<HTMLInputElement>(null);
 
   const isDeptSelected = !!form.dept && form.dept !== "-- เลือกสังกัด --";
+
+  // Roles come from Settings > สิทธิ์ผู้ใช้งาน. If the employee currently holds a
+  // role that no longer exists there, keep it as an explicit option so the
+  // browser does not silently switch them to the first option on save.
+  const isUnknownRole = !!form.role && !matchRoleOption(ROLE_OPTIONS, form.role);
+  const roleSelectOptions = useMemo(
+    () =>
+      isUnknownRole
+        ? [{ value: form.role, label: `${form.role} (ไม่มีในการตั้งค่าแล้ว)` }, ...ROLE_OPTIONS]
+        : ROLE_OPTIONS,
+    [isUnknownRole, form.role, ROLE_OPTIONS]
+  );
+
+  const shiftOptions = useMemo(() => {
+    const list = ["-- เลือกกะการทำงาน --", ...shiftNames];
+    return form.shift && !list.includes(form.shift) ? [...list, form.shift] : list;
+  }, [shiftNames, form.shift]);
+
+  useEffect(() => {
+    if (!open) return;
+    supabase
+      .from("shifts")
+      .select("name,start_time,end_time,sort_order")
+      .order("sort_order")
+      .then(({ data }) => {
+        setShiftNames(
+          (data || []).map((s: any) =>
+            s.start_time && s.end_time ? `${s.name} ${s.start_time}-${s.end_time}` : s.name
+          )
+        );
+      });
+  }, [open]);
 
   const filteredPositions = useMemo(() => {
     const collectNames = (positions: { name: string; children?: any[] }[]): string[] => {
@@ -132,33 +166,58 @@ const EmployeeFormDialog = ({ open, onOpenChange, employee, onSave }: EmployeeFo
         setForm(EMPTY);
       }
       setErrors([]);
+      setSaving(false);
     }
   }, [open, employee]);
 
+  // Align the stored role with the exact value used by the settings page
+  // (e.g. "hr" stored on an employee resolves to the "HR" option).
+  useEffect(() => {
+    if (!open || !form.role || !ROLE_OPTIONS.length) return;
+    const matched = matchRoleOption(ROLE_OPTIONS, form.role);
+    if (matched && matched.value !== form.role) {
+      setForm((f) => ({ ...f, role: matched.value }));
+    }
+  }, [open, form.role, ROLE_OPTIONS]);
+
   const set = (key: string) => (v: string) => setForm((f) => ({ ...f, [key]: v }));
+  const setNumber = (key: string) => (v: string) =>
+    setForm((f) => ({ ...f, [key]: Math.max(0, Number(v) || 0) }));
 
   // When the department changes, reset the position so it must be re-picked
   // from the newly selected affiliation's positions.
   const handleDeptChange = (v: string) => setForm((f) => ({ ...f, dept: v, position: "" }));
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const errs: string[] = [];
     if (!form.firstName.trim()) errs.push("กรุณากรอกชื่อ");
     if (!form.lastName.trim()) errs.push("กรุณากรอกนามสกุล");
     if (!form.dept.trim() || form.dept === "-- เลือกสังกัด --") errs.push("กรุณาเลือกสังกัด");
     if (!form.position.trim() || form.position === "-- เลือกตำแหน่ง --") errs.push("กรุณาเลือกตำแหน่ง");
+    if (form.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim()))
+      errs.push("รูปแบบอีเมลไม่ถูกต้อง");
+    if (!isEdit && !form.email.trim()) errs.push("กรุณากรอกอีเมล เพื่อสร้างบัญชีเข้าใช้งานให้พนักงาน");
+    if (!form.role.trim() || isUnknownRole) errs.push("กรุณาเลือกสิทธิ์การใช้งานจากรายการในหน้าตั้งค่า");
     if (errs.length) { setErrors(errs); return; }
 
     const avatar = form.firstName.charAt(0) || "?";
     const hue = Math.floor(Math.random() * 360);
-    onSave({
-      ...form,
-      avatar,
-      avatarColor: isEdit ? form.avatarColor : `hsl(${hue} 70% 90%)`,
-      avatarTextColor: isEdit ? form.avatarTextColor : `hsl(${hue} 70% 35%)`,
-      username: form.username || `${form.firstName.toLowerCase()}.${form.lastName.charAt(0).toLowerCase()}`,
-    });
-    onOpenChange(false);
+    setSaving(true);
+    try {
+      await onSave({
+        ...form,
+        email: form.email.trim(),
+        avatar,
+        avatarColor: isEdit ? form.avatarColor : `hsl(${hue} 70% 90%)`,
+        avatarTextColor: isEdit ? form.avatarTextColor : `hsl(${hue} 70% 35%)`,
+        username: form.username || `${form.firstName.toLowerCase()}.${form.lastName.charAt(0).toLowerCase()}`,
+      });
+      onOpenChange(false);
+    } catch (err: any) {
+      setErrors([err?.message || "บันทึกไม่สำเร็จ กรุณาลองใหม่อีกครั้ง"]);
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -208,6 +267,7 @@ const EmployeeFormDialog = ({ open, onOpenChange, employee, onSave }: EmployeeFo
           <SectionLabel>ข้อมูลพื้นฐาน</SectionLabel>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <SelectField label="คำนำหน้า" value={form.prefix} onChange={set("prefix")} options={["นาย", "นาง", "นางสาว", "ดร.", "ผศ.ดร."]} />
+            <SelectField label="เพศ" value={form.gender || "ชาย"} onChange={set("gender")} options={["ชาย", "หญิง", "อื่นๆ"]} />
             <InputField label="ชื่อ" value={form.firstName} onChange={set("firstName")} required />
             <InputField label="นามสกุล" value={form.lastName} onChange={set("lastName")} required />
             <InputField label="ชื่อเล่น" value={form.nickname} onChange={set("nickname")} />
@@ -243,8 +303,18 @@ const EmployeeFormDialog = ({ open, onOpenChange, employee, onSave }: EmployeeFo
             />
 
             <SelectField label="ประเภทพนักงาน" value={form.employeeType} onChange={set("employeeType")} options={["พนักงานประจำ", "พนักงานชั่วคราว", "พนักงานทดลองงาน"]} />
+            <SelectField
+              label="กะการทำงาน"
+              value={form.shift || "-- เลือกกะการทำงาน --"}
+              onChange={(v) => set("shift")(v === "-- เลือกกะการทำงาน --" ? "" : v)}
+              options={shiftOptions}
+            />
             <InputField label="วันที่เริ่มงาน" value={form.startDate} onChange={set("startDate")} placeholder="YYYY-MM-DD" />
+            <InputField label="วันสิ้นสุดทดลองงาน" value={form.trialEndDate} onChange={set("trialEndDate")} placeholder="YYYY-MM-DD" />
+            <InputField label="วันสิ้นสุดสัญญาจ้าง" value={form.contractEndDate} onChange={set("contractEndDate")} placeholder="YYYY-MM-DD" />
             <InputField label="เงินเดือน (บาท)" value={form.salary} onChange={set("salary")} type="number" />
+            <InputField label="เลขบัญชีธนาคาร" value={form.bankAccount} onChange={set("bankAccount")} />
+            <InputField label="เลขใบขับขี่" value={form.driverLicense} onChange={set("driverLicense")} />
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
                 <ScanFace className="w-3.5 h-3.5" /> Face Scan ID
@@ -256,7 +326,17 @@ const EmployeeFormDialog = ({ open, onOpenChange, employee, onSave }: EmployeeFo
               <p className="text-[10px] text-muted-foreground">ใช้ ID เดียวกับที่ตั้งค่าในเครื่องสแกนหน้า</p>
             </div>
             <SelectField label="สถานะ" value={form.status} onChange={set("status")} options={STATUS_OPTIONS} />
-            <SelectField label="สิทธิ์การใช้งาน" value={form.role} onChange={set("role")} options={ROLE_OPTIONS} />
+            <SelectField
+              label="สิทธิ์การใช้งาน"
+              value={form.role}
+              onChange={set("role")}
+              options={roleSelectOptions}
+              hint={
+                isUnknownRole
+                  ? "สิทธิ์นี้ไม่มีอยู่ในหน้าตั้งค่าสิทธิ์ผู้ใช้งานแล้ว กรุณาเลือกสิทธิ์ใหม่"
+                  : "รายการมาจากหน้าตั้งค่า > สิทธิ์ผู้ใช้งาน · การเปลี่ยนสิทธิ์มีผลกับบัญชีเข้าใช้งานทันที"
+              }
+            />
           </div>
 
           {/* ข้อมูลครอบครัว */}
@@ -270,6 +350,8 @@ const EmployeeFormDialog = ({ open, onOpenChange, employee, onSave }: EmployeeFo
             <InputField label="เบอร์โทรบิดา" value={form.fatherPhone} onChange={set("fatherPhone")} type="tel" />
             <InputField label="ชื่อมารดา" value={form.motherName} onChange={set("motherName")} />
             <InputField label="เบอร์โทรมารดา" value={form.motherPhone} onChange={set("motherPhone")} type="tel" />
+            <InputField label="จำนวนบุตรชาย" value={String(form.sons ?? 0)} onChange={setNumber("sons")} type="number" />
+            <InputField label="จำนวนบุตรสาว" value={String(form.daughters ?? 0)} onChange={setNumber("daughters")} type="number" />
           </div>
 
           {/* ผู้ติดต่อฉุกเฉิน */}
@@ -292,10 +374,11 @@ const EmployeeFormDialog = ({ open, onOpenChange, employee, onSave }: EmployeeFo
             className="flex items-center gap-2 px-4 py-2 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors">
             <X className="w-4 h-4" /> ยกเลิก
           </button>
-          <button onClick={handleSave}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold text-primary-foreground transition-all"
+          <button onClick={handleSave} disabled={saving}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold text-primary-foreground transition-all disabled:opacity-60 disabled:cursor-not-allowed"
             style={{ background: "linear-gradient(135deg, hsl(var(--primary)), hsl(31 100% 60%))", boxShadow: "0 4px 12px hsl(var(--primary) / 0.3)" }}>
-            <Save className="w-4 h-4" /> {isEdit ? "บันทึก" : "เพิ่มพนักงาน"}
+            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+            {saving ? "กำลังบันทึก..." : isEdit ? "บันทึก" : "เพิ่มพนักงาน"}
           </button>
         </DialogFooter>
       </DialogContent>

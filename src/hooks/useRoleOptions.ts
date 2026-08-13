@@ -18,41 +18,46 @@ const ROLE_NAME_TO_VALUE: Record<string, string> = {
   executive: "Executive",
 };
 
-// Desired display order (by role_name). Roles not listed are appended after.
-const ROLE_ORDER = [
-  "executive",
-  "manager",
-  "team_lead",
-  "hr",
-  "personnel",
-  "employee",
-  "accountant",
-  "admin",
-];
+/** Display name in English for a role_name coming from the settings page. */
+export const roleDisplayName = (roleName: string): string =>
+  ROLE_NAME_TO_VALUE[roleName.toLowerCase()] ??
+  roleName
+    .split("_")
+    .filter(Boolean)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
 
 /**
  * Builds the role dropdown options from the "สิทธิ์ผู้ใช้งาน" settings page
  * (role_permissions). Reflects additions/edits/deletions automatically and
- * applies the requested display order.
+ * respects the display order configured there.
  */
 export const useRoleOptions = (): RoleOption[] => {
   const { getAllRoles } = usePermissions();
 
-  return useMemo(() => {
-    const roles = getAllRoles();
+  return useMemo(
+    () =>
+      getAllRoles().map((r) => {
+        const value = ROLE_NAME_TO_VALUE[r.name.toLowerCase()] ?? r.name;
+        const name = roleDisplayName(r.name);
+        return {
+          value,
+          label: r.description ? `${name} — ${r.description}` : name,
+        };
+      }),
+    [getAllRoles]
+  );
+};
 
-    const ordered = [...roles].sort((a, b) => {
-      const ia = ROLE_ORDER.indexOf(a.name);
-      const ib = ROLE_ORDER.indexOf(b.name);
-      const ra = ia === -1 ? Number.MAX_SAFE_INTEGER : ia;
-      const rb = ib === -1 ? Number.MAX_SAFE_INTEGER : ib;
-      if (ra !== rb) return ra - rb;
-      return a.name.localeCompare(b.name);
-    });
-
-    return ordered.map((r) => ({
-      value: ROLE_NAME_TO_VALUE[r.name] ?? r.name,
-      label: r.description || r.name,
-    }));
-  }, [getAllRoles]);
+/**
+ * Finds the option matching a stored employees.role value, ignoring casing
+ * differences between employees.role ("HR") and role_permissions.role_name ("hr").
+ */
+export const matchRoleOption = (
+  options: RoleOption[],
+  storedRole: string | undefined | null
+): RoleOption | undefined => {
+  if (!storedRole) return undefined;
+  const target = storedRole.trim().toLowerCase();
+  return options.find((o) => o.value.toLowerCase() === target);
 };
