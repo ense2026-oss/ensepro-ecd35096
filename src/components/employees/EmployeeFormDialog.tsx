@@ -4,6 +4,7 @@ import { Save, X, ScanFace, Upload, Camera, Loader2 } from "lucide-react";
 import type { Employee } from "@/contexts/EmployeeContext";
 import { useOrg } from "@/contexts/OrgContext";
 import { useRoleOptions, matchRoleOption } from "@/hooks/useRoleOptions";
+import { useEmployeeFieldOptions } from "@/hooks/useEmployeeFieldOptions";
 import { processFileUpload } from "@/utils/fileCompression";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -89,6 +90,7 @@ const EmployeeFormDialog = ({ open, onOpenChange, employee, onSave }: EmployeeFo
   const isEdit = !!employee;
   const { affiliations, affiliationNames } = useOrg();
   const ROLE_OPTIONS = useRoleOptions();
+  const { options: fieldOptions } = useEmployeeFieldOptions();
   const [form, setForm] = useState<Omit<Employee, "id" | "education" | "workHistory">>(EMPTY);
   const [errors, setErrors] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
