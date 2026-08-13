@@ -71,7 +71,6 @@ async function toDataUrl(url: string): Promise<{ dataUrl: string; format: string
   }
 }
 
-const RED: [number, number, number] = [204, 0, 0];
 const BLACK: [number, number, number] = [0, 0, 0];
 
 /** Draw the payslip as a formal Thai letter (blueprint layout). */
