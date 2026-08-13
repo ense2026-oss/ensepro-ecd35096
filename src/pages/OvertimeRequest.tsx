@@ -75,10 +75,11 @@ const OTRequestDialog = ({ open, onClose, onSubmit }: {
 }) => {
   const { employees } = useEmployees();
   const { currentUser, role } = useAuth();
-  const { canAction } = usePermissions();
+  const { canAction, getScope } = usePermissions();
   const canAdd = canAction(role, 'ot', 'add');
   const hasAdminAccess = canAdd || canAction(role, 'ot', 'approve');
-  const isAdmin = role === 'admin';
+  // Can create OT for other people only when the OT scope is wider than "self"
+  const isAdmin = canAdd && getScope(role, 'ot') !== 'self';
   const shouldLockEmployee = !isAdmin;
   const [form, setForm] = useState({
     employeeId: shouldLockEmployee && currentUser ? (currentUser.employeeId || currentUser.id) : "",

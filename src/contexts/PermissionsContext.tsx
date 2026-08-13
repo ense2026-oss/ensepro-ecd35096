@@ -151,12 +151,11 @@ export const PermissionsProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
   const isSelfOnly = useCallback((role: string, path: string): boolean => {
     const r = role.toLowerCase();
-    if (["admin", "hr", "manager"].includes(r)) return false;
     const normalized = "/" + path.split("/")[1];
     const mod = routeToModule[normalized];
     if (!mod) return false;
-    const scope = getScope(r, mod);
-    return scope === "self";
+    // Scope comes from the permission matrix only — no hardcoded role names.
+    return getScope(r, mod) === "self";
   }, [getScope]);
 
   const getModuleForRoute = useCallback((path: string): string | undefined => {

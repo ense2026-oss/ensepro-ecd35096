@@ -42,35 +42,58 @@ import {
   DEFAULT_TAX_DEDUCTION, type TaxConfig, type TaxDeduction,
 } from "@/utils/taxCalculation";
 
-/* ─── Payroll config (same as Payroll page) ─── */
-const PAYROLL_CONFIG = {
-  otRateWorkday: 1.5,
-  diligenceEnabled: true,
-  diligenceAmount: 2000,
-  ssfEnabled: true,
-  ssfRate: 5,
-  ssfCeiling: 750,
-  taxConfig: { enabled: true, method: "progressive" as const, flatRate: 5 },
-};
+/* ─── Payroll config (live from settings, same source as the Payroll page) ─── */
+import { fetchPayrollConfig, DEFAULT_PAYROLL_CONFIG, type PayrollConfig } from "@/utils/payrollConfig";
 
-const mockAttendanceData: Record<string, { workDays: number; otHours: number; lateDays: number; absentDays: number; leaveDays: number }> = {
-  "a3f1b2c4-1234-5678-90ab-cdef01234567": { workDays: 22, otHours: 12, lateDays: 0, absentDays: 0, leaveDays: 0 },
-  "b4e2c3d5-2345-6789-01bc-def012345678": { workDays: 21, otHours: 4, lateDays: 1, absentDays: 0, leaveDays: 1 },
-  "c5f3d4e6-3456-7890-12cd-ef0123456789": { workDays: 22, otHours: 20, lateDays: 0, absentDays: 0, leaveDays: 0 },
-  "d6g4e5f7-4567-8901-23de-f01234567890": { workDays: 15, otHours: 0, lateDays: 0, absentDays: 0, leaveDays: 7 },
-  "e7h5f6g8-5678-9012-34ef-012345678901": { workDays: 22, otHours: 18, lateDays: 2, absentDays: 0, leaveDays: 0 },
-  "f8i6g7h9-6789-0123-45f0-123456789012": { workDays: 20, otHours: 6, lateDays: 0, absentDays: 2, leaveDays: 0 },
-  "g9j7h8i0-7890-1234-56g1-234567890123": { workDays: 0, otHours: 0, lateDays: 0, absentDays: 0, leaveDays: 0 },
-  "h0k8i9j1-8901-2345-67h2-345678901234": { workDays: 22, otHours: 2, lateDays: 0, absentDays: 0, leaveDays: 0 },
-  "i1l9j0k2-9012-3456-78i3-456789012345": { workDays: 22, otHours: 0, lateDays: 0, absentDays: 0, leaveDays: 0 },
-};
+let PAYROLL_CONFIG: PayrollConfig = { ...DEFAULT_PAYROLL_CONFIG };
+
+export interface ExportAttendanceSummary {
+  workDays: number; otHours: number; lateDays: number; absentDays: number; leaveDays: number;
+}
+
+const EMPTY_ATTENDANCE: ExportAttendanceSummary = { workDays: 0, otHours: 0, lateDays: 0, absentDays: 0, leaveDays: 0 };
+
+let attendanceByEmployee: Record<string, ExportAttendanceSummary> = {};
+
+const pad2 = (n: number) => String(n).padStart(2, "0");
+
+/**
+ * Load live payroll settings + real attendance/OT for the given period.
+ * Must be awaited before calling the export functions below.
+ */
+export async function primePayrollExportData(year: number, month: number): Promise<void> {
+  PAYROLL_CONFIG = await fetchPayrollConfig();
+  attendanceByEmployee = {};
+
+  const from = `${year}-${pad2(month)}-01`;
+  const to = `${year}-${pad2(month)}-31`;
+
+  const [attRes, otRes, leaveRes] = await Promise.all([
+    supabase.from("attendance_records").select("employee_id,status,late,date").gte("date", from).lte("date", to),
+    supabase.from("overtime_requests").select("employee_id,hours,date,status").gte("date", from).lte("date", to).eq("status", "approved"),
+    supabase.from("leave_requests").select("employee_id,days,date_from,status").gte("date_from", from).lte("date_from", to).eq("status", "approved"),
+  ]);
+
+  const bucket = (id: string) => (attendanceByEmployee[id] ||= { ...EMPTY_ATTENDANCE });
+
+  (attRes.data || []).forEach((r: any) => {
+    const b = bucket(r.employee_id);
+    if (r.status === "absent") b.absentDays += 1;
+    else if (r.status !== "dayoff") b.workDays += 1;
+    if (r.late) b.lateDays += 1;
+  });
+  (otRes.data || []).forEach((r: any) => { bucket(r.employee_id).otHours += Number(r.hours) || 0; });
+  (leaveRes.data || []).forEach((r: any) => { bucket(r.employee_id).leaveDays += Number(r.days) || 0; });
+}
 
 function calcPayrollForExport(emp: Employee) {
   const salary = Number(emp.salary) || 0;
-  const att = mockAttendanceData[emp.id] || { workDays: 22, otHours: 0, lateDays: 0, absentDays: 0, leaveDays: 0 };
+  const att = attendanceByEmployee[emp.id] || { ...EMPTY_ATTENDANCE };
   const hourlyRate = salary / 30 / 8;
-  const otPay = Math.round(att.otHours * hourlyRate * PAYROLL_CONFIG.otRateWorkday);
-  const diligence = PAYROLL_CONFIG.diligenceEnabled && att.lateDays === 0 && att.absentDays === 0 ? PAYROLL_CONFIG.diligenceAmount : 0;
+  const otPay = PAYROLL_CONFIG.otEnabled ? Math.round(att.otHours * hourlyRate * PAYROLL_CONFIG.otRateWorkday) : 0;
+  const tooLate = PAYROLL_CONFIG.deductLate && att.lateDays >= PAYROLL_CONFIG.lateThreshold;
+  const tooAbsent = PAYROLL_CONFIG.deductAbsent && att.absentDays >= PAYROLL_CONFIG.absentThreshold;
+  const diligence = PAYROLL_CONFIG.diligenceEnabled && !tooLate && !tooAbsent ? PAYROLL_CONFIG.diligenceAmount : 0;
 
   const customItems = (emp.customPayrollItems || []).filter((i) => i.enabled);
   const customIncome = customItems.filter((i) => i.type === "income").reduce((s, i) => s + i.amount, 0);

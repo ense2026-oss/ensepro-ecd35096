@@ -487,7 +487,16 @@ const Attendance = () => {
   const applyAttendanceChange = async (req: TimeEditRequest) => {
     const newCheckIn = req.newCheckIn || "-";
     const newCheckOut = req.newCheckOut || "-";
-    const isLate = newCheckIn !== "-" && newCheckIn > "08:30";
+    // Late rule lives in the database (shift start time + configurable grace period)
+    let isLate = false;
+    if (newCheckIn !== "-") {
+      const { data: lateData } = await supabase.rpc("is_late_checkin", {
+        _employee_id: req.employeeId,
+        _date: toISODate(req.date),
+        _check_in: newCheckIn,
+      });
+      isLate = lateData === true;
+    }
     const status = newCheckIn === "-" ? "absent" : isLate ? "late" : "present";
 
     // 1) If the request is tied to a specific attendance row, update it directly.

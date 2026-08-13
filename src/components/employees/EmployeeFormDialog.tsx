@@ -4,6 +4,7 @@ import { Save, X, ScanFace, Upload, Camera, Loader2 } from "lucide-react";
 import type { Employee } from "@/contexts/EmployeeContext";
 import { useOrg } from "@/contexts/OrgContext";
 import { useRoleOptions, matchRoleOption } from "@/hooks/useRoleOptions";
+import { useEmployeeFieldOptions } from "@/hooks/useEmployeeFieldOptions";
 import { processFileUpload } from "@/utils/fileCompression";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -89,6 +90,7 @@ const EmployeeFormDialog = ({ open, onOpenChange, employee, onSave }: EmployeeFo
   const isEdit = !!employee;
   const { affiliations, affiliationNames } = useOrg();
   const ROLE_OPTIONS = useRoleOptions();
+  const { options: fieldOptions } = useEmployeeFieldOptions();
   const [form, setForm] = useState<Omit<Employee, "id" | "education" | "workHistory">>(EMPTY);
   const [errors, setErrors] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
@@ -266,16 +268,16 @@ const EmployeeFormDialog = ({ open, onOpenChange, employee, onSave }: EmployeeFo
           {/* ข้อมูลพื้นฐาน */}
           <SectionLabel>ข้อมูลพื้นฐาน</SectionLabel>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <SelectField label="คำนำหน้า" value={form.prefix} onChange={set("prefix")} options={["นาย", "นาง", "นางสาว", "ดร.", "ผศ.ดร."]} />
-            <SelectField label="เพศ" value={form.gender || "ชาย"} onChange={set("gender")} options={["ชาย", "หญิง", "อื่นๆ"]} />
+            <SelectField label="คำนำหน้า" value={form.prefix} onChange={set("prefix")} options={fieldOptions.prefixes} />
+            <SelectField label="เพศ" value={form.gender || "ชาย"} onChange={set("gender")} options={fieldOptions.genders} />
             <InputField label="ชื่อ" value={form.firstName} onChange={set("firstName")} required />
             <InputField label="นามสกุล" value={form.lastName} onChange={set("lastName")} required />
             <InputField label="ชื่อเล่น" value={form.nickname} onChange={set("nickname")} />
             <InputField label="วันเกิด" value={form.birthDate} onChange={set("birthDate")} placeholder="YYYY-MM-DD" />
             <InputField label="เลขบัตรประชาชน" value={form.nationalId} onChange={set("nationalId")} placeholder="X-XXXX-XXXXX-XX-X" />
-            <SelectField label="สัญชาติ" value={form.nationality} onChange={set("nationality")} options={["ไทย", "อื่นๆ"]} />
-            <SelectField label="ศาสนา" value={form.religion} onChange={set("religion")} options={["พุทธ", "คริสต์", "อิสลาม", "ฮินดู", "อื่นๆ"]} />
-            <SelectField label="หมู่เลือด" value={form.bloodGroup} onChange={set("bloodGroup")} options={["A", "B", "AB", "O"]} />
+            <SelectField label="สัญชาติ" value={form.nationality} onChange={set("nationality")} options={fieldOptions.nationalities} />
+            <SelectField label="ศาสนา" value={form.religion} onChange={set("religion")} options={fieldOptions.religions} />
+            <SelectField label="หมู่เลือด" value={form.bloodGroup} onChange={set("bloodGroup")} options={fieldOptions.bloodGroups} />
             <InputField label="วันออกบัตร" value={form.idIssueDate} onChange={set("idIssueDate")} placeholder="YYYY-MM-DD" />
             <InputField label="วันหมดอายุบัตร" value={form.idExpireDate} onChange={set("idExpireDate")} placeholder="YYYY-MM-DD" />
             <InputField label="เบอร์โทรศัพท์" value={form.phone} onChange={set("phone")} type="tel" />
@@ -302,7 +304,7 @@ const EmployeeFormDialog = ({ open, onOpenChange, employee, onSave }: EmployeeFo
               hint={!isDeptSelected ? "กรุณาเลือกสังกัดก่อน" : undefined}
             />
 
-            <SelectField label="ประเภทพนักงาน" value={form.employeeType} onChange={set("employeeType")} options={["พนักงานประจำ", "พนักงานชั่วคราว", "พนักงานทดลองงาน"]} />
+            <SelectField label="ประเภทพนักงาน" value={form.employeeType} onChange={set("employeeType")} options={fieldOptions.employeeTypes} />
             <SelectField
               label="กะการทำงาน"
               value={form.shift || "-- เลือกกะการทำงาน --"}
@@ -342,7 +344,7 @@ const EmployeeFormDialog = ({ open, onOpenChange, employee, onSave }: EmployeeFo
           {/* ข้อมูลครอบครัว */}
           <SectionLabel>ข้อมูลครอบครัว</SectionLabel>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <SelectField label="สถานภาพสมรส" value={form.maritalStatus} onChange={set("maritalStatus")} options={["โสด", "สมรส", "หย่าร้าง", "หม้าย"]} />
+            <SelectField label="สถานภาพสมรส" value={form.maritalStatus} onChange={set("maritalStatus")} options={fieldOptions.maritalStatuses} />
             <InputField label="ชื่อคู่สมรส" value={form.spouseName} onChange={set("spouseName")} />
             <InputField label="เบอร์โทรคู่สมรส" value={form.spousePhone} onChange={set("spousePhone")} type="tel" />
             <div />

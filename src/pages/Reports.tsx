@@ -5,7 +5,7 @@ import {
   calculateAnnualIncome, calculateMonthlyTax, formatCurrency,
   DEFAULT_TAX_DEDUCTION, type TaxConfig,
 } from "@/utils/taxCalculation";
-import { exportPnd1Excel, exportPnd1Pdf, exportAllPayslipsExcel } from "@/utils/exportPayroll";
+import { exportPnd1Excel, exportPnd1Pdf, exportAllPayslipsExcel, primePayrollExportData } from "@/utils/exportPayroll";
 import {
   exportLeaveSummaryExcel, exportLeaveSummaryPdf,
   exportLeaveBalanceExcel, exportLeaveBalancePdf,
@@ -915,7 +915,10 @@ const Reports = () => {
       return;
     }
 
-    // Payroll-specific exports
+    // Payroll-specific exports (load live settings + real attendance first)
+    if (reportId.startsWith("payroll-")) {
+      await primePayrollExportData(Number(filterYear) - 543, monthIndexMap[filterMonth] || 1);
+    }
     if (reportId === "payroll-pnd1") {
       if (format === "excel") {
         exportPnd1Excel(employees, filterMonth, filterYear);

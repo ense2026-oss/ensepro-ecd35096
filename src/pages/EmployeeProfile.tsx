@@ -11,6 +11,7 @@ import { ThaiDatePicker } from "@/components/ui/thai-date-picker";
 import { useEmployees } from "@/contexts/EmployeeContext";
 import { useOrg, type Position } from "@/contexts/OrgContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { usePermissions } from "@/contexts/PermissionsContext";
 import { useRoleOptions } from "@/hooks/useRoleOptions";
 import { toast } from "sonner";
 import { TaxDeduction, DEFAULT_TAX_DEDUCTION, calculateTotalDeductions, calculateAnnualIncome, calculateExpenseDeduction, calculateProgressiveTax, formatCurrency } from "@/utils/taxCalculation";
@@ -105,7 +106,11 @@ const EmployeeProfile = () => {
   const { currentUser } = useAuth();
   const { affiliations, orgLevelsFlat } = useOrg();
   const ROLE_OPTIONS = useRoleOptions();
-  const canEditRestricted = currentUser?.role === "Admin" || currentUser?.role === "HR" || currentUser?.role === "Executive";
+  // Restricted fields (salary, role, ...) follow the permission matrix, not hardcoded role names
+  const { canAction, getScope } = usePermissions();
+  const canEditRestricted =
+    canAction(currentUser?.role || "", "employees", "edit") &&
+    getScope(currentUser?.role || "", "employees") === "all";
 
   // Fetch org levels assigned to this employee
   const [employeeOrgLevels, setEmployeeOrgLevels] = useState<string[]>([]);
