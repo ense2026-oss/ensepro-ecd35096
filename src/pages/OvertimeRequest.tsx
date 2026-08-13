@@ -15,6 +15,8 @@ import { notifyApprovers, notifyRequester, getApprovalTiers, notifyTierApprover 
 import SearchableSelect from "@/components/ui/searchable-select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogBody, DialogFooter } from "@/components/ui/dialog";
 import EmployeeAvatar from "@/components/ui/employee-avatar";
+import { Carousel, CarouselContent, CarouselItem } from "@/components/ui/carousel";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 type OTStatus = "pending" | "approved" | "rejected";
 type OTType = "workday" | "holiday" | "special";
