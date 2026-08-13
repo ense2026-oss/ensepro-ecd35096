@@ -62,6 +62,7 @@ export interface Employee {
   salary: string;
   bankAccount: string;
   driverLicense: string;
+  isProtected?: boolean;
   positionId?: string;
   status: "active" | "leave" | "inactive";
   homeAddress: string;
@@ -123,6 +124,7 @@ function dbToEmployee(row: any, education: any[], workHistory: any[], payrollIte
     salary: row.salary || '0',
     bankAccount: row.bank_account || '',
     driverLicense: row.driver_license || '',
+    isProtected: row.is_protected === true,
     positionId: row.position_id || undefined,
     status: (row.status as "active" | "leave" | "inactive") || 'active',
     homeAddress: row.home_address || '',
@@ -262,7 +264,7 @@ export const EmployeeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       // Fetch employees first (essential), then related data in parallel
       // Select specific columns excluding photo_url (base64 data is huge and slows down loading)
       const empRes = await supabase.from("employees").select(
-        "id,avatar,avatar_color,avatar_text_color,prefix,first_name,last_name,nickname,birth_date,gender,national_id,nationality,religion,blood_group,id_issue_date,id_expire_date,phone,email,address,dept,position,employee_type,start_date,trial_end_date,contract_end_date,shift,face_scan_id,salary,bank_account,driver_license,position_id,status,home_address,marital_status,spouse_name,spouse_phone,father_name,father_phone,mother_name,mother_phone,emergency_name,emergency_relation,emergency_phone,username,role,initial_password,children,children_after_2018,sons,daughters,pvd_rate,tax_deductions,user_id,created_at,updated_at"
+        "id,avatar,avatar_color,avatar_text_color,prefix,first_name,last_name,nickname,birth_date,gender,national_id,nationality,religion,blood_group,id_issue_date,id_expire_date,phone,email,address,dept,position,employee_type,start_date,trial_end_date,contract_end_date,shift,face_scan_id,salary,bank_account,driver_license,is_protected,position_id,status,home_address,marital_status,spouse_name,spouse_phone,father_name,father_phone,mother_name,mother_phone,emergency_name,emergency_relation,emergency_phone,username,role,initial_password,children,children_after_2018,sons,daughters,pvd_rate,tax_deductions,user_id,created_at,updated_at"
       ).order("created_at");
       if (empRes.error) throw empRes.error;
 
@@ -461,8 +463,8 @@ export const EmployeeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const deleteEmployee = useCallback(async (id: string) => {
     // Protect the primary admin account from deletion regardless of role
     const target = employees.find((e) => e.id === id);
-    if (target && (target.email || "").toLowerCase() === "ense2026@gmail.com") {
-      throw new Error("ไม่สามารถลบบัญชีผู้ดูแลระบบหลักนี้ได้");
+    if (target?.isProtected) {
+      throw new Error("ไม่สามารถลบบัญชีที่ถูกป้องกันไว้ได้");
     }
 
     // Cleanup auth account before deleting employee record
