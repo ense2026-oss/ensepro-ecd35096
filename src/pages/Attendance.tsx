@@ -374,17 +374,8 @@ const Attendance = () => {
     return emp ? { id: (emp as any).id, name: filterEmployee, dept: (emp as any).dept || "", photoUrl: (emp as any).photoUrl || (emp as any).photo_url } : null;
   }, [filterEmployee, scopedAttendance, employees]);
 
-  const isDayoffFor = useCallback((empId: string, iso: string) => {
-    const override = dayoffOverrides[`${empId}|${iso}`];
-    if (override !== undefined) return override;
-    const dow = new Date(iso + "T00:00:00").getDay();
-    return dayoffPatterns.some((p: any) =>
-      p.employee_id === empId &&
-      (p.weekdays || []).includes(dow) &&
-      p.effective_from <= iso &&
-      (!p.effective_to || p.effective_to >= iso)
-    );
-  }, [dayoffOverrides, dayoffPatterns]);
+
+
 
   // Full-period rows: real records + generated rows for days with no record.
   const displayRows = useMemo(() => {
