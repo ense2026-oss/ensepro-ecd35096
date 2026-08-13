@@ -91,9 +91,43 @@ const EmployeeFormDialog = ({ open, onOpenChange, employee, onSave }: EmployeeFo
   const ROLE_OPTIONS = useRoleOptions();
   const [form, setForm] = useState<Omit<Employee, "id" | "education" | "workHistory">>(EMPTY);
   const [errors, setErrors] = useState<string[]>([]);
+  const [saving, setSaving] = useState(false);
+  const [shiftNames, setShiftNames] = useState<string[]>([]);
   const photoInputRef = useRef<HTMLInputElement>(null);
 
   const isDeptSelected = !!form.dept && form.dept !== "-- เลือกสังกัด --";
+
+  // Roles come from Settings > สิทธิ์ผู้ใช้งาน. If the employee currently holds a
+  // role that no longer exists there, keep it as an explicit option so the
+  // browser does not silently switch them to the first option on save.
+  const isUnknownRole = !!form.role && !matchRoleOption(ROLE_OPTIONS, form.role);
+  const roleSelectOptions = useMemo(
+    () =>
+      isUnknownRole
+        ? [{ value: form.role, label: `${form.role} (ไม่มีในการตั้งค่าแล้ว)` }, ...ROLE_OPTIONS]
+        : ROLE_OPTIONS,
+    [isUnknownRole, form.role, ROLE_OPTIONS]
+  );
+
+  const shiftOptions = useMemo(() => {
+    const list = shiftNames.length ? shiftNames : [];
+    return form.shift && !list.includes(form.shift) ? [form.shift, ...list] : list;
+  }, [shiftNames, form.shift]);
+
+  useEffect(() => {
+    if (!open) return;
+    supabase
+      .from("shifts")
+      .select("name,start_time,end_time,sort_order")
+      .order("sort_order")
+      .then(({ data }) => {
+        setShiftNames(
+          (data || []).map((s: any) =>
+            s.start_time && s.end_time ? `${s.name} ${s.start_time}-${s.end_time}` : s.name
+          )
+        );
+      });
+  }, [open]);
 
   const filteredPositions = useMemo(() => {
     const collectNames = (positions: { name: string; children?: any[] }[]): string[] => {
