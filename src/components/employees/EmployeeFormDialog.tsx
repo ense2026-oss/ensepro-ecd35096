@@ -110,8 +110,8 @@ const EmployeeFormDialog = ({ open, onOpenChange, employee, onSave }: EmployeeFo
   );
 
   const shiftOptions = useMemo(() => {
-    const list = shiftNames.length ? shiftNames : [];
-    return form.shift && !list.includes(form.shift) ? [form.shift, ...list] : list;
+    const list = ["-- เลือกกะการทำงาน --", ...shiftNames];
+    return form.shift && !list.includes(form.shift) ? [...list, form.shift] : list;
   }, [shiftNames, form.shift]);
 
   useEffect(() => {
