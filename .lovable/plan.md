@@ -32,6 +32,8 @@ No  Mchn  EnNo  Name  Mode  IOMd  DateTime
 - บันทึกผลลง `face_scan_sync_logs` (sync_type = `file_import`) เพื่อดูย้อนหลังในแท็บประวัติ
 
 ## รายละเอียดทางเทคนิค
-- Component ใหม่ `src/components/settings/FaceScanFileImport.tsx` (parse ฝั่ง client, อ่านไฟล์เป็น UTF-8)
+- Component ใหม่ `src/components/attendance/FaceScanFileImportDialog.tsx` (parse ฝั่ง client, อ่านไฟล์เป็น UTF-8)
+- เรียกใช้ใน `src/pages/Attendance.tsx` ผ่านปุ่มที่มุมขวาบนของส่วนหัวตาราง โดยควบคุมการแสดงผลด้วยสิทธิ์จาก `usePermissions` หรือ `can_access_module`
 - ใช้ supabase client เดิม: query `employees(id, face_scan_id)` แล้ว upsert/insert `check_in_records` เป็นชุดละ ~200 แถว
 - ไม่มีการเปลี่ยนแปลงโครงสร้างฐานข้อมูล
+
