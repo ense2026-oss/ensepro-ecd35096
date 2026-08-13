@@ -30,7 +30,7 @@ interface LetterSettings {
 
 const DEFAULTS: LetterSettings = {
   companyName: "บริษัท พลังงานนครพิงค์ จำกัด",
-  signerName: "(นางสาวสุรีย์ ดียปรีชา)",
+  signerName: "(นางสาวสุรีย์ ตียปรีชา)",
   signerTitle: "พนักงานการเงิน",
   headerImageUrl: letterheadAsset.url,
 };
