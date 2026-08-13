@@ -721,6 +721,7 @@ export type Database = {
           id_expire_date: string
           id_issue_date: string
           initial_password: string
+          is_protected: boolean
           last_name: string
           marital_status: string
           mother_name: string
@@ -779,6 +780,7 @@ export type Database = {
           id_expire_date?: string
           id_issue_date?: string
           initial_password?: string
+          is_protected?: boolean
           last_name?: string
           marital_status?: string
           mother_name?: string
@@ -837,6 +839,7 @@ export type Database = {
           id_expire_date?: string
           id_issue_date?: string
           initial_password?: string
+          is_protected?: boolean
           last_name?: string
           marital_status?: string
           mother_name?: string
@@ -1806,6 +1809,10 @@ export type Database = {
           user_id: string
         }[]
       }
+      get_shift_start_time: {
+        Args: { _date: string; _employee_id: string }
+        Returns: string
+      }
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
@@ -1819,6 +1826,10 @@ export type Database = {
       }
       is_dayoff: {
         Args: { _date: string; _employee_id: string }
+        Returns: boolean
+      }
+      is_late_checkin: {
+        Args: { _check_in: string; _date: string; _employee_id: string }
         Returns: boolean
       }
       is_payslip_published: { Args: { _period_id: string }; Returns: boolean }
