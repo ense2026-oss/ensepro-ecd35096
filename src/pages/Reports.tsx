@@ -18,6 +18,8 @@ import {
   exportShiftChangeLogExcel,
   exportPayrollSummaryExcel,
   exportTaxAnnualExcel,
+  exportAttendanceReportExcel,
+  exportAttendanceSummaryExcel,
 } from "@/utils/exportGenericReports";
 import { toast } from "sonner";
 import {
