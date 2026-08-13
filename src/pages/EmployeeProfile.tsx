@@ -105,7 +105,11 @@ const EmployeeProfile = () => {
   const { currentUser } = useAuth();
   const { affiliations, orgLevelsFlat } = useOrg();
   const ROLE_OPTIONS = useRoleOptions();
-  const canEditRestricted = currentUser?.role === "Admin" || currentUser?.role === "HR" || currentUser?.role === "Executive";
+  // Restricted fields (salary, role, ...) follow the permission matrix, not hardcoded role names
+  const { canAction, getScope } = usePermissions();
+  const canEditRestricted =
+    canAction(currentUser?.role || "", "employees", "edit") &&
+    getScope(currentUser?.role || "", "employees") === "all";
 
   // Fetch org levels assigned to this employee
   const [employeeOrgLevels, setEmployeeOrgLevels] = useState<string[]>([]);
