@@ -7,6 +7,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/contexts/PermissionsContext";
 import { SETTINGS_TAB_TO_MODULE } from "@/lib/settingsModules";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Carousel, CarouselContent, CarouselItem } from "@/components/ui/carousel";
+
 import LocationsSettings from "@/components/settings/LocationsSettings";
 import RolesSettings from "@/components/settings/RolesSettings";
 import AdminsSettings from "@/components/settings/AdminsSettings";
