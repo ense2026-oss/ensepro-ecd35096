@@ -208,6 +208,7 @@ const EmployeeFormDialog = ({ open, onOpenChange, employee, onSave }: EmployeeFo
           <SectionLabel>ข้อมูลพื้นฐาน</SectionLabel>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <SelectField label="คำนำหน้า" value={form.prefix} onChange={set("prefix")} options={["นาย", "นาง", "นางสาว", "ดร.", "ผศ.ดร."]} />
+            <SelectField label="เพศ" value={form.gender || "ชาย"} onChange={set("gender")} options={["ชาย", "หญิง", "อื่นๆ"]} />
             <InputField label="ชื่อ" value={form.firstName} onChange={set("firstName")} required />
             <InputField label="นามสกุล" value={form.lastName} onChange={set("lastName")} required />
             <InputField label="ชื่อเล่น" value={form.nickname} onChange={set("nickname")} />
@@ -243,8 +244,13 @@ const EmployeeFormDialog = ({ open, onOpenChange, employee, onSave }: EmployeeFo
             />
 
             <SelectField label="ประเภทพนักงาน" value={form.employeeType} onChange={set("employeeType")} options={["พนักงานประจำ", "พนักงานชั่วคราว", "พนักงานทดลองงาน"]} />
+            <SelectField label="กะการทำงาน" value={form.shift} onChange={set("shift")} options={shiftOptions} />
             <InputField label="วันที่เริ่มงาน" value={form.startDate} onChange={set("startDate")} placeholder="YYYY-MM-DD" />
+            <InputField label="วันสิ้นสุดทดลองงาน" value={form.trialEndDate} onChange={set("trialEndDate")} placeholder="YYYY-MM-DD" />
+            <InputField label="วันสิ้นสุดสัญญาจ้าง" value={form.contractEndDate} onChange={set("contractEndDate")} placeholder="YYYY-MM-DD" />
             <InputField label="เงินเดือน (บาท)" value={form.salary} onChange={set("salary")} type="number" />
+            <InputField label="เลขบัญชีธนาคาร" value={form.bankAccount} onChange={set("bankAccount")} />
+            <InputField label="เลขใบขับขี่" value={form.driverLicense} onChange={set("driverLicense")} />
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
                 <ScanFace className="w-3.5 h-3.5" /> Face Scan ID
@@ -256,7 +262,17 @@ const EmployeeFormDialog = ({ open, onOpenChange, employee, onSave }: EmployeeFo
               <p className="text-[10px] text-muted-foreground">ใช้ ID เดียวกับที่ตั้งค่าในเครื่องสแกนหน้า</p>
             </div>
             <SelectField label="สถานะ" value={form.status} onChange={set("status")} options={STATUS_OPTIONS} />
-            <SelectField label="สิทธิ์การใช้งาน" value={form.role} onChange={set("role")} options={ROLE_OPTIONS} />
+            <SelectField
+              label="สิทธิ์การใช้งาน"
+              value={form.role}
+              onChange={set("role")}
+              options={roleSelectOptions}
+              hint={
+                isUnknownRole
+                  ? "สิทธิ์นี้ไม่มีอยู่ในหน้าตั้งค่าสิทธิ์ผู้ใช้งานแล้ว กรุณาเลือกสิทธิ์ใหม่"
+                  : "รายการมาจากหน้าตั้งค่า > สิทธิ์ผู้ใช้งาน · การเปลี่ยนสิทธิ์มีผลกับบัญชีเข้าใช้งานทันที"
+              }
+            />
           </div>
 
           {/* ข้อมูลครอบครัว */}
@@ -270,6 +286,8 @@ const EmployeeFormDialog = ({ open, onOpenChange, employee, onSave }: EmployeeFo
             <InputField label="เบอร์โทรบิดา" value={form.fatherPhone} onChange={set("fatherPhone")} type="tel" />
             <InputField label="ชื่อมารดา" value={form.motherName} onChange={set("motherName")} />
             <InputField label="เบอร์โทรมารดา" value={form.motherPhone} onChange={set("motherPhone")} type="tel" />
+            <InputField label="จำนวนบุตรชาย" value={String(form.sons ?? 0)} onChange={setNumber("sons")} type="number" />
+            <InputField label="จำนวนบุตรสาว" value={String(form.daughters ?? 0)} onChange={setNumber("daughters")} type="number" />
           </div>
 
           {/* ผู้ติดต่อฉุกเฉิน */}
@@ -292,10 +310,11 @@ const EmployeeFormDialog = ({ open, onOpenChange, employee, onSave }: EmployeeFo
             className="flex items-center gap-2 px-4 py-2 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors">
             <X className="w-4 h-4" /> ยกเลิก
           </button>
-          <button onClick={handleSave}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold text-primary-foreground transition-all"
+          <button onClick={handleSave} disabled={saving}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold text-primary-foreground transition-all disabled:opacity-60 disabled:cursor-not-allowed"
             style={{ background: "linear-gradient(135deg, hsl(var(--primary)), hsl(31 100% 60%))", boxShadow: "0 4px 12px hsl(var(--primary) / 0.3)" }}>
-            <Save className="w-4 h-4" /> {isEdit ? "บันทึก" : "เพิ่มพนักงาน"}
+            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+            {saving ? "กำลังบันทึก..." : isEdit ? "บันทึก" : "เพิ่มพนักงาน"}
           </button>
         </DialogFooter>
       </DialogContent>
