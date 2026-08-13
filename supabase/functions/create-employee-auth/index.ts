@@ -82,21 +82,17 @@ Deno.serve(async (req) => {
       console.error("Profile upsert error:", JSON.stringify(profileError));
     }
 
-    // Manually create user_role if trigger doesn't exist
-    const { error: roleError } = await supabaseAdmin
-      .from("user_roles")
-      .upsert({
-        user_id: userId,
-        role: appRole,
-      }, { onConflict: "user_id,role" });
+    // Replace any role rows created by the signup trigger with the chosen role
+    await supabaseAdmin.from("user_roles").delete().eq("user_id", userId);
+
+    const { error: roleError } = await supabaseAdmin.from("user_roles").insert({
+      user_id: userId,
+      role: enumRole,
+      role_name: roleName,
+    });
 
     if (roleError) {
-      console.error("Role upsert error:", JSON.stringify(roleError));
-      // Try insert instead
-      await supabaseAdmin.from("user_roles").insert({
-        user_id: userId,
-        role: appRole,
-      });
+      console.error("Role insert error:", JSON.stringify(roleError));
     }
 
     // Link employee record to auth user and save initial password
