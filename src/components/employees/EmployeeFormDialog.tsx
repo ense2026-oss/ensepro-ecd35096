@@ -22,7 +22,7 @@ const EMPTY: Omit<Employee, "id" | "education" | "workHistory"> = {
   phone: "", email: "", address: "",
   dept: "", position: "", employeeType: "พนักงานประจำ",
   startDate: "", trialEndDate: "", contractEndDate: "",
-  shift: "กะเช้า 08:00-17:00", faceScanId: "", salary: "", status: "active",
+  shift: "", faceScanId: "", salary: "", status: "active",
   bankAccount: "", driverLicense: "",
   homeAddress: "", maritalStatus: "โสด",
   spouseName: "", spousePhone: "",
