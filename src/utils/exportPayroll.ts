@@ -251,91 +251,29 @@ export async function exportPayslipPdf(emp: Employee, month?: string, year?: str
   onProgress?.(5);
   const p = calcPayrollForExport(emp);
   const doc = await createPdf();
-  onProgress?.(30);
+  onProgress?.(40);
 
-  // Company logo in top-right circle
-  const logoUrl = await fetchCompanyLogo();
-  onProgress?.(50);
-  const pageWidth = doc.internal.pageSize.getWidth();
-  const circleX = pageWidth - 25;
-  const circleY = 22;
-  const circleR = 14;
-  doc.setDrawColor(180, 180, 180);
-  doc.setLineWidth(0.4);
-  doc.circle(circleX, circleY, circleR, "S");
-  if (logoUrl) {
-    const img = await urlToDataUrl(logoUrl);
-    if (img) {
-      try {
-        const size = circleR * 1.6;
-        doc.addImage(img.dataUrl, img.format, circleX - size / 2, circleY - size / 2, size, size);
-      } catch { /* ignore */ }
-    }
-  }
-
-  doc.setFontSize(20);
-  doc.setFont("THSarabunNew", "bold");
-  doc.text("สลิปเงินเดือน", 14, 18);
-  doc.setFontSize(14);
-  doc.setFont("THSarabunNew", "normal");
-  if (month && year) {
-    doc.text(`ประจำเดือน ${month} ${year}`, 14, 26);
-  }
-  doc.setFontSize(12);
-  doc.text(`พนักงาน: ${emp.prefix}${emp.firstName} ${emp.lastName}`, 14, 34);
-  doc.text(`ตำแหน่ง: ${emp.position} | แผนก: ${emp.dept}`, 14, 40);
-  doc.text(`เลขบัตรประชาชน: ${emp.nationalId}`, 14, 46);
-
-  const incomeRows: string[][] = [
-    ["เงินเดือน", formatCurrency(p.salary)],
-    [`ค่าล่วงเวลา (${p.otHours} ชม.)`, formatCurrency(p.otPay)],
-    ["เบี้ยขยัน", formatCurrency(p.diligence)],
+  const incomes: PayslipLetterItem[] = [
+    { label: "อัตราเงินเดือน", amount: p.salary },
+    { label: "ค่าล่วงเวลา", amount: p.otPay },
+    { label: "ค่าตอบแทนวิชาชีพ", amount: p.diligence + p.customIncome },
   ];
-  p.customItems.filter((i) => i.type === "income").forEach((item) => {
-    incomeRows.push([item.name, formatCurrency(item.amount)]);
-  });
-  incomeRows.push(["รวมรายได้", formatCurrency(p.grossPay)]);
-
-  const headStyleGray = {
-    fillColor: [243, 244, 246] as [number, number, number],
-    textColor: [55, 65, 81] as [number, number, number],
-    font: "THSarabunNew",
-    fontStyle: "bold" as const,
-    lineColor: [209, 213, 219] as [number, number, number],
-    lineWidth: 0.2,
-  };
-
-  autoTable(doc, {
-    startY: 54,
-    head: [["รายการรายได้", "จำนวน (บาท)"]],
-    body: incomeRows,
-    styles: { fontSize: 11, font: "THSarabunNew" },
-    headStyles: headStyleGray,
-  });
-
-  const finalY = (doc as any).lastAutoTable?.finalY || 90;
-  const deductRows: string[][] = [
-    ["ประกันสังคม", formatCurrency(p.ssf)],
-    ["ภาษีหัก ณ ที่จ่าย", formatCurrency(p.monthlyTax)],
+  const deductions: PayslipLetterItem[] = [
+    { label: "ภาษีเงินได้หัก ณ ที่จ่าย", amount: p.monthlyTax },
+    { label: "เงินประกันสังคม (5%)", amount: p.ssf },
   ];
-  p.customItems.filter((i) => i.type === "deduction").forEach((item) => {
-    deductRows.push([item.name, formatCurrency(item.amount)]);
-  });
-  deductRows.push(["รวมหัก", formatCurrency(p.totalDeduct)]);
+  p.customItems.filter((i) => i.type === "deduction").forEach((i) => deductions.push({ label: i.name, amount: i.amount }));
 
-  autoTable(doc, {
-    startY: finalY + 6,
-    head: [["รายการหัก", "จำนวน (บาท)"]],
-    body: deductRows,
-    styles: { fontSize: 11, font: "THSarabunNew" },
-    headStyles: headStyleGray,
+  await renderPayslipLetter(doc, {
+    employeeName: `${emp.prefix}${emp.firstName} ${emp.lastName}`,
+    monthLabel: month || "",
+    yearBE: year ?? "",
+    incomes,
+    deductions,
+    totalIncome: p.netPay,
+    netPay: p.netPay,
   });
-  onProgress?.(85);
-
-  const finalY2 = (doc as any).lastAutoTable?.finalY || 130;
-  doc.setFontSize(16);
-  doc.setFont("THSarabunNew", "bold");
-  doc.text(`เงินได้สุทธิ: ${formatCurrency(p.netPay)} บาท`, 14, finalY2 + 14);
+  onProgress?.(90);
 
   const suffix = month && year ? `_${month}_${year}` : "";
   doc.save(`Payslip_${emp.firstName}_${emp.lastName}${suffix}.pdf`);
@@ -365,89 +303,32 @@ export async function exportPayslipPdfFromSnapshot(
 ) {
   onProgress?.(5);
   const doc = await createPdf();
-  onProgress?.(30);
+  onProgress?.(40);
 
-  const logoUrl = await fetchCompanyLogo();
-  onProgress?.(50);
-  const pageWidth = doc.internal.pageSize.getWidth();
-  const circleX = pageWidth - 25;
-  const circleY = 22;
-  const circleR = 14;
-  doc.setDrawColor(180, 180, 180);
-  doc.setLineWidth(0.4);
-  doc.circle(circleX, circleY, circleR, "S");
-  if (logoUrl) {
-    const img = await urlToDataUrl(logoUrl);
-    if (img) {
-      try {
-        const size = circleR * 1.6;
-        doc.addImage(img.dataUrl, img.format, circleX - size / 2, circleY - size / 2, size, size);
-      } catch { /* ignore */ }
-    }
-  }
-
-  doc.setFontSize(20);
-  doc.setFont("THSarabunNew", "bold");
-  doc.text("สลิปเงินเดือน", 14, 18);
-  doc.setFontSize(14);
-  doc.setFont("THSarabunNew", "normal");
-  doc.text(`ประจำเดือน ${month} ${year}`, 14, 26);
-  doc.setFontSize(12);
-  doc.text(`พนักงาน: ${emp.prefix}${emp.firstName} ${emp.lastName}`, 14, 34);
-  doc.text(`ตำแหน่ง: ${emp.position} | แผนก: ${emp.dept}`, 14, 40);
-  doc.text(`เลขบัตรประชาชน: ${emp.nationalId}`, 14, 46);
-
-  const headStyleGray = {
-    fillColor: [243, 244, 246] as [number, number, number],
-    textColor: [55, 65, 81] as [number, number, number],
-    font: "THSarabunNew",
-    fontStyle: "bold" as const,
-    lineColor: [209, 213, 219] as [number, number, number],
-    lineWidth: 0.2,
-  };
-
-  const incomeRows: string[][] = [
-    ["เงินเดือน", formatCurrency(snap.base_salary)],
-    [`ค่าล่วงเวลา (${snap.ot_hours} ชม.)`, formatCurrency(snap.ot_pay)],
-    ["เบี้ยขยัน", formatCurrency(snap.diligence)],
+  const customIncome = (snap.custom_items || []).filter((i) => i.type === "income").reduce((s, i) => s + Number(i.amount), 0);
+  const incomes: PayslipLetterItem[] = [
+    { label: "อัตราเงินเดือน", amount: Number(snap.base_salary) },
+    { label: "ค่าล่วงเวลา", amount: Number(snap.ot_pay) },
+    { label: "ค่าตอบแทนวิชาชีพ", amount: Number(snap.diligence) + customIncome },
   ];
-  (snap.custom_items || []).filter((i) => i.type === "income").forEach((item) => {
-    incomeRows.push([item.name, formatCurrency(item.amount)]);
-  });
-  incomeRows.push(["รวมรายได้", formatCurrency(snap.gross_pay)]);
-
-  autoTable(doc, {
-    startY: 54,
-    head: [["รายการรายได้", "จำนวน (บาท)"]],
-    body: incomeRows,
-    styles: { fontSize: 11, font: "THSarabunNew" },
-    headStyles: headStyleGray,
-  });
-
-  const finalY = (doc as any).lastAutoTable?.finalY || 90;
-  const deductRows: string[][] = [
-    ["ประกันสังคม", formatCurrency(snap.ssf)],
-    ["ภาษีหัก ณ ที่จ่าย", formatCurrency(snap.tax)],
+  const deductions: PayslipLetterItem[] = [
+    { label: "ภาษีเงินได้หัก ณ ที่จ่าย", amount: Number(snap.tax) },
+    { label: "เงินประกันสังคม (5%)", amount: Number(snap.ssf) },
   ];
-  (snap.custom_items || []).filter((i) => i.type === "deduction").forEach((item) => {
-    deductRows.push([item.name, formatCurrency(item.amount)]);
-  });
-  deductRows.push(["รวมหัก", formatCurrency(snap.total_deduct)]);
+  (snap.custom_items || []).filter((i) => i.type === "deduction").forEach((i) => deductions.push({ label: i.name, amount: Number(i.amount) }));
 
-  autoTable(doc, {
-    startY: finalY + 6,
-    head: [["รายการหัก", "จำนวน (บาท)"]],
-    body: deductRows,
-    styles: { fontSize: 11, font: "THSarabunNew" },
-    headStyles: headStyleGray,
+  await renderPayslipLetter(doc, {
+    employeeName: `${emp.prefix}${emp.firstName} ${emp.lastName}`,
+    monthLabel: month,
+    yearBE: year,
+    incomes,
+    deductions,
+    totalIncome: Number(snap.net_pay),
+    netPay: Number(snap.net_pay),
   });
-  onProgress?.(85);
-
-  const finalY2 = (doc as any).lastAutoTable?.finalY || 130;
-  doc.setFontSize(16);
-  doc.setFont("THSarabunNew", "bold");
-  doc.text(`เงินได้สุทธิ: ${formatCurrency(snap.net_pay)} บาท`, 14, finalY2 + 14);
+  onProgress?.(90);
 
   doc.save(`Payslip_${emp.firstName}_${emp.lastName}_${month}_${year}.pdf`);
   onProgress?.(100);
 }
+
