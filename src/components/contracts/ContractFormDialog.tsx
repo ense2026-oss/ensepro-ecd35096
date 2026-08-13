@@ -23,8 +23,12 @@ const ContractFormDialog = ({ open, onOpenChange, editContract }: Props) => {
   const { employees } = useEmployees();
   const { addContract, updateContract, settings } = useContracts();
   const { user } = useAuth();
+  const { canAction } = usePermissions();
   const activeEmployees = employees.filter((e) => e.status !== "inactive");
-  const managers = employees.filter((e) => ["Admin", "Manager", "HR"].includes(e.role));
+  // Signers/approvers come from the permission matrix (contracts approve/edit), not hardcoded roles
+  const managers = employees.filter(
+    (e) => canAction(e.role || "", "contracts", "approve") || canAction(e.role || "", "contracts", "edit")
+  );
 
   const [form, setForm] = useState({
     employeeId: "",
