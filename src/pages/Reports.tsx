@@ -954,8 +954,9 @@ const Reports = () => {
     else if (selectedReport === "ot-trend") fetchOtTrend();
     else if (selectedReport?.startsWith("shift-")) fetchShiftData();
     else if (selectedReport?.startsWith("emp-")) fetchEmployeeData();
+    else if (selectedReport?.startsWith("att-")) fetchAttendanceData();
     else if (selectedReport?.startsWith("payroll-")) fetchPayrollData();
-  }, [selectedReport, fetchLeaveData, fetchLeaveBalance, fetchLeaveYearly, fetchOtData, fetchOtTrend, fetchShiftData, fetchEmployeeData, fetchPayrollData]);
+  }, [selectedReport, fetchLeaveData, fetchLeaveBalance, fetchLeaveYearly, fetchOtData, fetchOtTrend, fetchShiftData, fetchEmployeeData, fetchAttendanceData, fetchPayrollData]);
 
   const toggleCat = (cat: string) => setExpandedCats((p) => ({ ...p, [cat]: !p[cat] }));
 
@@ -1052,6 +1053,19 @@ const Reports = () => {
       if (format === "excel") {
         exportOvertimeReportExcel(otData, currentReport?.name || "รายงาน OT", filterMonth, filterYear);
         toast.success("ส่งออกรายงาน OT เป็น Excel สำเร็จ");
+        return;
+      }
+    }
+
+    // Attendance reports
+    if (reportId?.startsWith("att-")) {
+      if (format === "excel") {
+        if (reportId === "att-monthly") {
+          exportAttendanceSummaryExcel(attSummaryData, currentReport?.name || "สรุปเข้างานรายเดือน", filterMonth, filterYear);
+        } else {
+          exportAttendanceReportExcel(attTableData, currentReport?.name || "รายงานบันทึกเวลา", filterMonth, filterYear);
+        }
+        toast.success("ส่งออกรายงานบันทึกเวลาเป็น Excel สำเร็จ");
         return;
       }
     }
@@ -1171,6 +1185,7 @@ const Reports = () => {
             else if (selectedReport === 'ot-trend') fetchOtTrend();
             else if (selectedReport?.startsWith('shift-')) fetchShiftData();
             else if (selectedReport?.startsWith('emp-')) fetchEmployeeData();
+            else if (selectedReport?.startsWith('att-')) fetchAttendanceData();
             else if (selectedReport?.startsWith('payroll-')) fetchPayrollData();
           }} className="ml-auto flex items-center gap-1.5 text-sm font-medium px-3 py-2 rounded-lg hover:bg-muted transition-colors" style={{ color: "#FF870F" }}>
             <RefreshCw className="w-3.5 h-3.5" />
@@ -1184,7 +1199,7 @@ const Reports = () => {
             <div className="rounded-2xl border border-border bg-card p-5">
               <h3 className="text-sm font-bold mb-4">สถิติการเข้างานรายเดือน</h3>
               <ResponsiveContainer width="100%" height={260}>
-                <BarChart data={attendanceMonthly}>
+                <BarChart data={attMonthlyChart}>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                   <XAxis dataKey="month" fontSize={12} />
                   <YAxis fontSize={12} />
@@ -1199,7 +1214,7 @@ const Reports = () => {
             <div className="rounded-2xl border border-border bg-card p-5">
               <h3 className="text-sm font-bold mb-4">แนวโน้มการมาสาย</h3>
               <ResponsiveContainer width="100%" height={260}>
-                <AreaChart data={attendanceMonthly}>
+                <AreaChart data={attMonthlyChart}>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                   <XAxis dataKey="month" fontSize={12} />
                   <YAxis fontSize={12} />
