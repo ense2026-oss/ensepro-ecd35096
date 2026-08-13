@@ -915,7 +915,10 @@ const Reports = () => {
       return;
     }
 
-    // Payroll-specific exports
+    // Payroll-specific exports (load live settings + real attendance first)
+    if (reportId.startsWith("payroll-")) {
+      await primePayrollExportData(Number(filterYear) - 543, monthIndexMap[filterMonth] || 1);
+    }
     if (reportId === "payroll-pnd1") {
       if (format === "excel") {
         exportPnd1Excel(employees, filterMonth, filterYear);
