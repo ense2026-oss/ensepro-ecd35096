@@ -63,7 +63,7 @@ interface PermissionsContextType {
   getModuleForRoute: (path: string) => string | undefined;
   refreshPermissions: () => Promise<void>;
   getRolePermissions: (role: string) => RolePermission[];
-  getAllRoles: () => { name: string; description: string }[];
+  getAllRoles: () => { name: string; description: string; displayOrder: number }[];
 }
 
 const PermissionsContext = createContext<PermissionsContextType | null>(null);
@@ -168,14 +168,19 @@ export const PermissionsProvider: React.FC<{ children: React.ReactNode }> = ({ c
     return permissions.filter((p) => p.role_name === role.toLowerCase());
   }, [permissions]);
 
-  const getAllRoles = useCallback((): { name: string; description: string }[] => {
-    const seen = new Map<string, string>();
+  const getAllRoles = useCallback((): { name: string; description: string; displayOrder: number }[] => {
+    const seen = new Map<string, { description: string; displayOrder: number }>();
     permissions.forEach((p) => {
       if (!seen.has(p.role_name)) {
-        seen.set(p.role_name, p.role_description);
+        seen.set(p.role_name, {
+          description: p.role_description,
+          displayOrder: p.display_order ?? Number.MAX_SAFE_INTEGER,
+        });
       }
     });
-    return Array.from(seen.entries()).map(([name, description]) => ({ name, description }));
+    return Array.from(seen.entries())
+      .map(([name, v]) => ({ name, description: v.description, displayOrder: v.displayOrder }))
+      .sort((a, b) => (a.displayOrder - b.displayOrder) || a.name.localeCompare(b.name));
   }, [permissions]);
 
   return (
