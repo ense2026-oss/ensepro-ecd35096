@@ -145,21 +145,21 @@ const Employees = () => {
   return (
     <div className="space-y-5">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
+      <div className="flex flex-row items-center justify-between gap-3">
+        <div className="min-w-0">
           <h2 className="text-xl font-bold font-display">รายชื่อพนักงาน</h2>
-          <p className="text-sm text-muted-foreground mt-0.5">พนักงานทั้งหมด {nonAdmins.length} คน</p>
+          <p className="hidden sm:block text-sm text-muted-foreground mt-0.5">พนักงานทั้งหมด {nonAdmins.length} คน</p>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={() => setImportOpen(true)} className="flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-medium hover:bg-muted transition-colors">
-            <Upload className="w-4 h-4" /> นำเข้า
+          <button onClick={() => setImportOpen(true)} aria-label="นำเข้า" title="นำเข้า" className="flex items-center justify-center gap-2 h-10 w-10 sm:w-auto sm:px-3 sm:py-2 rounded-xl border text-sm font-medium hover:bg-muted transition-colors">
+            <Upload className="w-4 h-4" /> <span className="hidden sm:inline">นำเข้า</span>
           </button>
-          <button onClick={() => setExportOpen(true)} className="flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-medium hover:bg-muted transition-colors">
-            <Download className="w-4 h-4" /> Export
+          <button onClick={() => setExportOpen(true)} aria-label="Export" title="Export" className="flex items-center justify-center gap-2 h-10 w-10 sm:w-auto sm:px-3 sm:py-2 rounded-xl border text-sm font-medium hover:bg-muted transition-colors">
+            <Download className="w-4 h-4" /> <span className="hidden sm:inline">Export</span>
           </button>
-          <button onClick={handleAdd} className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all"
+          <button onClick={handleAdd} aria-label="เพิ่มพนักงาน" title="เพิ่มพนักงาน" className="flex items-center justify-center gap-2 h-10 w-10 sm:w-auto sm:px-4 sm:py-2 rounded-xl text-sm font-bold transition-all"
             style={{ background: "linear-gradient(135deg, hsl(var(--primary)), hsl(31 100% 60%))", color: "hsl(var(--primary-foreground))", boxShadow: "0 4px 12px hsl(var(--primary) / 0.3)" }}>
-            <Plus className="w-4 h-4" /> เพิ่มพนักงาน
+            <Plus className="w-4 h-4" /> <span className="hidden sm:inline">เพิ่มพนักงาน</span>
           </button>
         </div>
       </div>

@@ -11,6 +11,7 @@ import TimeInput24 from "@/components/ui/time-input-24";
 import SearchableSelect from "@/components/ui/searchable-select";
 import { useTimeEditRequests, type TimeEditRequest } from "@/contexts/TimeEditContext";
 import { supabase } from "@/integrations/supabase/client";
+import StatCarousel from "@/components/ui/stat-carousel";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/contexts/PermissionsContext";
 import { notifyRequester, notifyTierApprover } from "@/utils/notifications";
@@ -672,36 +673,40 @@ const Attendance = () => {
   return (
     <div className="space-y-3">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-row items-center justify-between gap-3">
         <div>
           <h2 className="text-xl font-bold font-display">บันทึกเวลาเข้าออกงาน</h2>
-          <p className="text-sm text-muted-foreground mt-0.5">ข้อมูลจากฐานข้อมูล</p>
+          <p className="hidden sm:block text-sm text-muted-foreground mt-0.5">ข้อมูลจากฐานข้อมูล</p>
         </div>
         {(canExport || canEditTime || canRequestOwnEdit) && (
           <div className="flex items-center gap-2">
             {canEditTime && (
               <button
                 onClick={() => setImportOpen(true)}
-                className="flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-medium hover:bg-muted transition-colors"
+                aria-label="นำเข้าจากเครื่องสแกน"
+                title="นำเข้าจากเครื่องสแกน"
+                className="flex items-center justify-center gap-2 h-10 w-10 sm:w-auto sm:px-3 sm:py-2 rounded-xl border text-sm font-medium hover:bg-muted transition-colors"
               >
                 <Upload className="w-4 h-4" />
-                นำเข้าจากเครื่องสแกน
+                <span className="hidden sm:inline">นำเข้าจากเครื่องสแกน</span>
               </button>
             )}
             {canExport && (
-              <button className="flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-medium hover:bg-muted transition-colors">
+              <button aria-label="Export Excel" title="Export Excel" className="flex items-center justify-center gap-2 h-10 w-10 sm:w-auto sm:px-3 sm:py-2 rounded-xl border text-sm font-medium hover:bg-muted transition-colors">
                 <Download className="w-4 h-4" />
-                Export Excel
+                <span className="hidden sm:inline">Export Excel</span>
               </button>
             )}
             {(canEditTime || canRequestOwnEdit) && (
               <button
                 onClick={openNewRequest}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold"
+                aria-label="ขอแก้ไขเวลา"
+                title="ขอแก้ไขเวลา"
+                className="flex items-center justify-center gap-2 h-10 w-10 sm:w-auto sm:px-4 sm:py-2 rounded-xl text-sm font-bold"
                 style={{ background: "linear-gradient(135deg, hsl(var(--primary)), hsl(31 100% 60%))", color: "hsl(var(--primary-foreground))", boxShadow: "0 4px 12px hsl(var(--primary) / 0.3)" }}
               >
                 <AlertCircle className="w-4 h-4" />
-                ขอแก้ไขเวลา
+                <span className="hidden sm:inline">ขอแก้ไขเวลา</span>
               </button>
             )}
           </div>
@@ -710,7 +715,7 @@ const Attendance = () => {
 
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <StatCarousel className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {Object.entries(summary).map(([key, val]) => {
           const conf = statusConf[key];
           const Icon = conf.icon;
@@ -733,7 +738,7 @@ const Attendance = () => {
             </div>
           );
         })}
-      </div>
+      </StatCarousel>
 
       {/* View Toggle */}
       <div className="flex gap-2">

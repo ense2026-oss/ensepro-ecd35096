@@ -400,10 +400,10 @@ const Leave = () => {
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
+      <div className="flex flex-row items-center justify-between gap-3">
+        <div className="min-w-0">
           <h2 className="text-xl font-bold font-display">ระบบลางาน</h2>
-          <p className="text-sm text-muted-foreground mt-0.5">จัดการคำขอลาและโควต้าการลา</p>
+          <p className="hidden sm:block text-sm text-muted-foreground mt-0.5">จัดการคำขอลาและโควต้าการลา</p>
         </div>
         <div className="flex items-center gap-2">
           <button

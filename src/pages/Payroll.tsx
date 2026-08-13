@@ -14,6 +14,7 @@ import {
   DEFAULT_TAX_DEDUCTION, type TaxConfig, type TaxDeduction,
 } from "@/utils/taxCalculation";
 import { toast } from "sonner";
+import StatCarousel from "@/components/ui/stat-carousel";
 import { exportPnd1Excel, exportPnd1Pdf, exportPayslipExcel, exportPayslipPdf, exportPayslipPdfFromSnapshot, exportAllPayslipsExcel, primePayrollExportData } from "@/utils/exportPayroll";
 import { createDownloadProgressToast } from "@/utils/downloadToast";
 import { Input } from "@/components/ui/input";
@@ -792,17 +793,17 @@ const Payroll = () => {
   return (
     <div className="space-y-5">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
+      <div className="flex flex-row items-center justify-between gap-3">
+        <div className="min-w-0">
           <h2 className="text-xl font-bold font-display">ระบบเงินเดือน</h2>
-          <p className="text-sm text-muted-foreground mt-0.5">สรุปเงินเดือนประจำเดือน {THAI_MONTHS[selectedMonth - 1]} {thaiYear}</p>
+          <p className="hidden sm:block text-sm text-muted-foreground mt-0.5">สรุปเงินเดือนประจำเดือน {THAI_MONTHS[selectedMonth - 1]} {thaiYear}</p>
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap justify-end">
           {/* Month/Year selector */}
           <select
             value={selectedMonth}
             onChange={(e) => setSelectedMonth(Number(e.target.value))}
-            className="px-3 py-2 text-sm rounded-xl border bg-muted/30 outline-none cursor-pointer"
+            className="hidden sm:block px-3 py-2 text-sm rounded-xl border bg-muted/30 outline-none cursor-pointer"
           >
             {THAI_MONTHS.map((m, i) => (
               <option key={i} value={i + 1}>{m}</option>
@@ -811,17 +812,17 @@ const Payroll = () => {
           <select
             value={selectedYear}
             onChange={(e) => setSelectedYear(Number(e.target.value))}
-            className="px-3 py-2 text-sm rounded-xl border bg-muted/30 outline-none cursor-pointer"
+            className="hidden sm:block px-3 py-2 text-sm rounded-xl border bg-muted/30 outline-none cursor-pointer"
           >
             {Array.from({ length: 5 }, (_, i) => now.getFullYear() - 2 + i).map((y) => (
               <option key={y} value={y}>{y + 543}</option>
             ))}
           </select>
-          <button onClick={async () => { await primePayrollExportData(selectedYear, selectedMonth); exportAllPayslipsExcel(employees); toast.success("ส่งออกสลิปเงินเดือนทั้งหมด Excel สำเร็จ"); }} className="flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-medium hover:bg-muted transition-colors">
-            <Download className="w-4 h-4" /> Export Excel
+          <button onClick={async () => { await primePayrollExportData(selectedYear, selectedMonth); exportAllPayslipsExcel(employees); toast.success("ส่งออกสลิปเงินเดือนทั้งหมด Excel สำเร็จ"); }} aria-label="Export Excel" title="Export Excel" className="flex items-center justify-center gap-2 h-10 w-10 sm:w-auto sm:px-3 sm:py-2 rounded-xl border text-sm font-medium hover:bg-muted transition-colors">
+            <Download className="w-4 h-4" /> <span className="hidden sm:inline">Export Excel</span>
           </button>
-          <button onClick={async () => { await primePayrollExportData(selectedYear, selectedMonth); await exportPnd1Pdf(employees, THAI_MONTHS[selectedMonth - 1], String(thaiYear)); toast.success("ส่งออก ภ.ง.ด.1 PDF สำเร็จ"); }} className="flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-medium hover:bg-muted transition-colors">
-            <FileText className="w-4 h-4" /> ภ.ง.ด.1 PDF
+          <button onClick={async () => { await primePayrollExportData(selectedYear, selectedMonth); await exportPnd1Pdf(employees, THAI_MONTHS[selectedMonth - 1], String(thaiYear)); toast.success("ส่งออก ภ.ง.ด.1 PDF สำเร็จ"); }} aria-label="ภ.ง.ด.1 PDF" title="ภ.ง.ด.1 PDF" className="flex items-center justify-center gap-2 h-10 w-10 sm:w-auto sm:px-3 sm:py-2 rounded-xl border text-sm font-medium hover:bg-muted transition-colors">
+            <FileText className="w-4 h-4" /> <span className="hidden sm:inline">ภ.ง.ด.1 PDF</span>
           </button>
         </div>
       </div>
@@ -880,12 +881,12 @@ const Payroll = () => {
 
       {/* Summary Cards */}
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <StatCarousel>
         <SummaryCard icon={Banknote} label="รายได้รวม" value={`฿${formatCurrency(totals.gross)}`} color="hsl(var(--primary))" bg="hsl(var(--primary) / 0.1)" />
         <SummaryCard icon={Calculator} label="ภาษีหัก ณ ที่จ่าย" value={`฿${formatCurrency(totals.tax)}`} color="hsl(31 100% 53%)" bg="hsl(31 100% 93%)" />
         <SummaryCard icon={ShieldCheck} label="ประกันสังคม" value={`฿${formatCurrency(totals.ssf)}`} color="hsl(220 90% 50%)" bg="hsl(220 90% 93%)" />
         <SummaryCard icon={Wallet} label="เงินได้สุทธิรวม" value={`฿${formatCurrency(totals.net)}`} color="hsl(90 100% 30%)" bg="hsl(90 100% 92%)" />
-      </div>
+      </StatCarousel>
 
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
         <Users className="w-4 h-4" />
