@@ -176,15 +176,17 @@ const ApprovalSettings = () => {
                 </select>
 
                 {tier.type === "role" ? (
-                  <select
-                    value={tier.value}
-                    onChange={(e) => updateTier(mi, ti, { value: e.target.value })}
-                    className="px-3 py-2 text-sm rounded-xl border outline-none bg-muted/30 cursor-pointer flex-1 min-w-[140px]"
-                  >
-                    {roleOptions.map((opt) => (
-                      <option key={opt.value} value={opt.value}>{opt.label}</option>
-                    ))}
-                  </select>
+                  <div className="flex-1 min-w-[140px] min-w-0">
+                    <select
+                      value={tier.value}
+                      onChange={(e) => updateTier(mi, ti, { value: e.target.value })}
+                      className="w-full px-3 py-2 text-sm rounded-xl border outline-none bg-muted/30 cursor-pointer"
+                    >
+                      {roleOptions.map((opt) => (
+                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                      ))}
+                    </select>
+                  </div>
                 ) : (
                   <div className="flex-1 min-w-[140px]">
                     <SearchableSelect
