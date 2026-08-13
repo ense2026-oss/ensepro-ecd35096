@@ -15,6 +15,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/contexts/PermissionsContext";
 import { notifyRequester, notifyTierApprover } from "@/utils/notifications";
 import EmployeeAvatar from "@/components/ui/employee-avatar";
+import FaceScanFileImportDialog from "@/components/attendance/FaceScanFileImportDialog";
+
 
 interface AttendanceRecord {
   id: string;
