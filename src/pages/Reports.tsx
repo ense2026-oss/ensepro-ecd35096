@@ -18,6 +18,8 @@ import {
   exportShiftChangeLogExcel,
   exportPayrollSummaryExcel,
   exportTaxAnnualExcel,
+  exportAttendanceReportExcel,
+  exportAttendanceSummaryExcel,
 } from "@/utils/exportGenericReports";
 import { toast } from "sonner";
 import {
@@ -117,27 +119,9 @@ const categories: { key: ReportCategory; label: string; icon: React.ElementType;
   { key: "payroll", label: "เงินเดือน/ภาษี", icon: Banknote, color: "#0ea5e9" },
 ];
 
-// --- Mock chart data ---
-const attendanceMonthly = [
-  { month: "ม.ค.", ปกติ: 420, สาย: 18, ขาด: 5 },
-  { month: "ก.พ.", ปกติ: 410, สาย: 22, ขาด: 8 },
-  { month: "มี.ค.", ปกติ: 430, สาย: 15, ขาด: 3 },
-  { month: "เม.ย.", ปกติ: 400, สาย: 25, ขาด: 10 },
-  { month: "พ.ค.", ปกติ: 425, สาย: 20, ขาด: 6 },
-  { month: "มิ.ย.", ปกติ: 435, สาย: 12, ขาด: 4 },
-];
-
 const defaultLeavePieColors = ["#FF870F", "#9CA3AF", "#87FF0F", "#E5E5E5", "#3b82f6", "#a855f7", "#ef4444", "#14b8a6"];
 
-// Mock data removed - employee data now fetched from database
-
-const mockAttendanceTable = [
-  { id: "EMP-001", name: "สมชาย ใจดี", date: "20/02/2569", checkIn: "08:02", checkOut: "17:15", status: "ปกติ", hours: "9:13" },
-  { id: "EMP-002", name: "สมหญิง รักงาน", date: "20/02/2569", checkIn: "08:45", checkOut: "17:30", status: "สาย", hours: "8:45" },
-  { id: "EMP-003", name: "วิชัย เก่งกาจ", date: "20/02/2569", checkIn: "07:55", checkOut: "18:00", status: "ปกติ", hours: "10:05" },
-  { id: "EMP-004", name: "นภา สดใส", date: "20/02/2569", checkIn: "09:10", checkOut: "17:00", status: "สาย", hours: "7:50" },
-  { id: "EMP-005", name: "ประภาส มั่นคง", date: "20/02/2569", checkIn: "08:00", checkOut: "17:00", status: "ปกติ", hours: "9:00" },
-];
+// All report data is fetched from the database (no mock data).
 
 // mockLeaveTable removed - now fetched from database
 
@@ -211,6 +195,12 @@ const Reports = () => {
   const [empHeadcountData, setEmpHeadcountData] = useState<{ dept: string; count: number }[]>([]);
   const [empHiringTrend, setEmpHiringTrend] = useState<any[]>([]);
   const [empLoading, setEmpLoading] = useState(false);
+
+  // --- Real Attendance data ---
+  const [attTableData, setAttTableData] = useState<any[]>([]);
+  const [attSummaryData, setAttSummaryData] = useState<any[]>([]);
+  const [attMonthlyChart, setAttMonthlyChart] = useState<any[]>([]);
+  const [attLoading, setAttLoading] = useState(false);
 
   // --- Real Payroll data ---
   const [payrollSummaryData, setPayrollSummaryData] = useState<any[]>([]);
@@ -865,6 +855,97 @@ const Reports = () => {
     }
   }, [filterYear]);
 
+  // --- Fetch Attendance data (real records) ---
+  const fetchAttendanceData = useCallback(async () => {
+    setAttLoading(true);
+    try {
+      const ceYear = parseInt(filterYear) - 543;
+      const monthNum = monthIndexMap[filterMonth] || 1;
+
+      const { data, error } = await supabase
+        .from("attendance_records")
+        .select("*, employees!attendance_records_employee_id_fkey(first_name, last_name, username, dept)")
+        .gte("date", `${ceYear}-01-01`)
+        .lte("date", `${ceYear}-12-31`)
+        .order("date", { ascending: false });
+      if (error) throw error;
+
+      const statusLabel: Record<string, string> = {
+        present: "ปกติ", normal: "ปกติ", late: "สาย", absent: "ขาดงาน",
+        leave: "ลางาน", dayoff: "วันหยุด", holiday: "วันหยุด",
+      };
+
+      const all = (data || []).map((r: any) => {
+        const emp = r.employees;
+        const parsed = parseThaiDate(r.date);
+        const toMin = (t: string) => {
+          const [h, m] = String(t || "").split(":").map(Number);
+          return Number.isFinite(h) ? h * 60 + (m || 0) : NaN;
+        };
+        const inM = toMin(r.check_in);
+        const outM = toMin(r.check_out);
+        let hours = "-";
+        if (Number.isFinite(inM) && Number.isFinite(outM)) {
+          let diff = outM - inM;
+          if (diff < 0) diff += 24 * 60;
+          hours = `${Math.floor(diff / 60)}:${String(diff % 60).padStart(2, "0")}`;
+        }
+        return {
+          id: r.id,
+          employeeId: r.employee_id,
+          name: emp ? `${emp.first_name} ${emp.last_name}` : "ไม่ทราบ",
+          dept: emp?.dept || "-",
+          date: parsed ? `${String(parsed.day).padStart(2, "0")}/${String(parsed.month).padStart(2, "0")}/${parsed.ceYear + 543}` : r.date,
+          month: parsed?.month ?? 0,
+          checkIn: r.check_in || "-",
+          checkOut: r.check_out || "-",
+          hours,
+          otHours: Number(r.ot_hours) || 0,
+          late: !!r.late,
+          rawStatus: r.status,
+          status: r.late && r.status !== "absent" && r.status !== "leave" ? "สาย" : (statusLabel[r.status] || r.status),
+        };
+      });
+
+      // Monthly chart for the whole year
+      const chart = monthShortNames.map((label, i) => {
+        const rows = all.filter((r) => r.month === i + 1);
+        return {
+          month: label,
+          ปกติ: rows.filter((r) => !r.late && r.rawStatus !== "absent" && r.rawStatus !== "leave" && r.rawStatus !== "dayoff").length,
+          สาย: rows.filter((r) => r.late).length,
+          ขาด: rows.filter((r) => r.rawStatus === "absent").length,
+        };
+      });
+      setAttMonthlyChart(chart);
+
+      // Selected month rows
+      let rows = all.filter((r) => r.month === monthNum);
+      if (selectedReport === "att-late") rows = rows.filter((r) => r.late);
+      else if (selectedReport === "att-ot") rows = rows.filter((r) => r.otHours > 0);
+      setAttTableData(rows);
+
+      // Per-employee summary for the selected month
+      const monthRows = all.filter((r) => r.month === monthNum);
+      const byEmp = new Map<string, any>();
+      monthRows.forEach((r) => {
+        const cur = byEmp.get(r.employeeId) || { name: r.name, dept: r.dept, workDays: 0, lateDays: 0, absentDays: 0, leaveDays: 0, otHours: 0 };
+        if (r.rawStatus === "absent") cur.absentDays += 1;
+        else if (r.rawStatus === "leave") cur.leaveDays += 1;
+        else if (r.rawStatus !== "dayoff") cur.workDays += 1;
+        if (r.late) cur.lateDays += 1;
+        cur.otHours = Math.round((cur.otHours + r.otHours) * 100) / 100;
+        byEmp.set(r.employeeId, cur);
+      });
+      setAttSummaryData(Array.from(byEmp.values()).sort((a, b) => a.name.localeCompare(b.name, "th")));
+    } catch (err) {
+      console.error("Error fetching attendance data:", err);
+    } finally {
+      setAttLoading(false);
+    }
+  }, [filterYear, filterMonth, selectedReport]);
+
+
   useEffect(() => {
     if (selectedReport === "leave-summary") fetchLeaveData();
     else if (selectedReport === "leave-balance") fetchLeaveBalance();
@@ -873,8 +954,9 @@ const Reports = () => {
     else if (selectedReport === "ot-trend") fetchOtTrend();
     else if (selectedReport?.startsWith("shift-")) fetchShiftData();
     else if (selectedReport?.startsWith("emp-")) fetchEmployeeData();
+    else if (selectedReport?.startsWith("att-")) fetchAttendanceData();
     else if (selectedReport?.startsWith("payroll-")) fetchPayrollData();
-  }, [selectedReport, fetchLeaveData, fetchLeaveBalance, fetchLeaveYearly, fetchOtData, fetchOtTrend, fetchShiftData, fetchEmployeeData, fetchPayrollData]);
+  }, [selectedReport, fetchLeaveData, fetchLeaveBalance, fetchLeaveYearly, fetchOtData, fetchOtTrend, fetchShiftData, fetchEmployeeData, fetchAttendanceData, fetchPayrollData]);
 
   const toggleCat = (cat: string) => setExpandedCats((p) => ({ ...p, [cat]: !p[cat] }));
 
@@ -971,6 +1053,19 @@ const Reports = () => {
       if (format === "excel") {
         exportOvertimeReportExcel(otData, currentReport?.name || "รายงาน OT", filterMonth, filterYear);
         toast.success("ส่งออกรายงาน OT เป็น Excel สำเร็จ");
+        return;
+      }
+    }
+
+    // Attendance reports
+    if (reportId?.startsWith("att-")) {
+      if (format === "excel") {
+        if (reportId === "att-monthly") {
+          exportAttendanceSummaryExcel(attSummaryData, currentReport?.name || "สรุปเข้างานรายเดือน", filterMonth, filterYear);
+        } else {
+          exportAttendanceReportExcel(attTableData, currentReport?.name || "รายงานบันทึกเวลา", filterMonth, filterYear);
+        }
+        toast.success("ส่งออกรายงานบันทึกเวลาเป็น Excel สำเร็จ");
         return;
       }
     }
@@ -1090,6 +1185,7 @@ const Reports = () => {
             else if (selectedReport === 'ot-trend') fetchOtTrend();
             else if (selectedReport?.startsWith('shift-')) fetchShiftData();
             else if (selectedReport?.startsWith('emp-')) fetchEmployeeData();
+            else if (selectedReport?.startsWith('att-')) fetchAttendanceData();
             else if (selectedReport?.startsWith('payroll-')) fetchPayrollData();
           }} className="ml-auto flex items-center gap-1.5 text-sm font-medium px-3 py-2 rounded-lg hover:bg-muted transition-colors" style={{ color: "#FF870F" }}>
             <RefreshCw className="w-3.5 h-3.5" />
@@ -1103,7 +1199,7 @@ const Reports = () => {
             <div className="rounded-2xl border border-border bg-card p-5">
               <h3 className="text-sm font-bold mb-4">สถิติการเข้างานรายเดือน</h3>
               <ResponsiveContainer width="100%" height={260}>
-                <BarChart data={attendanceMonthly}>
+                <BarChart data={attMonthlyChart}>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                   <XAxis dataKey="month" fontSize={12} />
                   <YAxis fontSize={12} />
@@ -1118,7 +1214,7 @@ const Reports = () => {
             <div className="rounded-2xl border border-border bg-card p-5">
               <h3 className="text-sm font-bold mb-4">แนวโน้มการมาสาย</h3>
               <ResponsiveContainer width="100%" height={260}>
-                <AreaChart data={attendanceMonthly}>
+                <AreaChart data={attMonthlyChart}>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                   <XAxis dataKey="month" fontSize={12} />
                   <YAxis fontSize={12} />
@@ -1507,42 +1603,89 @@ const Reports = () => {
               </table>
             )}
             {cat === "attendance" && (
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="bg-muted/50">
-                    <th className="text-left px-4 py-3 font-semibold">ลำดับที่</th>
-                    <th className="text-left px-4 py-3 font-semibold">ชื่อ-สกุล</th>
-                    <th className="text-left px-4 py-3 font-semibold">วันที่</th>
-                    <th className="text-left px-4 py-3 font-semibold">เข้างาน</th>
-                    <th className="text-left px-4 py-3 font-semibold">ออกงาน</th>
-                    <th className="text-left px-4 py-3 font-semibold">ชั่วโมง</th>
-                    <th className="text-left px-4 py-3 font-semibold">สถานะ</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {mockAttendanceTable.map((row, i) => (
-                    <tr key={row.id} className="border-t border-border hover:bg-muted/30 transition-colors">
-                      <td className="px-4 py-3 text-center">{mockAttendanceTable.length - i}</td>
-                      <td className="px-4 py-3 font-medium">{row.name}</td>
-                      <td className="px-4 py-3">{row.date}</td>
-                      <td className="px-4 py-3">{row.checkIn}</td>
-                      <td className="px-4 py-3">{row.checkOut}</td>
-                      <td className="px-4 py-3">{row.hours}</td>
-                      <td className="px-4 py-3">
-                        <span
-                          className="px-2 py-0.5 rounded-full text-xs font-medium"
-                          style={{
-                            background: row.status === "ปกติ" ? "hsl(var(--accent-green) / 0.15)" : "hsl(31 100% 95%)",
-                            color: row.status === "ปกติ" ? "#4CAF50" : "#FF870F",
-                          }}
-                        >
-                          {row.status}
-                        </span>
-                      </td>
+              selectedReport === "att-monthly" ? (
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-muted/50">
+                      <th className="text-left px-4 py-3 font-semibold">ลำดับที่</th>
+                      <th className="text-left px-4 py-3 font-semibold">ชื่อ-สกุล</th>
+                      <th className="text-left px-4 py-3 font-semibold">แผนก</th>
+                      <th className="text-left px-4 py-3 font-semibold">มาทำงาน</th>
+                      <th className="text-left px-4 py-3 font-semibold">มาสาย</th>
+                      <th className="text-left px-4 py-3 font-semibold">ขาดงาน</th>
+                      <th className="text-left px-4 py-3 font-semibold">ลา</th>
+                      <th className="text-left px-4 py-3 font-semibold">OT (ชม.)</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {attLoading ? (
+                      <tr><td colSpan={8} className="px-4 py-8 text-center text-muted-foreground">กำลังโหลด...</td></tr>
+                    ) : attSummaryData.length === 0 ? (
+                      <tr><td colSpan={8} className="px-4 py-8 text-center text-muted-foreground">ไม่มีข้อมูล</td></tr>
+                    ) : attSummaryData.map((row: any, i: number) => (
+                      <tr key={i} className="border-t border-border hover:bg-muted/30 transition-colors">
+                        <td className="px-4 py-3 text-center">{i + 1}</td>
+                        <td className="px-4 py-3 font-medium">{row.name}</td>
+                        <td className="px-4 py-3">{row.dept}</td>
+                        <td className="px-4 py-3">{row.workDays}</td>
+                        <td className="px-4 py-3">{row.lateDays}</td>
+                        <td className="px-4 py-3">{row.absentDays}</td>
+                        <td className="px-4 py-3">{row.leaveDays}</td>
+                        <td className="px-4 py-3">{row.otHours}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : (
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-muted/50">
+                      <th className="text-left px-4 py-3 font-semibold">ลำดับที่</th>
+                      <th className="text-left px-4 py-3 font-semibold">ชื่อ-สกุล</th>
+                      <th className="text-left px-4 py-3 font-semibold">แผนก</th>
+                      <th className="text-left px-4 py-3 font-semibold">วันที่</th>
+                      <th className="text-left px-4 py-3 font-semibold">เข้างาน</th>
+                      <th className="text-left px-4 py-3 font-semibold">ออกงาน</th>
+                      <th className="text-left px-4 py-3 font-semibold">ชั่วโมง</th>
+                      <th className="text-left px-4 py-3 font-semibold">OT (ชม.)</th>
+                      <th className="text-left px-4 py-3 font-semibold">สถานะ</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {attLoading ? (
+                      <tr><td colSpan={9} className="px-4 py-8 text-center text-muted-foreground">กำลังโหลด...</td></tr>
+                    ) : attTableData.length === 0 ? (
+                      <tr><td colSpan={9} className="px-4 py-8 text-center text-muted-foreground">ไม่มีข้อมูล</td></tr>
+                    ) : attTableData.map((row: any, i: number) => (
+                      <tr key={row.id} className="border-t border-border hover:bg-muted/30 transition-colors">
+                        <td className="px-4 py-3 text-center">{i + 1}</td>
+                        <td className="px-4 py-3 font-medium">{row.name}</td>
+                        <td className="px-4 py-3">{row.dept}</td>
+                        <td className="px-4 py-3">{row.date}</td>
+                        <td className="px-4 py-3">{row.checkIn}</td>
+                        <td className="px-4 py-3">{row.checkOut}</td>
+                        <td className="px-4 py-3">{row.hours}</td>
+                        <td className="px-4 py-3">{row.otHours || "-"}</td>
+                        <td className="px-4 py-3">
+                          <span
+                            className="px-2 py-0.5 rounded-full text-xs font-medium"
+                            style={{
+                              background: row.status === "ปกติ"
+                                ? "hsl(var(--accent-green) / 0.15)"
+                                : row.status === "ขาดงาน"
+                                  ? "hsl(0 80% 95%)"
+                                  : "hsl(31 100% 95%)",
+                              color: row.status === "ปกติ" ? "#4CAF50" : row.status === "ขาดงาน" ? "#ef4444" : "#FF870F",
+                            }}
+                          >
+                            {row.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )
             )}
             {cat === "overtime" && (
               <table className="w-full text-sm">
