@@ -122,6 +122,8 @@ const Attendance = () => {
   const [dateTo, setDateTo] = useState("");
   const [filterMonth, setFilterMonth] = useState(currentMonthLocal);
   const [activeView, setActiveView] = useState<"attendance" | "requests">("attendance");
+  const [importOpen, setImportOpen] = useState(false);
+
 
   // Edit dialog
   const [editOpen, setEditOpen] = useState(false);
