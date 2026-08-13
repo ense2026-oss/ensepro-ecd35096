@@ -303,7 +303,12 @@ const EmployeeFormDialog = ({ open, onOpenChange, employee, onSave }: EmployeeFo
             />
 
             <SelectField label="ประเภทพนักงาน" value={form.employeeType} onChange={set("employeeType")} options={["พนักงานประจำ", "พนักงานชั่วคราว", "พนักงานทดลองงาน"]} />
-            <SelectField label="กะการทำงาน" value={form.shift} onChange={set("shift")} options={shiftOptions} />
+            <SelectField
+              label="กะการทำงาน"
+              value={form.shift || "-- เลือกกะการทำงาน --"}
+              onChange={(v) => set("shift")(v === "-- เลือกกะการทำงาน --" ? "" : v)}
+              options={shiftOptions}
+            />
             <InputField label="วันที่เริ่มงาน" value={form.startDate} onChange={set("startDate")} placeholder="YYYY-MM-DD" />
             <InputField label="วันสิ้นสุดทดลองงาน" value={form.trialEndDate} onChange={set("trialEndDate")} placeholder="YYYY-MM-DD" />
             <InputField label="วันสิ้นสุดสัญญาจ้าง" value={form.contractEndDate} onChange={set("contractEndDate")} placeholder="YYYY-MM-DD" />
