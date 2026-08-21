@@ -57,11 +57,10 @@ const allNavItems = [
     ],
   },
   {
-    section: "รายงาน & ตั้งค่า",
+    section: "รายงาน",
     items: [
       { path: "/reports", label: "รายงาน", icon: FileText },
       { path: "/notifications", label: "การแจ้งเตือน", icon: Bell },
-      { path: "/settings", label: "ตั้งค่า", icon: Settings },
     ],
   },
 ];
@@ -259,18 +258,28 @@ const Sidebar = ({ collapsed, onToggle, onNavigate }: SidebarProps) => {
         ))}
       </nav>
 
-      {/* Logout */}
-      <div className="p-3 border-t" style={{ borderColor: "hsl(var(--sidebar-border))" }}>
+      {/* Settings & Logout */}
+      <div className="p-3 border-t flex items-center gap-2" style={{ borderColor: "hsl(var(--sidebar-border))" }}>
+        {canAccessRoute(role, "/settings") && (
+          <Link
+            to="/settings"
+            className={`sidebar-item flex-1 justify-center ${location.pathname === "/settings" ? "active" : ""}`}
+            title="ตั้งค่า"
+            onClick={onNavigate}
+          >
+            <Settings className="w-5 h-5 flex-shrink-0" />
+          </Link>
+        )}
         <button
           onClick={async () => {
             await logout();
             navigate("/login");
           }}
-          className={`sidebar-item w-full ${collapsed ? "justify-center" : ""}`}
+          className="sidebar-item flex-1 justify-center"
           style={{ color: "rgba(255,255,255,0.5)" }}
+          title="ออกจากระบบ"
         >
           <LogOut className="w-5 h-5 flex-shrink-0" />
-          {!collapsed && <span>ออกจากระบบ</span>}
         </button>
       </div>
 
