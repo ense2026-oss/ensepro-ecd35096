@@ -29,6 +29,27 @@ import { usePayrollConfig, DEFAULT_PAYROLL_CONFIG, type PayrollConfig } from "@/
 /* ─── Payroll config (loaded from settings; default as fallback) ─── */
 const PAYROLL_CONFIG = DEFAULT_PAYROLL_CONFIG;
 
+/* ─── Next pay date, derived from the pay-cycle setting ─── */
+function getNextPayDateInfo(config: PayrollConfig, now: Date): { label: string; daysUntil: number } | null {
+  if (!config.payCycleEnabled) return null;
+  const payDay = config.payCycle === "25" ? 25 : config.payCycle === "custom" ? config.customPayDay : null;
+  const label = config.payCycle === "end" ? "สิ้นเดือน" : `ทุกวันที่ ${payDay}`;
+
+  const lastDayOfMonth = (y: number, m: number) => new Date(y, m + 1, 0).getDate();
+  const buildDate = (y: number, m: number) => {
+    if (payDay == null) return new Date(y, m + 1, 0); // end of month
+    const day = Math.min(payDay, lastDayOfMonth(y, m));
+    return new Date(y, m, day);
+  };
+
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  let next = buildDate(today.getFullYear(), today.getMonth());
+  if (next < today) next = buildDate(today.getFullYear(), today.getMonth() + 1);
+
+  const daysUntil = Math.round((next.getTime() - today.getTime()) / 86_400_000);
+  return { label, daysUntil };
+}
+
 /* ─── Attendance data type ─── */
 interface AttendanceStats {
   workDays: number;
@@ -159,6 +180,7 @@ function CustomItemsDialog({
   onSave: (items: CustomPayrollItem[]) => void;
 }) {
   const [items, setItems] = useState<CustomPayrollItem[]>(emp.customPayrollItems || []);
+  const { config } = usePayrollConfig();
 
   useEffect(() => {
     if (open) setItems(emp.customPayrollItems || []);
@@ -166,6 +188,12 @@ function CustomItemsDialog({
 
   const addItem = (type: "income" | "deduction") => {
     setItems([...items, { id: crypto.randomUUID(), name: "", type, amount: 0, enabled: true }]);
+  };
+
+  const addItemFromTemplate = (type: "income" | "deduction", templateId: string) => {
+    const t = config.templates.find((tpl) => tpl.id === templateId);
+    if (!t) return;
+    setItems([...items, { id: crypto.randomUUID(), name: t.name, type, amount: t.defaultAmount, enabled: true }]);
   };
 
   const updateItem = (id: string, field: keyof CustomPayrollItem, value: any) => {
@@ -214,9 +242,23 @@ function CustomItemsDialog({
               ))}
               {incomeItems.length === 0 && <p className="text-xs text-muted-foreground py-2">ยังไม่มีรายรับเพิ่มเติม</p>}
             </div>
-            <Button variant="outline" size="sm" className="mt-2 text-xs" onClick={() => addItem("income")}>
-              <Plus className="w-3 h-3 mr-1" /> เพิ่มรายรับ
-            </Button>
+            <div className="flex items-center gap-2 mt-2">
+              <Button variant="outline" size="sm" className="text-xs" onClick={() => addItem("income")}>
+                <Plus className="w-3 h-3 mr-1" /> เพิ่มรายรับ
+              </Button>
+              {config.templates.some((t) => t.type === "income") && (
+                <Select onValueChange={(id) => addItemFromTemplate("income", id)}>
+                  <SelectTrigger className="h-8 w-44 text-xs">
+                    <SelectValue placeholder="เลือกจาก Template" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {config.templates.filter((t) => t.type === "income").map((t) => (
+                      <SelectItem key={t.id} value={t.id}>{t.name || "(ไม่มีชื่อ)"}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
           </div>
 
           {/* Deduction items */}
@@ -235,9 +277,23 @@ function CustomItemsDialog({
               ))}
               {deductionItems.length === 0 && <p className="text-xs text-muted-foreground py-2">ยังไม่มีรายการหักเพิ่มเติม</p>}
             </div>
-            <Button variant="outline" size="sm" className="mt-2 text-xs" onClick={() => addItem("deduction")}>
-              <Plus className="w-3 h-3 mr-1" /> เพิ่มรายการหัก
-            </Button>
+            <div className="flex items-center gap-2 mt-2">
+              <Button variant="outline" size="sm" className="text-xs" onClick={() => addItem("deduction")}>
+                <Plus className="w-3 h-3 mr-1" /> เพิ่มรายการหัก
+              </Button>
+              {config.templates.some((t) => t.type === "deduction") && (
+                <Select onValueChange={(id) => addItemFromTemplate("deduction", id)}>
+                  <SelectTrigger className="h-8 w-44 text-xs">
+                    <SelectValue placeholder="เลือกจาก Template" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {config.templates.filter((t) => t.type === "deduction").map((t) => (
+                      <SelectItem key={t.id} value={t.id}>{t.name || "(ไม่มีชื่อ)"}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
           </div>
 
           <Button onClick={handleSave} className="w-full">บันทึก</Button>
@@ -796,7 +852,18 @@ const Payroll = () => {
       <div className="flex flex-row items-center justify-between gap-3">
         <div className="min-w-0">
           <h2 className="text-xl font-bold font-display">ระบบเงินเดือน</h2>
-          <p className="hidden sm:block text-sm text-muted-foreground mt-0.5">สรุปเงินเดือนประจำเดือน {THAI_MONTHS[selectedMonth - 1]} {thaiYear}</p>
+          <p className="hidden sm:block text-sm text-muted-foreground mt-0.5">
+            สรุปเงินเดือนประจำเดือน {THAI_MONTHS[selectedMonth - 1]} {thaiYear}
+            {(() => {
+              const info = getNextPayDateInfo(payrollConfig, new Date());
+              if (!info) return null;
+              return (
+                <span className="ml-2 text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
+                  รอบจ่าย {info.label} · อีก {info.daysUntil} วัน
+                </span>
+              );
+            })()}
+          </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap justify-end">
           {/* Month/Year selector */}

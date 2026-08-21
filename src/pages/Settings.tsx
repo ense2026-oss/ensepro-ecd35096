@@ -33,6 +33,7 @@ const ALL_TABS = [
   { id: "admins", label: "ผู้ดูแลระบบ", icon: ShieldCheck },
   { id: "shifts", label: "กะการทำงาน", icon: Clock },
   { id: "payroll", label: "ตั้งค่าเงินเดือน", icon: Banknote },
+  { id: "contracts", label: "ตั้งค่าสัญญาจ้าง", icon: FileSignature },
   { id: "modules", label: "ตั้งค่าโมดูล", icon: ToggleRight },
   { id: "leave-types", label: "ประเภทการลา", icon: Calendar },
   { id: "company-holidays", label: "วันหยุดบริษัท", icon: CalendarDays },

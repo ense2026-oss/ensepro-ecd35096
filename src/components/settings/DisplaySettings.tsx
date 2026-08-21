@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Palette, Type, Check, RotateCcw, Paintbrush, ChevronDown, ChevronUp } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 // --- Color conversion helpers ---
 const hslToHex = (hslStr: string): string => {
@@ -160,6 +161,50 @@ const loadSettings = (key: string = STORAGE_KEY): DisplaySettingsState => {
   return defaultSettings;
 };
 
+// The global (non-personal) theme is the "main program" theme shared by every
+// user/device, so it lives in company_settings rather than localStorage.
+const GLOBAL_DISPLAY_KEY = "display_settings";
+
+const mergeGlobalSettings = (raw: unknown): DisplaySettingsState => {
+  if (!raw || typeof raw !== "object") return defaultSettings;
+  const parsed = raw as Partial<DisplaySettingsState>;
+  return {
+    ...defaultSettings,
+    ...parsed,
+    customColors: { ...defaultCustomColors, ...(parsed.customColors || {}) },
+  };
+};
+
+const fetchGlobalDisplaySettings = async (): Promise<DisplaySettingsState | null> => {
+  try {
+    const { data } = await supabase
+      .from("company_settings")
+      .select("value")
+      .eq("key", GLOBAL_DISPLAY_KEY)
+      .maybeSingle();
+    return data?.value ? mergeGlobalSettings(data.value) : null;
+  } catch {
+    return null;
+  }
+};
+
+const saveGlobalDisplaySettings = async (settings: DisplaySettingsState) => {
+  const value = JSON.parse(JSON.stringify(settings));
+  const { data: existing } = await supabase
+    .from("company_settings")
+    .select("id")
+    .eq("key", GLOBAL_DISPLAY_KEY)
+    .maybeSingle();
+  if (existing) {
+    await supabase
+      .from("company_settings")
+      .update({ value, updated_at: new Date().toISOString() })
+      .eq("key", GLOBAL_DISPLAY_KEY);
+  } else {
+    await supabase.from("company_settings").insert([{ key: GLOBAL_DISPLAY_KEY, value }]);
+  }
+};
+
 const loadFont = (googleFont?: string) => {
   if (!googleFont) return;
   const id = `font-${googleFont.split(":")[0].replace(/\+/g, "-")}`;
@@ -235,12 +280,21 @@ export const applyStartupDisplaySettings = () => {
         const personalKey = getPersonalDisplayKey(userId);
         if (localStorage.getItem(personalKey)) {
           applyDisplaySettings(loadSettings(personalKey));
-          return;
+          return; // personal override always wins — no need to fetch the org theme
         }
       }
     }
   } catch { /* ignore */ }
-  applyDisplaySettings(loadSettings());
+
+  // Apply the cached copy instantly (avoids a flash of unstyled content),
+  // then refresh from the DB so every device converges on the latest org theme.
+  applyDisplaySettings(loadSettings(STORAGE_KEY));
+  fetchGlobalDisplaySettings().then((fresh) => {
+    if (fresh) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(fresh));
+      applyDisplaySettings(fresh);
+    }
+  });
 };
 
 
@@ -289,11 +343,50 @@ interface DisplaySettingsProps {
 const DisplaySettings = ({ storageKey = STORAGE_KEY, personal = false }: DisplaySettingsProps) => {
   const [settings, setSettings] = useState<DisplaySettingsState>(() => loadSettings(storageKey));
   const [showCustom, setShowCustom] = useState(settings.themeId === "custom");
+  const skipNextSaveRef = useRef(false);
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
+
+  // Global (non-personal) mode: load the latest org theme from the DB on open,
+  // and stay in sync if another admin changes it while this page is open.
+  useEffect(() => {
+    if (personal) return;
+    fetchGlobalDisplaySettings().then((fresh) => {
+      if (fresh) {
+        skipNextSaveRef.current = true;
+        setSettings(fresh);
+        setShowCustom(fresh.themeId === "custom");
+      }
+    });
+    const channel = supabase
+      .channel("display-settings-realtime")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "company_settings", filter: `key=eq.${GLOBAL_DISPLAY_KEY}` },
+        (payload) => {
+          if (payload.new && "value" in payload.new) {
+            const fresh = mergeGlobalSettings((payload.new as Record<string, unknown>).value);
+            skipNextSaveRef.current = true;
+            setSettings(fresh);
+            setShowCustom(fresh.themeId === "custom");
+          }
+        }
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [personal]);
 
   useEffect(() => {
     applyDisplaySettings(settings);
     localStorage.setItem(storageKey, JSON.stringify(settings));
-  }, [settings, storageKey]);
+
+    if (personal) return;
+    // Settings just arrived from the DB/another admin — don't echo it back.
+    if (skipNextSaveRef.current) { skipNextSaveRef.current = false; return; }
+
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    saveTimeoutRef.current = setTimeout(() => { saveGlobalDisplaySettings(settings); }, 400);
+    return () => { if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current); };
+  }, [settings, storageKey, personal]);
 
   const update = (key: keyof DisplaySettingsState, value: string) => {
     setSettings((prev) => ({ ...prev, [key]: value }));
