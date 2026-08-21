@@ -24,6 +24,8 @@ dist-ssr
 *.sw?
 
 # Environment variables
-.env
-.env.*
-!.env.example
+# NOTE: .env is intentionally tracked — the deploy pipeline builds directly
+# from this repo and needs VITE_SUPABASE_* baked in at build time. It only
+# contains the Supabase anon/publishable key, which is safe to expose.
+.env.local
+.env.*.local
