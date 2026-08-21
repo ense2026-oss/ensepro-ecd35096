@@ -357,12 +357,12 @@ const Employees = () => {
       {/* Card View */}
       {showAsCards && (
         <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
             {paginatedData.map((emp) => {
               const sc = statusConfig[emp.status];
               const displayName = `${emp.firstName} ${emp.lastName}`;
               return (
-                <div key={emp.id} className="card-base p-5 flex flex-col gap-3 animate-fade-in">
+                <div key={emp.id} className="card-base p-3 sm:p-5 flex flex-col gap-2 sm:gap-3 animate-fade-in">
                   <div className="flex items-start justify-between">
                     <EmployeeAvatar photoUrl={emp.photoUrl} avatar={emp.avatar} avatarColor={emp.avatarColor} avatarTextColor={emp.avatarTextColor} firstName={emp.firstName} size="xl" rounded="2xl" />
                     <DropdownMenu>
@@ -390,12 +390,25 @@ const Employees = () => {
                     <div className="flex items-center gap-2 text-xs text-muted-foreground"><MapPin className="w-3.5 h-3.5" />เริ่มงาน {emp.startDate}</div>
                   </div>
                   <div className="flex gap-2 pt-1">
-                    <button onClick={() => navigate(`/employees/${emp.id}`)}
-                      className="flex-1 py-2 rounded-xl text-xs font-semibold transition-colors border"
-                      style={{ borderColor: "hsl(var(--primary))", color: "hsl(var(--primary))" }}>ดูข้อมูล</button>
-                    <button onClick={() => handleEdit(emp)}
-                      className="flex-1 py-2 rounded-xl text-xs font-semibold transition-all"
-                      style={{ background: "linear-gradient(135deg, hsl(var(--primary)), hsl(31 100% 60%))", color: "hsl(var(--primary-foreground))" }}>แก้ไข</button>
+                    {isMobile ? (
+                      <>
+                        <button onClick={() => navigate(`/employees/${emp.id}`)} aria-label="ดูข้อมูล" title="ดูข้อมูล"
+                          className="flex-1 py-2 rounded-xl flex items-center justify-center transition-colors border"
+                          style={{ borderColor: "hsl(var(--primary))", color: "hsl(var(--primary))" }}><Eye className="w-4 h-4" /></button>
+                        <button onClick={() => handleEdit(emp)} aria-label="แก้ไข" title="แก้ไข"
+                          className="flex-1 py-2 rounded-xl flex items-center justify-center transition-all"
+                          style={{ background: "linear-gradient(135deg, hsl(var(--primary)), hsl(31 100% 60%))", color: "hsl(var(--primary-foreground))" }}><Edit className="w-4 h-4" /></button>
+                      </>
+                    ) : (
+                      <>
+                        <button onClick={() => navigate(`/employees/${emp.id}`)}
+                          className="flex-1 py-2 rounded-xl text-xs font-semibold transition-colors border"
+                          style={{ borderColor: "hsl(var(--primary))", color: "hsl(var(--primary))" }}>ดูข้อมูล</button>
+                        <button onClick={() => handleEdit(emp)}
+                          className="flex-1 py-2 rounded-xl text-xs font-semibold transition-all"
+                          style={{ background: "linear-gradient(135deg, hsl(var(--primary)), hsl(31 100% 60%))", color: "hsl(var(--primary-foreground))" }}>แก้ไข</button>
+                      </>
+                    )}
                   </div>
                 </div>
               );
