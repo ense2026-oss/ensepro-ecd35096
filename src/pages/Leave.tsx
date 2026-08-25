@@ -166,6 +166,11 @@ const Leave = () => {
     const { error } = await supabase.storage.from("leave-attachments").upload(path, file, { upsert: true });
     if (error) {
       console.error("Upload error:", error);
+      toast({
+        title: "อัปโหลดไฟล์แนบไม่สำเร็จ",
+        description: error.message || "กรุณาลองแนบไฟล์อีกครั้ง",
+        variant: "destructive",
+      });
       return null;
     }
     return path;
@@ -217,10 +222,8 @@ const Leave = () => {
 
       if (file) {
         const fileUrl = await uploadFile(file, editingRecord.id);
-        if (fileUrl) {
-          updateData.file_url = fileUrl;
-          updateData.has_file = true;
-        }
+        updateData.file_url = fileUrl;
+        updateData.has_file = !!fileUrl;
       }
 
       await supabase.from("leave_requests").update(updateData).eq("id", editingRecord.id);
@@ -259,9 +262,10 @@ const Leave = () => {
 
       if (inserted && file) {
         const fileUrl = await uploadFile(file, inserted.id);
-        if (fileUrl) {
-          await supabase.from("leave_requests").update({ file_url: fileUrl, has_file: true }).eq("id", inserted.id);
-        }
+        await supabase
+          .from("leave_requests")
+          .update({ file_url: fileUrl, has_file: !!fileUrl })
+          .eq("id", inserted.id);
       }
 
       fetchLeaves();
