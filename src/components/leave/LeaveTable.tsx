@@ -204,15 +204,22 @@ const LeaveTable = ({ records, onApprove, onReject, hideActions = false, current
                   <p className="text-xs text-muted-foreground mb-1">เหตุผล</p>
                   <p className="text-sm p-3 rounded-xl bg-muted/40 whitespace-pre-wrap">{detail.reason || "-"}</p>
                 </div>
-                {detail.file && detail.fileUrl && (
-                  <button
-                    onClick={() => handleViewFile(detail.fileUrl!)}
-                    className="flex items-center gap-1.5 text-sm font-medium hover:underline"
-                    style={{ color: "#FF870F" }}
-                  >
-                    <FileText className="w-4 h-4" /> ดูเอกสารแนบ
-                  </button>
-                )}
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">เอกสารแนบ</p>
+                  {detail.fileUrl ? (
+                    <button
+                      onClick={() => handleViewFile(detail.fileUrl!)}
+                      className="flex items-center gap-1.5 text-sm font-medium hover:underline"
+                      style={{ color: "#FF870F" }}
+                    >
+                      <FileText className="w-4 h-4" /> ดูเอกสารแนบ
+                    </button>
+                  ) : detail.file ? (
+                    <p className="text-sm text-destructive">แนบไฟล์ไว้ แต่ไม่พบไฟล์ในระบบ (กรุณาแนบใหม่)</p>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">-</p>
+                  )}
+                </div>
                 <div className="flex items-center gap-2">
                   <p className="text-xs text-muted-foreground">สถานะ:</p>
                   <span className="text-xs font-semibold px-2.5 py-1 rounded-full" style={{ background: c.bg, color: c.color }}>
