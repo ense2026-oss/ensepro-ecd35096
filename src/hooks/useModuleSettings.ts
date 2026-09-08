@@ -19,12 +19,24 @@ export function useModuleSettings() {
   const [modules, setModules] = useState<Record<string, boolean>>(DEFAULT_MODULES);
   const [loading, setLoading] = useState(true);
 
-  const fetchSettings = useCallback(async () => {
-    const { data } = await supabase
+  const fetchSettings = useCallback(async (retriesLeft = 2): Promise<void> => {
+    const { data, error } = await supabase
       .from("company_settings")
       .select("value")
       .eq("key", "module_settings")
       .maybeSingle();
+
+    if (error) {
+      console.error("Failed to load module settings", error);
+      // Transient network/auth blips shouldn't silently fall back to "everything enabled" —
+      // retry a couple of times before giving up.
+      if (retriesLeft > 0) {
+        await new Promise((r) => setTimeout(r, 800));
+        return fetchSettings(retriesLeft - 1);
+      }
+      setLoading(false);
+      return;
+    }
 
     if (data?.value && typeof data.value === "object" && !Array.isArray(data.value)) {
       const merged = { ...DEFAULT_MODULES, ...(data.value as Record<string, boolean>) };
@@ -73,27 +85,55 @@ export function useModuleSettings() {
     };
   }, [fetchSettings]);
 
-  const updateModules = useCallback(async (newModules: Record<string, boolean>) => {
-    setModules(newModules);
+  const updateModules = useCallback(async (newModules: Record<string, boolean>): Promise<{ error?: string }> => {
+    let previousModules: Record<string, boolean>;
+    setModules((prev) => { previousModules = prev; return newModules; });
     window.dispatchEvent(new CustomEvent("module-settings-changed", { detail: newModules }));
 
+    const rollback = () => {
+      setModules(previousModules);
+      window.dispatchEvent(new CustomEvent("module-settings-changed", { detail: previousModules }));
+    };
+
     // Upsert to DB
-    const { data: existing } = await supabase
+    const { data: existing, error: selectError } = await supabase
       .from("company_settings")
       .select("id")
       .eq("key", "module_settings")
       .maybeSingle();
 
+    if (selectError) {
+      rollback();
+      return { error: selectError.message };
+    }
+
     if (existing) {
-      await supabase
+      // .select() after update lets us detect an RLS policy silently blocking the
+      // write (0 rows returned, no error) instead of reporting a false success.
+      const { data: updated, error } = await supabase
         .from("company_settings")
         .update({ value: newModules as any, updated_at: new Date().toISOString() })
-        .eq("key", "module_settings");
+        .eq("key", "module_settings")
+        .select("id");
+      if (error) {
+        rollback();
+        return { error: error.message };
+      }
+      if (!updated || updated.length === 0) {
+        rollback();
+        return { error: "ไม่มีสิทธิ์บันทึกการตั้งค่านี้" };
+      }
     } else {
-      await supabase
+      const { error } = await supabase
         .from("company_settings")
         .insert({ key: "module_settings", value: newModules as any });
+      if (error) {
+        rollback();
+        return { error: error.message };
+      }
     }
+
+    return {};
   }, []);
 
   return { modules, loading, updateModules };

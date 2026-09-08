@@ -38,13 +38,18 @@ const MODULE_DEFS: ModuleConfig[] = [
 const ModuleSettings = () => {
   const { modules, loading, updateModules } = useModuleSettings();
 
-  const handleToggle = (id: string) => {
+  const handleToggle = async (id: string) => {
     const def = MODULE_DEFS.find((m) => m.id === id);
     if (!def || def.locked) return;
 
-    const newModules = { ...modules, [id]: !modules[id] };
-    updateModules(newModules);
-    toast.success(`${def.label} ${modules[id] ? "ปิดใช้งานแล้ว" : "เปิดใช้งานแล้ว"}`);
+    const willEnable = !modules[id];
+    const newModules = { ...modules, [id]: willEnable };
+    const { error } = await updateModules(newModules);
+    if (error) {
+      toast.error(`บันทึกไม่สำเร็จ: ${error}`);
+      return;
+    }
+    toast.success(`${def.label} ${willEnable ? "เปิดใช้งานแล้ว" : "ปิดใช้งานแล้ว"}`);
   };
 
   if (loading) {
