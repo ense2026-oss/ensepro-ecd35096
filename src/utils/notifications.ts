@@ -8,6 +8,31 @@ interface NotifyParams {
   actionLabel?: string;
 }
 
+/**
+ * Where a notification should take the user when clicked — straight to the
+ * page the request/event belongs to, instead of a standalone notifications list.
+ * "approval"/"system" carry no module of their own, so fall back to matching
+ * keywords in the title (older rows, or payslip-publish notices).
+ */
+export function getNotificationLink(n: { type: string; title?: string; description?: string }): string {
+  switch (n.type) {
+    case "leave":
+      return "/leave";
+    case "attendance":
+      return "/attendance";
+    case "ot":
+      return "/overtime";
+    case "employee":
+      return "/employees";
+  }
+  const text = `${n.title || ""} ${n.description || ""}`;
+  if (text.includes("สลิปเงินเดือน")) return "/my-payslips";
+  if (text.includes("OT")) return "/overtime";
+  if (text.includes("ลา")) return "/leave";
+  if (text.includes("เวลา")) return "/attendance";
+  return "/notifications";
+}
+
 // Map notification type to approval_config module key
 const typeToModuleKey: Record<string, string> = {
   leave: "leave",

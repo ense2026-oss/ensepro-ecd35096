@@ -15,7 +15,6 @@ import {
   ChevronRight,
   Building2,
   FileText,
-  Bell,
   LogOut,
   Shield,
   MapPin,
@@ -60,7 +59,6 @@ const allNavItems = [
     section: "รายงาน",
     items: [
       { path: "/reports", label: "รายงาน", icon: FileText },
-      { path: "/notifications", label: "การแจ้งเตือน", icon: Bell },
     ],
   },
 ];
@@ -68,7 +66,7 @@ const allNavItems = [
 const Sidebar = ({ collapsed, onToggle, onNavigate }: SidebarProps) => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { leavePending, attendancePending, overtimePending, notificationCount } = usePendingCounts();
+  const { leavePending, attendancePending, overtimePending } = usePendingCounts();
   const { programName, programSubtitle, logoUrl, logoOnlyUrl, displayMode } = useBranding();
   const activeLogo = displayMode === "logo-only" ? logoOnlyUrl : logoUrl;
   const { currentUser, role, logout } = useAuth();
@@ -127,7 +125,6 @@ const Sidebar = ({ collapsed, onToggle, onNavigate }: SidebarProps) => {
     "/attendance": attendancePending,
     "/leave": leavePending,
     "/overtime": overtimePending,
-    "/notifications": notificationCount,
   };
 
   return (

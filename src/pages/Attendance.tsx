@@ -606,7 +606,7 @@ const Attendance = () => {
       toast.success("อนุมัติคำขอแก้ไขเวลาเรียบร้อย (ครบทุกระดับ)");
       setDetailOpen(false);
       notifyRequester(req.employeeId, {
-        type: "approval",
+        type: "attendance",
         title: "คำขอแก้ไขเวลาได้รับการอนุมัติ",
         description: `คำขอแก้ไขเวลา ${req.date} (เข้า ${req.newCheckIn} / ออก ${req.newCheckOut}) ได้รับการอนุมัติแล้ว`,
         targetEmployee: req.employeeName,
@@ -658,7 +658,7 @@ const Attendance = () => {
     toast.success("ปฏิเสธคำขอแก้ไขเวลาเรียบร้อย");
     setDetailOpen(false);
     notifyRequester(req.employeeId, {
-      type: "approval",
+      type: "attendance",
       title: "คำขอแก้ไขเวลาไม่ได้รับการอนุมัติ",
       description: `คำขอแก้ไขเวลา ${req.date} (เข้า ${req.newCheckIn} / ออก ${req.newCheckOut}) ไม่ได้รับการอนุมัติ`,
       targetEmployee: req.employeeName,

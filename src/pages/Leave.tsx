@@ -340,7 +340,7 @@ const Leave = () => {
       toast({ title: "อนุมัติแล้ว", description: "อนุมัติคำขอลาเรียบร้อยแล้ว (ครบทุกระดับ)" });
 
       notifyRequester(record.employeeId, {
-        type: "approval",
+        type: "leave",
         title: "คำขอลาได้รับการอนุมัติ",
         description: `คำขอลา ${record.type} ${record.days} วัน (${record.from} - ${record.to}) ได้รับการอนุมัติแล้ว`,
         targetEmployee: record.name,
@@ -394,7 +394,7 @@ const Leave = () => {
     const record = leaves.find((l) => l.id === id);
     if (record) {
       notifyRequester(record.employeeId, {
-        type: "approval",
+        type: "leave",
         title: "คำขอลาไม่ได้รับการอนุมัติ",
         description: `คำขอลา ${record.type} ${record.days} วัน (${record.from} - ${record.to}) ไม่ได้รับการอนุมัติ`,
         targetEmployee: record.name,

@@ -7,6 +7,7 @@ import { usePermissions } from "@/contexts/PermissionsContext";
 import EmployeeAvatar from "@/components/ui/employee-avatar";
 import { usePendingCounts } from "@/contexts/PendingCountsContext";
 import { useTimeEditRequests } from "@/contexts/TimeEditContext";
+import { getNotificationLink } from "@/utils/notifications";
 
 interface TopbarProps {
   onMenuToggle?: () => void;
@@ -55,7 +56,7 @@ const Topbar = ({ onMenuToggle, pageTitle = "Dashboard", pageSubtitle = "ภา�
     text: `${n.title}: ${n.description}`.slice(0, 60),
     time: n.time,
     unread: !n.read,
-    link: n.type === "attendance" ? "/attendance" : n.type === "leave" ? "/leave" : n.type === "ot" ? "/overtime" : "/notifications",
+    link: getNotificationLink(n),
   }));
 
   const unreadCount = sharedNotifs.filter((n) => !n.read).length;

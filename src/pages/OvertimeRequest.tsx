@@ -507,7 +507,7 @@ const OvertimeRequest = () => {
       toast.success("อนุมัติ OT เรียบร้อย (ครบทุกระดับ)");
 
       notifyRequester(req.employeeId, {
-        type: "approval",
+        type: "ot",
         title: "คำขอ OT ได้รับการอนุมัติ",
         description: `คำขอ OT ${req.date} (${req.startTime}-${req.endTime}) ${req.hours} ชม. ได้รับการอนุมัติแล้ว`,
         targetEmployee: req.employeeName,
@@ -559,7 +559,7 @@ const OvertimeRequest = () => {
     const req = requests.find((r) => r.id === id);
     if (req) {
       notifyRequester(req.employeeId, {
-        type: "approval",
+        type: "ot",
         title: "คำขอ OT ไม่ได้รับการอนุมัติ",
         description: `คำขอ OT ${req.date} (${req.startTime}-${req.endTime}) ${req.hours} ชม. ไม่ได้รับการอนุมัติ`,
         targetEmployee: req.employeeName,
