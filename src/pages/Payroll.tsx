@@ -1094,7 +1094,7 @@ const Payroll = () => {
             {paginatedData.length > 0 && (
               <tfoot>
                 <tr className="border-t-2 font-semibold" style={{ background: "hsl(var(--muted) / 0.5)" }}>
-                  <td className="px-4 py-3 sticky left-0 z-10" style={{ background: "hsl(var(--muted) / 0.5)" }}>รวมทั้งหมด ({filtered.length} คน)</td>
+                  <td className="px-4 py-3 sticky left-0 z-10 whitespace-nowrap" style={{ background: "hsl(var(--muted))" }}>รวมทั้งหมด ({filtered.length} คน)</td>
                   <td className="text-right px-3 py-3 tabular-nums">{formatCurrency(filtered.reduce((s, r) => s + r.payroll.salary, 0))}</td>
                   <td className="text-right px-3 py-3 tabular-nums">{formatCurrency(filtered.reduce((s, r) => s + r.payroll.otPay, 0))}</td>
                   <td className="text-right px-3 py-3 tabular-nums">{formatCurrency(filtered.reduce((s, r) => s + r.payroll.diligence, 0))}</td>
