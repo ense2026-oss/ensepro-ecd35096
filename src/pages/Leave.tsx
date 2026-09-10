@@ -5,7 +5,6 @@ import LeaveTable, { type LeaveRecord } from "@/components/leave/LeaveTable";
 import LeaveRequestDialog from "@/components/leave/LeaveRequestDialog";
 import LeaveCalendarDialog from "@/components/leave/LeaveCalendarDialog";
 import { useToast } from "@/hooks/use-toast";
-import { usePendingCounts } from "@/contexts/PendingCountsContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEmployees } from "@/contexts/EmployeeContext";
 import { usePermissions } from "@/contexts/PermissionsContext";
@@ -24,7 +23,6 @@ import {
 
 const Leave = () => {
   const { toast } = useToast();
-  const { setLeavePending } = usePendingCounts();
   const { currentUser, role, user } = useAuth();
   const { employees: allEmployees } = useEmployees();
   const { canAction, getScope } = usePermissions();
@@ -150,10 +148,6 @@ const Leave = () => {
     if (scope === "department") return leaves.filter((l) => l.dept === currentDept);
     return leaves;
   }, [leaves, scope, currentUser?.employeeId, currentDept]);
-
-  useEffect(() => {
-    setLeavePending(scopedLeaves.filter((l) => l.status === "pending").length);
-  }, [scopedLeaves, setLeavePending]);
 
   const filtered = scopedLeaves.filter((l) => filterStatus === "all" || l.status === filterStatus);
 

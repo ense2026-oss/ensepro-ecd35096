@@ -62,21 +62,34 @@ export const PendingCountsProvider = ({ children }: { children: ReactNode }) => 
 
       const scope = getScope(roleKey, module);
 
-      let query = supabase
+      if (scope === "self") {
+        if (!employeeId) return 0;
+        const { count } = await supabase
+          .from(table)
+          .select("*", { count: "exact", head: true })
+          .eq("status", "pending")
+          .eq("employee_id", employeeId);
+        return count ?? 0;
+      }
+
+      if (scope === "department") {
+        const dept = currentUser?.dept;
+        if (!dept) return 0;
+        // Matches the client-side dept filtering each page does (e.g. Leave.tsx's
+        // scopedLeaves) — join to employees so the badge and the page agree.
+        const { count } = await supabase
+          .from(table)
+          .select("*, employees!inner(dept)", { count: "exact", head: true })
+          .eq("status", "pending")
+          .eq("employees.dept", dept);
+        return count ?? 0;
+      }
+
+      // "all" scope: no additional filter needed.
+      const { count } = await supabase
         .from(table)
         .select("*", { count: "exact", head: true })
         .eq("status", "pending");
-
-      // For "self" scope, only count the user's own pending requests
-      if (scope === "self" && employeeId) {
-        query = query.eq("employee_id", employeeId);
-      }
-      // For "department" scope, we'd need to join — but RLS already filters,
-      // and the page does client-side dept filtering. For badge accuracy,
-      // we rely on RLS + skip showing badge for dept scope to avoid mismatch.
-      // "all" scope: no additional filter needed.
-
-      const { count } = await query;
       return count ?? 0;
     };
 
@@ -89,7 +102,7 @@ export const PendingCountsProvider = ({ children }: { children: ReactNode }) => 
     setLeavePending(leaveCount);
     setAttendancePending(timeEditCount);
     setOvertimePending(otCount);
-  }, [user, role, currentUser?.employeeId, permLoading, getScope, canAction]);
+  }, [user, role, currentUser?.employeeId, currentUser?.dept, permLoading, getScope, canAction]);
 
   // Debounced refresh - notifications are instant, others slightly delayed
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();

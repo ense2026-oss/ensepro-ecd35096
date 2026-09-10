@@ -1,5 +1,4 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from "react";
-import { usePendingCounts } from "@/contexts/PendingCountsContext";
 import { Search, Download, CheckCircle, XCircle, Clock, AlertCircle, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Save, X, FileText, Check, RotateCcw, CalendarDays, Eye, Upload } from "lucide-react";
 import { ThaiDatePicker } from "@/components/ui/thai-date-picker";
 import { format } from "date-fns";
@@ -107,7 +106,6 @@ const Attendance = () => {
   const canRequestOwnEdit = true;
   const attendanceScope = getScope(role, 'attendance');
   const canExport = attendanceScope !== 'self';
-  const { setAttendancePending } = usePendingCounts();
   const { editRequests, addEditRequest, updateRequestStatus } = useTimeEditRequests();
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
   const [otMap, setOtMap] = useState<Record<string, number>>({});
@@ -336,10 +334,6 @@ const Attendance = () => {
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, []);
-
-  useEffect(() => {
-    setAttendancePending(editRequests.filter((r) => r.status === "pending").length);
-  }, [editRequests, setAttendancePending]);
 
   // Default the employee filter to the signed-in user (admin/hr/manager/executive included).
   const selfFilterInit = useRef(false);

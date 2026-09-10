@@ -4,7 +4,6 @@ import {
   Hourglass, TrendingUp, FileText, ChevronDown, X, AlertCircle, Eye
 } from "lucide-react";
 import { useEmployees } from "@/contexts/EmployeeContext";
-import { usePendingCounts } from "@/contexts/PendingCountsContext";
 import { ThaiDatePicker } from "@/components/ui/thai-date-picker";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/contexts/PermissionsContext";
@@ -276,7 +275,6 @@ const OvertimeRequest = () => {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [filterMonth, setFilterMonth] = useState(currentMonthLocal);
-  const { setOvertimePending } = usePendingCounts();
   const { currentUser, role, user } = useAuth();
   const { canAction, getScope } = usePermissions();
   const canApprove = canAction(role, 'ot', 'approve');
@@ -366,10 +364,6 @@ const OvertimeRequest = () => {
       : requests.filter((r) => currentUser && r.employeeId === (currentUser.employeeId || currentUser.id));
   const pendingCount = userRequests.filter((r) => r.status === "pending").length;
   const approvedCount = userRequests.filter((r) => r.status === "approved").length;
-
-  useEffect(() => {
-    setOvertimePending(pendingCount);
-  }, [pendingCount, setOvertimePending]);
 
   const allNames = useMemo(
     () => Array.from(new Set(userRequests.map((r) => r.employeeName).filter(Boolean))).sort(),
