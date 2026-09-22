@@ -108,9 +108,17 @@ const EmployeeProfile = () => {
   const ROLE_OPTIONS = useRoleOptions();
   // Restricted fields (salary, role, ...) follow the permission matrix, not hardcoded role names
   const { canAction, getScope } = usePermissions();
+  // Whether this role can edit employee records at all (any scope) — gates
+  // the personal/family/education tabs and the Edit button itself. Without
+  // this, an employee with no edit rights on the "employee" module could
+  // still open edit mode and "save" changes that RLS silently discards,
+  // leaving them believing the change took while admins still see the old
+  // value.
+  const canEditProfile = canAction(currentUser?.role || "", "employee", "edit");
+  // Work/Tax tabs carry scope-sensitive fields (salary, role, dept) — those
+  // stay restricted to roles with company-wide ("all" scope) edit rights.
   const canEditRestricted =
-    canAction(currentUser?.role || "", "employees", "edit") &&
-    getScope(currentUser?.role || "", "employees") === "all";
+    canEditProfile && getScope(currentUser?.role || "", "employee") === "all";
 
   // Fetch org levels assigned to this employee
   const [employeeOrgLevels, setEmployeeOrgLevels] = useState<string[]>([]);
@@ -279,12 +287,19 @@ const EmployeeProfile = () => {
   const updateWork = (wId: number, field: string, val: string) =>
     setData((d) => d ? { ...d, workHistory: d.workHistory.map((w) => w.id === wId ? { ...w, [field]: val } : w) } : d);
 
-  const handleSave = () => {
-    if (data) {
-      updateEmployee(data.id, data);
+  const handleSave = async () => {
+    if (!data) return;
+    try {
+      await updateEmployee(data.id, data);
       toast.success("บันทึกข้อมูลพนักงานสำเร็จ");
+      setIsEditing(false);
+    } catch (err: any) {
+      // Revert to the last known-good server value — the write didn't
+      // actually apply, so keeping the edited state would show data that
+      // was never saved.
+      if (employee) setData({ ...employee });
+      toast.error("บันทึกไม่สำเร็จ: " + (err?.message || "เกิดข้อผิดพลาด"));
     }
-    setIsEditing(false);
   };
 
   const handlePasswordChange = async () => {
@@ -819,12 +834,12 @@ const EmployeeProfile = () => {
                 <Save className="w-4 h-4" /> บันทึก
               </button>
             </>
-          ) : (
+          ) : canEditProfile ? (
             <button onClick={() => setIsEditing(true)}
               className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold text-primary-foreground bg-primary hover:bg-primary/90 shadow-md transition-all">
               <Edit className="w-4 h-4" /> แก้ไขข้อมูล
             </button>
-          )}
+          ) : null}
         </div>
       </div>
 

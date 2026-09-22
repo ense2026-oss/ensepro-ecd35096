@@ -401,8 +401,15 @@ export const EmployeeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const updateEmployee = useCallback(async (id: string, data: Partial<Employee>) => {
     const dbData = employeeToDb(data);
-    const { error } = await supabase.from("employees").update(dbData).eq("id", id);
+    // .select() after update lets us detect an RLS policy silently blocking the
+    // write (0 rows returned, no error) instead of reporting a false success —
+    // without this, a caller lacking edit rights on this row sees "saved" while
+    // nothing actually changed.
+    const { data: updated, error } = await supabase.from("employees").update(dbData).eq("id", id).select("id");
     if (error) { console.error("Update employee error:", error); throw error; }
+    if (!updated || updated.length === 0) {
+      throw new Error("ไม่มีสิทธิ์แก้ไขข้อมูลพนักงานคนนี้");
+    }
 
     // Sync role to user_roles if role changed
     if (data.role !== undefined) {
