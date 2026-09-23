@@ -1,16 +1,19 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  Search, Plus, Download, Upload, MoreHorizontal, Eye, Edit, Trash2,
+  Search, Plus, Download, Upload, MoreHorizontal, Eye, Edit, Trash2, LogIn,
   Phone, Mail, MapPin, ChevronLeft, ChevronRight, ListFilter,
 } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useEmployees } from "@/contexts/EmployeeContext";
 import { useOrg } from "@/contexts/OrgContext";
+import { useAuth } from "@/contexts/AuthContext";
+import { useImpersonation } from "@/contexts/ImpersonationContext";
 import type { Position } from "@/contexts/OrgContext";
 import type { Employee } from "@/contexts/EmployeeContext";
 import EmployeeFormDialog from "@/components/employees/EmployeeFormDialog";
 import DeleteEmployeeDialog from "@/components/employees/DeleteEmployeeDialog";
+import LoginAsDialog from "@/components/employees/LoginAsDialog";
 import ImportEmployeesDialog from "@/components/employees/ImportEmployeesDialog";
 import ExportEmployeesDialog from "@/components/employees/ExportEmployeesDialog";
 import EmployeeStatsCards from "@/components/employees/EmployeeStatsCards";
@@ -33,6 +36,9 @@ const Employees = () => {
   const isMobile = useIsMobile();
   const { employees, addEmployee, updateEmployee, deleteEmployee } = useEmployees();
   const { affiliations } = useOrg();
+  const { role, currentUser } = useAuth();
+  const { startImpersonation } = useImpersonation();
+  const isAdmin = role === "admin";
   const [search, setSearch] = useState("");
   const [selectedDept, setSelectedDept] = useState("all");
   const [selectedPosition, setSelectedPosition] = useState("all");
@@ -46,6 +52,9 @@ const Employees = () => {
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deletingEmployee, setDeletingEmployee] = useState<Employee | null>(null);
+  const [loginAsOpen, setLoginAsOpen] = useState(false);
+  const [loginAsEmployee, setLoginAsEmployee] = useState<Employee | null>(null);
+  const [loginAsLoading, setLoginAsLoading] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const [filterDialogOpen, setFilterDialogOpen] = useState(false);
@@ -107,6 +116,23 @@ const Employees = () => {
   const handleAdd = () => { setEditingEmployee(null); setFormOpen(true); };
   const handleEdit = (emp: Employee) => { setEditingEmployee(emp); setFormOpen(true); };
   const handleDeleteClick = (emp: Employee) => { setDeletingEmployee(emp); setDeleteOpen(true); };
+
+  const canLoginAs = (emp: Employee) =>
+    isAdmin && !!emp.userId && emp.id !== currentUser?.employeeId && !emp.isProtected;
+
+  const handleLoginAsClick = (emp: Employee) => { setLoginAsEmployee(emp); setLoginAsOpen(true); };
+  const handleLoginAsConfirm = async () => {
+    if (!loginAsEmployee) return;
+    setLoginAsLoading(true);
+    const { error } = await startImpersonation(loginAsEmployee.id);
+    setLoginAsLoading(false);
+    if (error) {
+      toast.error(error);
+      return;
+    }
+    setLoginAsOpen(false);
+    setLoginAsEmployee(null);
+  };
 
   const handleFormSave = async (data: Omit<Employee, "id" | "education" | "workHistory">) => {
     if (editingEmployee) {
@@ -298,6 +324,9 @@ const Employees = () => {
                         <div className="flex items-center gap-1">
                           <button onClick={() => navigate(`/employees/${emp.id}`)} className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"><Eye className="w-4 h-4" /></button>
                           <button onClick={() => handleEdit(emp)} className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"><Edit className="w-4 h-4" /></button>
+                          {canLoginAs(emp) && (
+                            <button onClick={() => handleLoginAsClick(emp)} title="เข้าสู่ระบบในฐานะพนักงาน" className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"><LogIn className="w-4 h-4" /></button>
+                          )}
                           <button onClick={() => handleDeleteClick(emp)} className="p-1.5 rounded-lg hover:bg-destructive/10 transition-colors text-muted-foreground hover:text-destructive"><Trash2 className="w-4 h-4" /></button>
                         </div>
                       </td>
@@ -372,6 +401,9 @@ const Employees = () => {
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem onClick={() => navigate(`/employees/${emp.id}`)}><Eye className="w-4 h-4 mr-2" /> ดูข้อมูล</DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleEdit(emp)}><Edit className="w-4 h-4 mr-2" /> แก้ไข</DropdownMenuItem>
+                        {canLoginAs(emp) && (
+                          <DropdownMenuItem onClick={() => handleLoginAsClick(emp)}><LogIn className="w-4 h-4 mr-2" /> เข้าสู่ระบบในฐานะพนักงาน</DropdownMenuItem>
+                        )}
                         <DropdownMenuItem onClick={() => handleDeleteClick(emp)} className="text-destructive focus:text-destructive"><Trash2 className="w-4 h-4 mr-2" /> ลบ</DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -463,6 +495,10 @@ const Employees = () => {
       <DeleteEmployeeDialog open={deleteOpen} onOpenChange={setDeleteOpen}
         employeeName={deletingEmployee ? `${deletingEmployee.prefix}${deletingEmployee.firstName} ${deletingEmployee.lastName}` : ""}
         onConfirm={handleDeleteConfirm} />
+      <LoginAsDialog open={loginAsOpen} onOpenChange={setLoginAsOpen}
+        employeeName={loginAsEmployee ? `${loginAsEmployee.prefix}${loginAsEmployee.firstName} ${loginAsEmployee.lastName}` : ""}
+        loading={loginAsLoading}
+        onConfirm={handleLoginAsConfirm} />
       <ImportEmployeesDialog open={importOpen} onOpenChange={setImportOpen} />
       <ExportEmployeesDialog open={exportOpen} onOpenChange={setExportOpen} employees={filtered} />
     </div>

@@ -9,6 +9,7 @@ import { PendingCountsProvider } from "@/contexts/PendingCountsContext";
 import { TimeEditProvider } from "@/contexts/TimeEditContext";
 import { ContractProvider } from "@/contexts/ContractContext";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { ImpersonationProvider } from "@/contexts/ImpersonationContext";
 import { PermissionsProvider } from "@/contexts/PermissionsContext";
 import { OrgProvider } from "@/contexts/OrgContext";
 import MainLayout from "@/components/layout/MainLayout";
@@ -149,7 +150,9 @@ const App = () => (
       <BrandingProvider>
         <AuthProvider>
           <BrowserRouter>
-            <AppRoutes />
+            <ImpersonationProvider>
+              <AppRoutes />
+            </ImpersonationProvider>
           </BrowserRouter>
         </AuthProvider>
       </BrandingProvider>

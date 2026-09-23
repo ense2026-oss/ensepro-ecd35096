@@ -63,6 +63,7 @@ export interface Employee {
   bankAccount: string;
   driverLicense: string;
   isProtected?: boolean;
+  userId?: string;
   positionId?: string;
   status: "active" | "leave" | "inactive";
   homeAddress: string;
@@ -125,6 +126,7 @@ function dbToEmployee(row: any, education: any[], workHistory: any[], payrollIte
     bankAccount: row.bank_account || '',
     driverLicense: row.driver_license || '',
     isProtected: row.is_protected === true,
+    userId: row.user_id || undefined,
     positionId: row.position_id || undefined,
     status: (row.status as "active" | "leave" | "inactive") || 'active',
     homeAddress: row.home_address || '',

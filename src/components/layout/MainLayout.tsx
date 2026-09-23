@@ -4,8 +4,10 @@ import Sidebar from "./Sidebar";
 import Topbar from "./Topbar";
 import MobileFooterNav from "./MobileFooterNav";
 import { useAuth } from "@/contexts/AuthContext";
+import { useImpersonation } from "@/contexts/ImpersonationContext";
 import { usePermissions } from "@/contexts/PermissionsContext";
 import { useModuleSettings } from "@/hooks/useModuleSettings";
+import { LogOut } from "lucide-react";
 
 // Map a base route to its module_settings key (for enable/disable gating)
 const routeToModuleSetting: Record<string, string> = {
@@ -44,6 +46,7 @@ const MainLayout = () => {
   const location = useLocation();
   const mainRef = useRef<HTMLElement>(null);
   const { user, loading, profileReady, currentUser, role } = useAuth();
+  const { isImpersonating, impersonatedName, stopImpersonation } = useImpersonation();
   const { canAccessRoute, isSelfOnly, loading: permLoading } = usePermissions();
   const { modules: enabledModules, loading: modulesLoading } = useModuleSettings();
 
@@ -122,6 +125,20 @@ const MainLayout = () => {
         <Sidebar collapsed={false} onToggle={() => setMobileSidebarOpen(!mobileSidebarOpen)} onNavigate={() => setMobileSidebarOpen(false)} />
       </div>
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
+        {isImpersonating && (
+          <div className="flex items-center justify-between gap-3 px-4 py-2 bg-amber-500 text-amber-950 text-sm font-medium flex-shrink-0">
+            <span>
+              กำลังเข้าสู่ระบบในฐานะ <span className="font-semibold">{impersonatedName}</span> — คุณกำลังใช้สิทธิ์จริงของพนักงานคนนี้
+            </span>
+            <button
+              onClick={stopImpersonation}
+              className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-amber-950/10 hover:bg-amber-950/20 transition-colors"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              กลับเป็นผู้ดูแลระบบ
+            </button>
+          </div>
+        )}
         <Topbar
           onMenuToggle={() => setMobileSidebarOpen(!mobileSidebarOpen)}
           pageTitle={pageInfo.title}
