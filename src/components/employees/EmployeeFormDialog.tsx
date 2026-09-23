@@ -363,12 +363,6 @@ const EmployeeFormDialog = ({ open, onOpenChange, employee, onSave }: EmployeeFo
             <InputField label="ความสัมพันธ์" value={form.emergencyRelation} onChange={set("emergencyRelation")} />
             <InputField label="เบอร์โทรฉุกเฉิน" value={form.emergencyPhone} onChange={set("emergencyPhone")} type="tel" />
           </div>
-
-          {/* บัญชีผู้ใช้ */}
-          <SectionLabel>บัญชีผู้ใช้</SectionLabel>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <InputField label="Username" value={form.username} onChange={set("username")} placeholder="auto-generated if empty" />
-          </div>
         </DialogBody>
 
         <DialogFooter className="px-6 pb-6 pt-4 border-t border-border">

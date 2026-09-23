@@ -28,7 +28,7 @@ const TAB_CONFIG = [
   { key: "family",     label: "ข้อมูลครอบครัว",  icon: Users },
   { key: "documents",  label: "เอกสารแนบ",       icon: Paperclip },
   { key: "workhistory",label: "ประวัติ",          icon: Clock },
-  { key: "tax",        label: "ข้อมูลภาษี",      icon: Receipt },
+  { key: "tax",        label: "ข้อมูลภาษี",      icon: Receipt, hidden: true }, // TODO: temporarily hidden, re-enable later
   { key: "security",   label: "ความปลอดภัย",     icon: Shield },
   { key: "display",    label: "การแสดงผล",       icon: Palette },
 ];
@@ -199,7 +199,6 @@ const EmployeeProfile = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showInitialPassword, setShowInitialPassword] = useState(false);
   const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordError, setPasswordError] = useState("");
   
   const photoInputRef = useRef<HTMLInputElement>(null);
@@ -306,7 +305,6 @@ const EmployeeProfile = () => {
 
   const handlePasswordChange = async () => {
     if (newPassword.length < 8) { setPasswordError("รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร"); return; }
-    if (newPassword !== confirmPassword) { setPasswordError("รหัสผ่านไม่ตรงกัน"); return; }
     setPasswordError("");
 
     try {
@@ -332,7 +330,6 @@ const EmployeeProfile = () => {
     }
 
     setNewPassword("");
-    setConfirmPassword("");
     toast.success(isOwnProfile ? "เปลี่ยนรหัสผ่านของคุณสำเร็จ" : `รีเซ็ตรหัสผ่านของ ${employee?.firstName || "พนักงาน"} สำเร็จ`);
   };
 
@@ -691,12 +688,10 @@ const EmployeeProfile = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {isEditing && canEditRestricted ? (
             <>
-              <InputField label="Username" value={emp.username} onChange={set("username")} />
               <SelectField label="สิทธิ์การใช้งาน" value={emp.role} onChange={set("role")} options={ROLE_OPTIONS} />
             </>
           ) : (
             <>
-              <Field label="Username" value={emp.username} />
               <div className="space-y-1">
                 <p className="text-xs text-muted-foreground">Role</p>
                 <span className="text-xs font-bold px-2.5 py-1 rounded-lg bg-primary/10 text-primary">{emp.role}</span>
@@ -739,16 +734,6 @@ const EmployeeProfile = () => {
             <label className="text-xs font-medium text-muted-foreground">รหัสผ่านใหม่</label>
             <div className="relative">
               <input type={showPassword ? "text" : "password"} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="อย่างน้อย 8 ตัวอักษร"
-                className="w-full px-3 py-2 pr-10 text-sm rounded-xl border border-border bg-muted/30 outline-none focus:ring-2 focus:ring-primary/30 transition-all" />
-              <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
-                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              </button>
-            </div>
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-muted-foreground">ยืนยันรหัสผ่านใหม่</label>
-            <div className="relative">
-              <input type={showPassword ? "text" : "password"} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="กรอกรหัสผ่านอีกครั้ง"
                 className="w-full px-3 py-2 pr-10 text-sm rounded-xl border border-border bg-muted/30 outline-none focus:ring-2 focus:ring-primary/30 transition-all" />
               <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -911,7 +896,7 @@ const EmployeeProfile = () => {
       <div className="card-base overflow-hidden">
         <div className="border-b border-border">
           <div className="flex justify-between lg:justify-start">
-            {TAB_CONFIG.map(({ key, label, icon: Icon }) => (
+            {TAB_CONFIG.filter((t) => !t.hidden).map(({ key, label, icon: Icon }) => (
               <button key={key} onClick={() => setActiveTab(key)}
                 className="flex items-center justify-center gap-2 flex-1 lg:flex-none px-2 lg:px-4 py-3.5 text-sm font-medium whitespace-nowrap transition-all border-b-2 -mb-px"
                 style={{
