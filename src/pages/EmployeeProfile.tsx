@@ -102,7 +102,7 @@ const STATUS_OPTIONS: SelectOption[] = [
 const EmployeeProfile = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { getEmployeeById, updateEmployee, loading } = useEmployees();
+  const { getEmployeeById, updateEmployee, loading, refetch } = useEmployees();
   const { currentUser } = useAuth();
   const { affiliations, orgLevelsFlat } = useOrg();
   const ROLE_OPTIONS = useRoleOptions();
@@ -165,6 +165,10 @@ const EmployeeProfile = () => {
   };
 
   const employee = getEmployeeById(id || "");
+  const isOwnProfile = !!employee && !!currentUser?.employeeId && currentUser.employeeId === employee.id;
+  // admin-reset-password enforces exactly these two roles server-side; gate the
+  // UI on the same rule so nobody is offered a button that can only 403.
+  const isAdminOrHr = ["admin", "hr"].includes((currentUser?.role || "").toLowerCase());
 
   const [activeTab, setActiveTab] = useState("personal");
   const [isEditing, setIsEditing] = useState(false);
@@ -220,8 +224,6 @@ const EmployeeProfile = () => {
     const photoUrl = await processFileUpload(file, { maxWidth: 400, maxHeight: 400, quality: 0.8 });
     if (!photoUrl) return;
     if (!employee) return;
-
-    const isOwnProfile = !!currentUser?.employeeId && currentUser.employeeId === employee.id;
 
     try {
       if (isOwnProfile) {
@@ -306,18 +308,32 @@ const EmployeeProfile = () => {
     if (newPassword.length < 8) { setPasswordError("รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร"); return; }
     if (newPassword !== confirmPassword) { setPasswordError("รหัสผ่านไม่ตรงกัน"); return; }
     setPasswordError("");
-    
+
     try {
-      const { error } = await supabase.auth.updateUser({ password: newPassword });
-      if (error) throw error;
+      if (isOwnProfile) {
+        // auth.updateUser only ever changes the SIGNED-IN user's password — correct
+        // here, and the reason it must never be used for someone else's profile.
+        const { error } = await supabase.auth.updateUser({ password: newPassword });
+        if (error) throw error;
+      } else {
+        if (!employee?.email) throw new Error("พนักงานคนนี้ไม่มีอีเมลสำหรับเข้าสู่ระบบ");
+        // Service-role edge function: resets the target employee's credential and
+        // keeps employees.initial_password in sync.
+        const { data: fnData, error: fnError } = await supabase.functions.invoke("admin-reset-password", {
+          body: { email: employee.email, password: newPassword },
+        });
+        if (fnError || fnData?.error) throw new Error(fnData?.error || fnError?.message || "รีเซ็ตรหัสผ่านไม่สำเร็จ");
+        setData((d) => d ? { ...d, initialPassword: newPassword } : d);
+        await refetch();
+      }
     } catch (err: any) {
       setPasswordError(err.message || "เกิดข้อผิดพลาด");
       return;
     }
-    
+
     setNewPassword("");
     setConfirmPassword("");
-    toast.success("เปลี่ยนรหัสผ่านสำเร็จ");
+    toast.success(isOwnProfile ? "เปลี่ยนรหัสผ่านของคุณสำเร็จ" : `รีเซ็ตรหัสผ่านของ ${employee?.firstName || "พนักงาน"} สำเร็จ`);
   };
 
 
@@ -709,9 +725,16 @@ const EmployeeProfile = () => {
       </div>
 
 
+      {(isOwnProfile || isAdminOrHr) && (
       <div>
-        <SectionLabel>เปลี่ยนรหัสผ่าน</SectionLabel>
+        <SectionLabel>{isOwnProfile ? "เปลี่ยนรหัสผ่านของฉัน" : `รีเซ็ตรหัสผ่านของ ${emp.firstName} ${emp.lastName}`}</SectionLabel>
         <div className="card-base p-5 space-y-3">
+          {!isOwnProfile && (
+            <div className="flex items-start gap-2 text-xs rounded-lg px-3 py-2 bg-amber-50 text-amber-800 border border-amber-200">
+              <AlertCircle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
+              <span>รหัสผ่านใหม่จะมีผลกับการเข้าสู่ระบบของ <b>{emp.firstName}</b> ทันที (ไม่ใช่รหัสผ่านของคุณ)</span>
+            </div>
+          )}
           <div className="space-y-1.5">
             <label className="text-xs font-medium text-muted-foreground">รหัสผ่านใหม่</label>
             <div className="relative">
@@ -737,10 +760,11 @@ const EmployeeProfile = () => {
           )}
           <button onClick={handlePasswordChange}
             className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-primary-foreground bg-primary hover:bg-primary/90 shadow-md transition-all">
-            <Lock className="w-4 h-4" /> เปลี่ยนรหัสผ่าน
+            <Lock className="w-4 h-4" /> {isOwnProfile ? "เปลี่ยนรหัสผ่าน" : "รีเซ็ตรหัสผ่าน"}
           </button>
         </div>
       </div>
+      )}
     </div>
   );
 

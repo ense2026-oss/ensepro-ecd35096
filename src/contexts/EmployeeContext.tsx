@@ -400,6 +400,33 @@ export const EmployeeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   }, [fetchEmployees]);
 
   const updateEmployee = useCallback(async (id: string, data: Partial<Employee>) => {
+    // The login email lives in Supabase Auth, not in this table. If the email is
+    // changing for an employee who already has a login, sync Auth FIRST via the
+    // service-role edge function; if that fails, abort the whole save so the
+    // profile email and the credential can never drift apart.
+    if (data.email !== undefined) {
+      const newEmail = data.email.replace(/\s+/g, "").trim().toLowerCase();
+      const { data: current } = await supabase
+        .from("employees")
+        .select("email, user_id")
+        .eq("id", id)
+        .maybeSingle();
+      const currentEmail = (current?.email || "").toLowerCase();
+      if (current?.user_id && newEmail && newEmail !== currentEmail) {
+        const { data: syncData, error: syncError } = await supabase.functions.invoke("admin-update-email", {
+          body: { employeeId: id, newEmail },
+        });
+        if (syncError || syncData?.error) {
+          const detail = syncData?.error || syncError?.message || "";
+          throw new Error(
+            /Failed to send a request|not found|404/i.test(detail)
+              ? "เปลี่ยนอีเมลไม่สำเร็จ: ระบบซิงก์อีเมลเข้าสู่ระบบ (admin-update-email) ยังไม่ถูก deploy"
+              : `เปลี่ยนอีเมลเข้าสู่ระบบไม่สำเร็จ: ${detail}`,
+          );
+        }
+      }
+    }
+
     const dbData = employeeToDb(data);
     // .select() after update lets us detect an RLS policy silently blocking the
     // write (0 rows returned, no error) instead of reporting a false success —
