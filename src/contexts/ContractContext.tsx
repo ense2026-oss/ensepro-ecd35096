@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from "react";
+import { useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 
 /* ───────────────────── Types ───────────────────── */
@@ -215,11 +216,20 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
     setLoading(false);
   }, []);
 
-  // Lazy load: defer fetch to avoid blocking initial render
+  // Only contract pages (/contracts*) and the contract settings tab (/settings)
+  // read this data. Fetching its 5 tables (incl. base64 signature blobs) on every
+  // other page — Dashboard, Check-in, Payroll… — was pure waste, so defer the
+  // fetch until the user is actually on a route that needs it.
+  const location = useLocation();
+  const fetchedRef = useRef(false);
   useEffect(() => {
-    const timer = setTimeout(() => fetchAll(), 500);
+    const p = location.pathname;
+    const needsContracts = p.startsWith("/contracts") || p === "/settings";
+    if (!needsContracts || fetchedRef.current) return;
+    fetchedRef.current = true;
+    const timer = setTimeout(() => fetchAll(), 300);
     return () => clearTimeout(timer);
-  }, [fetchAll]);
+  }, [location.pathname, fetchAll]);
 
   /* ─── Contract CRUD ─── */
   const addContract = useCallback(async (data: Omit<Contract, "id" | "createdAt" | "updatedAt">): Promise<Contract | null> => {
