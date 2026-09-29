@@ -46,7 +46,7 @@ const MainLayout = () => {
   const location = useLocation();
   const mainRef = useRef<HTMLElement>(null);
   const { user, loading, profileReady, currentUser, role } = useAuth();
-  const { isImpersonating, impersonatedName, stopImpersonation } = useImpersonation();
+  const { isImpersonating, impersonatedName, stopImpersonation, busy: impersonationBusy } = useImpersonation();
   const { canAccessRoute, isSelfOnly, loading: permLoading } = usePermissions();
   const { modules: enabledModules, loading: modulesLoading } = useModuleSettings();
 
@@ -136,10 +136,11 @@ const MainLayout = () => {
             </span>
             <button
               onClick={stopImpersonation}
-              className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-amber-950/10 hover:bg-amber-950/20 transition-colors"
+              disabled={impersonationBusy}
+              className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-amber-950/10 hover:bg-amber-950/20 transition-colors disabled:opacity-60 disabled:cursor-not-allowed whitespace-nowrap flex-shrink-0"
             >
               <LogOut className="w-3.5 h-3.5" />
-              กลับเป็นผู้ดูแลระบบ
+              {impersonationBusy ? "กำลังกลับ..." : "กลับเป็นผู้ดูแลระบบ"}
             </button>
           </div>
         )}
