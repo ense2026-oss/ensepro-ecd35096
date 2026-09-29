@@ -6,18 +6,23 @@ import { supabase } from "@/integrations/supabase/client";
 // permission check downstream run as that employee actually would — not a
 // cosmetic UI role switch still authenticated as the admin.
 //
-// Both entering and leaving impersonation finish with a FULL page reload
-// (window.location), not a SPA navigate: after the auth session changes every
-// context provider (permissions, org, employees, …) must re-initialise from the
-// new session, and a clean boot is far more reliable than trying to refresh a
-// dozen live providers in place — which caused the "stuck / can't go back" bug.
+// Restoring the admin session does NOT go through supabase.auth.setSession:
+// that call acquires the auth lock and, in some environments, hangs long enough
+// that the app either freezes on the overlay or reloads while the target's
+// session is still the one in storage — leaving the admin stuck with the
+// employee's rights. Instead we snapshot the admin's raw auth-token blob from
+// storage on the way in, and on the way out write that blob straight back and
+// reload. Storage writes are synchronous and lock-free, so the restore is
+// deterministic; the fresh boot then reads the admin session and auto-refreshes
+// its token if needed.
 
 const STASH_KEY = "impersonation_admin_session";
 const FLAG_KEY = "impersonation_active_name";
+const AUTH_KEY_RE = /^sb-.*-auth-token$/;
 
-interface StashedSession {
-  access_token: string;
-  refresh_token: string;
+interface AdminSnapshot {
+  authKey: string;
+  blob: string;
 }
 
 interface ImpersonationContextType {
@@ -38,14 +43,16 @@ const readFlag = (): string | null => {
   }
 };
 
-// Supabase auth calls acquire an internal lock; in some environments a slow
-// network/storage round-trip leaves that call pending for a long time, which
-// would freeze the switch on the loading overlay forever. Race every auth call
-// against a timeout so the flow always resolves and can fall back to a reload.
-const TIMEOUT_SENTINEL = Symbol("timeout");
-function withTimeout<T>(p: Promise<T>, ms: number): Promise<T | typeof TIMEOUT_SENTINEL> {
-  return Promise.race([p, new Promise<typeof TIMEOUT_SENTINEL>((resolve) => setTimeout(() => resolve(TIMEOUT_SENTINEL), ms))]);
-}
+// The localStorage key Supabase stores the session under (sb-<ref>-auth-token).
+const findAuthKey = (): string | null => {
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && AUTH_KEY_RE.test(k)) return k;
+    }
+  } catch {}
+  return null;
+};
 
 const clearFlags = () => {
   try {
@@ -54,18 +61,30 @@ const clearFlags = () => {
   } catch {}
 };
 
+// Supabase auth calls acquire an internal lock; in some environments a slow
+// round-trip leaves the promise pending far too long. Race it against a timeout
+// so the switch never freezes on the overlay.
+const TIMEOUT_SENTINEL = Symbol("timeout");
+function withTimeout<T>(p: Promise<T>, ms: number): Promise<T | typeof TIMEOUT_SENTINEL> {
+  return Promise.race([p, new Promise<typeof TIMEOUT_SENTINEL>((resolve) => setTimeout(() => resolve(TIMEOUT_SENTINEL), ms))]);
+}
+
 export const ImpersonationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [impersonatedName, setImpersonatedName] = useState<string | null>(readFlag);
+  // Set once from storage on mount; both entering and leaving impersonation do a
+  // full reload, so this state is only ever read, never updated in place.
+  const [impersonatedName] = useState<string | null>(readFlag);
   const [busy, setBusy] = useState(false);
 
   const startImpersonation = useCallback(async (employeeId: string): Promise<{ error: string | null }> => {
     setBusy(true);
     try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const currentSession = sessionData.session;
-      if (!currentSession) {
+      // Snapshot the admin's session blob straight from storage — this is what we
+      // write back on exit, no auth-lock call needed to restore.
+      const authKey = findAuthKey();
+      const adminBlob = authKey ? localStorage.getItem(authKey) : null;
+      if (!authKey || !adminBlob) {
         setBusy(false);
-        return { error: "ไม่พบเซสชันผู้ดูแลระบบ" };
+        return { error: "ไม่พบเซสชันผู้ดูแลระบบ กรุณาเข้าสู่ระบบใหม่" };
       }
 
       const { data, error } = await supabase.functions.invoke("admin-impersonate-user", {
@@ -78,13 +97,9 @@ export const ImpersonationProvider: React.FC<{ children: React.ReactNode }> = ({
 
       const { tokenHash, targetName } = data as { tokenHash: string; targetName: string };
 
-      // Stash the admin session BEFORE swapping so we can restore it on exit.
-      const stash: StashedSession = {
-        access_token: currentSession.access_token,
-        refresh_token: currentSession.refresh_token,
-      };
+      const snapshot: AdminSnapshot = { authKey, blob: adminBlob };
       try {
-        sessionStorage.setItem(STASH_KEY, JSON.stringify(stash));
+        sessionStorage.setItem(STASH_KEY, JSON.stringify(snapshot));
         sessionStorage.setItem(FLAG_KEY, targetName || "พนักงาน");
       } catch {
         setBusy(false);
@@ -117,22 +132,17 @@ export const ImpersonationProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const stopImpersonation = useCallback(async (): Promise<void> => {
     setBusy(true);
-    // true = admin session restored, false = definitely failed, null = unknown
-    // (setSession took too long; it usually still wrote the tokens to storage, so
-    // a fresh reload picks the admin session back up).
-    let restored: boolean | null = false;
+    let restored = false;
     try {
       const raw = sessionStorage.getItem(STASH_KEY);
       if (raw) {
-        const stash: StashedSession = JSON.parse(raw);
-        const res = await withTimeout(
-          supabase.auth.setSession({
-            access_token: stash.access_token,
-            refresh_token: stash.refresh_token,
-          }),
-          8000,
-        );
-        restored = res === TIMEOUT_SENTINEL ? null : !!res.data?.session && !res.error;
+        const snap = JSON.parse(raw) as AdminSnapshot;
+        if (snap?.authKey && snap?.blob) {
+          // Write the admin session blob straight back over the target's — the
+          // next boot reads it as the admin session. Synchronous, no lock, no hang.
+          localStorage.setItem(snap.authKey, snap.blob);
+          restored = true;
+        }
       }
     } catch (err) {
       console.warn("stopImpersonation restore failed:", err);
@@ -140,18 +150,15 @@ export const ImpersonationProvider: React.FC<{ children: React.ReactNode }> = ({
 
     clearFlags();
 
-    if (restored === false) {
-      // The stashed admin session is genuinely gone/expired — don't leave the app
-      // in a broken half-state. Sign out cleanly and send them to log in again.
+    if (restored) {
+      window.location.assign("/employees");
+    } else {
+      // Nothing to restore — clear whatever session is there and send to login.
       try {
-        await withTimeout(supabase.auth.signOut(), 5000);
+        const k = findAuthKey();
+        if (k) localStorage.removeItem(k);
       } catch {}
       window.location.assign("/login?expired=1");
-    } else {
-      // Restored, or unknown-but-likely-written — reload fresh as admin. The full
-      // reload resets the auth client (clearing any stuck lock) and boots from the
-      // admin tokens now in storage.
-      window.location.assign("/employees");
     }
   }, []);
 
