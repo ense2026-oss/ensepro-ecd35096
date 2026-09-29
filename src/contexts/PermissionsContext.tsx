@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { withRetry } from "@/lib/retry";
 
 // Types
 export type SettingsModuleKey =
@@ -75,11 +76,15 @@ export const PermissionsProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
   const fetchPermissions = useCallback(async () => {
     try {
-      const { data, error } = await supabase
-        .from("role_permissions")
-        .select("*")
-        .order("display_order")
-        .order("role_name");
+      // withRetry: a 504 timeout here would otherwise leave permissions empty
+      // (and every known route denied) until a realtime event re-triggers fetch.
+      const { data, error } = await withRetry(() =>
+        supabase
+          .from("role_permissions")
+          .select("*")
+          .order("display_order")
+          .order("role_name")
+      );
       if (error) throw error;
       setPermissions((data as RolePermission[]) || []);
     } catch (e) {

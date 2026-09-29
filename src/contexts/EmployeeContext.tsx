@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useCallback, useEffect, use
 import { TaxDeduction, DEFAULT_TAX_DEDUCTION } from "@/utils/taxCalculation";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { withRetry } from "@/lib/retry";
 import { toast } from "sonner";
 
 /* ───────────────────── Types ───────────────────── */
@@ -265,9 +266,13 @@ export const EmployeeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       setLoading(true);
       // Fetch employees first (essential), then related data in parallel
       // Select specific columns excluding photo_url (base64 data is huge and slows down loading)
-      const empRes = await supabase.from("employees").select(
-        "id,avatar,avatar_color,avatar_text_color,prefix,first_name,last_name,nickname,birth_date,gender,national_id,nationality,religion,blood_group,id_issue_date,id_expire_date,phone,email,address,dept,position,employee_type,start_date,trial_end_date,contract_end_date,shift,face_scan_id,salary,bank_account,driver_license,is_protected,position_id,status,home_address,marital_status,spouse_name,spouse_phone,father_name,father_phone,mother_name,mother_phone,emergency_name,emergency_relation,emergency_phone,username,role,initial_password,children,children_after_2018,sons,daughters,pvd_rate,tax_deductions,user_id,created_at,updated_at"
-      ).order("created_at");
+      // withRetry: a transient 504 "upstream request timeout" comes back as
+      // `error`; retry with backoff instead of leaving the app with no employees.
+      const empRes = await withRetry(() =>
+        supabase.from("employees").select(
+          "id,avatar,avatar_color,avatar_text_color,prefix,first_name,last_name,nickname,birth_date,gender,national_id,nationality,religion,blood_group,id_issue_date,id_expire_date,phone,email,address,dept,position,employee_type,start_date,trial_end_date,contract_end_date,shift,face_scan_id,salary,bank_account,driver_license,is_protected,position_id,status,home_address,marital_status,spouse_name,spouse_phone,father_name,father_phone,mother_name,mother_phone,emergency_name,emergency_relation,emergency_phone,username,role,initial_password,children,children_after_2018,sons,daughters,pvd_rate,tax_deductions,user_id,created_at,updated_at"
+        ).order("created_at")
+      );
       if (empRes.error) throw empRes.error;
 
       // Quick initial render with basic employee data (no education/work/payroll)
@@ -279,10 +284,10 @@ export const EmployeeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
       // Then fetch related data + photo_url in background
       const [eduRes, whRes, piRes, photoRes] = await Promise.all([
-        supabase.from("employee_education").select("*"),
-        supabase.from("employee_work_history").select("*"),
-        supabase.from("employee_custom_payroll_items").select("*"),
-        supabase.from("employees").select("id,photo_url"),
+        withRetry(() => supabase.from("employee_education").select("*")),
+        withRetry(() => supabase.from("employee_work_history").select("*")),
+        withRetry(() => supabase.from("employee_custom_payroll_items").select("*")),
+        withRetry(() => supabase.from("employees").select("id,photo_url")),
       ]);
 
       const eduData = eduRes.data || [];

@@ -7,6 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/contexts/PermissionsContext";
 import { useToast } from "@/hooks/use-toast";
 import { useDragScroll } from "@/hooks/useDragScroll";
+import { usePageQuery, unwrapAll } from "@/hooks/usePageQuery";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import SearchableSelect from "@/components/ui/searchable-select";
 import { ThaiDatePicker } from "@/components/ui/thai-date-picker";
@@ -84,7 +85,6 @@ const DayOff = () => {
   const [patterns, setPatterns] = useState<Pattern[]>([]);
   const [overrides, setOverrides] = useState<Override[]>([]);
   const [holidays, setHolidays] = useState<CompanyHoliday[]>([]);
-  const [loading, setLoading] = useState(true);
 
   const today = new Date();
   const [year, setYear] = useState(today.getFullYear());
@@ -114,20 +114,28 @@ const DayOff = () => {
     }
   }, [isEmployeeRole, employeeId]);
 
-  const fetchAll = async (showLoading = false) => {
-    if (showLoading) setLoading(true);
-    const [pr, or, hr] = await Promise.all([
-      supabase.from("employee_dayoff_patterns").select("*"),
-      supabase.from("employee_dayoff_overrides").select("*"),
-      supabase.from("company_holidays").select("*"),
-    ]);
-    setPatterns((pr.data as Pattern[]) || []);
-    setOverrides((or.data as Override[]) || []);
-    setHolidays((hr.data as CompanyHoliday[]) || []);
-    if (showLoading) setLoading(false);
-  };
-
-  useEffect(() => { fetchAll(true); }, []);
+  // Cached via React Query: revisiting this page renders instantly from cache and
+  // only refetches in the background; 504s are retried before showing an error.
+  const { loading, refetch: fetchAll } = usePageQuery(
+    ["day-off"],
+    async () => {
+      const [pr, or, hr] = unwrapAll(await Promise.all([
+        supabase.from("employee_dayoff_patterns").select("*"),
+        supabase.from("employee_dayoff_overrides").select("*"),
+        supabase.from("company_holidays").select("*"),
+      ]));
+      return {
+        patterns: pr as Pattern[],
+        overrides: or as Override[],
+        holidays: hr as CompanyHoliday[],
+      };
+    },
+    (d) => {
+      setPatterns(d.patterns);
+      setOverrides(d.overrides);
+      setHolidays(d.holidays);
+    },
+  );
 
   // Realtime
   useEffect(() => {

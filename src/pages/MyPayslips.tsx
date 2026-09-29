@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { usePageQuery } from "@/hooks/usePageQuery";
 import { useAuth } from "@/contexts/AuthContext";
 import { Receipt, FileText, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -21,51 +22,51 @@ const MyPayslips = () => {
   const [me, setMe] = useState<EmployeeInfo | null>(null);
 
   const [rows, setRows] = useState<PayslipWithPeriod[]>([]);
-  const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<PayslipWithPeriod | null>(null);
 
-  // Resolve my employee record
-  useEffect(() => {
-    if (!user?.id) return;
-    (async () => {
-      const { data } = await supabase
+  // Cached via React Query: revisiting this page renders instantly from cache and
+  // only refetches in the background; 504s are retried before showing an error.
+  // Resolves my employee record, then my published payslips.
+  const { loading, error, refetch: fetchRows } = usePageQuery(
+    ["my-payslips", user?.id ?? null],
+    async () => {
+      const meRes = await supabase
         .from("employees")
         .select("id, prefix, first_name, last_name, position, dept, national_id")
-        .eq("user_id", user.id)
+        .eq("user_id", user!.id)
         .maybeSingle();
-      setMe((data as any) || null);
-    })();
-  }, [user?.id]);
+      if (meRes.error) throw new Error(meRes.error.message || "โหลดสลิปไม่สำเร็จ");
+      const meRow = ((meRes.data as any) || null) as EmployeeInfo | null;
+      if (!meRow?.id) return { me: meRow, rows: [] as PayslipWithPeriod[] };
+
+      const res = await supabase
+        .from("payslips")
+        .select("*, period:payroll_periods!inner(id, year, month, status, published_at)")
+        .eq("employee_id", meRow.id)
+        .eq("payroll_periods.status", "published")
+        .order("period(year)", { ascending: false })
+        .order("period(month)", { ascending: false });
+      if (res.error) throw new Error(res.error.message || "โหลดสลิปไม่สำเร็จ");
+      return { me: meRow, rows: ((res.data as any) || []) as PayslipWithPeriod[] };
+    },
+    (d) => {
+      setMe(d.me);
+      setRows(d.rows);
+    },
+    { enabled: !!user?.id },
+  );
+
+  useEffect(() => {
+    if (error) {
+      console.error(error);
+      toast.error("โหลดสลิปไม่สำเร็จ");
+    }
+  }, [error]);
 
   const meForExport = useMemo(() => me ? {
     prefix: me.prefix, firstName: me.first_name, lastName: me.last_name,
     position: me.position, dept: me.dept, nationalId: me.national_id,
   } : null, [me]);
-
-
-  useEffect(() => {
-    if (!me?.id) return;
-    let mounted = true;
-    (async () => {
-      setLoading(true);
-      const { data, error } = await supabase
-        .from("payslips")
-        .select("*, period:payroll_periods!inner(id, year, month, status, published_at)")
-        .eq("employee_id", me.id)
-        .eq("payroll_periods.status", "published")
-        .order("period(year)", { ascending: false })
-        .order("period(month)", { ascending: false });
-      if (error) {
-        console.error(error);
-        toast.error("โหลดสลิปไม่สำเร็จ");
-      }
-      if (mounted) {
-        setRows((data as any) || []);
-        setLoading(false);
-      }
-    })();
-    return () => { mounted = false; };
-  }, [me?.id]);
 
   // Realtime: refresh when periods/payslips change
   useEffect(() => {
@@ -73,12 +74,11 @@ const MyPayslips = () => {
     const ch = supabase
       .channel("my-payslips")
       .on("postgres_changes", { event: "*", schema: "public", table: "payroll_periods" }, () => {
-        // simple refetch trigger via state
-        setLoading((l) => l);
+        fetchRows();
       })
       .subscribe();
     return () => { supabase.removeChannel(ch); };
-  }, [me?.id]);
+  }, [me?.id, fetchRows]);
 
   return (
     <div className="space-y-5">

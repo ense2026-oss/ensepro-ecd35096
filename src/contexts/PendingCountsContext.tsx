@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, useCallback, useRef, Re
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/contexts/PermissionsContext";
+import { withRetry } from "@/lib/retry";
 
 interface PendingCountsContextType {
   leavePending: number;
@@ -45,11 +46,13 @@ export const PendingCountsProvider = ({ children }: { children: ReactNode }) => 
     const employeeId = currentUser?.employeeId;
 
     // Fetch unread notifications count (always user-scoped)
-    const { count: notifCount } = await supabase
-      .from("app_notifications")
-      .select("*", { count: "exact", head: true })
-      .eq("user_id", user.id)
-      .eq("is_read", false);
+    const { count: notifCount } = await withRetry(() =>
+      supabase
+        .from("app_notifications")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", user.id)
+        .eq("is_read", false)
+    );
     if (notifCount !== null) setNotificationCount(notifCount);
 
     // Helper: build scoped query for pending items
@@ -64,11 +67,13 @@ export const PendingCountsProvider = ({ children }: { children: ReactNode }) => 
 
       if (scope === "self") {
         if (!employeeId) return 0;
-        const { count } = await supabase
-          .from(table)
-          .select("*", { count: "exact", head: true })
-          .eq("status", "pending")
-          .eq("employee_id", employeeId);
+        const { count } = await withRetry(() =>
+          supabase
+            .from(table)
+            .select("*", { count: "exact", head: true })
+            .eq("status", "pending")
+            .eq("employee_id", employeeId)
+        );
         return count ?? 0;
       }
 
@@ -77,19 +82,23 @@ export const PendingCountsProvider = ({ children }: { children: ReactNode }) => 
         if (!dept) return 0;
         // Matches the client-side dept filtering each page does (e.g. Leave.tsx's
         // scopedLeaves) — join to employees so the badge and the page agree.
-        const { count } = await supabase
-          .from(table)
-          .select("*, employees!inner(dept)", { count: "exact", head: true })
-          .eq("status", "pending")
-          .eq("employees.dept", dept);
+        const { count } = await withRetry(() =>
+          supabase
+            .from(table)
+            .select("*, employees!inner(dept)", { count: "exact", head: true })
+            .eq("status", "pending")
+            .eq("employees.dept", dept)
+        );
         return count ?? 0;
       }
 
       // "all" scope: no additional filter needed.
-      const { count } = await supabase
-        .from(table)
-        .select("*", { count: "exact", head: true })
-        .eq("status", "pending");
+      const { count } = await withRetry(() =>
+        supabase
+          .from(table)
+          .select("*", { count: "exact", head: true })
+          .eq("status", "pending")
+      );
       return count ?? 0;
     };
 

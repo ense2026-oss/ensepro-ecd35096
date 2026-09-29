@@ -6,6 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/contexts/PermissionsContext";
 import { useToast } from "@/hooks/use-toast";
 import { useDragScroll } from "@/hooks/useDragScroll";
+import { usePageQuery, unwrapAll } from "@/hooks/usePageQuery";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import SearchableSelect from "@/components/ui/searchable-select";
 import { ThaiDatePicker } from "@/components/ui/thai-date-picker";
@@ -122,7 +123,6 @@ const OvertimeManagement = () => {
   const [holidays, setHolidays] = useState<CompanyHoliday[]>([]);
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [assignments, setAssignments] = useState<ShiftAssignment[]>([]);
-  const [loading, setLoading] = useState(true);
 
   const today = new Date();
   const [year, setYear] = useState(today.getFullYear());
@@ -140,26 +140,37 @@ const OvertimeManagement = () => {
   const canEdit = canAction(role, "ot", "edit");
   const managerName = currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : "ผู้ดูแลระบบ";
 
-  const fetchAll = async (showLoading = false) => {
-    if (showLoading) setLoading(true);
-    const [ot, pr, or, hol, sh, asn] = await Promise.all([
-      supabase.from("overtime_requests").select("id, employee_id, date, hours, ot_type, start_time, end_time, status").eq("status", "approved"),
-      supabase.from("employee_dayoff_patterns").select("*"),
-      supabase.from("employee_dayoff_overrides").select("*"),
-      supabase.from("company_holidays").select("*"),
-      supabase.from("shifts").select("*").order("sort_order"),
-      supabase.from("shift_assignments").select("*"),
-    ]);
-    setEntries((ot.data as OTEntry[]) || []);
-    setPatterns((pr.data as Pattern[]) || []);
-    setOverrides((or.data as Override[]) || []);
-    setHolidays((hol.data as CompanyHoliday[]) || []);
-    setShifts((sh.data as Shift[]) || []);
-    setAssignments((asn.data as ShiftAssignment[]) || []);
-    if (showLoading) setLoading(false);
-  };
-
-  useEffect(() => { fetchAll(true); }, []);
+  // Cached via React Query: revisiting this page renders instantly from cache and
+  // only refetches in the background; 504s are retried before showing an error.
+  const { loading, refetch: fetchAll } = usePageQuery(
+    ["overtime-management"],
+    async () => {
+      const [ot, pr, or, hol, sh, asn] = unwrapAll(await Promise.all([
+        supabase.from("overtime_requests").select("id, employee_id, date, hours, ot_type, start_time, end_time, status").eq("status", "approved"),
+        supabase.from("employee_dayoff_patterns").select("*"),
+        supabase.from("employee_dayoff_overrides").select("*"),
+        supabase.from("company_holidays").select("*"),
+        supabase.from("shifts").select("*").order("sort_order"),
+        supabase.from("shift_assignments").select("*"),
+      ]));
+      return {
+        entries: ot as OTEntry[],
+        patterns: pr as Pattern[],
+        overrides: or as Override[],
+        holidays: hol as CompanyHoliday[],
+        shifts: sh as Shift[],
+        assignments: asn as ShiftAssignment[],
+      };
+    },
+    (d) => {
+      setEntries(d.entries);
+      setPatterns(d.patterns);
+      setOverrides(d.overrides);
+      setHolidays(d.holidays);
+      setShifts(d.shifts);
+      setAssignments(d.assignments);
+    },
+  );
 
   useEffect(() => {
     const refetch = () => { fetchAll(false); };

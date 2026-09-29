@@ -9,6 +9,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/contexts/PermissionsContext";
 import TimeInput24 from "@/components/ui/time-input-24";
 import { supabase } from "@/integrations/supabase/client";
+import { usePageQuery, unwrapAll } from "@/hooks/usePageQuery";
 import { toast } from "sonner";
 import { notifyApprovers, notifyRequester, getApprovalTiers, notifyTierApprover } from "@/utils/notifications";
 import SearchableSelect from "@/components/ui/searchable-select";
@@ -280,25 +281,27 @@ const OvertimeRequest = () => {
   const canApprove = canAction(role, 'ot', 'approve');
   const canAdd = canAction(role, 'ot', 'add');
   const otScope = getScope(role, 'ot');
-  const [loading, setLoading] = useState(true);
 
-  const fetchRequests = useCallback(async () => {
-    const [{ data }, { data: actuals }] = await Promise.all([
-      supabase
-        .from("overtime_requests")
-        .select("*, employees(first_name, last_name, dept, photo_url)")
-        .order("created_at", { ascending: false }),
-      supabase
-        .from("check_in_records")
-        .select("employee_id, date, ot_actual_in, ot_actual_out"),
-    ]);
-    const actualMap = new Map<string, { in: string | null; out: string | null }>();
-    (actuals || []).forEach((a: any) => {
-      if (!a.ot_actual_in && !a.ot_actual_out) return;
-      actualMap.set(`${a.employee_id}|${a.date}`, { in: a.ot_actual_in, out: a.ot_actual_out });
-    });
-    if (data) {
-      setRequests(data.map((r: any) => {
+  // Cached via React Query: revisiting this page renders instantly from cache and
+  // only refetches in the background; 504s are retried before showing an error.
+  const { loading, refetch: fetchRequests } = usePageQuery(
+    ["overtime-requests"],
+    async () => {
+      const [data, actuals] = unwrapAll(await Promise.all([
+        supabase
+          .from("overtime_requests")
+          .select("*, employees(first_name, last_name, dept, photo_url)")
+          .order("created_at", { ascending: false }),
+        supabase
+          .from("check_in_records")
+          .select("employee_id, date, ot_actual_in, ot_actual_out"),
+      ]));
+      const actualMap = new Map<string, { in: string | null; out: string | null }>();
+      (actuals as any[]).forEach((a: any) => {
+        if (!a.ot_actual_in && !a.ot_actual_out) return;
+        actualMap.set(`${a.employee_id}|${a.date}`, { in: a.ot_actual_in, out: a.ot_actual_out });
+      });
+      const requests: OTRequest[] = (data as any[]).map((r: any) => {
         const baseDate = String(r.date || "").split("~")[0].trim();
         const actual = actualMap.get(`${r.employee_id}|${baseDate}`);
         return {
@@ -322,15 +325,11 @@ const OvertimeRequest = () => {
           approvedTiers: r.approved_tiers || 0,
           totalTiers: r.total_tiers || 1,
         };
-      }));
-    }
-
-    setLoading(false);
-  }, []);
-
-  useEffect(() => {
-    fetchRequests();
-  }, [fetchRequests]);
+      });
+      return { requests };
+    },
+    (d) => { setRequests(d.requests); },
+  );
 
   // Reset month/date filters when entering the pending tab so all months show by default
   useEffect(() => {

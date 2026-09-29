@@ -16,6 +16,7 @@ import { usePermissions } from "@/contexts/PermissionsContext";
 import { notifyRequester, notifyTierApprover } from "@/utils/notifications";
 import EmployeeAvatar from "@/components/ui/employee-avatar";
 import FaceScanFileImportDialog from "@/components/attendance/FaceScanFileImportDialog";
+import { usePageQuery, unwrapAll } from "@/hooks/usePageQuery";
 
 
 interface AttendanceRecord {
@@ -114,7 +115,6 @@ const Attendance = () => {
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
   const [otMap, setOtMap] = useState<Record<string, number>>({});
   const [otTimeMap, setOtTimeMap] = useState<Record<string, { start: string; end: string }>>({});
-  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterEmployee, setFilterEmployee] = useState("all");
@@ -143,108 +143,131 @@ const Attendance = () => {
 
   const attendanceRealtimeRef = useRef<ReturnType<typeof setTimeout>>();
 
-  // Fetch attendance from DB
-  const fetchAttendance = useCallback(async () => {
-    const { data, error } = await supabase
-      .from("attendance_records")
-      .select("*, employees(first_name, last_name, dept)")
-      .order("date", { ascending: false })
-      .order("created_at", { ascending: false });
-
-    if (error) {
-      toast.error("โหลดข้อมูลบันทึกเวลาไม่สำเร็จ");
-      setLoading(false);
-      return;
-    }
-
-    setAttendance((data ?? []).map((r: any) => ({
-      id: r.id,
-      employeeId: r.employee_id,
-      name: r.employees ? `${r.employees.first_name} ${r.employees.last_name}` : "",
-      dept: r.employees?.dept || "",
-      date: r.date,
-      checkIn: r.check_in,
-      checkOut: r.check_out,
-      status: r.status,
-      late: r.late,
-      ot: Number(r.ot_hours) || 0,
-    })));
-    setLoading(false);
-  }, []);
-
-  // Fetch OT hours from overtime_requests (all statuses) and aggregate by employee + date
-  const fetchOvertime = useCallback(async () => {
-    const { data, error } = await supabase
-      .from("overtime_requests")
-      .select("employee_id, date, hours, status, start_time, end_time");
-    if (error) return;
-    const map: Record<string, number> = {};
-    const timeMap: Record<string, { start: string; end: string }> = {};
-    (data ?? []).forEach((r: any) => {
-      const key = `${r.employee_id}|${r.date}`;
-      map[key] = (map[key] || 0) + (Number(r.hours) || 0);
-      const prev = timeMap[key];
-      timeMap[key] = {
-        start: prev?.start || r.start_time || "",
-        end: r.end_time || prev?.end || "",
-      };
-    });
-    setOtMap(map);
-    setOtTimeMap(timeMap);
-  }, []);
-
   // Leave days / company holidays / personal day-off patterns — used to label days with no record.
   const [leaveMap, setLeaveMap] = useState<Record<string, string>>({});
   const [holidayMap, setHolidayMap] = useState<Record<string, string>>({});
   const [dayoffPatterns, setDayoffPatterns] = useState<any[]>([]);
   const [dayoffOverrides, setDayoffOverrides] = useState<Record<string, boolean>>({});
 
-  const fetchCalendarContext = useCallback(async () => {
-    const [leaveRes, holidayRes, patternRes, overrideRes] = await Promise.all([
-      supabase.from("leave_requests").select("employee_id, leave_type_name, date_from, date_to, status").neq("status", "rejected"),
-      supabase.from("company_holidays").select("date, name"),
-      supabase.from("employee_dayoff_patterns").select("employee_id, weekdays, effective_from, effective_to"),
-      supabase.from("employee_dayoff_overrides").select("employee_id, date, is_dayoff"),
-    ]);
+  // Cached via React Query: revisiting this page renders instantly from cache and
+  // only refetches in the background; 504s are retried before showing an error.
 
-    const lm: Record<string, string> = {};
-    (leaveRes.data ?? []).forEach((r: any) => {
-      const from = toISODate(r.date_from);
-      const to = toISODate(r.date_to) || from;
-      if (!from || !to) return;
-      let cur = from;
-      while (cur <= to) {
-        lm[`${r.employee_id}|${cur}`] = r.leave_type_name || "ลางาน";
-        cur = addDaysLocal(cur, 1);
-      }
-    });
-    setLeaveMap(lm);
+  // Attendance rows (with employee name/dept join; photos come from EmployeeContext).
+  const { loading, error: attendanceError, refetch: refetchAttendance } = usePageQuery(
+    ["attendance-records"],
+    async () => {
+      const [rows] = unwrapAll([
+        await supabase
+          .from("attendance_records")
+          .select("*, employees(first_name, last_name, dept)")
+          .order("date", { ascending: false })
+          .order("created_at", { ascending: false }),
+      ]);
+      const records: AttendanceRecord[] = (rows as any[]).map((r: any) => ({
+        id: r.id,
+        employeeId: r.employee_id,
+        name: r.employees ? `${r.employees.first_name} ${r.employees.last_name}` : "",
+        dept: r.employees?.dept || "",
+        date: r.date,
+        checkIn: r.check_in,
+        checkOut: r.check_out,
+        status: r.status,
+        late: r.late,
+        ot: Number(r.ot_hours) || 0,
+      }));
+      return { records };
+    },
+    (d) => {
+      setAttendance(d.records);
+    },
+  );
 
-    const hm: Record<string, string> = {};
-    (holidayRes.data ?? []).forEach((h: any) => { hm[h.date] = h.name; });
-    setHolidayMap(hm);
+  // Surface a user-visible error only after React Query has exhausted its retries.
+  useEffect(() => {
+    if (attendanceError) toast.error("โหลดข้อมูลบันทึกเวลาไม่สำเร็จ");
+  }, [attendanceError]);
 
-    setDayoffPatterns(patternRes.data ?? []);
-    const om: Record<string, boolean> = {};
-    (overrideRes.data ?? []).forEach((o: any) => { om[`${o.employee_id}|${o.date}`] = o.is_dayoff; });
-    setDayoffOverrides(om);
-  }, []);
+  // OT hours from overtime_requests (all statuses), aggregated by employee + date.
+  const { refetch: refetchOvertime } = usePageQuery(
+    ["attendance-overtime"],
+    async () => {
+      const [rows] = unwrapAll([
+        await supabase
+          .from("overtime_requests")
+          .select("employee_id, date, hours, status, start_time, end_time"),
+      ]);
+      const map: Record<string, number> = {};
+      const timeMap: Record<string, { start: string; end: string }> = {};
+      (rows as any[]).forEach((r: any) => {
+        const key = `${r.employee_id}|${r.date}`;
+        map[key] = (map[key] || 0) + (Number(r.hours) || 0);
+        const prev = timeMap[key];
+        timeMap[key] = {
+          start: prev?.start || r.start_time || "",
+          end: r.end_time || prev?.end || "",
+        };
+      });
+      return { otMap: map, otTimeMap: timeMap };
+    },
+    (d) => {
+      setOtMap(d.otMap);
+      setOtTimeMap(d.otTimeMap);
+    },
+  );
 
-  useEffect(() => { fetchCalendarContext(); }, [fetchCalendarContext]);
+  // Leave / holiday / day-off context (no page-state filters — a single static key).
+  const { refetch: refetchCalendar } = usePageQuery(
+    ["attendance-calendar-context"],
+    async () => {
+      const [leaveRows, holidayRows, patternRows, overrideRows] = unwrapAll(await Promise.all([
+        supabase.from("leave_requests").select("employee_id, leave_type_name, date_from, date_to, status").neq("status", "rejected"),
+        supabase.from("company_holidays").select("date, name"),
+        supabase.from("employee_dayoff_patterns").select("employee_id, weekdays, effective_from, effective_to"),
+        supabase.from("employee_dayoff_overrides").select("employee_id, date, is_dayoff"),
+      ]));
+
+      const lm: Record<string, string> = {};
+      (leaveRows as any[]).forEach((r: any) => {
+        const from = toISODate(r.date_from);
+        const to = toISODate(r.date_to) || from;
+        if (!from || !to) return;
+        let cur = from;
+        while (cur <= to) {
+          lm[`${r.employee_id}|${cur}`] = r.leave_type_name || "ลางาน";
+          cur = addDaysLocal(cur, 1);
+        }
+      });
+
+      const hm: Record<string, string> = {};
+      (holidayRows as any[]).forEach((h: any) => { hm[h.date] = h.name; });
+
+      const om: Record<string, boolean> = {};
+      (overrideRows as any[]).forEach((o: any) => { om[`${o.employee_id}|${o.date}`] = o.is_dayoff; });
+
+      return {
+        leaveMap: lm,
+        holidayMap: hm,
+        dayoffPatterns: patternRows as any[],
+        dayoffOverrides: om,
+      };
+    },
+    (d) => {
+      setLeaveMap(d.leaveMap);
+      setHolidayMap(d.holidayMap);
+      setDayoffPatterns(d.dayoffPatterns);
+      setDayoffOverrides(d.dayoffOverrides);
+    },
+  );
 
 
   const debouncedFetchAttendance = useCallback(() => {
     if (attendanceRealtimeRef.current) clearTimeout(attendanceRealtimeRef.current);
     attendanceRealtimeRef.current = setTimeout(() => {
-      fetchAttendance();
-      fetchOvertime();
+      refetchAttendance();
+      refetchOvertime();
+      refetchCalendar();
     }, 300);
-  }, [fetchAttendance, fetchOvertime]);
-
-  useEffect(() => {
-    fetchAttendance();
-    fetchOvertime();
-  }, [fetchAttendance, fetchOvertime]);
+  }, [refetchAttendance, refetchOvertime, refetchCalendar]);
 
   useEffect(() => {
     const channel = supabase
@@ -559,7 +582,7 @@ const Attendance = () => {
         );
     }
 
-    fetchAttendance();
+    refetchAttendance();
   };
 
   const handleApprove = async (reqId: string) => {
@@ -1184,8 +1207,8 @@ const Attendance = () => {
         open={importOpen}
         onOpenChange={setImportOpen}
         onImported={() => {
-          fetchAttendance();
-          fetchOvertime();
+          refetchAttendance();
+          refetchOvertime();
         }}
       />
     </div>

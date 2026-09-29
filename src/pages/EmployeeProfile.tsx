@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   ArrowLeft, Camera, Edit, Save, X, Plus, Trash2,
@@ -19,6 +19,7 @@ import { processFileUpload } from "@/utils/fileCompression";
 import LazyImage from "@/components/ui/lazy-image";
 import defaultAvatarImg from "@/assets/default-avatar.png";
 import { supabase } from "@/integrations/supabase/client";
+import { usePageQuery } from "@/hooks/usePageQuery";
 import DisplaySettings, { getPersonalDisplayKey } from "@/components/settings/DisplaySettings";
 import EmployeeDocuments from "@/components/employees/EmployeeDocuments";
 
@@ -121,23 +122,24 @@ const EmployeeProfile = () => {
     canEditProfile && getScope(currentUser?.role || "", "employee") === "all";
 
   // Fetch org levels assigned to this employee
-  const [employeeOrgLevels, setEmployeeOrgLevels] = useState<string[]>([]);
-  useEffect(() => {
-    if (!id) return;
-    const fetchOrgLevels = async () => {
-      const { data } = await supabase.from("org_level_employees").select("org_level_id").eq("employee_id", id);
-      if (data && data.length > 0) {
-        const names = data.map(row => {
-          const ol = orgLevelsFlat.find(o => o.id === row.org_level_id);
-          return ol?.name || "";
-        }).filter(Boolean);
-        setEmployeeOrgLevels(names);
-      } else {
-        setEmployeeOrgLevels([]);
-      }
-    };
-    fetchOrgLevels();
-  }, [id, orgLevelsFlat]);
+  // Cached via React Query (keyed by route id): revisiting renders instantly from
+  // cache and refetches in the background; 504s are retried before an error surfaces.
+  const [employeeOrgLevelIds, setEmployeeOrgLevelIds] = useState<string[]>([]);
+  usePageQuery(
+    ["employee-profile-org-levels", id],
+    async () => {
+      const res = await supabase.from("org_level_employees").select("org_level_id").eq("employee_id", id!);
+      if (res.error) throw new Error(res.error.message || "โหลดข้อมูลไม่สำเร็จ");
+      return { ids: (res.data || []).map((row) => row.org_level_id as string) };
+    },
+    (d) => { setEmployeeOrgLevelIds(d.ids); },
+    { enabled: !!id },
+  );
+  // Names resolve against the org tree so they stay correct if orgLevelsFlat loads later.
+  const employeeOrgLevels = useMemo(
+    () => employeeOrgLevelIds.map((olId) => orgLevelsFlat.find((o) => o.id === olId)?.name || "").filter(Boolean),
+    [employeeOrgLevelIds, orgLevelsFlat],
+  );
 
   // Flatten position tree to get all position names for a given affiliation
   const flattenPositionNames = (positions: Position[]): string[] => {
@@ -187,15 +189,20 @@ const EmployeeProfile = () => {
 
 
   // Fetch photo_url on-demand (not included in list query for performance)
-  useEffect(() => {
-    if (!id || !employee) return;
-    if (employee.photoUrl) return; // already has photo
-    supabase.from("employees").select("photo_url").eq("id", id).maybeSingle().then(({ data: row }) => {
-      if (row?.photo_url) {
-        setData((d) => d ? { ...d, photoUrl: row.photo_url } : d);
+  usePageQuery(
+    ["employee-profile-photo", id],
+    async () => {
+      const res = await supabase.from("employees").select("photo_url").eq("id", id!).maybeSingle();
+      if (res.error) throw new Error(res.error.message || "โหลดข้อมูลไม่สำเร็จ");
+      return { photoUrl: (res.data?.photo_url as string | null | undefined) || null };
+    },
+    (d) => {
+      if (d.photoUrl) {
+        setData((prev) => prev ? { ...prev, photoUrl: d.photoUrl } : prev);
       }
-    });
-  }, [id, employee]);
+    },
+    { enabled: !!id && !!employee && !employee.photoUrl }, // already has photo → skip
+  );
   const [showPassword, setShowPassword] = useState(false);
   const [showInitialPassword, setShowInitialPassword] = useState(false);
   const [newPassword, setNewPassword] = useState("");

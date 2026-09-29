@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback } from "react"; // unified org tree
+import { useState, useMemo } from "react"; // unified org tree
 import { Plus, Edit, Trash2, Building2, Users, ChevronDown, ChevronRight, GripVertical, UserPlus, X, Crown, Network, LayoutGrid, List } from "lucide-react";
 import OrgChartView from "@/components/organization/OrgChartView";
 import { supabase } from "@/integrations/supabase/client";
@@ -7,6 +7,7 @@ import { useEmployees, type Employee } from "@/contexts/EmployeeContext";
 import { usePermissions } from "@/contexts/PermissionsContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useBranding } from "@/contexts/BrandingContext";
+import { usePageQuery } from "@/hooks/usePageQuery";
 
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogBody, DialogFooter, DialogClose,
@@ -264,11 +265,17 @@ const Organization = () => {
 
   // ─── Org Level Employees ───
   const [orgLevelEmpRows, setOrgLevelEmpRows] = useState<{ org_level_id: string; employee_id: string }[]>([]);
-  const fetchOrgLevelEmployees = useCallback(async () => {
-    const { data } = await supabase.from("org_level_employees").select("org_level_id, employee_id").order("sort_order");
-    setOrgLevelEmpRows(data || []);
-  }, []);
-  useEffect(() => { fetchOrgLevelEmployees(); }, [fetchOrgLevelEmployees]);
+  // Cached via React Query: revisiting renders instantly from cache and refetches
+  // in the background; 504s are retried before an error surfaces.
+  const { refetch: fetchOrgLevelEmployees } = usePageQuery(
+    ["organization-org-level-employees"],
+    async () => {
+      const res = await supabase.from("org_level_employees").select("org_level_id, employee_id").order("sort_order");
+      if (res.error) throw new Error(res.error.message || "โหลดข้อมูลไม่สำเร็จ");
+      return { rows: (res.data || []) as { org_level_id: string; employee_id: string }[] };
+    },
+    (d) => { setOrgLevelEmpRows(d.rows); },
+  );
 
   const orgLevelEmployeeMap = useMemo(() => {
     const map = new Map<string, Employee[]>();

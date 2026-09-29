@@ -16,6 +16,30 @@ import { th } from "date-fns/locale";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Carousel, CarouselContent, CarouselItem } from "@/components/ui/carousel";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { usePageQuery, unwrapAll } from "@/hooks/usePageQuery";
+
+// Unwraps a single Supabase `.maybeSingle()` (or placeholder) result: throws on
+// error so React Query retries, otherwise returns `data` as-is (may be null).
+const single = <T,>(res: { data: T; error: { message: string } | null }): T => {
+  if (res.error) throw new Error(res.error.message || "โหลดข้อมูลไม่สำเร็จ");
+  return res.data;
+};
+
+type DashboardData = {
+  leaveTypes: any[];
+  employeeRow: any | null;
+  holidays: any[];
+  patterns: any[];
+  overrides: any[];
+  branch: "self" | "dept" | "all";
+  employees: any[];
+  attToday: any[];
+  leaves: any[];
+  ots: any[];
+  timeEdits: any[];
+  monthAtt: any[];
+  checkIn: any | null;
+};
 
 /* ─── Mobile carousel wrapper for stat cards ─── */
 const StatCarousel = ({ children }: { children: ReactNode }) => {
@@ -207,7 +231,6 @@ const DEFAULT_LEAVE_COLOR = "#60a5fa";
 const Dashboard = () => {
   const { currentUser, role } = useAuth();
   const { getScope } = usePermissions();
-  const [loading, setLoading] = useState(true);
 
   // Shared data
   const [employees, setEmployees] = useState<any[]>([]);
@@ -231,51 +254,52 @@ const Dashboard = () => {
   const employeeScope = getScope(role, 'employee');
   const viewType: "admin" | "manager" | "employee" = employeeScope === "all" ? "admin" : employeeScope === "department" ? "manager" : "employee";
 
-  const fetchAll = useCallback(async (initial = false) => {
-    if (initial) setLoading(true);
-    try {
-      // Parallel: fetch leave_types + employee record simultaneously
-      const empIdDirect = currentUser?.employeeId;
-      const userId = currentUser?.id;
+  const userId = currentUser?.id;
+  const empIdDirect = currentUser?.employeeId;
 
+  // Cached via React Query: revisiting this page renders instantly from cache and
+  // only refetches in the background; 504s are retried before showing an error.
+  const { loading, refetch } = usePageQuery(
+    ["dashboard", userId, empIdDirect, viewType, today, monthStart, monthEnd],
+    async (): Promise<DashboardData> => {
+      // Parallel: fetch leave_types + employee record simultaneously
       const [ltRes, empLookup] = await Promise.all([
         supabase.from("leave_types").select("*"),
         empIdDirect
           ? supabase.from("employees").select("id, first_name, last_name, dept, status, user_id, start_date").eq("id", empIdDirect).maybeSingle()
           : userId
             ? supabase.from("employees").select("id, first_name, last_name, dept, status, user_id, start_date").eq("user_id", userId).maybeSingle()
-            : Promise.resolve({ data: null }),
+            : Promise.resolve({ data: null, error: null }),
       ]);
 
-      if (ltRes.data) setLeaveTypes(ltRes.data);
-      const empRecord = empLookup.data;
-      if (empRecord) setMyEmployee(empRecord);
-      const empId = empRecord?.id || empIdDirect || null;
+      const [leaveTypes] = unwrapAll([ltRes]);
+      const employeeRow: any | null = single(empLookup);
+      const empId = employeeRow?.id || empIdDirect || null;
 
       // Holidays + personal day-offs (common to all views)
-      const [chRes, patRes, ovrRes] = await Promise.all([
+      const [holidays, patterns, overrides] = unwrapAll(await Promise.all([
         supabase.from("company_holidays").select("date, name, is_paid").gte("date", today).order("date").limit(12),
-        empId ? supabase.from("employee_dayoff_patterns").select("*").eq("employee_id", empId) : Promise.resolve({ data: [] as any[] }),
-        empId ? supabase.from("employee_dayoff_overrides").select("*").eq("employee_id", empId).gte("date", today) : Promise.resolve({ data: [] as any[] }),
-      ]);
-      setCompanyHolidays(chRes.data || []);
-      setMyDayoffPatterns(patRes.data || []);
-      setMyDayoffOverrides(ovrRes.data || []);
+        empId ? supabase.from("employee_dayoff_patterns").select("*").eq("employee_id", empId) : Promise.resolve({ data: [] as any[], error: null }),
+        empId ? supabase.from("employee_dayoff_overrides").select("*").eq("employee_id", empId).gte("date", today) : Promise.resolve({ data: [] as any[], error: null }),
+      ]));
 
-
+      const common = { leaveTypes, employeeRow, holidays, patterns, overrides };
 
       if (viewType === "employee") {
-        if (!empId) { setLoading(false); return; }
+        if (!empId) {
+          return { ...common, branch: "self", employees: [], attToday: [], leaves: [], ots: [], timeEdits: [], monthAtt: [], checkIn: null };
+        }
         const [leaveRes, otRes, ciRes] = await Promise.all([
           supabase.from("leave_requests").select("*").eq("employee_id", empId),
           supabase.from("overtime_requests").select("*").eq("employee_id", empId),
           supabase.from("check_in_records").select("*").eq("employee_id", empId).eq("date", today).maybeSingle(),
         ]);
-        if (leaveRes.data) setLeaveRequests(leaveRes.data);
-        if (otRes.data) setOtRequests(otRes.data);
-        setCheckInToday(ciRes.data);
-      } else if (viewType === "manager") {
-        const myDept = empRecord?.dept || "";
+        const [leaves, ots] = unwrapAll([leaveRes, otRes]);
+        return { ...common, branch: "self", employees: [], attToday: [], leaves, ots, timeEdits: [], monthAtt: [], checkIn: single(ciRes) };
+      }
+
+      if (viewType === "manager") {
+        const myDept = employeeRow?.dept || "";
         const [empRes, attRes, leaveRes, otRes, teRes, monthAttRes, ciRes] = await Promise.all([
           supabase.from("employees").select("id, first_name, last_name, dept, status, user_id, start_date").eq("dept", myDept),
           supabase.from("attendance_records").select("id, employee_id, date, status, late").eq("date", today),
@@ -283,54 +307,63 @@ const Dashboard = () => {
           supabase.from("overtime_requests").select("id, employee_id, date, hours, status, ot_type, created_at, employees(first_name, last_name)").gte("date", monthStart).lte("date", monthEnd),
           supabase.from("time_edit_requests").select("id, employee_id").eq("status", "pending"),
           supabase.from("attendance_records").select("date, status, late, employee_id").gte("date", monthStart).lte("date", monthEnd),
-          empId ? supabase.from("check_in_records").select("*").eq("employee_id", empId).eq("date", today).maybeSingle() : Promise.resolve({ data: null }),
+          empId ? supabase.from("check_in_records").select("*").eq("employee_id", empId).eq("date", today).maybeSingle() : Promise.resolve({ data: null, error: null }),
         ]);
+        const [employees, attToday, leaves, ots, timeEdits, monthAtt] = unwrapAll([empRes, attRes, leaveRes, otRes, teRes, monthAttRes]);
 
-        const deptEmpIds = new Set((empRes.data || []).map((e: any) => e.id));
-        if (empRes.data) setEmployees(empRes.data);
-        if (attRes.data) setTodayAttendance(attRes.data.filter((a: any) => deptEmpIds.has(a.employee_id)));
-        if (leaveRes.data) setLeaveRequests(leaveRes.data.filter((l: any) => deptEmpIds.has(l.employee_id)));
-        if (otRes.data) setOtRequests(otRes.data.filter((o: any) => deptEmpIds.has(o.employee_id)));
-        if (teRes.data) setTimeEditRequests(teRes.data.filter((t: any) => deptEmpIds.has(t.employee_id)));
-        if (monthAttRes.data) setMonthlyAttendance(monthAttRes.data.filter((a: any) => deptEmpIds.has(a.employee_id)));
-        setCheckInToday(ciRes.data);
-      } else {
-        // Admin/HR: fetch everything in one parallel batch
-        const [empRes, attRes, leaveRes, otRes, teRes, monthAttRes, ciRes] = await Promise.all([
-          supabase.from("employees").select("id, first_name, last_name, dept, status, user_id, start_date"),
-          supabase.from("attendance_records").select("id, employee_id, date, status, late").eq("date", today),
-          supabase.from("leave_requests").select("id, employee_id, leave_type_name, date_from, date_to, days, status, created_at, employees(first_name, last_name)").lte("date_from", monthEnd).gte("date_to", monthStart),
-          supabase.from("overtime_requests").select("id, employee_id, date, hours, status, ot_type, created_at, employees(first_name, last_name)").gte("date", monthStart).lte("date", monthEnd),
-          supabase.from("time_edit_requests").select("id").eq("status", "pending"),
-          supabase.from("attendance_records").select("date, status, late, employee_id").gte("date", monthStart).lte("date", monthEnd),
-          empId ? supabase.from("check_in_records").select("*").eq("employee_id", empId).eq("date", today).maybeSingle() : Promise.resolve({ data: null }),
-        ]);
-
-        if (empRes.data) setEmployees(empRes.data);
-        if (attRes.data) setTodayAttendance(attRes.data);
-        if (leaveRes.data) setLeaveRequests(leaveRes.data);
-        if (otRes.data) setOtRequests(otRes.data);
-        if (teRes.data) setTimeEditRequests(teRes.data);
-        if (monthAttRes.data) setMonthlyAttendance(monthAttRes.data);
-        setCheckInToday(ciRes.data);
+        const deptEmpIds = new Set(employees.map((e: any) => e.id));
+        return {
+          ...common,
+          branch: "dept",
+          employees,
+          attToday: attToday.filter((a: any) => deptEmpIds.has(a.employee_id)),
+          leaves: leaves.filter((l: any) => deptEmpIds.has(l.employee_id)),
+          ots: ots.filter((o: any) => deptEmpIds.has(o.employee_id)),
+          timeEdits: timeEdits.filter((t: any) => deptEmpIds.has(t.employee_id)),
+          monthAtt: monthAtt.filter((a: any) => deptEmpIds.has(a.employee_id)),
+          checkIn: single(ciRes),
+        };
       }
-    } catch (e) {
-      console.error("Dashboard load error:", e);
-    } finally {
-      if (initial) setLoading(false);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [today, monthStart, monthEnd, currentUser?.id, currentUser?.employeeId, viewType]);
+
+      // Admin/HR: fetch everything in one parallel batch
+      const [empRes, attRes, leaveRes, otRes, teRes, monthAttRes, ciRes] = await Promise.all([
+        supabase.from("employees").select("id, first_name, last_name, dept, status, user_id, start_date"),
+        supabase.from("attendance_records").select("id, employee_id, date, status, late").eq("date", today),
+        supabase.from("leave_requests").select("id, employee_id, leave_type_name, date_from, date_to, days, status, created_at, employees(first_name, last_name)").lte("date_from", monthEnd).gte("date_to", monthStart),
+        supabase.from("overtime_requests").select("id, employee_id, date, hours, status, ot_type, created_at, employees(first_name, last_name)").gte("date", monthStart).lte("date", monthEnd),
+        supabase.from("time_edit_requests").select("id").eq("status", "pending"),
+        supabase.from("attendance_records").select("date, status, late, employee_id").gte("date", monthStart).lte("date", monthEnd),
+        empId ? supabase.from("check_in_records").select("*").eq("employee_id", empId).eq("date", today).maybeSingle() : Promise.resolve({ data: null, error: null }),
+      ]);
+      const [employees, attToday, leaves, ots, timeEdits, monthAtt] = unwrapAll([empRes, attRes, leaveRes, otRes, teRes, monthAttRes]);
+      return { ...common, branch: "all", employees, attToday, leaves, ots, timeEdits, monthAtt, checkIn: single(ciRes) };
+    },
+    (d) => {
+      setLeaveTypes(d.leaveTypes);
+      setMyEmployee(d.employeeRow);
+      setCompanyHolidays(d.holidays);
+      setMyDayoffPatterns(d.patterns);
+      setMyDayoffOverrides(d.overrides);
+      setEmployees(d.employees);
+      setTodayAttendance(d.attToday);
+      setLeaveRequests(d.leaves);
+      setOtRequests(d.ots);
+      setTimeEditRequests(d.timeEdits);
+      setMonthlyAttendance(d.monthAtt);
+      setCheckInToday(d.checkIn);
+    },
+    { enabled: !!userId },
+  );
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const debouncedFetch = useCallback(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => fetchAll(), 800);
-  }, [fetchAll]);
+    debounceRef.current = setTimeout(() => refetch(), 800);
+  }, [refetch]);
 
+  // Realtime — silent updates via cache invalidation (no loading flash)
   useEffect(() => {
     if (!currentUser?.id) return;
-    fetchAll(true);
 
     const channel = supabase
       .channel("dashboard-realtime")
@@ -348,7 +381,7 @@ const Dashboard = () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
       supabase.removeChannel(channel);
     };
-  }, [fetchAll, debouncedFetch, currentUser?.id]);
+  }, [debouncedFetch, currentUser?.id]);
 
   // ═══════════════════════════════════════════════
   // Derived stats (must be before any early return for hooks rules)

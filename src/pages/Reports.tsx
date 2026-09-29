@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { usePageQuery, unwrapAll } from "@/hooks/usePageQuery";
 import StatCarousel from "@/components/ui/stat-carousel";
 import { useEmployees } from "@/contexts/EmployeeContext";
 import {
@@ -171,7 +172,6 @@ const Reports = () => {
   // --- Real leave data ---
   const [leaveData, setLeaveData] = useState<any[]>([]);
   const [leavePieData, setLeavePieData] = useState<{ name: string; value: number; color: string }[]>([]);
-  const [leaveLoading, setLeaveLoading] = useState(false);
   const [leaveBalanceData, setLeaveBalanceData] = useState<any[]>([]);
   const [leaveYearlyData, setLeaveYearlyData] = useState<any[]>([]);
   const [leaveYearlyChartData, setLeaveYearlyChartData] = useState<any[]>([]);
@@ -179,13 +179,11 @@ const Reports = () => {
 
   // --- Real OT data ---
   const [otData, setOtData] = useState<any[]>([]);
-  const [otLoading, setOtLoading] = useState(false);
   const [otPieData, setOtPieData] = useState<{ name: string; value: number; color: string }[]>([]);
   const [otMonthlyChartData, setOtMonthlyChartData] = useState<any[]>([]);
 
   // --- Real Shift data ---
   const [shiftData, setShiftData] = useState<any[]>([]);
-  const [shiftLoading, setShiftLoading] = useState(false);
   const [shiftDistribution, setShiftDistribution] = useState<any[]>([]);
   const [shiftPieData, setShiftPieData] = useState<{ name: string; value: number; color: string }[]>([]);
   const [shiftCoverageData, setShiftCoverageData] = useState<any[]>([]);
@@ -195,18 +193,15 @@ const Reports = () => {
   const [empTableData, setEmpTableData] = useState<any[]>([]);
   const [empHeadcountData, setEmpHeadcountData] = useState<{ dept: string; count: number }[]>([]);
   const [empHiringTrend, setEmpHiringTrend] = useState<any[]>([]);
-  const [empLoading, setEmpLoading] = useState(false);
 
   // --- Real Attendance data ---
   const [attTableData, setAttTableData] = useState<any[]>([]);
   const [attSummaryData, setAttSummaryData] = useState<any[]>([]);
   const [attMonthlyChart, setAttMonthlyChart] = useState<any[]>([]);
-  const [attLoading, setAttLoading] = useState(false);
 
   // --- Real Payroll data ---
   const [payrollSummaryData, setPayrollSummaryData] = useState<any[]>([]);
   const [taxCumulativeData, setTaxCumulativeData] = useState<any[]>([]);
-  const [payrollLoading, setPayrollLoading] = useState(false);
 
   const monthIndexMap: Record<string, number> = {
     "มกราคม": 1, "กุมภาพันธ์": 2, "มีนาคม": 3, "เมษายน": 4,
@@ -216,141 +211,149 @@ const Reports = () => {
 
   const monthShortNames = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
 
-  const fetchLeaveData = useCallback(async () => {
-    setLeaveLoading(true);
-    try {
-      const ceYear = parseInt(filterYear) - 543;
-      const monthNum = monthIndexMap[filterMonth] || 1;
+  // Which report's query is active. Each report's data is cached per filter via
+  // React Query (usePageQuery): revisiting a report/month renders instantly from
+  // cache and only refetches in the background; 504s are retried automatically.
+  // Only the active report's query is enabled — the others stay idle.
+  const isLeaveSummary = selectedReport === "leave-summary";
+  const isLeaveBalance = selectedReport === "leave-balance";
+  const isLeaveYearly = selectedReport === "leave-yearly";
+  const isLeaveReport = isLeaveSummary || isLeaveBalance || isLeaveYearly;
+  const isOtSummary = selectedReport === "ot-summary" || selectedReport === "ot-by-type";
+  const isOtTrend = selectedReport === "ot-trend";
+  const isShiftReport = !!selectedReport?.startsWith("shift-");
+  const isEmpReport = !!selectedReport?.startsWith("emp-");
+  const isAttReport = !!selectedReport?.startsWith("att-");
+  const isPayrollReport = !!selectedReport?.startsWith("payroll-");
 
-      const { data, error } = await supabase
-        .from("leave_requests")
-        .select("*, employees!leave_requests_employee_id_fkey(first_name, last_name, username)")
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
-
-      // Filter client-side by parsing dates
-      const filtered = (data || []).filter((r: any) => {
-        const parsed = parseThaiDate(r.date_from);
-        if (!parsed) return false;
-        return parsed.ceYear === ceYear && parsed.month === monthNum;
-      });
-
-      const rows = filtered.map((r: any) => ({
-        name: r.employees ? `${r.employees.first_name} ${r.employees.last_name}` : "ไม่ทราบ",
-        empId: r.employees?.username || "-",
-        type: r.leave_type_name || "-",
-        from: r.date_from,
-        to: r.date_to,
-        days: Number(r.days),
-        status: r.status === "approved" ? "อนุมัติ" : r.status === "rejected" ? "ไม่อนุมัติ" : "รออนุมัติ",
-      }));
-      setLeaveData(rows);
-
-      // Build pie data
-      const typeMap: Record<string, number> = {};
-      rows.forEach((r: any) => {
-        typeMap[r.type] = (typeMap[r.type] || 0) + r.days;
-      });
-      const pieEntries = Object.entries(typeMap).map(([name, value], i) => ({
-        name,
-        value: value as number,
-        color: defaultLeavePieColors[i % defaultLeavePieColors.length],
-      }));
-      setLeavePieData(pieEntries);
-    } catch (err) {
-      console.error("Error fetching leave data:", err);
-    } finally {
-      setLeaveLoading(false);
-    }
-  }, [filterYear, filterMonth]);
-
-  // Fetch leave balance (quota remaining) for all employees
-  const fetchLeaveBalance = useCallback(async () => {
-    setLeaveLoading(true);
-    try {
-      const ceYear = parseInt(filterYear) - 543;
-
-      const [typesRes, requestsRes, empsRes] = await Promise.all([
-        supabase.from("leave_types").select("*").order("sort_order"),
-        supabase.from("leave_requests").select("employee_id, leave_type_id, leave_type_name, date_from, days, status")
-          .neq("status", "rejected"),
-        supabase.from("employees").select("id, first_name, last_name, username, role").eq("status", "active"),
-      ]);
-
-      const leaveTypes = typesRes.data || [];
-      const allRequests = requestsRes.data || [];
-      const emps = (empsRes.data || []).filter((e: any) => (e.role || "").toLowerCase() !== "admin");
-
-      // Filter by year client-side
-      const requests = allRequests.filter((r: any) => {
-        const parsed = parseThaiDate(r.date_from);
-        return parsed && parsed.ceYear === ceYear;
-      });
-
-      // Group used days per employee per leave type
-      const usedMap: Record<string, Record<string, number>> = {};
-      requests.forEach((r: any) => {
-        if (!usedMap[r.employee_id]) usedMap[r.employee_id] = {};
-        const key = r.leave_type_id;
-        usedMap[r.employee_id][key] = (usedMap[r.employee_id][key] || 0) + Number(r.days);
-      });
-
-      const balanceRows = emps.map((emp: any) => {
-        const row: any = {
-          empId: emp.username || "-",
-          name: `${emp.first_name} ${emp.last_name}`,
-        };
-        let totalQuota = 0;
-        let totalUsed = 0;
-        leaveTypes.forEach((lt: any) => {
-          const used = usedMap[emp.id]?.[lt.id] || 0;
-          row[`${lt.name}_quota`] = lt.quota;
-          row[`${lt.name}_used`] = used;
-          row[`${lt.name}_remaining`] = lt.quota - used;
-          totalQuota += lt.quota;
-          totalUsed += used;
-        });
-        row.totalQuota = totalQuota;
-        row.totalUsed = totalUsed;
-        row.totalRemaining = totalQuota - totalUsed;
-        return row;
-      });
-
-      setLeaveBalanceData(balanceRows);
-
-      // Build pie for balance overview
-      const overallTypeUsage: Record<string, number> = {};
-      requests.forEach((r: any) => {
-        const name = r.leave_type_name || "อื่นๆ";
-        overallTypeUsage[name] = (overallTypeUsage[name] || 0) + Number(r.days);
-      });
-      const pieEntries = Object.entries(overallTypeUsage).map(([name, value], i) => ({
-        name, value: value as number,
-        color: leaveTypes.find((lt: any) => lt.name === name)?.color || defaultLeavePieColors[i % defaultLeavePieColors.length],
-      }));
-      setLeavePieData(pieEntries);
-    } catch (err) {
-      console.error("Error fetching leave balance:", err);
-    } finally {
-      setLeaveLoading(false);
-    }
-  }, [filterYear]);
-
-  // Fetch yearly leave summary
-  const fetchLeaveYearly = useCallback(async () => {
-    setLeaveLoading(true);
-    try {
-      const ceYear = parseInt(filterYear) - 543;
-
-      const [requestsRes, typesRes] = await Promise.all([
+  // --- Leave reports (summary / balance / yearly) ---
+  // The three leave reports share `leavePieData`, so they run as one query keyed
+  // by the selected report; switching between them re-applies the right payload.
+  const { loading: leaveQueryLoading, refetch: refetchLeave } = usePageQuery(
+    ["reports-leave", selectedReport, filterYear, isLeaveSummary ? filterMonth : null],
+    async () => {
+      if (isLeaveSummary) {
+        const res = await supabase
+          .from("leave_requests")
+          .select("*, employees!leave_requests_employee_id_fkey(first_name, last_name, username)")
+          .order("created_at", { ascending: false });
+        if (res.error) throw new Error(res.error.message || "โหลดข้อมูลไม่สำเร็จ");
+        return { kind: "leave-summary" as const, data: (res.data || []) as any[] };
+      }
+      if (isLeaveBalance) {
+        const [leaveTypes, allRequests, emps] = unwrapAll(await Promise.all([
+          supabase.from("leave_types").select("*").order("sort_order"),
+          supabase.from("leave_requests").select("employee_id, leave_type_id, leave_type_name, date_from, days, status")
+            .neq("status", "rejected"),
+          supabase.from("employees").select("id, first_name, last_name, username, role").eq("status", "active"),
+        ]));
+        return { kind: "leave-balance" as const, leaveTypes: leaveTypes as any[], allRequests: allRequests as any[], emps: emps as any[] };
+      }
+      const [allRequests, leaveTypes] = unwrapAll(await Promise.all([
         supabase.from("leave_requests").select("date_from, leave_type_name, days, status")
           .neq("status", "rejected"),
         supabase.from("leave_types").select("name, color").order("sort_order"),
-      ]);
+      ]));
+      return { kind: "leave-yearly" as const, allRequests: allRequests as any[], leaveTypes: leaveTypes as any[] };
+    },
+    (d) => {
+      const ceYear = parseInt(filterYear) - 543;
 
-      const allRequests = requestsRes.data || [];
-      const leaveTypes = typesRes.data || [];
+      if (d.kind === "leave-summary") {
+        const monthNum = monthIndexMap[filterMonth] || 1;
+
+        // Filter client-side by parsing dates
+        const filtered = d.data.filter((r: any) => {
+          const parsed = parseThaiDate(r.date_from);
+          if (!parsed) return false;
+          return parsed.ceYear === ceYear && parsed.month === monthNum;
+        });
+
+        const rows = filtered.map((r: any) => ({
+          name: r.employees ? `${r.employees.first_name} ${r.employees.last_name}` : "ไม่ทราบ",
+          empId: r.employees?.username || "-",
+          type: r.leave_type_name || "-",
+          from: r.date_from,
+          to: r.date_to,
+          days: Number(r.days),
+          status: r.status === "approved" ? "อนุมัติ" : r.status === "rejected" ? "ไม่อนุมัติ" : "รออนุมัติ",
+        }));
+        setLeaveData(rows);
+
+        // Build pie data
+        const typeMap: Record<string, number> = {};
+        rows.forEach((r: any) => {
+          typeMap[r.type] = (typeMap[r.type] || 0) + r.days;
+        });
+        const pieEntries = Object.entries(typeMap).map(([name, value], i) => ({
+          name,
+          value: value as number,
+          color: defaultLeavePieColors[i % defaultLeavePieColors.length],
+        }));
+        setLeavePieData(pieEntries);
+        return;
+      }
+
+      if (d.kind === "leave-balance") {
+        // Fetch leave balance (quota remaining) for all employees
+        const leaveTypes = d.leaveTypes;
+        const allRequests = d.allRequests;
+        const emps = d.emps.filter((e: any) => (e.role || "").toLowerCase() !== "admin");
+
+        // Filter by year client-side
+        const requests = allRequests.filter((r: any) => {
+          const parsed = parseThaiDate(r.date_from);
+          return parsed && parsed.ceYear === ceYear;
+        });
+
+        // Group used days per employee per leave type
+        const usedMap: Record<string, Record<string, number>> = {};
+        requests.forEach((r: any) => {
+          if (!usedMap[r.employee_id]) usedMap[r.employee_id] = {};
+          const key = r.leave_type_id;
+          usedMap[r.employee_id][key] = (usedMap[r.employee_id][key] || 0) + Number(r.days);
+        });
+
+        const balanceRows = emps.map((emp: any) => {
+          const row: any = {
+            empId: emp.username || "-",
+            name: `${emp.first_name} ${emp.last_name}`,
+          };
+          let totalQuota = 0;
+          let totalUsed = 0;
+          leaveTypes.forEach((lt: any) => {
+            const used = usedMap[emp.id]?.[lt.id] || 0;
+            row[`${lt.name}_quota`] = lt.quota;
+            row[`${lt.name}_used`] = used;
+            row[`${lt.name}_remaining`] = lt.quota - used;
+            totalQuota += lt.quota;
+            totalUsed += used;
+          });
+          row.totalQuota = totalQuota;
+          row.totalUsed = totalUsed;
+          row.totalRemaining = totalQuota - totalUsed;
+          return row;
+        });
+
+        setLeaveBalanceData(balanceRows);
+
+        // Build pie for balance overview
+        const overallTypeUsage: Record<string, number> = {};
+        requests.forEach((r: any) => {
+          const name = r.leave_type_name || "อื่นๆ";
+          overallTypeUsage[name] = (overallTypeUsage[name] || 0) + Number(r.days);
+        });
+        const pieEntries = Object.entries(overallTypeUsage).map(([name, value], i) => ({
+          name, value: value as number,
+          color: leaveTypes.find((lt: any) => lt.name === name)?.color || defaultLeavePieColors[i % defaultLeavePieColors.length],
+        }));
+        setLeavePieData(pieEntries);
+        return;
+      }
+
+      // Yearly leave summary
+      const allRequests = d.allRequests;
+      const leaveTypes = d.leaveTypes;
       const typeNames = leaveTypes.map((lt: any) => lt.name);
 
       // Filter by year client-side
@@ -404,33 +407,36 @@ const Reports = () => {
         color: r.color || defaultLeavePieColors[i % defaultLeavePieColors.length],
       }));
       setLeavePieData(pieEntries);
-    } catch (err) {
-      console.error("Error fetching yearly leave:", err);
-    } finally {
-      setLeaveLoading(false);
-    }
-  }, [filterYear]);
+    },
+    { enabled: isLeaveReport },
+  );
+  // Disabled queries report pending; only show loading for the active report.
+  const leaveLoading = isLeaveReport && leaveQueryLoading;
+  const fetchLeaveData = refetchLeave;
+  const fetchLeaveBalance = refetchLeave;
+  const fetchLeaveYearly = refetchLeave;
 
   // --- Fetch OT data ---
-  const fetchOtData = useCallback(async () => {
-    setOtLoading(true);
-    try {
+  const { loading: otQueryLoading, refetch: fetchOtData } = usePageQuery(
+    ["reports-ot", filterYear, filterMonth],
+    async () => {
       const ceYear = parseInt(filterYear) - 543;
       const monthNum = monthIndexMap[filterMonth] || 1;
       const startDate = `${ceYear}-${String(monthNum).padStart(2, '0')}-01`;
       const endDay = new Date(ceYear, monthNum, 0).getDate();
       const endDate = `${ceYear}-${String(monthNum).padStart(2, '0')}-${String(endDay).padStart(2, '0')}`;
 
-      const { data, error } = await supabase
+      const res = await supabase
         .from("overtime_requests")
         .select("*, employees!overtime_requests_employee_id_fkey(first_name, last_name, username, dept)")
         .gte("date", startDate)
         .lte("date", endDate)
         .order("date", { ascending: false });
-
-      if (error) throw error;
-
-      const rows = (data || []).map((r: any) => {
+      if (res.error) throw new Error(res.error.message || "โหลดข้อมูลไม่สำเร็จ");
+      return { data: (res.data || []) as any[] };
+    },
+    (d) => {
+      const rows = d.data.map((r: any) => {
         const emp = r.employees;
         const name = emp ? `${emp.first_name} ${emp.last_name}` : "ไม่ทราบ";
         const dept = emp?.dept || "-";
@@ -461,28 +467,26 @@ const Reports = () => {
       setOtPieData(Object.entries(typeGroups).map(([name, value]) => ({
         name, value, color: otTypeColors[name] || "#9CA3AF",
       })));
-    } catch (err) {
-      console.error("Error fetching OT data:", err);
-    } finally {
-      setOtLoading(false);
-    }
-  }, [filterYear, filterMonth]);
+    },
+    { enabled: isOtSummary },
+  );
 
-  const fetchOtTrend = useCallback(async () => {
-    setOtLoading(true);
-    try {
+  const { loading: otTrendQueryLoading, refetch: fetchOtTrend } = usePageQuery(
+    ["reports-ot-trend", filterYear],
+    async () => {
       const ceYear = parseInt(filterYear) - 543;
-      const { data, error } = await supabase
+      const res = await supabase
         .from("overtime_requests")
         .select("date, hours, status")
         .gte("date", `${ceYear}-01-01`)
         .lte("date", `${ceYear}-12-31`);
-
-      if (error) throw error;
-
+      if (res.error) throw new Error(res.error.message || "โหลดข้อมูลไม่สำเร็จ");
+      return { data: (res.data || []) as any[] };
+    },
+    (d) => {
       const monthlyMap: Record<number, { hours: number; count: number }> = {};
       for (let i = 1; i <= 12; i++) monthlyMap[i] = { hours: 0, count: 0 };
-      (data || []).forEach((r: any) => {
+      d.data.forEach((r: any) => {
         const m = parseInt(r.date.split("-")[1]);
         if (monthlyMap[m]) {
           monthlyMap[m].hours += r.hours || 0;
@@ -495,29 +499,29 @@ const Reports = () => {
         ชั่วโมงOT: Math.round(monthlyMap[i + 1].hours * 100) / 100,
         จำนวนคำขอ: monthlyMap[i + 1].count,
       })));
-    } catch (err) {
-      console.error("Error fetching OT trend:", err);
-    } finally {
-      setOtLoading(false);
-    }
-  }, [filterYear]);
+    },
+    { enabled: isOtTrend },
+  );
+  const otLoading = (isOtSummary && otQueryLoading) || (isOtTrend && otTrendQueryLoading);
 
   // --- Fetch Shift data ---
-  const fetchShiftData = useCallback(async () => {
-    setShiftLoading(true);
-    try {
-      const ceYear = parseInt(filterYear) - 543;
-      const monthNum = monthIndexMap[filterMonth] || 1;
-
-      const [shiftsRes, assignmentsRes, empsRes] = await Promise.all([
+  const { loading: shiftQueryLoading, refetch: fetchShiftData } = usePageQuery(
+    ["reports-shift", filterYear, filterMonth],
+    async () => {
+      const [shifts, assignments, emps] = unwrapAll(await Promise.all([
         supabase.from("shifts").select("*").order("sort_order"),
         supabase.from("shift_assignments").select("*"),
         supabase.from("employees").select("id, first_name, last_name, username, dept, shift, role").eq("status", "active"),
-      ]);
+      ]));
+      return { shifts: shifts as any[], assignments: assignments as any[], emps: emps as any[] };
+    },
+    (d) => {
+      const ceYear = parseInt(filterYear) - 543;
+      const monthNum = monthIndexMap[filterMonth] || 1;
 
-      const shifts = shiftsRes.data || [];
-      const assignments = assignmentsRes.data || [];
-      const emps = (empsRes.data || []);
+      const shifts = d.shifts;
+      const assignments = d.assignments;
+      const emps = d.emps;
 
       const empMap = new Map(emps.map((e: any) => [e.id, e]));
       const shiftMap = new Map(shifts.map((s: any) => [s.id, s]));
@@ -625,28 +629,37 @@ const Reports = () => {
           reason: "มอบหมายกะรายวัน",
         };
       }));
-
-    } catch (err) {
-      console.error("Error fetching shift data:", err);
-    } finally {
-      setShiftLoading(false);
-    }
-  }, [filterYear, filterMonth]);
+    },
+    { enabled: isShiftReport },
+  );
+  const shiftLoading = isShiftReport && shiftQueryLoading;
 
   // --- Fetch Employee data ---
-  const fetchEmployeeData = useCallback(async () => {
-    setEmpLoading(true);
-    try {
-      const ceYear = parseInt(filterYear) - 543;
-      const monthNum = monthIndexMap[filterMonth] || 1;
-
-      const { data: allEmps, error } = await supabase
+  const { loading: empQueryLoading, refetch: fetchEmployeeData } = usePageQuery(
+    ["reports-employees", selectedReport, filterYear, filterMonth],
+    async () => {
+      const res = await supabase
         .from("employees")
         .select("id, username, first_name, last_name, dept, position, employee_type, start_date, status, role")
         .order("created_at", { ascending: false });
+      if (res.error) throw new Error(res.error.message || "โหลดข้อมูลไม่สำเร็จ");
+      // Birthday report needs birth_date, so fetch it alongside
+      let bdEmps: any[] | null = null;
+      if (selectedReport === "emp-birthday") {
+        const bdRes = await supabase
+          .from("employees")
+          .select("username, first_name, last_name, dept, position, birth_date, status, role")
+          .eq("status", "active");
+        if (bdRes.error) throw new Error(bdRes.error.message || "โหลดข้อมูลไม่สำเร็จ");
+        bdEmps = (bdRes.data || []) as any[];
+      }
+      return { allEmps: (res.data || []) as any[], bdEmps };
+    },
+    (d) => {
+      const ceYear = parseInt(filterYear) - 543;
+      const monthNum = monthIndexMap[filterMonth] || 1;
 
-      if (error) throw error;
-      const emps = (allEmps || []).filter((e: any) => (e.role || "").toLowerCase() !== "admin");
+      const emps = d.allEmps.filter((e: any) => (e.role || "").toLowerCase() !== "admin");
 
       // Determine which employees to show based on report type
       if (selectedReport === "emp-all") {
@@ -689,17 +702,7 @@ const Reports = () => {
           rawStatus: e.status,
         })));
       } else if (selectedReport === "emp-birthday") {
-        const birthdayEmps = emps.filter((e: any) => {
-          if (!e.status || e.status !== "active") return false;
-          // Need birth_date - refetch with it
-          return true;
-        });
-        // We need birth_date, so re-fetch
-        const { data: bdEmps } = await supabase
-          .from("employees")
-          .select("username, first_name, last_name, dept, position, birth_date, status, role")
-          .eq("status", "active");
-        const filtered = (bdEmps || []).filter((e: any) => {
+        const filtered = (d.bdEmps || []).filter((e: any) => {
           if ((e.role || "").toLowerCase() === "admin") return false;
           const parsed = parseThaiDate(e.birth_date);
           return parsed && parsed.month === monthNum;
@@ -740,47 +743,54 @@ const Reports = () => {
         return { month: mName, เข้าใหม่: newCount, ลาออก: resignCount };
       });
       setEmpHiringTrend(trendData);
-
-    } catch (err) {
-      console.error("Error fetching employee data:", err);
-    } finally {
-      setEmpLoading(false);
-    }
-  }, [filterYear, filterMonth, selectedReport]);
+    },
+    { enabled: isEmpReport },
+  );
+  const empLoading = isEmpReport && empQueryLoading;
 
   // --- Fetch Payroll data ---
-  const fetchPayrollData = useCallback(async () => {
-    setPayrollLoading(true);
-    try {
+  const { loading: payrollQueryLoading, refetch: fetchPayrollData } = usePageQuery(
+    ["reports-payroll", filterYear],
+    async () => {
+      const ceYear = parseInt(filterYear) - 543;
+      const [empsDataRaw, otDataRaw, customItems, periodsData] = unwrapAll(await Promise.all([
+        // Fetch active employees with salary
+        supabase
+          .from("employees")
+          .select("id, first_name, last_name, salary, tax_deductions, pvd_rate, children, children_after_2018, status, role")
+          .eq("status", "active"),
+        // Fetch approved OT for the year
+        supabase
+          .from("overtime_requests")
+          .select("date, hours, status")
+          .eq("status", "approved"),
+        // Fetch custom payroll items
+        supabase
+          .from("employee_custom_payroll_items")
+          .select("employee_id, amount, type, enabled")
+          .eq("enabled", true),
+        // Fetch published payroll periods for this year - only show months that have been published
+        supabase
+          .from("payroll_periods")
+          .select("month, status")
+          .eq("year", ceYear)
+          .eq("status", "published"),
+      ]));
+      return {
+        empsDataRaw: empsDataRaw as any[],
+        otDataRaw: otDataRaw as any[],
+        customItems: customItems as any[],
+        periodsData: periodsData as any[],
+      };
+    },
+    (d) => {
       const ceYear = parseInt(filterYear) - 543;
       const taxConfig: TaxConfig = { enabled: true, method: "progressive", flatRate: 5 };
 
-      // Fetch active employees with salary
-      const { data: empsDataRaw } = await supabase
-        .from("employees")
-        .select("id, first_name, last_name, salary, tax_deductions, pvd_rate, children, children_after_2018, status, role")
-        .eq("status", "active");
-      const empsData = (empsDataRaw || []).filter((e: any) => (e.role || "").toLowerCase() !== "admin");
-
-      // Fetch approved OT for the year
-      const { data: otDataRaw } = await supabase
-        .from("overtime_requests")
-        .select("date, hours, status")
-        .eq("status", "approved");
-
-      // Fetch custom payroll items
-      const { data: customItems } = await supabase
-        .from("employee_custom_payroll_items")
-        .select("employee_id, amount, type, enabled")
-        .eq("enabled", true);
-
-      // Fetch published payroll periods for this year - only show months that have been published
-      const { data: periodsData } = await supabase
-        .from("payroll_periods")
-        .select("month, status")
-        .eq("year", ceYear)
-        .eq("status", "published");
-      const publishedMonths = new Set((periodsData || []).map((p: any) => p.month));
+      const empsData = d.empsDataRaw.filter((e: any) => (e.role || "").toLowerCase() !== "admin");
+      const otDataRaw = d.otDataRaw;
+      const customItems = d.customItems;
+      const publishedMonths = new Set(d.periodsData.map((p: any) => p.month));
 
       const activeEmps = empsData || [];
       const allOt = (otDataRaw || []).filter((o: any) => {
@@ -848,35 +858,34 @@ const Reports = () => {
         };
       });
       setTaxCumulativeData(taxCumData);
-
-    } catch (err) {
-      console.error("Error fetching payroll data:", err);
-    } finally {
-      setPayrollLoading(false);
-    }
-  }, [filterYear]);
+    },
+    { enabled: isPayrollReport },
+  );
+  const payrollLoading = isPayrollReport && payrollQueryLoading;
 
   // --- Fetch Attendance data (real records) ---
-  const fetchAttendanceData = useCallback(async () => {
-    setAttLoading(true);
-    try {
+  const { loading: attQueryLoading, refetch: fetchAttendanceData } = usePageQuery(
+    ["reports-attendance", selectedReport, filterYear, filterMonth],
+    async () => {
       const ceYear = parseInt(filterYear) - 543;
-      const monthNum = monthIndexMap[filterMonth] || 1;
-
-      const { data, error } = await supabase
+      const res = await supabase
         .from("attendance_records")
         .select("*, employees!attendance_records_employee_id_fkey(first_name, last_name, username, dept)")
         .gte("date", `${ceYear}-01-01`)
         .lte("date", `${ceYear}-12-31`)
         .order("date", { ascending: false });
-      if (error) throw error;
+      if (res.error) throw new Error(res.error.message || "โหลดข้อมูลไม่สำเร็จ");
+      return { data: (res.data || []) as any[] };
+    },
+    (d) => {
+      const monthNum = monthIndexMap[filterMonth] || 1;
 
       const statusLabel: Record<string, string> = {
         present: "ปกติ", normal: "ปกติ", late: "สาย", absent: "ขาดงาน",
         leave: "ลางาน", dayoff: "วันหยุด", holiday: "วันหยุด",
       };
 
-      const all = (data || []).map((r: any) => {
+      const all = d.data.map((r: any) => {
         const emp = r.employees;
         const parsed = parseThaiDate(r.date);
         const toMin = (t: string) => {
@@ -939,25 +948,10 @@ const Reports = () => {
         byEmp.set(r.employeeId, cur);
       });
       setAttSummaryData(Array.from(byEmp.values()).sort((a, b) => a.name.localeCompare(b.name, "th")));
-    } catch (err) {
-      console.error("Error fetching attendance data:", err);
-    } finally {
-      setAttLoading(false);
-    }
-  }, [filterYear, filterMonth, selectedReport]);
-
-
-  useEffect(() => {
-    if (selectedReport === "leave-summary") fetchLeaveData();
-    else if (selectedReport === "leave-balance") fetchLeaveBalance();
-    else if (selectedReport === "leave-yearly") fetchLeaveYearly();
-    else if (selectedReport === "ot-summary" || selectedReport === "ot-by-type") fetchOtData();
-    else if (selectedReport === "ot-trend") fetchOtTrend();
-    else if (selectedReport?.startsWith("shift-")) fetchShiftData();
-    else if (selectedReport?.startsWith("emp-")) fetchEmployeeData();
-    else if (selectedReport?.startsWith("att-")) fetchAttendanceData();
-    else if (selectedReport?.startsWith("payroll-")) fetchPayrollData();
-  }, [selectedReport, fetchLeaveData, fetchLeaveBalance, fetchLeaveYearly, fetchOtData, fetchOtTrend, fetchShiftData, fetchEmployeeData, fetchAttendanceData, fetchPayrollData]);
+    },
+    { enabled: isAttReport },
+  );
+  const attLoading = isAttReport && attQueryLoading;
 
   const toggleCat = (cat: string) => setExpandedCats((p) => ({ ...p, [cat]: !p[cat] }));
 

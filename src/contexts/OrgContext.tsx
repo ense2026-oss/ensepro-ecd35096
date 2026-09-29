@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useMemo, useCallback, useRef, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { withRetry } from "@/lib/retry";
 
 /* ═══════════════════ Types ═══════════════════ */
 export interface Position {
@@ -138,8 +139,8 @@ export const OrgProvider = ({ children }: { children: ReactNode }) => {
   /* ─── Fetch ─── */
   const fetchAffiliations = useCallback(async () => {
     const [affRes, posRes] = await Promise.all([
-      supabase.from("affiliations").select("*").order("sort_order"),
-      supabase.from("positions").select("*").order("sort_order"),
+      withRetry(() => supabase.from("affiliations").select("*").order("sort_order")),
+      withRetry(() => supabase.from("positions").select("*").order("sort_order")),
     ]);
 
     const affs = (affRes.data || []) as { id: string; name: string; sort_order: number; parent_org_level_id: string | null }[];
@@ -157,7 +158,7 @@ export const OrgProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const fetchOrgLevels = useCallback(async () => {
-    const { data } = await supabase.from("org_levels").select("*").order("sort_order");
+    const { data } = await withRetry(() => supabase.from("org_levels").select("*").order("sort_order"));
     const flat = (data || []) as DbOrgLevel[];
     setOrgLevelsFlat(flat);
     setOrgLevels(buildOrgLevelTree(flat));

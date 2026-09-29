@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useCallback, useEffect, useRef, Re
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { notifyApprovers, getApprovalTiers } from "@/utils/notifications";
+import { withRetry } from "@/lib/retry";
 
 export interface TimeEditRequest {
   id: string;
@@ -86,10 +87,12 @@ export const TimeEditProvider = ({ children }: { children: ReactNode }) => {
 
   // Fetch time edit requests
   const fetchEditRequests = useCallback(async () => {
-    const { data } = await supabase
-      .from("time_edit_requests")
-      .select("*, employees(first_name, last_name)")
-      .order("created_at", { ascending: false });
+    const { data } = await withRetry(() =>
+      supabase
+        .from("time_edit_requests")
+        .select("*, employees(first_name, last_name)")
+        .order("created_at", { ascending: false })
+    );
     if (data) {
       setEditRequests(data.map((r: any) => ({
         id: r.id,
@@ -114,11 +117,13 @@ export const TimeEditProvider = ({ children }: { children: ReactNode }) => {
   // Fetch notifications
   const fetchNotifications = useCallback(async () => {
     if (!user) return;
-    const { data } = await supabase
-      .from("app_notifications")
-      .select("*")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false });
+    const { data } = await withRetry(() =>
+      supabase
+        .from("app_notifications")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+    );
     if (data) {
       setNotifications(data.map((n: any) => ({
         id: n.id,

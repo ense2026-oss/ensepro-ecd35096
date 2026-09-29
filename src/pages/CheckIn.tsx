@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   MapPin, Clock, CheckCircle, XCircle, Navigation, Loader2,
@@ -13,6 +13,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogBody, DialogFooter } from "@/components/ui/dialog";
 import { useGeolocation, findNearestLocation, type OfficeLocation, type NearestResult } from "@/utils/geo";
 import { supabase } from "@/integrations/supabase/client";
+import { usePageQuery } from "@/hooks/usePageQuery";
 
 
 // Shared config key — MUST match LocationsSettings.tsx
@@ -123,109 +124,132 @@ const CheckIn = () => {
   const [legacyShift, setLegacyShift] = useState<string | null>(null);
   const [todayShift, setTodayShift] = useState<typeof currentShift>(currentShift);
   const [officeLocations, setOfficeLocations] = useState<OfficeLocation[]>([]);
-  const [locationsLoaded, setLocationsLoaded] = useState(false);
+
+  const todayStr = (() => {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, "0");
+    const d = String(now.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+  })();
+
+  // Cached via React Query: revisiting this page renders instantly from cache and
+  // only refetches in the background; 504s are retried before showing an error.
 
   // Load configured office locations (geofence areas) from settings
-  useEffect(() => {
-    const loadLocations = async () => {
-      const { data } = await supabase
+  const { loading: locationsLoading } = usePageQuery(
+    ["checkin-locations"],
+    async () => {
+      const res = await supabase
         .from("company_settings")
         .select("value")
         .eq("key", LOCATIONS_SETTINGS_KEY)
         .maybeSingle();
-      if (data?.value && Array.isArray(data.value)) {
-        setOfficeLocations(data.value as unknown as OfficeLocation[]);
-      }
-      setLocationsLoaded(true);
-    };
-    loadLocations();
-  }, []);
-
+      if (res.error) throw new Error(res.error.message || "โหลดข้อมูลไม่สำเร็จ");
+      const value = res.data?.value;
+      return { locations: (value && Array.isArray(value) ? (value as unknown as OfficeLocation[]) : null) };
+    },
+    (d) => {
+      if (d.locations) setOfficeLocations(d.locations);
+    },
+  );
+  const locationsLoaded = !locationsLoading;
 
   // Find employee id for current user
-  useEffect(() => {
-    if (!currentUser) return;
-    const findEmpId = async () => {
-      const { data } = await supabase
+  usePageQuery(
+    ["checkin-employee", currentUser?.id ?? null],
+    async () => {
+      const res = await supabase
         .from("employees")
         .select("id, shift")
-        .eq("user_id", currentUser.id)
+        .eq("user_id", currentUser!.id)
         .maybeSingle();
-      if (data) {
-        setEmployeeId(data.id);
-        setLegacyShift((data as any).shift || null);
+      if (res.error) throw new Error(res.error.message || "โหลดข้อมูลไม่สำเร็จ");
+      return { id: (res.data?.id as string | undefined) ?? null, shift: ((res.data as any)?.shift as string | undefined) || null };
+    },
+    (d) => {
+      if (d.id) {
+        setEmployeeId(d.id);
+        setLegacyShift(d.shift);
       }
-    };
-    findEmpId();
-  }, [currentUser]);
+    },
+    { enabled: !!currentUser },
+  );
 
   // Fetch check-in history
-  const fetchHistory = useCallback(async () => {
-    if (!employeeId) return;
-    const { data } = await supabase
-      .from("check_in_records")
-      .select("*")
-      .eq("employee_id", employeeId)
-      .order("date", { ascending: false });
-    if (data) {
-      setHistory(data.map((r: any) => ({
-        id: r.id,
-        employeeId: r.employee_id,
-        date: r.date,
-        checkIn: r.check_in,
-        checkOut: r.check_out,
-        location: r.location,
-        withinRadius: r.within_radius,
-        source: r.source as "gps" | "face_scan",
-        remark: r.remark,
-        otActualIn: r.ot_actual_in,
-        otActualOut: r.ot_actual_out,
-      })));
-    }
-  }, [employeeId]);
+  const { refetch: fetchHistory } = usePageQuery(
+    ["checkin-history", employeeId],
+    async () => {
+      const res = await supabase
+        .from("check_in_records")
+        .select("*")
+        .eq("employee_id", employeeId!)
+        .order("date", { ascending: false });
+      if (res.error) throw new Error(res.error.message || "โหลดข้อมูลไม่สำเร็จ");
+      return {
+        history: (res.data || []).map((r: any) => ({
+          id: r.id,
+          employeeId: r.employee_id,
+          date: r.date,
+          checkIn: r.check_in,
+          checkOut: r.check_out,
+          location: r.location,
+          withinRadius: r.within_radius,
+          source: r.source as "gps" | "face_scan",
+          remark: r.remark,
+          otActualIn: r.ot_actual_in,
+          otActualOut: r.ot_actual_out,
+        })) as CheckInRecord[],
+      };
+    },
+    (d) => { setHistory(d.history); },
+    { enabled: !!employeeId },
+  );
 
   // Fetch OT records (overtime_requests) for this employee
-  const fetchOtRecords = useCallback(async () => {
-    if (!employeeId) return;
-    const { data } = await supabase
-      .from("overtime_requests")
-      .select("id, date, start_time, end_time, status")
-      .eq("employee_id", employeeId)
-      .order("date", { ascending: false });
-    if (data) {
-      setOtRecords(data.map((r: any) => ({
-        id: r.id,
-        date: r.date,
-        startTime: r.start_time,
-        endTime: r.end_time,
-        status: r.status as "pending" | "approved" | "rejected",
-      })));
-    }
-  }, [employeeId]);
-
-  useEffect(() => {
-    fetchHistory();
-    fetchOtRecords();
-  }, [fetchHistory, fetchOtRecords]);
+  const { refetch: fetchOtRecords } = usePageQuery(
+    ["checkin-ot-records", employeeId],
+    async () => {
+      const res = await supabase
+        .from("overtime_requests")
+        .select("id, date, start_time, end_time, status")
+        .eq("employee_id", employeeId!)
+        .order("date", { ascending: false });
+      if (res.error) throw new Error(res.error.message || "โหลดข้อมูลไม่สำเร็จ");
+      return {
+        otRecords: (res.data || []).map((r: any) => ({
+          id: r.id,
+          date: r.date,
+          startTime: r.start_time,
+          endTime: r.end_time,
+          status: r.status as "pending" | "approved" | "rejected",
+        })) as OTRecord[],
+      };
+    },
+    (d) => { setOtRecords(d.otRecords); },
+    { enabled: !!employeeId },
+  );
 
   // Fetch this employee's shift assignment for today
-  useEffect(() => {
-    if (!employeeId) return;
-    const fetchShift = async () => {
-      const now = new Date();
-      const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-      const { data } = await supabase
+  usePageQuery(
+    ["checkin-today-shift", employeeId, legacyShift, todayStr],
+    async () => {
+      const res = await supabase
         .from("shift_assignments")
         .select("start_date, end_date, shifts(name, start_time, end_time)")
-        .eq("employee_id", employeeId)
-        .lte("start_date", today)
-        .gte("end_date", today)
+        .eq("employee_id", employeeId!)
+        .lte("start_date", todayStr)
+        .gte("end_date", todayStr)
         .order("start_date", { ascending: false })
         .limit(1)
         .maybeSingle();
-      const s = (data as any)?.shifts;
-      if (s) {
-        setTodayShift({ name: s.name, start: s.start_time, end: s.end_time });
+      if (res.error) throw new Error(res.error.message || "โหลดข้อมูลไม่สำเร็จ");
+      const s = (res.data as any)?.shifts;
+      return { shift: s ? { name: s.name as string, start: s.start_time as string, end: s.end_time as string } : null };
+    },
+    (d) => {
+      if (d.shift) {
+        setTodayShift(d.shift);
         return;
       }
       // Fallback: parse the employee's legacy shift text e.g. "กะเช้า 08:00-17:00"
@@ -238,9 +262,9 @@ const CheckIn = () => {
         }
       }
       setTodayShift(currentShift);
-    };
-    fetchShift();
-  }, [employeeId, legacyShift]);
+    },
+    { enabled: !!employeeId },
+  );
 
   // Realtime: refresh OT records when overtime_requests change
   useEffect(() => {
@@ -264,15 +288,6 @@ const CheckIn = () => {
 
   // Strict geofence: must have a configured area AND be within its radius.
   const canCheckIn = hasActiveLocations && nearest?.withinRadius === true;
-
-
-  const todayStr = (() => {
-    const now = new Date();
-    const y = now.getFullYear();
-    const m = String(now.getMonth() + 1).padStart(2, "0");
-    const d = String(now.getDate()).padStart(2, "0");
-    return `${y}-${m}-${d}`;
-  })();
 
   const todayRecord = history.find((r) => r.date === todayStr);
   const todayCheckIn = todayRecord?.checkIn && todayRecord.checkIn !== "-" ? todayRecord.checkIn : null;

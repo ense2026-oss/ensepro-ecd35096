@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { usePageQuery } from "@/hooks/usePageQuery";
 
 export type PayrollPeriodStatus = "draft" | "published";
 
@@ -60,41 +61,44 @@ export interface PayslipRow {
 export function usePayrollPeriod(year: number, month: number) {
   const [period, setPeriod] = useState<PayrollPeriod | null>(null);
   const [payslips, setPayslips] = useState<PayslipRow[]>([]);
-  const [loading, setLoading] = useState(true);
 
-  const refetch = useCallback(async () => {
-    setLoading(true);
-    const { data: per } = await supabase
-      .from("payroll_periods")
-      .select("*")
-      .eq("year", year)
-      .eq("month", month)
-      .maybeSingle();
-    if (!per) {
-      setPeriod(null);
-      setPayslips([]);
-      setLoading(false);
-      return;
-    }
-    setPeriod(per as PayrollPeriod);
-    const { data: rows } = await supabase
-      .from("payslips")
-      .select("*")
-      .eq("period_id", per.id);
-    setPayslips((rows as any as PayslipRow[]) || []);
-    setLoading(false);
-  }, [year, month]);
-
-  useEffect(() => {
-    refetch();
-  }, [refetch]);
+  // Cached via React Query: revisiting a period renders instantly from cache and
+  // only refetches in the background; 504s are retried before showing an error.
+  const { loading, refetch } = usePageQuery(
+    ["payroll-period", year, month],
+    async () => {
+      const perRes = await supabase
+        .from("payroll_periods")
+        .select("*")
+        .eq("year", year)
+        .eq("month", month)
+        .maybeSingle();
+      if (perRes.error) throw new Error(perRes.error.message || "โหลดข้อมูลไม่สำเร็จ");
+      const per = perRes.data;
+      if (!per) return { period: null as PayrollPeriod | null, payslips: [] as PayslipRow[] };
+      const rowsRes = await supabase
+        .from("payslips")
+        .select("*")
+        .eq("period_id", per.id);
+      if (rowsRes.error) throw new Error(rowsRes.error.message || "โหลดข้อมูลไม่สำเร็จ");
+      return {
+        period: per as PayrollPeriod,
+        payslips: ((rowsRes.data as any as PayslipRow[]) || []),
+      };
+    },
+    (d) => {
+      setPeriod(d.period);
+      setPayslips(d.payslips);
+    },
+  );
 
   // realtime
   useEffect(() => {
+    const onChange = () => { refetch(); };
     const channel = supabase
       .channel(`payroll-${year}-${month}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "payroll_periods" }, refetch)
-      .on("postgres_changes", { event: "*", schema: "public", table: "payslips" }, refetch)
+      .on("postgres_changes", { event: "*", schema: "public", table: "payroll_periods" }, onChange)
+      .on("postgres_changes", { event: "*", schema: "public", table: "payslips" }, onChange)
       .subscribe();
     return () => {
       supabase.removeChannel(channel);

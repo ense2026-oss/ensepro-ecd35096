@@ -22,6 +22,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { usePayrollPeriod, type PayslipRow } from "@/hooks/usePayrollPeriod";
+import { usePageQuery, unwrapAll } from "@/hooks/usePageQuery";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/contexts/PermissionsContext";
 import { usePayrollConfig, DEFAULT_PAYROLL_CONFIG, type PayrollConfig } from "@/utils/payrollConfig";
@@ -442,104 +443,99 @@ const Payroll = () => {
   // Real attendance data
   const [attendanceMap, setAttendanceMap] = useState<Record<string, AttendanceStats>>({});
   const [overrideMap, setOverrideMap] = useState<Record<string, PayrollOverride>>({});
-  const [loadingData, setLoadingData] = useState(true);
 
   const activeEmployees = useMemo(() => employees.filter((e) => e.status === "active"), [employees]);
 
-  // Fetch real attendance, leave, OT data for selected month
-  useEffect(() => {
-    const fetchPayrollData = async () => {
-      setLoadingData(true);
+  // Fetch real attendance, leave, OT data for selected month.
+  // Cached via React Query: revisiting a month renders instantly from cache and
+  // only refetches in the background; 504s are retried before showing an error.
+  const hasActiveEmployees = activeEmployees.length > 0;
+  const { loading: attendanceLoading } = usePageQuery(
+    ["payroll", selectedYear, selectedMonth],
+    async () => {
       const { startDate, endDate } = getMonthDateRange(selectedYear, selectedMonth);
+      const [attRows, leaveRows, otRows] = unwrapAll(await Promise.all([
+        supabase.from("attendance_records").select("employee_id, status, late, ot_hours, date")
+          .gte("date", startDate).lte("date", endDate),
+        supabase.from("leave_requests").select("employee_id, days, status, date_from, date_to")
+          .or(`date_from.lte.${endDate},date_to.gte.${startDate}`)
+          .in("status", ["approved"]),
+        supabase.from("overtime_requests").select("employee_id, hours, status")
+          .gte("date", startDate).lte("date", endDate)
+          .eq("status", "approved"),
+      ]));
+      return { attRows: attRows as any[], leaveRows: leaveRows as any[], otRows: otRows as any[] };
+    },
+    (d) => {
+      const map: Record<string, AttendanceStats> = {};
 
-      try {
-        const [attRes, leaveRes, otRes] = await Promise.all([
-          supabase.from("attendance_records").select("employee_id, status, late, ot_hours, date")
-            .gte("date", startDate).lte("date", endDate),
-          supabase.from("leave_requests").select("employee_id, days, status, date_from, date_to")
-            .or(`date_from.lte.${endDate},date_to.gte.${startDate}`)
-            .in("status", ["approved"]),
-          supabase.from("overtime_requests").select("employee_id, hours, status")
-            .gte("date", startDate).lte("date", endDate)
-            .eq("status", "approved"),
-        ]);
+      // Initialize all active employees
+      activeEmployees.forEach((emp) => {
+        map[emp.id] = { workDays: 0, otHours: 0, lateDays: 0, absentDays: 0, leaveDays: 0 };
+      });
 
-        const map: Record<string, AttendanceStats> = {};
+      // Process attendance records
+      d.attRows.forEach((rec: any) => {
+        if (!map[rec.employee_id]) map[rec.employee_id] = { workDays: 0, otHours: 0, lateDays: 0, absentDays: 0, leaveDays: 0 };
+        const stats = map[rec.employee_id];
+        if (rec.status === "present" || rec.status === "late") {
+          stats.workDays++;
+        } else if (rec.status === "absent") {
+          stats.absentDays++;
+        }
+        if (rec.late) stats.lateDays++;
+        stats.otHours += Number(rec.ot_hours) || 0;
+      });
 
-        // Initialize all active employees
-        activeEmployees.forEach((emp) => {
-          map[emp.id] = { workDays: 0, otHours: 0, lateDays: 0, absentDays: 0, leaveDays: 0 };
-        });
+      // Process approved leave
+      d.leaveRows.forEach((lr: any) => {
+        if (!map[lr.employee_id]) return;
+        map[lr.employee_id].leaveDays += Number(lr.days) || 0;
+      });
 
-        // Process attendance records
-        (attRes.data || []).forEach((rec: any) => {
-          if (!map[rec.employee_id]) map[rec.employee_id] = { workDays: 0, otHours: 0, lateDays: 0, absentDays: 0, leaveDays: 0 };
-          const stats = map[rec.employee_id];
-          if (rec.status === "present" || rec.status === "late") {
-            stats.workDays++;
-          } else if (rec.status === "absent") {
-            stats.absentDays++;
-          }
-          if (rec.late) stats.lateDays++;
-          stats.otHours += Number(rec.ot_hours) || 0;
-        });
+      // Process approved OT (add to otHours if not already from attendance)
+      d.otRows.forEach((ot: any) => {
+        if (!map[ot.employee_id]) return;
+        // Only add OT hours from approved OT requests if attendance doesn't track them
+        const attOt = map[ot.employee_id].otHours;
+        if (attOt === 0) {
+          map[ot.employee_id].otHours += Number(ot.hours) || 0;
+        }
+      });
 
-        // Process approved leave
-        (leaveRes.data || []).forEach((lr: any) => {
-          if (!map[lr.employee_id]) return;
-          map[lr.employee_id].leaveDays += Number(lr.days) || 0;
-        });
+      setAttendanceMap(map);
+    },
+    { enabled: hasActiveEmployees },
+  );
+  // Disabled queries report pending; only show loading once we actually fetch.
+  const loadingData = hasActiveEmployees && attendanceLoading;
 
-        // Process approved OT (add to otHours if not already from attendance)
-        (otRes.data || []).forEach((ot: any) => {
-          if (!map[ot.employee_id]) return;
-          // Only add OT hours from approved OT requests if attendance doesn't track them
-          const attOt = map[ot.employee_id].otHours;
-          if (attOt === 0) {
-            map[ot.employee_id].otHours += Number(ot.hours) || 0;
-          }
-        });
-
-        setAttendanceMap(map);
-      } catch (err) {
-        console.error("Failed to fetch payroll data:", err);
-      } finally {
-        setLoadingData(false);
-      }
-    };
-
-    if (activeEmployees.length > 0) {
-      fetchPayrollData();
-    } else {
-      setLoadingData(false);
-    }
-  }, [activeEmployees, selectedMonth, selectedYear]);
-
-  // Fetch overrides for the selected month
-  const fetchOverrides = useCallback(async () => {
-    const { data, error } = await supabase
-      .from("payroll_overrides")
-      .select("*")
-      .eq("year", selectedYear)
-      .eq("month", selectedMonth);
-    if (error) {
-      console.error("Failed to load payroll overrides", error);
-      return;
-    }
-    const m: Record<string, PayrollOverride> = {};
-    (data || []).forEach((row: any) => {
-      m[row.employee_id] = {
-        base_salary: row.base_salary,
-        ot_pay: row.ot_pay,
-        diligence: row.diligence,
-        ssf: row.ssf,
-        tax: row.tax,
-      };
-    });
-    setOverrideMap(m);
-  }, [selectedYear, selectedMonth]);
-
-  useEffect(() => { fetchOverrides(); }, [fetchOverrides]);
+  // Fetch overrides for the selected month (cached per month, see above)
+  const { refetch: fetchOverrides } = usePageQuery(
+    ["payroll-overrides", selectedYear, selectedMonth],
+    async () => {
+      const res = await supabase
+        .from("payroll_overrides")
+        .select("*")
+        .eq("year", selectedYear)
+        .eq("month", selectedMonth);
+      if (res.error) throw new Error(res.error.message || "โหลดข้อมูลไม่สำเร็จ");
+      return { rows: (res.data || []) as any[] };
+    },
+    (d) => {
+      const m: Record<string, PayrollOverride> = {};
+      d.rows.forEach((row: any) => {
+        m[row.employee_id] = {
+          base_salary: row.base_salary,
+          ot_pay: row.ot_pay,
+          diligence: row.diligence,
+          ssf: row.ssf,
+          tax: row.tax,
+        };
+      });
+      setOverrideMap(m);
+    },
+  );
 
   const setOverrideField = useCallback(async (
     employeeId: string,

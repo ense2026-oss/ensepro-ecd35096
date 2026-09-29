@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { withRetry } from "@/lib/retry";
 
 const DEFAULT_MODULES: Record<string, boolean> = {
   employees: true,
@@ -19,21 +20,20 @@ export function useModuleSettings() {
   const [modules, setModules] = useState<Record<string, boolean>>(DEFAULT_MODULES);
   const [loading, setLoading] = useState(true);
 
-  const fetchSettings = useCallback(async (retriesLeft = 2): Promise<void> => {
-    const { data, error } = await supabase
-      .from("company_settings")
-      .select("value")
-      .eq("key", "module_settings")
-      .maybeSingle();
+  const fetchSettings = useCallback(async (): Promise<void> => {
+    // Transient network/auth blips (incl. Supabase 504 "upstream request timeout",
+    // which arrives as `error`) shouldn't silently fall back to "everything
+    // enabled" — withRetry re-runs with exponential backoff before giving up.
+    const { data, error } = await withRetry(() =>
+      supabase
+        .from("company_settings")
+        .select("value")
+        .eq("key", "module_settings")
+        .maybeSingle()
+    );
 
     if (error) {
       console.error("Failed to load module settings", error);
-      // Transient network/auth blips shouldn't silently fall back to "everything enabled" —
-      // retry a couple of times before giving up.
-      if (retriesLeft > 0) {
-        await new Promise((r) => setTimeout(r, 800));
-        return fetchSettings(retriesLeft - 1);
-      }
       setLoading(false);
       return;
     }

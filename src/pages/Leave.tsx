@@ -9,6 +9,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useEmployees } from "@/contexts/EmployeeContext";
 import { usePermissions } from "@/contexts/PermissionsContext";
 import { supabase } from "@/integrations/supabase/client";
+import { usePageQuery, unwrapAll } from "@/hooks/usePageQuery";
 import { notifyApprovers, notifyRequester, getApprovalTiers, notifyTierApprover } from "@/utils/notifications";
 import {
   AlertDialog,
@@ -52,32 +53,36 @@ const Leave = () => {
 
   // Fetch all active employee names for substitute dropdown (bypasses scope limitation)
   const [allEmployeeNames, setAllEmployeeNames] = useState<string[]>([]);
-  useEffect(() => {
-    const fetchSubstitutes = async () => {
-      const { data } = await supabase.rpc("get_active_employee_names");
-      if (data) {
-        setAllEmployeeNames(data.map((e: any) => e.full_name));
-      }
-    };
-    fetchSubstitutes();
-  }, []);
+  usePageQuery(
+    ["leave-substitutes"],
+    async () => {
+      const [names] = unwrapAll([await supabase.rpc("get_active_employee_names")]);
+      return { names: (names as any[]).map((e: any) => e.full_name as string) };
+    },
+    (d) => { setAllEmployeeNames(d.names); },
+  );
 
   const [leaveTypes, setLeaveTypes] = useState<LeaveType[]>([]);
   const [leaves, setLeaves] = useState<LeaveRecord[]>([]);
   const [filterStatus, setFilterStatus] = useState("all");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [calendarOpen, setCalendarOpen] = useState(false);
-  const [loading, setLoading] = useState(true);
   const [editingRecord, setEditingRecord] = useState<LeaveRecord | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
-  const fetchLeaveTypes = useCallback(async () => {
-    const { data } = await supabase
-      .from("leave_types")
-      .select("*")
-      .order("sort_order");
-    if (data) {
-      setLeaveTypes(data.map((lt: any) => ({
+  // Cached via React Query: revisiting this page renders instantly from cache and
+  // only refetches in the background; 504s are retried before showing an error.
+  const { refetch: fetchLeaves } = usePageQuery(
+    ["leave", currentUser?.employeeId ?? null],
+    async () => {
+      const [types, reqs] = unwrapAll(await Promise.all([
+        supabase.from("leave_types").select("*").order("sort_order"),
+        supabase
+          .from("leave_requests")
+          .select("*, employees(first_name, last_name, dept, photo_url)")
+          .order("created_at", { ascending: false }),
+      ]));
+      const leaveTypes: LeaveType[] = (types as any[]).map((lt: any) => ({
         id: lt.id,
         name: lt.name,
         quota: lt.quota,
@@ -85,17 +90,8 @@ const Leave = () => {
         color: lt.color,
         requireDoc: lt.require_doc,
         docRequiredMinDays: lt.doc_required_min_days ?? 1,
-      })));
-    }
-  }, []);
-
-  const fetchLeaves = useCallback(async () => {
-    const { data } = await supabase
-      .from("leave_requests")
-      .select("*, employees(first_name, last_name, dept, photo_url)")
-      .order("created_at", { ascending: false });
-    if (data) {
-      const records: LeaveRecord[] = data.map((r: any) => ({
+      }));
+      const records: LeaveRecord[] = (reqs as any[]).map((r: any) => ({
         id: r.id,
         employeeId: r.employee_id,
         name: r.employees ? `${r.employees.first_name} ${r.employees.last_name}` : "",
@@ -113,24 +109,22 @@ const Leave = () => {
         approvedTiers: r.approved_tiers || 0,
         totalTiers: r.total_tiers || 1,
       }));
-      setLeaves(records);
+      return { leaveTypes, records };
+    },
+    (d) => {
+      setLeaves(d.records);
 
       // Quota cards always show current user's own usage
-      const myRecords = records.filter((r) => r.employeeId === currentUser?.employeeId);
+      const myRecords = d.records.filter((r) => r.employeeId === currentUser?.employeeId);
 
-      setLeaveTypes((prev) => prev.map((lt) => {
+      setLeaveTypes(d.leaveTypes.map((lt) => {
         const used = myRecords
           .filter((r) => r.type === lt.name && r.status !== "rejected")
           .reduce((sum, r) => sum + r.days, 0);
         return { ...lt, used };
       }));
-    }
-    setLoading(false);
-  }, [scope, currentUser?.employeeId]);
-
-  useEffect(() => {
-    fetchLeaveTypes().then(() => fetchLeaves());
-  }, [fetchLeaveTypes, fetchLeaves]);
+    },
+  );
 
   // Realtime subscription for leave_requests
   useEffect(() => {
