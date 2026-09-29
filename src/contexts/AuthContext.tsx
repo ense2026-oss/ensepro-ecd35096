@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { User, Session } from "@supabase/supabase-js";
+import { useQueryClient } from "@tanstack/react-query";
+import { clearPersistedQueryCache } from "@/lib/queryPersist";
 
 type AppRole = "admin" | "hr" | "manager" | "employee" | "accountant" | "executive";
 
@@ -90,6 +92,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [employeeData, setEmployeeData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [profileReady, setProfileReady] = useState(false);
+  const queryClient = useQueryClient();
 
   const fetchProfileAndRole = useCallback(async (userId: string) => {
     try {
@@ -239,12 +242,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setEmployeeData(null);
     setProfileReady(false);
     clearAuthCache();
+    // Drop cached page data (memory + the persisted localStorage snapshot) so the
+    // next account on this browser never sees the previous user's data.
+    queryClient.clear();
+    clearPersistedQueryCache();
     try {
       await supabase.auth.signOut();
     } catch (err) {
       console.warn("signOut error (state already cleared):", err);
     }
-  }, []);
+  }, [queryClient]);
 
 
   // Build currentUser: available as soon as user exists (with fallback if profile not loaded yet)

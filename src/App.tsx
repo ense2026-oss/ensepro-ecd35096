@@ -1,7 +1,9 @@
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient } from "@tanstack/react-query";
+import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
+import { queryPersister, QUERY_CACHE_MAX_AGE, QUERY_CACHE_VERSION } from "@/lib/queryPersist";
 import { BrowserRouter, Routes, Route, Navigate, useSearchParams } from "react-router-dom";
 import { EmployeeProvider } from "@/contexts/EmployeeContext";
 import { BrandingProvider } from "@/contexts/BrandingContext";
@@ -46,7 +48,7 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 30_000, // a revisit inside 30s shows cache with no request at all; after that: instant cache + silent background refetch
-      gcTime: 15 * 60_000, // keep cache 15 min so returning to a page is instant
+      gcTime: QUERY_CACHE_MAX_AGE, // must be >= the persisted snapshot's maxAge so restored queries aren't garbage-collected on the spot
       refetchOnWindowFocus: false,
       refetchOnReconnect: true,
       // Supabase intermittently answers 504 "upstream request timeout" under burst
@@ -143,7 +145,12 @@ const AppRoutes = () => (
 );
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
+  // Restores page data from localStorage on boot (so F5 doesn't reload everything)
+  // and keeps the snapshot updated while the app runs.
+  <PersistQueryClientProvider
+    client={queryClient}
+    persistOptions={{ persister: queryPersister, maxAge: QUERY_CACHE_MAX_AGE, buster: QUERY_CACHE_VERSION }}
+  >
     <TooltipProvider delayDuration={300} skipDelayDuration={0}>
       <Toaster />
       <Sonner />
@@ -158,7 +165,7 @@ const App = () => (
         </AuthProvider>
       </BrandingProvider>
     </TooltipProvider>
-  </QueryClientProvider>
+  </PersistQueryClientProvider>
 );
 
 export default App;
