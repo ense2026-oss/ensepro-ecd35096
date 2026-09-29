@@ -6,12 +6,14 @@ import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/contexts/PermissionsContext";
 import { useToast } from "@/hooks/use-toast";
 import { useDragScroll } from "@/hooks/useDragScroll";
+import { useDeferredMount } from "@/hooks/useDeferredMount";
 import { usePageQuery, unwrapAll } from "@/hooks/usePageQuery";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import SearchableSelect from "@/components/ui/searchable-select";
 import { ThaiDatePicker } from "@/components/ui/thai-date-picker";
 import EmployeeAvatar from "@/components/ui/employee-avatar";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import { Anchor as PopoverAnchor } from "@radix-ui/react-popover";
 import { cn } from "@/lib/utils";
 
 interface OTEntry {
@@ -85,14 +87,6 @@ const isDayoffOn = (empId: string, dateIso: string, dow: number, patterns: Patte
   return patterns.some((p) => p.employee_id === empId && isPatternActive(p, dateIso) && p.weekdays.includes(dow));
 };
 
-// Returns the shift assigned to an employee on a date (day override > bulk)
-const getShiftIdFor = (empId: string, dateIso: string, assignments: ShiftAssignment[]): string | null => {
-  const day = assignments.find((a) => a.assignment_type === "day" && a.employee_id === empId && a.start_date === dateIso);
-  if (day) return day.shift_id;
-  const bulk = assignments.find((a) => a.assignment_type !== "day" && a.employee_id === empId && a.start_date <= dateIso && a.end_date >= dateIso);
-  return bulk ? bulk.shift_id : null;
-};
-
 const fmtThaiDate = (iso: string) => {
   if (!iso) return "-";
   const [y, m, d] = iso.split("-");
@@ -132,6 +126,12 @@ const OvertimeManagement = () => {
   const [activeTab, setActiveTab] = useState("calendar");
   const [selectedEmpId, setSelectedEmpId] = useState<string>("");
   const [empColCollapsed, setEmpColCollapsed] = useState(false);
+  // The employees × days grid renders one frame after the route commits so the
+  // navigation (sidebar highlight, header, filters) is instant.
+  const gridReady = useDeferredMount();
+  // One shared cell-editor popover for the whole grid (instead of one Radix
+  // Popover per cell), anchored to the clicked cell button.
+  const [openCell, setOpenCell] = useState<{ empId: string; iso: string; anchor: HTMLElement } | null>(null);
 
   useEffect(() => {
     if (isEmployeeRole && employeeId) setSelectedEmpId(employeeId);
@@ -197,11 +197,87 @@ const OvertimeManagement = () => {
     shifts.forEach((s) => m.set(s.id, s));
     return m;
   }, [shifts]);
+  // ---- Indexed lookups (built once per data change; used instead of per-cell array scans) ----
+  // OT entries per employee+date, in original array order (same as entries.filter).
+  const otByEmpDate = useMemo(() => {
+    const m = new Map<string, OTEntry[]>();
+    for (const e of entries) {
+      const k = `${e.employee_id}|${e.date}`;
+      const list = m.get(k);
+      if (list) list.push(e); else m.set(k, [e]);
+    }
+    return m;
+  }, [entries]);
+  // First override per employee+date wins (same as overrides.find).
+  const overridesByEmpDate = useMemo(() => {
+    const m = new Map<string, Override>();
+    for (const o of overrides) {
+      const k = `${o.employee_id}|${o.date}`;
+      if (!m.has(k)) m.set(k, o);
+    }
+    return m;
+  }, [overrides]);
+  const patternsByEmp = useMemo(() => {
+    const m = new Map<string, Pattern[]>();
+    for (const p of patterns) {
+      const list = m.get(p.employee_id);
+      if (list) list.push(p); else m.set(p.employee_id, [p]);
+    }
+    return m;
+  }, [patterns]);
+  // Day-type assignments: first match per employee+start_date wins (same as assignments.find).
+  const dayAssignByEmpDate = useMemo(() => {
+    const m = new Map<string, ShiftAssignment>();
+    for (const a of assignments) {
+      if (a.assignment_type !== "day") continue;
+      const k = `${a.employee_id}|${a.start_date}`;
+      if (!m.has(k)) m.set(k, a);
+    }
+    return m;
+  }, [assignments]);
+  // Non-day (bulk) assignments per employee, in original array order so .find picks the same one.
+  const bulkByEmp = useMemo(() => {
+    const m = new Map<string, ShiftAssignment[]>();
+    for (const a of assignments) {
+      if (a.assignment_type === "day") continue;
+      const list = m.get(a.employee_id);
+      if (list) list.push(a); else m.set(a.employee_id, [a]);
+    }
+    return m;
+  }, [assignments]);
+
+  // Indexed equivalent of isDayoffOn (identical semantics: override > company holiday > pattern).
+  const isDayoffIndexed = (empId: string, dateIso: string, dow: number): boolean => {
+    const ov = overridesByEmpDate.get(`${empId}|${dateIso}`);
+    if (ov) return ov.is_dayoff;
+    if (holidaySet.has(dateIso)) return true;
+    const ps = patternsByEmp.get(empId);
+    return !!ps && ps.some((p) => isPatternActive(p, dateIso) && p.weekdays.includes(dow));
+  };
+  // Indexed equivalent of getShiftIdFor (day override > first matching bulk assignment).
+  const shiftIdFor = (empId: string, dateIso: string): string | null => {
+    const day = dayAssignByEmpDate.get(`${empId}|${dateIso}`);
+    if (day) return day.shift_id;
+    const bulk = bulkByEmp.get(empId)?.find((a) => a.start_date <= dateIso && a.end_date >= dateIso);
+    return bulk ? bulk.shift_id : null;
+  };
   const shiftFor = (empId: string, dateIso: string): Shift | null => {
-    const id = getShiftIdFor(empId, dateIso, assignments);
+    const id = shiftIdFor(empId, dateIso);
     return id ? shiftMap.get(id) || null : null;
   };
   const monthDays = useMemo(() => getMonthDays(year, month), [year, month]);
+  // Per-day values computed once per month (outside the employee loop).
+  const dayInfos = useMemo(() => monthDays.map((d) => {
+    const dow = d.getDay();
+    const iso = isoDate(d);
+    return {
+      d, iso, dow,
+      dayNum: d.getDate(),
+      isWeekend: dow === 0 || dow === 6,
+      isHoliday: holidaySet.has(iso),
+      holidayName: holidayNameMap.get(iso),
+    };
+  }), [monthDays, holidaySet, holidayNameMap]);
 
   const departments = useMemo(() => {
     const set = new Set<string>();
@@ -227,7 +303,7 @@ const OvertimeManagement = () => {
 
   // Returns the OT entries for an employee on a date
   const otFor = (empId: string, dateIso: string): OTEntry[] =>
-    entries.filter((e) => e.employee_id === empId && e.date === dateIso);
+    otByEmpDate.get(`${empId}|${dateIso}`) || [];
 
   // Save (replace) the OT for an employee+date with a single managed entry
   const saveOT = async (empId: string, dateIso: string, hours: number, otType: string, startTime: string, endTime: string) => {
@@ -275,6 +351,19 @@ const OvertimeManagement = () => {
   if (loading) {
     return <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-muted-foreground" /></div>;
   }
+
+  // Context for the currently open cell editor (shared popover), resolved with the
+  // same helpers the cells use so the editor sees exactly what the cell shows.
+  const openCellCtx = (() => {
+    if (!openCell) return null;
+    const emp = filteredEmployees.find((e) => e.id === openCell.empId);
+    const info = dayInfos.find((di) => di.iso === openCell.iso);
+    if (!emp || !info) return null;
+    const dayoff = isDayoffIndexed(emp.id, info.iso, info.dow);
+    const shift = shiftFor(emp.id, info.iso);
+    const primary = otFor(emp.id, info.iso)[0];
+    return { emp, info, dayoff, shift, primary };
+  })();
 
   return (
     <div className="space-y-5">
@@ -341,6 +430,9 @@ const OvertimeManagement = () => {
 
           <div ref={calendarScrollRef} className="overflow-auto max-h-[calc(100vh-200px)] cursor-grab touch-none">
             <p className="sm:hidden text-[10px] text-muted-foreground px-1 pb-1 flex items-center gap-1"><ChevronLeft className="w-3 h-3" />ลากนิ้วเพื่อเลื่อนดูวันที่<ChevronRight className="w-3 h-3" /></p>
+            {!gridReady ? (
+              <div className="min-h-[400px] flex items-center justify-center text-xs text-muted-foreground">กำลังเตรียมตาราง…</div>
+            ) : (
             <table className="w-full text-xs border-collapse">
               <thead>
                 <tr>
@@ -352,26 +444,20 @@ const OvertimeManagement = () => {
                       </button>
                     </div>
                   </th>
-                  {monthDays.map((d) => {
-                    const dow = d.getDay();
-                    const isWeekend = dow === 0 || dow === 6;
-                    const iso = isoDate(d);
-                    const isHoliday = holidaySet.has(iso);
-                    return (
-                      <th key={iso} title={isHoliday ? `วันหยุด: ${holidayNameMap.get(iso) || ""}` : `${WEEKDAY_FULL[dow]} ${d.getDate()}`}
-                        className="sticky top-0 z-20 px-1 py-1 text-center font-semibold border-b min-w-[40px]" style={{
-                        borderColor: "hsl(var(--border))",
-                        background: isHoliday ? "hsl(220 80% 95%)" : (isWeekend ? "hsl(0 0% 96%)" : "hsl(var(--muted) / 0.5)"),
-                        color: isHoliday ? "hsl(220 80% 35%)" : undefined,
-                      }}>
-                        <div className="text-[9px] opacity-60">{WEEKDAY_LABELS[dow]}</div>
-                        <div>{d.getDate()}</div>
-                        <div className="h-1 flex items-center justify-center">
-                          {isHoliday && <span className="inline-block w-1.5 h-1.5 rounded-full" style={{ background: "hsl(220 80% 45%)" }} />}
-                        </div>
-                      </th>
-                    );
-                  })}
+                  {dayInfos.map(({ iso, dow, dayNum, isWeekend, isHoliday, holidayName }) => (
+                    <th key={iso} title={isHoliday ? `วันหยุด: ${holidayName || ""}` : `${WEEKDAY_FULL[dow]} ${dayNum}`}
+                      className="sticky top-0 z-20 px-1 py-1 text-center font-semibold border-b min-w-[40px]" style={{
+                      borderColor: "hsl(var(--border))",
+                      background: isHoliday ? "hsl(220 80% 95%)" : (isWeekend ? "hsl(0 0% 96%)" : "hsl(var(--muted) / 0.5)"),
+                      color: isHoliday ? "hsl(220 80% 35%)" : undefined,
+                    }}>
+                      <div className="text-[9px] opacity-60">{WEEKDAY_LABELS[dow]}</div>
+                      <div>{dayNum}</div>
+                      <div className="h-1 flex items-center justify-center">
+                        {isHoliday && <span className="inline-block w-1.5 h-1.5 rounded-full" style={{ background: "hsl(220 80% 45%)" }} />}
+                      </div>
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
@@ -389,11 +475,8 @@ const OvertimeManagement = () => {
                         )}
                       </div>
                     </td>
-                    {monthDays.map((d) => {
-                      const iso = isoDate(d);
-                      const dow = d.getDay();
-                      const isHoliday = holidaySet.has(iso);
-                      const dayoff = isDayoffOn(emp.id, iso, dow, patterns, overrides, holidaySet);
+                    {dayInfos.map(({ iso, dow, dayNum, isHoliday, holidayName }) => {
+                      const dayoff = isDayoffIndexed(emp.id, iso, dow);
                       const dayEntries = otFor(emp.id, iso);
                       const totalH = dayEntries.reduce((s, e) => s + (e.hours || 0), 0);
                       const primary = dayEntries[0];
@@ -403,8 +486,8 @@ const OvertimeManagement = () => {
                       let bg = "hsl(var(--muted))";
                       let color = "hsl(var(--muted-foreground))";
                       let label = "—";
-                      let title = `${WEEKDAY_FULL[dow]} ${d.getDate()}`;
-                      if (isHoliday) title += ` · วันหยุด${holidayNameMap.get(iso) ? `: ${holidayNameMap.get(iso)}` : ""}`;
+                      let title = `${WEEKDAY_FULL[dow]} ${dayNum}`;
+                      if (isHoliday) title += ` · วันหยุด${holidayName ? `: ${holidayName}` : ""}`;
                       else if (dayoff) title += " · วันหยุดพนักงาน";
                       if (shift) title += ` · กะ${shift.name} (${shift.start_time}-${shift.end_time})`;
                       // Day-off cells: soft (faded) red background with "หยุด" label
@@ -432,23 +515,14 @@ const OvertimeManagement = () => {
                       return (
                         <td key={iso} className="p-0.5 text-center border-b" style={{ borderColor: "hsl(var(--border))", background: isHoliday ? "hsl(220 80% 97%)" : undefined }}>
                           {canEdit ? (
-                            <OTCellPopover
-                              dateLabel={`${fmtThaiDate(iso)} · ${emp.firstName}`}
-                              dayoff={dayoff}
-                              holidayName={isHoliday ? (holidayNameMap.get(iso) || "วันหยุด") : ""}
-                              shiftLabel={shift ? `${shift.name} (${shift.start_time}-${shift.end_time})` : ""}
-                              shiftColor={shift?.color}
-                              entry={primary}
-                              onSave={(h, t, st, et) => saveOT(emp.id, iso, h, t, st, et)}
-                              onRemove={() => removeOT(emp.id, iso)}
+                            <button
+                              type="button"
+                              className="w-full transition-all hover:scale-110 cursor-pointer"
+                              title={title}
+                              onClick={(e) => setOpenCell({ empId: emp.id, iso, anchor: e.currentTarget })}
                             >
-                              <button
-                                className="w-full transition-all hover:scale-110 cursor-pointer"
-                                title={title}
-                              >
-                                {cellInner}
-                              </button>
-                            </OTCellPopover>
+                              {cellInner}
+                            </button>
                           ) : (
                             <div className="w-full" title={title}>
 
@@ -465,7 +539,31 @@ const OvertimeManagement = () => {
                 )}
               </tbody>
             </table>
+            )}
           </div>
+
+          {/* Single shared cell-editor popover, anchored to the clicked cell */}
+          {canEdit && (
+            <Popover open={!!openCellCtx} onOpenChange={(o) => { if (!o) setOpenCell(null); }}>
+              {openCell && <PopoverAnchor virtualRef={{ current: openCell.anchor }} />}
+              {openCellCtx && (
+                <PopoverContent className="w-64 p-3 space-y-2.5" align="center">
+                  <OTCellEditor
+                    key={`${openCellCtx.emp.id}|${openCellCtx.info.iso}`}
+                    dateLabel={`${fmtThaiDate(openCellCtx.info.iso)} · ${openCellCtx.emp.firstName}`}
+                    dayoff={openCellCtx.dayoff}
+                    holidayName={openCellCtx.info.isHoliday ? (openCellCtx.info.holidayName || "วันหยุด") : ""}
+                    shiftLabel={openCellCtx.shift ? `${openCellCtx.shift.name} (${openCellCtx.shift.start_time}-${openCellCtx.shift.end_time})` : ""}
+                    shiftColor={openCellCtx.shift?.color}
+                    entry={openCellCtx.primary}
+                    onSave={(h: number, t: string, st: string, et: string) => saveOT(openCellCtx.emp.id, openCellCtx.info.iso, h, t, st, et)}
+                    onRemove={() => removeOT(openCellCtx.emp.id, openCellCtx.info.iso)}
+                    onClose={() => setOpenCell(null)}
+                  />
+                </PopoverContent>
+              )}
+            </Popover>
+          )}
         </TabsContent>
 
         {/* ============ TAB 2: Per-employee ============ */}
@@ -504,33 +602,24 @@ const OvertimeManagement = () => {
 };
 
 /* =================== OT Cell editor popover =================== */
-const OTCellPopover = ({ children, dateLabel, dayoff, holidayName, shiftLabel, shiftColor, entry, onSave, onRemove }: any) => {
-  const [open, setOpen] = useState(false);
+// Editor body (form state + controls). It is mounted only while its popover is
+// open, so the form always starts from the current entry — the same as the old
+// per-cell popover which reset its fields every time it opened.
+const OTCellEditor = ({ dateLabel, dayoff, holidayName, shiftLabel, shiftColor, entry, onSave, onRemove, onClose }: any) => {
   const [hours, setHours] = useState<string>(entry ? String(entry.hours) : "");
   const [otType, setOtType] = useState<string>(entry?.ot_type || (dayoff ? "holiday" : "workday"));
   const [startTime, setStartTime] = useState<string>(entry?.start_time || "");
   const [endTime, setEndTime] = useState<string>(entry?.end_time || "");
 
-  useEffect(() => {
-    if (open) {
-      setHours(entry ? String(entry.hours) : "");
-      setOtType(entry?.ot_type || (dayoff ? "holiday" : "workday"));
-      setStartTime(entry?.start_time || "");
-      setEndTime(entry?.end_time || "");
-    }
-  }, [open]);
-
   const handleSave = () => {
     const h = parseFloat(hours);
     if (isNaN(h) || h <= 0) return;
     onSave(h, otType, startTime, endTime);
-    setOpen(false);
+    onClose();
   };
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>{children}</PopoverTrigger>
-      <PopoverContent className="w-64 p-3 space-y-2.5" align="center">
+    <>
         <div className="border-b pb-1.5 space-y-1">
           <div className="text-[11px] text-muted-foreground">{dateLabel}</div>
           <div className="flex flex-wrap items-center gap-1.5">
@@ -591,12 +680,24 @@ const OTCellPopover = ({ children, dateLabel, dayoff, holidayName, shiftLabel, s
             <Save className="w-3.5 h-3.5" />บันทึก
           </button>
           {entry && (
-            <button onClick={() => { onRemove(); setOpen(false); }}
+            <button onClick={() => { onRemove(); onClose(); }}
               className="px-3 py-2 rounded-lg text-xs font-bold text-destructive hover:bg-destructive/10 border border-destructive/30">
               <Trash2 className="w-3.5 h-3.5" />
             </button>
           )}
         </div>
+    </>
+  );
+};
+
+// Per-trigger popover (used by the per-employee tab, where there are at most 31 cells).
+const OTCellPopover = ({ children, ...editorProps }: any) => {
+  const [open, setOpen] = useState(false);
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>{children}</PopoverTrigger>
+      <PopoverContent className="w-64 p-3 space-y-2.5" align="center">
+        <OTCellEditor {...editorProps} onClose={() => setOpen(false)} />
       </PopoverContent>
     </Popover>
   );

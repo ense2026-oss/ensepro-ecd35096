@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, CalendarDays, Users, Settings2, Loader2, Plus, Trash2, Save, Copy, Search, Clock, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useEmployees } from "@/contexts/EmployeeContext";
@@ -7,11 +7,13 @@ import { usePermissions } from "@/contexts/PermissionsContext";
 import { useToast } from "@/hooks/use-toast";
 import { useDragScroll } from "@/hooks/useDragScroll";
 import { usePageQuery, unwrapAll } from "@/hooks/usePageQuery";
+import { useDeferredMount } from "@/hooks/useDeferredMount";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import SearchableSelect from "@/components/ui/searchable-select";
 import { ThaiDatePicker } from "@/components/ui/thai-date-picker";
 import EmployeeAvatar from "@/components/ui/employee-avatar";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import { Anchor as PopoverAnchor } from "@radix-ui/react-popover";
 import { cn } from "@/lib/utils";
 
 interface Shift {
@@ -55,20 +57,74 @@ const isPatternActive = (p: Pattern, dateIso: string): boolean => {
   return true;
 };
 
-// Returns true if date is a day-off for this employee (override > company > pattern)
-const isDayoffOn = (empId: string, dateIso: string, dow: number, patterns: Pattern[], overrides: Override[], holidays: Set<string>): boolean => {
-  const ov = overrides.find((o) => o.employee_id === empId && o.date === dateIso);
-  if (ov) return ov.is_dayoff;
-  if (holidays.has(dateIso)) return true;
-  return patterns.some((p) => p.employee_id === empId && isPatternActive(p, dateIso) && p.weekdays.includes(dow));
+/* ---------- Indexed lookups (built once per data change; used by the per-cell grid loops) ---------- */
+// Semantics match the previous array scans exactly:
+//   day-off  = override (first match by emp+date) > company holiday > any active pattern containing dow
+//   shift    = day assignment (first match by emp+date) > first bulk (in array order) covering the date
+// Arrays come ordered created_at DESC (optimistic rows are prepended), so "first" = most recently
+// created. Maps keep the first occurrence per key and per-employee lists keep array order.
+const empDateKey = (empId: string, dateIso: string) => `${empId}|${dateIso}`;
+
+interface ShiftIndex {
+  shiftById: Map<string, Shift>;
+  dayAssignByEmpDate: Map<string, ShiftAssignment>;
+  bulkByEmp: Map<string, ShiftAssignment[]>;
+  patternsByEmp: Map<string, Pattern[]>;
+  overridesByEmpDate: Map<string, Override>;
+  holidays: Set<string>;
+}
+
+const buildDayAssignIndex = (days: ShiftAssignment[]): Map<string, ShiftAssignment> => {
+  const m = new Map<string, ShiftAssignment>();
+  for (const d of days) {
+    const k = empDateKey(d.employee_id, d.start_date);
+    if (!m.has(k)) m.set(k, d);
+  }
+  return m;
 };
 
-// Returns the shift assigned to an employee on a date (day override > bulk)
-const getShiftFor = (empId: string, dateIso: string, bulks: ShiftAssignment[], days: ShiftAssignment[]): string | null => {
-  const day = days.find((d) => d.employee_id === empId && d.start_date === dateIso);
-  if (day) return day.shift_id;
-  const bulk = bulks.find((b) => b.employee_id === empId && b.start_date <= dateIso && b.end_date >= dateIso);
-  return bulk ? bulk.shift_id : null;
+const buildBulkIndex = (bulks: ShiftAssignment[]): Map<string, ShiftAssignment[]> => {
+  const m = new Map<string, ShiftAssignment[]>();
+  for (const b of bulks) {
+    const list = m.get(b.employee_id);
+    if (list) list.push(b); else m.set(b.employee_id, [b]);
+  }
+  return m;
+};
+
+const buildPatternIndex = (patterns: Pattern[]): Map<string, Pattern[]> => {
+  const m = new Map<string, Pattern[]>();
+  for (const p of patterns) {
+    const list = m.get(p.employee_id);
+    if (list) list.push(p); else m.set(p.employee_id, [p]);
+  }
+  return m;
+};
+
+const buildOverrideIndex = (overrides: Override[]): Map<string, Override> => {
+  const m = new Map<string, Override>();
+  for (const o of overrides) {
+    const k = empDateKey(o.employee_id, o.date);
+    if (!m.has(k)) m.set(k, o);
+  }
+  return m;
+};
+
+// Indexed equivalent of isDayoffOn (override > company > pattern)
+const isDayoffOnIdx = (empId: string, dateIso: string, dow: number, idx: ShiftIndex): boolean => {
+  const ov = idx.overridesByEmpDate.get(empDateKey(empId, dateIso));
+  if (ov) return ov.is_dayoff;
+  if (idx.holidays.has(dateIso)) return true;
+  const list = idx.patternsByEmp.get(empId);
+  if (!list) return false;
+  return list.some((p) => isPatternActive(p, dateIso) && p.weekdays.includes(dow));
+};
+
+// Indexed equivalent of the bulk lookup: first bulk (in array order) covering the date
+const getBulkForIdx = (empId: string, dateIso: string, idx: ShiftIndex): ShiftAssignment | undefined => {
+  const list = idx.bulkByEmp.get(empId);
+  if (!list) return undefined;
+  return list.find((b) => b.start_date <= dateIso && b.end_date >= dateIso);
 };
 
 const fmtThaiDate = (iso: string) => {
@@ -106,6 +162,12 @@ const ShiftManagement = () => {
   const [activeTab, setActiveTab] = useState("calendar");
   const [selectedEmpId, setSelectedEmpId] = useState<string>("");
   const [empColCollapsed, setEmpColCollapsed] = useState(false);
+  // Route commits instantly; the employees × days grid mounts on the next frame.
+  const gridReady = useDeferredMount();
+  // One shared shift-picker popover for the whole grid (instead of one per cell).
+  const [openCell, setOpenCell] = useState<{ empId: string; iso: string; anchor: HTMLElement } | null>(null);
+  const lastOpenCellRef = useRef<{ empId: string; iso: string; anchor: HTMLElement } | null>(null);
+  useEffect(() => { if (openCell) lastOpenCellRef.current = openCell; }, [openCell]);
 
   // Auto-select self for employee role
   useEffect(() => {
@@ -163,6 +225,24 @@ const ShiftManagement = () => {
   const monthDays = useMemo(() => getMonthDays(year, month), [year, month]);
   const bulkAssignments = useMemo(() => assignments.filter((a) => a.assignment_type === "bulk"), [assignments]);
   const dayAssignments = useMemo(() => assignments.filter((a) => a.assignment_type === "day"), [assignments]);
+
+  // Indexed lookups — built once per data change, O(1) per cell instead of scanning arrays
+  const shiftById = useMemo(() => new Map(shifts.map((s) => [s.id, s] as const)), [shifts]);
+  const dayAssignByEmpDate = useMemo(() => buildDayAssignIndex(dayAssignments), [dayAssignments]);
+  const bulkByEmp = useMemo(() => buildBulkIndex(bulkAssignments), [bulkAssignments]);
+  const patternsByEmp = useMemo(() => buildPatternIndex(patterns), [patterns]);
+  const overridesByEmpDate = useMemo(() => buildOverrideIndex(overrides), [overrides]);
+  const shiftIndex = useMemo<ShiftIndex>(
+    () => ({ shiftById, dayAssignByEmpDate, bulkByEmp, patternsByEmp, overridesByEmpDate, holidays: holidaySet }),
+    [shiftById, dayAssignByEmpDate, bulkByEmp, patternsByEmp, overridesByEmpDate, holidaySet],
+  );
+
+  // Per-day values that don't depend on the employee — computed once per month, not per cell
+  const monthDayInfo = useMemo(() => monthDays.map((d) => {
+    const dow = d.getDay();
+    const iso = isoDate(d);
+    return { d, iso, dow, dateNum: d.getDate(), isWeekend: dow === 0 || dow === 6, isHoliday: holidaySet.has(iso) };
+  }), [monthDays, holidaySet]);
 
   const departments = useMemo(() => {
     const set = new Set<string>();
@@ -306,6 +386,9 @@ const ShiftManagement = () => {
 
           <div ref={calendarScrollRef} className="overflow-auto max-h-[calc(100vh-200px)] cursor-grab touch-none">
             <p className="sm:hidden text-[10px] text-muted-foreground px-1 pb-1 flex items-center gap-1"><ChevronLeft className="w-3 h-3" />ลากนิ้วเพื่อเลื่อนดูวันที่<ChevronRight className="w-3 h-3" /></p>
+            {!gridReady ? (
+              <div className="min-h-[400px] flex items-center justify-center text-xs text-muted-foreground">กำลังเตรียมตาราง…</div>
+            ) : (
             <table className="w-full text-xs border-collapse">
               <thead>
                 <tr>
@@ -317,22 +400,16 @@ const ShiftManagement = () => {
                       </button>
                     </div>
                   </th>
-                  {monthDays.map((d) => {
-                    const dow = d.getDay();
-                    const isWeekend = dow === 0 || dow === 6;
-                    const iso = isoDate(d);
-                    const isHoliday = holidaySet.has(iso);
-                    return (
-                      <th key={iso} className="sticky top-0 z-20 px-1 py-1 text-center font-semibold border-b min-w-[40px]" style={{
-                        borderColor: "hsl(var(--border))",
-                        background: isHoliday ? "hsl(220 80% 95%)" : (isWeekend ? "hsl(0 0% 96%)" : "hsl(var(--muted) / 0.5)"),
-                        color: isHoliday ? "hsl(220 80% 35%)" : undefined,
-                      }}>
-                        <div className="text-[9px] opacity-60">{WEEKDAY_LABELS[dow]}</div>
-                        <div>{d.getDate()}</div>
-                      </th>
-                    );
-                  })}
+                  {monthDayInfo.map(({ iso, dow, dateNum, isWeekend, isHoliday }) => (
+                    <th key={iso} className="sticky top-0 z-20 px-1 py-1 text-center font-semibold border-b min-w-[40px]" style={{
+                      borderColor: "hsl(var(--border))",
+                      background: isHoliday ? "hsl(220 80% 95%)" : (isWeekend ? "hsl(0 0% 96%)" : "hsl(var(--muted) / 0.5)"),
+                      color: isHoliday ? "hsl(220 80% 35%)" : undefined,
+                    }}>
+                      <div className="text-[9px] opacity-60">{WEEKDAY_LABELS[dow]}</div>
+                      <div>{dateNum}</div>
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
@@ -350,20 +427,19 @@ const ShiftManagement = () => {
                         )}
                       </div>
                     </td>
-                    {monthDays.map((d) => {
-                      const iso = isoDate(d);
-                      const dow = d.getDay();
-                      const dayoff = isDayoffOn(emp.id, iso, dow, patterns, overrides, holidaySet);
-                      const shiftId = getShiftFor(emp.id, iso, bulkAssignments, dayAssignments);
-                      const shift = shiftId ? shifts.find((s) => s.id === shiftId) : null;
-                      const hasDayOverride = dayAssignments.some((da) => da.employee_id === emp.id && da.start_date === iso);
-                      const hasBulk = bulkAssignments.some((b) => b.employee_id === emp.id && b.start_date <= iso && b.end_date >= iso);
+                    {monthDayInfo.map(({ iso, dow, dateNum }) => {
+                      const dayoff = isDayoffOnIdx(emp.id, iso, dow, shiftIndex);
+                      // day override > bulk (same precedence as getShiftFor)
+                      const dayAssign = dayAssignByEmpDate.get(empDateKey(emp.id, iso));
+                      const bulk = dayAssign ? undefined : getBulkForIdx(emp.id, iso, shiftIndex);
+                      const shiftId = dayAssign ? dayAssign.shift_id : bulk ? bulk.shift_id : null;
+                      const shift = shiftId ? shiftById.get(shiftId) : null;
 
                       // Cell content
                       let bg = "hsl(var(--muted))";
                       let color = "hsl(var(--muted-foreground))";
                       let label: string = "—";
-                      let title = `${WEEKDAY_FULL[dow]} ${d.getDate()}`;
+                      let title = `${WEEKDAY_FULL[dow]} ${dateNum}`;
                       if (dayoff) {
                         bg = "hsl(0 70% 88%)";
                         color = "hsl(0 70% 35%)";
@@ -379,45 +455,21 @@ const ShiftManagement = () => {
                       return (
                         <td key={iso} className="p-0.5 text-center border-b" style={{ borderColor: "hsl(var(--border))" }}>
                           {canEdit && !dayoff ? (
-                            <Popover>
-                              <PopoverTrigger asChild>
-                                <button
-                                  className={cn(
-                                    "w-full h-8 rounded text-[10px] font-bold transition-all hover:scale-110 cursor-pointer",
-                                    hasDayOverride && "ring-1 ring-offset-1 ring-orange-400"
-                                  )}
-                                  style={{ background: bg, color }}
-                                  title={title}
-                                >
-                                  {label}
-                                </button>
-                              </PopoverTrigger>
-                              <PopoverContent className="w-56 p-1.5" align="center">
-                                <div className="px-2 py-1.5 text-[10px] text-muted-foreground border-b mb-1">
-                                  {fmtThaiDate(iso)} · {emp.firstName}
-                                </div>
-                                {shifts.map((s) => (
-                                  <button key={s.id} onClick={() => setShiftForDate(emp.id, iso, s.id)}
-                                    className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold hover:bg-muted transition-colors text-left">
-                                    <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ background: s.color }} />
-                                    <span className="flex-1">{s.name}</span>
-                                    <span className="text-muted-foreground">{s.start_time}</span>
-                                  </button>
-                                ))}
-                                {hasDayOverride && (
-                                  <button onClick={() => setShiftForDate(emp.id, iso, null)}
-                                    className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold hover:bg-destructive/10 text-destructive transition-colors border-t mt-1">
-                                    <Trash2 className="w-3.5 h-3.5" />ลบกะรายวัน
-                                  </button>
-                                )}
-                                {hasBulk && (
-                                  <button onClick={() => deleteBulkForDate(emp.id, iso)}
-                                    className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold hover:bg-destructive/10 text-destructive transition-colors border-t mt-1">
-                                    <Trash2 className="w-3.5 h-3.5" />ยกเลิกกะระยะยาว
-                                  </button>
-                                )}
-                              </PopoverContent>
-                            </Popover>
+                            <button
+                              className={cn(
+                                "w-full h-8 rounded text-[10px] font-bold transition-all hover:scale-110 cursor-pointer",
+                                !!dayAssign && "ring-1 ring-offset-1 ring-orange-400"
+                              )}
+                              style={{ background: bg, color }}
+                              title={title}
+                              onClick={(e) => {
+                                const anchor = e.currentTarget;
+                                // Clicking the open cell again toggles it closed (like a PopoverTrigger)
+                                setOpenCell((cur) => (cur && cur.empId === emp.id && cur.iso === iso) ? null : { empId: emp.id, iso, anchor });
+                              }}
+                            >
+                              {label}
+                            </button>
                           ) : (
                             <div className="w-full h-8 rounded text-[10px] font-bold flex items-center justify-center"
                               style={{ background: bg, color }}
@@ -435,7 +487,56 @@ const ShiftManagement = () => {
                 )}
               </tbody>
             </table>
+            )}
           </div>
+
+          {/* Single shared shift-picker popover, anchored to the clicked cell */}
+          {(() => {
+            // Keep rendering the last cell's menu while the close animation plays out
+            const cell = openCell ?? lastOpenCellRef.current;
+            if (!cell) return null;
+            const emp = employees.find((e) => e.id === cell.empId);
+            const { empId, iso } = cell;
+            const hasDayOverride = dayAssignByEmpDate.has(empDateKey(empId, iso));
+            const hasBulk = !!getBulkForIdx(empId, iso, shiftIndex);
+            return (
+              <Popover open={!!openCell} onOpenChange={(o) => { if (!o) setOpenCell(null); }}>
+                <PopoverAnchor virtualRef={{ current: cell.anchor }} />
+                <PopoverContent
+                  className="w-56 p-1.5"
+                  align="center"
+                  onInteractOutside={(e) => {
+                    // Let the anchored cell's own click handle toggling, exactly like a PopoverTrigger would
+                    if (cell.anchor.contains(e.target as Node)) e.preventDefault();
+                  }}
+                >
+                  <div className="px-2 py-1.5 text-[10px] text-muted-foreground border-b mb-1">
+                    {fmtThaiDate(iso)} · {emp?.firstName}
+                  </div>
+                  {shifts.map((s) => (
+                    <button key={s.id} onClick={() => setShiftForDate(empId, iso, s.id)}
+                      className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold hover:bg-muted transition-colors text-left">
+                      <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ background: s.color }} />
+                      <span className="flex-1">{s.name}</span>
+                      <span className="text-muted-foreground">{s.start_time}</span>
+                    </button>
+                  ))}
+                  {hasDayOverride && (
+                    <button onClick={() => setShiftForDate(empId, iso, null)}
+                      className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold hover:bg-destructive/10 text-destructive transition-colors border-t mt-1">
+                      <Trash2 className="w-3.5 h-3.5" />ลบกะรายวัน
+                    </button>
+                  )}
+                  {hasBulk && (
+                    <button onClick={() => deleteBulkForDate(empId, iso)}
+                      className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold hover:bg-destructive/10 text-destructive transition-colors border-t mt-1">
+                      <Trash2 className="w-3.5 h-3.5" />ยกเลิกกะระยะยาว
+                    </button>
+                  )}
+                </PopoverContent>
+              </Popover>
+            );
+          })()}
         </TabsContent>
 
         {/* ============ TAB 2: Per-employee ============ */}
@@ -444,10 +545,7 @@ const ShiftManagement = () => {
             employees={employees}
             shifts={shifts}
             bulkAssignments={bulkAssignments}
-            dayAssignments={dayAssignments}
-            patterns={patterns}
-            overrides={overrides}
-            holidaySet={holidaySet}
+            shiftIndex={shiftIndex}
             selectedEmpId={selectedEmpId}
             setSelectedEmpId={setSelectedEmpId}
             canEdit={canEdit}
@@ -474,13 +572,18 @@ const ShiftManagement = () => {
 
 /* =================== TAB 2: Employee Detail =================== */
 const EmployeeShiftDetailView = ({
-  employees, shifts, bulkAssignments, dayAssignments, patterns, overrides, holidaySet,
+  employees, shifts, bulkAssignments, shiftIndex,
   selectedEmpId, setSelectedEmpId, canEdit, onChanged, onSetShift, lockEmployee,
-}: any) => {
+}: {
+  employees: any[]; shifts: Shift[]; bulkAssignments: ShiftAssignment[]; shiftIndex: ShiftIndex;
+  selectedEmpId: string; setSelectedEmpId: (id: string) => void; canEdit: boolean; onChanged: () => void;
+  onSetShift: (empId: string, dateIso: string, shiftId: string | null) => void; lockEmployee: boolean;
+}) => {
   const { toast } = useToast();
   const today = new Date();
   const [year, setYear] = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth());
+  const gridReady = useDeferredMount();
 
   const [shiftId, setShiftId] = useState("");
   const [startDate, setStartDate] = useState("");
@@ -492,7 +595,6 @@ const EmployeeShiftDetailView = ({
     .map((e: any) => ({ value: e.id, label: `${e.prefix}${e.firstName} ${e.lastName}${e.nickname ? ` (${e.nickname})` : ""}`, subtitle: e.dept, photoUrl: e.photoUrl, avatar: e.avatar, avatarColor: e.avatarColor, avatarTextColor: e.avatarTextColor, firstName: e.firstName }));
 
   const empBulks = bulkAssignments.filter((b: ShiftAssignment) => b.employee_id === selectedEmpId);
-  const empDays = dayAssignments.filter((d: ShiftAssignment) => d.employee_id === selectedEmpId);
   const monthDays = useMemo(() => getMonthDays(year, month), [year, month]);
 
   const navMonth = (delta: number) => {
@@ -577,6 +679,9 @@ const EmployeeShiftDetailView = ({
                 <h4 className="text-base font-bold font-display">{monthLabel}</h4>
                 <button onClick={() => navMonth(1)} className="p-2 rounded-xl hover:bg-muted"><ChevronRight className="w-4 h-4" /></button>
               </div>
+              {!gridReady ? (
+                <div className="min-h-[400px] flex items-center justify-center text-xs text-muted-foreground">กำลังเตรียมตาราง…</div>
+              ) : (
               <div className="grid grid-cols-7 gap-px rounded-xl border overflow-hidden" style={{ borderColor: "hsl(var(--border))" }}>
                 {WEEKDAY_LABELS.map((wd) => (
                   <div key={wd} className="bg-muted/50 px-2 py-2 text-center text-[11px] font-semibold text-muted-foreground">{wd}</div>
@@ -585,10 +690,12 @@ const EmployeeShiftDetailView = ({
                 {monthDays.map((d) => {
                   const iso = isoDate(d);
                   const dow = d.getDay();
-                  const dayoff = isDayoffOn(selectedEmpId, iso, dow, patterns, overrides, holidaySet);
-                  const sId = getShiftFor(selectedEmpId, iso, bulkAssignments, dayAssignments);
-                  const shift = sId ? shifts.find((s: Shift) => s.id === sId) : null;
-                  const hasDayOverride = empDays.some((da: ShiftAssignment) => da.start_date === iso);
+                  const dayoff = isDayoffOnIdx(selectedEmpId, iso, dow, shiftIndex);
+                  // day override > bulk (same precedence as getShiftFor)
+                  const dayAssign = shiftIndex.dayAssignByEmpDate.get(empDateKey(selectedEmpId, iso));
+                  const sId = dayAssign ? dayAssign.shift_id : (getBulkForIdx(selectedEmpId, iso, shiftIndex)?.shift_id ?? null);
+                  const shift = sId ? shiftIndex.shiftById.get(sId) : null;
+                  const hasDayOverride = !!dayAssign;
 
                   return (
                     <div key={iso} className="bg-background min-h-[68px] p-1 flex flex-col items-center gap-1"
@@ -638,6 +745,7 @@ const EmployeeShiftDetailView = ({
                   );
                 })}
               </div>
+              )}
             </div>
 
             <div className="card-base p-4">

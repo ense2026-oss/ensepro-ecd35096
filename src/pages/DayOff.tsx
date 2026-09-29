@@ -8,11 +8,13 @@ import { usePermissions } from "@/contexts/PermissionsContext";
 import { useToast } from "@/hooks/use-toast";
 import { useDragScroll } from "@/hooks/useDragScroll";
 import { usePageQuery, unwrapAll } from "@/hooks/usePageQuery";
+import { useDeferredMount } from "@/hooks/useDeferredMount";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import SearchableSelect from "@/components/ui/searchable-select";
 import { ThaiDatePicker } from "@/components/ui/thai-date-picker";
 import EmployeeAvatar from "@/components/ui/employee-avatar";
-import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import { Popover, PopoverContent } from "@/components/ui/popover";
+import { Anchor as PopoverAnchor } from "@radix-ui/react-popover";
 import CompanyHolidaysSettings from "@/components/settings/CompanyHolidaysSettings";
 import { cn } from "@/lib/utils";
 import { CalendarOff } from "lucide-react";
@@ -54,15 +56,46 @@ function isPatternActive(p: Pattern, dateIso: string): boolean {
   return true;
 }
 
-function computeDayoffStatus(empId: string, dateIso: string, dow: number, patterns: Pattern[], overrides: Override[], holidays: Set<string>): "work" | "pattern" | "extra" | "company" {
-  const ov = overrides.find((o) => o.employee_id === empId && o.date === dateIso);
+type DayoffStatus = "work" | "pattern" | "extra" | "company";
+
+const overrideKey = (empId: string, dateIso: string) => `${empId}|${dateIso}`;
+
+// Indexed equivalent of the old per-cell array scans. Same precedence:
+// override (is_dayoff → extra, else work) > company holiday > active pattern
+// matching the weekday > work.
+function computeDayoffStatus(
+  empId: string,
+  dateIso: string,
+  dow: number,
+  patternsByEmp: Map<string, Pattern[]>,
+  overridesByEmpDate: Map<string, Override>,
+  holidays: Set<string>,
+): DayoffStatus {
+  const ov = overridesByEmpDate.get(overrideKey(empId, dateIso));
   if (ov) {
     if (ov.is_dayoff) return "extra";
     return "work";
   }
   if (holidays.has(dateIso)) return "company";
-  const matched = patterns.some((p) => p.employee_id === empId && isPatternActive(p, dateIso) && p.weekdays.includes(dow));
+  const empPatterns = patternsByEmp.get(empId);
+  const matched = !!empPatterns && empPatterns.some((p) => isPatternActive(p, dateIso) && p.weekdays.includes(dow));
   return matched ? "pattern" : "work";
+}
+
+interface MonthDayInfo {
+  d: Date;
+  iso: string;
+  dow: number;
+  dayNum: number;
+  isWeekend: boolean;
+  isHoliday: boolean;
+  holidayName: string | undefined;
+}
+
+interface OpenCell {
+  empId: string;
+  iso: string;
+  anchor: HTMLElement;
 }
 
 const DayOff = () => {
@@ -151,7 +184,55 @@ const DayOff = () => {
 
   const holidaySet = useMemo(() => new Set(holidays.map((h) => h.date)), [holidays]);
 
+  // Route commits with a lightweight placeholder; the employees × days grid
+  // mounts one frame later so the sidebar highlight is instant.
+  const gridReady = useDeferredMount();
+
+  // One shared popover for the whole grid instead of one Radix Popover per cell.
+  const [openCell, setOpenCell] = useState<OpenCell | null>(null);
+
+  // ---- Indexes (built once per data change, used inside the cell loop) ----
+  // First-match semantics are preserved for the maps (matches the old `.find`).
+  const holidayNameByDate = useMemo(() => {
+    const m = new Map<string, string>();
+    holidays.forEach((h) => { if (!m.has(h.date)) m.set(h.date, h.name); });
+    return m;
+  }, [holidays]);
+
+  const patternsByEmp = useMemo(() => {
+    const m = new Map<string, Pattern[]>();
+    patterns.forEach((p) => {
+      const list = m.get(p.employee_id);
+      if (list) list.push(p); else m.set(p.employee_id, [p]);
+    });
+    return m;
+  }, [patterns]);
+
+  const overridesByEmpDate = useMemo(() => {
+    const m = new Map<string, Override>();
+    overrides.forEach((o) => {
+      const k = overrideKey(o.employee_id, o.date);
+      if (!m.has(k)) m.set(k, o);
+    });
+    return m;
+  }, [overrides]);
+
   const monthDays = useMemo(() => getMonthDays(year, month), [year, month]);
+
+  // Per-day values computed once per month (not once per employee × day).
+  const monthDayInfo = useMemo<MonthDayInfo[]>(() => monthDays.map((d) => {
+    const dow = d.getDay();
+    const iso = isoDate(d);
+    return {
+      d,
+      iso,
+      dow,
+      dayNum: d.getDate(),
+      isWeekend: dow === 0 || dow === 6,
+      isHoliday: holidaySet.has(iso),
+      holidayName: holidayNameByDate.get(iso),
+    };
+  }), [monthDays, holidaySet, holidayNameByDate]);
 
   const departments = useMemo(() => {
     const set = new Set<string>();
@@ -167,6 +248,25 @@ const DayOff = () => {
       return true;
     });
   }, [employees, deptFilter, search]);
+
+  // Content for the shared popover, derived from the current data every render
+  // (so it live-updates after a realtime refetch, like the old per-cell popover).
+  const openCellData = useMemo(() => {
+    if (!openCell) return null;
+    const emp = filteredEmployees.find((e) => e.id === openCell.empId);
+    const day = monthDayInfo.find((x) => x.iso === openCell.iso);
+    if (!emp || !day) return null;
+    const status = computeDayoffStatus(emp.id, day.iso, day.dow, patternsByEmp, overridesByEmpDate, holidaySet);
+    const ov = overridesByEmpDate.get(overrideKey(emp.id, day.iso));
+    const statusLabel = status === "work" ? "ทำงาน" : status === "pattern" ? "หยุดประจำ" : status === "extra" ? "หยุดเพิ่ม" : "วันหยุดบริษัท";
+    const statusDot = status === "work" ? "hsl(var(--muted-foreground))" : status === "pattern" ? "hsl(0 70% 50%)" : status === "extra" ? "hsl(31 90% 50%)" : "hsl(220 80% 55%)";
+    return { anchor: openCell.anchor, emp, day, status, ov, hasOverride: !!ov, statusLabel, statusDot };
+  }, [openCell, filteredEmployees, monthDayInfo, patternsByEmp, overridesByEmpDate, holidaySet]);
+
+  // If the selected cell leaves the grid (month change / filter), drop the stale anchor.
+  useEffect(() => {
+    if (openCell && !openCellData) setOpenCell(null);
+  }, [openCell, openCellData]);
 
   const monthLabel = useMemo(() => {
     const months = ["มกราคม","กุมภาพันธ์","มีนาคม","เมษายน","พฤษภาคม","มิถุนายน","กรกฎาคม","สิงหาคม","กันยายน","ตุลาคม","พฤศจิกายน","ธันวาคม"];
@@ -300,6 +400,9 @@ const DayOff = () => {
 
           <div ref={calendarScrollRef} className="overflow-auto max-h-[calc(100vh-200px)] cursor-grab touch-none">
             <p className="sm:hidden text-[10px] text-muted-foreground px-1 pb-1 flex items-center gap-1"><ChevronLeft className="w-3 h-3" />ลากนิ้วเพื่อเลื่อนดูวันที่<ChevronRight className="w-3 h-3" /></p>
+            {!gridReady ? (
+              <div className="min-h-[400px] flex items-center justify-center text-xs text-muted-foreground">กำลังเตรียมตาราง…</div>
+            ) : (
             <table className="w-full text-xs border-collapse">
               <thead>
                 <tr>
@@ -311,24 +414,17 @@ const DayOff = () => {
                       </button>
                     </div>
                   </th>
-                  {monthDays.map((d) => {
-                    const dow = d.getDay();
-                    const isWeekend = dow === 0 || dow === 6;
-                    const iso = isoDate(d);
-                    const isHoliday = holidaySet.has(iso);
-                    const hName = holidays.find((h) => h.date === iso)?.name;
-                    return (
-                      <th key={iso} className="sticky top-0 z-20 px-1 py-1 text-center font-semibold border-b min-w-[28px]" style={{
-                        borderColor: "hsl(var(--border))",
-                        background: isHoliday ? "hsl(220 80% 90%)" : (isWeekend ? "hsl(0 0% 96%)" : "hsl(var(--muted) / 0.5)"),
-                        color: isHoliday ? "hsl(220 80% 30%)" : undefined,
-                      }} title={isHoliday && hName ? hName : undefined}>
-                        <div className="text-[9px] opacity-60">{WEEKDAY_LABELS[dow]}</div>
-                        <div>{d.getDate()}</div>
-                        {isHoliday && <div className="mx-auto mt-0.5 w-1.5 h-1.5 rounded-full" style={{ background: "hsl(220 80% 45%)" }} />}
-                      </th>
-                    );
-                  })}
+                  {monthDayInfo.map(({ iso, dow, dayNum, isWeekend, isHoliday, holidayName }) => (
+                    <th key={iso} className="sticky top-0 z-20 px-1 py-1 text-center font-semibold border-b min-w-[28px]" style={{
+                      borderColor: "hsl(var(--border))",
+                      background: isHoliday ? "hsl(220 80% 90%)" : (isWeekend ? "hsl(0 0% 96%)" : "hsl(var(--muted) / 0.5)"),
+                      color: isHoliday ? "hsl(220 80% 30%)" : undefined,
+                    }} title={isHoliday && holidayName ? holidayName : undefined}>
+                      <div className="text-[9px] opacity-60">{WEEKDAY_LABELS[dow]}</div>
+                      <div>{dayNum}</div>
+                      {isHoliday && <div className="mx-auto mt-0.5 w-1.5 h-1.5 rounded-full" style={{ background: "hsl(220 80% 45%)" }} />}
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
@@ -346,81 +442,23 @@ const DayOff = () => {
                         )}
                       </div>
                     </td>
-                    {monthDays.map((d) => {
-                      const iso = isoDate(d);
-                      const dow = d.getDay();
-                      const status = computeDayoffStatus(emp.id, iso, dow, patterns, overrides, holidaySet);
+                    {monthDayInfo.map(({ iso, dow, dayNum, holidayName }) => {
+                      const status = computeDayoffStatus(emp.id, iso, dow, patternsByEmp, overridesByEmpDate, holidaySet);
                       const c = cellColor(status);
-                      const hasOverride = overrides.some((o) => o.employee_id === emp.id && o.date === iso);
-                      const ov = overrides.find((o) => o.employee_id === emp.id && o.date === iso);
-                      const holidayName = holidays.find((h) => h.date === iso)?.name;
+                      const hasOverride = overridesByEmpDate.has(overrideKey(emp.id, iso));
                       const statusLabel = status === "work" ? "ทำงาน" : status === "pattern" ? "หยุดประจำ" : status === "extra" ? "หยุดเพิ่ม" : "วันหยุดบริษัท";
-                      const statusDot = status === "work" ? "hsl(var(--muted-foreground))" : status === "pattern" ? "hsl(0 70% 50%)" : status === "extra" ? "hsl(31 90% 50%)" : "hsl(220 80% 55%)";
                       return (
                         <td key={iso} className="p-0.5 text-center border-b" style={{borderColor:"hsl(var(--border))"}}>
-                          <Popover>
-                            <PopoverTrigger asChild>
-                              <button
-                                disabled={!canEdit}
-                                className={`w-full h-7 rounded text-[11px] font-bold transition-all ${canEdit ? "hover:scale-110 cursor-pointer" : "cursor-default"} ${hasOverride ? "ring-1 ring-offset-1 ring-orange-400" : ""}`}
-                                style={{ background: c.bg, color: c.color }}
-                                title={`${d.getDate()}/${month + 1}/${year + 543} · ${statusLabel}${status === "company" && holidayName ? ` · ${holidayName}` : ""}`}
-                              >
-                                {c.label}
-                              </button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-64 p-3" align="center" side="top">
-                              <div className="text-[11px] text-muted-foreground border-b pb-1.5 mb-2">
-                                {d.getDate()}/{month + 1}/{year + 543} · {emp.prefix}{emp.firstName} {emp.lastName}
-                              </div>
-                              <div className="space-y-1.5 text-xs">
-                                <div className="flex items-center gap-2">
-                                  <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: statusDot }} />
-                                  <span className="font-semibold flex-1">{statusLabel}</span>
-                                  <span className="text-muted-foreground">{WEEKDAY_FULL[dow]}</span>
-                                </div>
-                                {status === "company" && holidayName && (
-                                  <div className="text-muted-foreground pl-4">{holidayName}</div>
-                                )}
-                                {ov?.reason && (
-                                  <div className="text-muted-foreground pl-4">เหตุผล: {ov.reason}</div>
-                                )}
-                                {canEdit && (
-                                  <div className="pt-1.5 border-t mt-2 flex flex-col items-center gap-1.5">
-                                    {!hasOverride && status === "pattern" && (
-                                      <button
-                                        onClick={() => deletePatternForDate(emp.id, iso, dow)}
-                                        className="flex items-center justify-center gap-2 w-full px-2 py-1 rounded-md text-sm font-semibold text-destructive hover:bg-destructive/10 transition-colors"
-                                        title="ยกเลิกหยุดประจำทั้งหมด"
-                                      >
-                                        <Trash2 className="w-5 h-5" />
-                                        ยกเลิกหยุดประจำ
-                                      </button>
-                                    )}
-                                    {!hasOverride && status !== "pattern" && (
-                                      <button
-                                        onClick={() => toggleOverride(emp.id, iso, status)}
-                                        className="flex items-center justify-center gap-2 w-full text-sm font-semibold text-primary hover:underline"
-                                      >
-                                        <Plus className="w-5 h-5" />
-                                        {status === "work" ? "ตั้งเป็นวันหยุด" : "เปลี่ยนสถานะ"}
-                                      </button>
-                                    )}
-                                    {hasOverride && (
-                                      <button
-                                        onClick={() => deleteOverride(ov!.id)}
-                                        className="flex items-center justify-center gap-2 w-full px-2 py-1 rounded-md text-sm font-semibold text-destructive hover:bg-destructive/10 transition-colors"
-                                        title="ยกเลิกวันหยุด"
-                                      >
-                                        <Trash2 className="w-5 h-5" />
-                                        ยกเลิกวันหยุด
-                                      </button>
-                                    )}
-                                  </div>
-                                )}
-                              </div>
-                            </PopoverContent>
-                          </Popover>
+                          <button
+                            type="button"
+                            disabled={!canEdit}
+                            onClick={(e) => setOpenCell({ empId: emp.id, iso, anchor: e.currentTarget })}
+                            className={`w-full h-7 rounded text-[11px] font-bold transition-all ${canEdit ? "hover:scale-110 cursor-pointer" : "cursor-default"} ${hasOverride ? "ring-1 ring-offset-1 ring-orange-400" : ""}`}
+                            style={{ background: c.bg, color: c.color }}
+                            title={`${dayNum}/${month + 1}/${year + 543} · ${statusLabel}${status === "company" && holidayName ? ` · ${holidayName}` : ""}`}
+                          >
+                            {c.label}
+                          </button>
                         </td>
                       );
                     })}
@@ -431,7 +469,68 @@ const DayOff = () => {
                 )}
               </tbody>
             </table>
+            )}
           </div>
+
+          {/* One shared popover for the whole grid, anchored to the clicked cell */}
+          <Popover open={!!openCellData} onOpenChange={(o) => { if (!o) setOpenCell(null); }}>
+            {openCellData && (
+              <>
+                <PopoverAnchor virtualRef={{ current: openCellData.anchor }} />
+                <PopoverContent className="w-64 p-3" align="center" side="top">
+                  <div className="text-[11px] text-muted-foreground border-b pb-1.5 mb-2">
+                    {openCellData.day.dayNum}/{month + 1}/{year + 543} · {openCellData.emp.prefix}{openCellData.emp.firstName} {openCellData.emp.lastName}
+                  </div>
+                  <div className="space-y-1.5 text-xs">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: openCellData.statusDot }} />
+                      <span className="font-semibold flex-1">{openCellData.statusLabel}</span>
+                      <span className="text-muted-foreground">{WEEKDAY_FULL[openCellData.day.dow]}</span>
+                    </div>
+                    {openCellData.status === "company" && openCellData.day.holidayName && (
+                      <div className="text-muted-foreground pl-4">{openCellData.day.holidayName}</div>
+                    )}
+                    {openCellData.ov?.reason && (
+                      <div className="text-muted-foreground pl-4">เหตุผล: {openCellData.ov.reason}</div>
+                    )}
+                    {canEdit && (
+                      <div className="pt-1.5 border-t mt-2 flex flex-col items-center gap-1.5">
+                        {!openCellData.hasOverride && openCellData.status === "pattern" && (
+                          <button
+                            onClick={() => deletePatternForDate(openCellData.emp.id, openCellData.day.iso, openCellData.day.dow)}
+                            className="flex items-center justify-center gap-2 w-full px-2 py-1 rounded-md text-sm font-semibold text-destructive hover:bg-destructive/10 transition-colors"
+                            title="ยกเลิกหยุดประจำทั้งหมด"
+                          >
+                            <Trash2 className="w-5 h-5" />
+                            ยกเลิกหยุดประจำ
+                          </button>
+                        )}
+                        {!openCellData.hasOverride && openCellData.status !== "pattern" && (
+                          <button
+                            onClick={() => toggleOverride(openCellData.emp.id, openCellData.day.iso, openCellData.status)}
+                            className="flex items-center justify-center gap-2 w-full text-sm font-semibold text-primary hover:underline"
+                          >
+                            <Plus className="w-5 h-5" />
+                            {openCellData.status === "work" ? "ตั้งเป็นวันหยุด" : "เปลี่ยนสถานะ"}
+                          </button>
+                        )}
+                        {openCellData.hasOverride && (
+                          <button
+                            onClick={() => deleteOverride(openCellData.ov!.id)}
+                            className="flex items-center justify-center gap-2 w-full px-2 py-1 rounded-md text-sm font-semibold text-destructive hover:bg-destructive/10 transition-colors"
+                            title="ยกเลิกวันหยุด"
+                          >
+                            <Trash2 className="w-5 h-5" />
+                            ยกเลิกวันหยุด
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </PopoverContent>
+              </>
+            )}
+          </Popover>
         </TabsContent>
 
         {/* ============ TAB 2: Per-employee ============ */}
