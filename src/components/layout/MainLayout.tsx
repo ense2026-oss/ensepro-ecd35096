@@ -91,13 +91,17 @@ const MainLayout = () => {
   }
 
 
+  // Wait for permissions to load before applying self-only routing: during the
+  // initial fetch getScope has no rows and defaults to "self", which would
+  // wrongly bounce admins/HR (scope "all") to their own profile until their real
+  // permissions arrive.
   // Redirect self-only users from list view to their own profile
-  if (isSelfOnly(role, "/employees") && location.pathname === "/employees") {
+  if (!permLoading && isSelfOnly(role, "/employees") && location.pathname === "/employees") {
     return <Navigate to={`/employees/${selfEmployeeId}`} replace />;
   }
 
   // Block employee from viewing other employees' profiles
-  if (isSelfOnly(role, "/employees") && location.pathname.startsWith("/employees/")) {
+  if (!permLoading && isSelfOnly(role, "/employees") && location.pathname.startsWith("/employees/")) {
     const viewingId = location.pathname.split("/employees/")[1];
     if (viewingId && viewingId !== selfEmployeeId) {
       return <Navigate to={`/employees/${selfEmployeeId}`} replace />;
