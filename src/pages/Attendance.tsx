@@ -98,6 +98,10 @@ const currentMonthLocal = (): string => String(new Date().getMonth() + 1).padSta
 
 const Attendance = () => {
   const { employees } = useEmployees();
+  // Photos come from EmployeeContext (loaded once, in the background) instead of
+  // joining base64 photo_url onto every attendance row — that join shipped a full
+  // photo per record and was the bulk of this page's payload.
+  const photoMap = useMemo(() => new Map(employees.map((e) => [e.id, e.photoUrl])), [employees]);
   const { role, user, currentUser } = useAuth();
   const { canAction, getScope } = usePermissions();
   const canApproveTime = canAction(role, 'attendance', 'approve');
@@ -143,7 +147,7 @@ const Attendance = () => {
   const fetchAttendance = useCallback(async () => {
     const { data, error } = await supabase
       .from("attendance_records")
-      .select("*, employees(first_name, last_name, dept, photo_url)")
+      .select("*, employees(first_name, last_name, dept)")
       .order("date", { ascending: false })
       .order("created_at", { ascending: false });
 
@@ -157,7 +161,6 @@ const Attendance = () => {
       id: r.id,
       employeeId: r.employee_id,
       name: r.employees ? `${r.employees.first_name} ${r.employees.last_name}` : "",
-      photoUrl: r.employees?.photo_url || undefined,
       dept: r.employees?.dept || "",
       date: r.date,
       checkIn: r.check_in,
@@ -364,10 +367,10 @@ const Attendance = () => {
   const selectedEmployee = useMemo(() => {
     if (filterEmployee === "all") return null;
     const fromAttendance = scopedAttendance.find((a) => a.name === filterEmployee);
-    if (fromAttendance) return { id: fromAttendance.employeeId, name: fromAttendance.name, dept: fromAttendance.dept, photoUrl: fromAttendance.photoUrl };
+    if (fromAttendance) return { id: fromAttendance.employeeId, name: fromAttendance.name, dept: fromAttendance.dept, photoUrl: photoMap.get(fromAttendance.employeeId) };
     const emp = employees.find((e: any) => `${e.firstName ?? e.first_name} ${e.lastName ?? e.last_name}` === filterEmployee);
     return emp ? { id: (emp as any).id, name: filterEmployee, dept: (emp as any).dept || "", photoUrl: (emp as any).photoUrl || (emp as any).photo_url } : null;
-  }, [filterEmployee, scopedAttendance, employees]);
+  }, [filterEmployee, scopedAttendance, employees, photoMap]);
 
 
 
@@ -917,7 +920,7 @@ const Attendance = () => {
                         <td className="px-3 py-1.5 text-sm font-medium whitespace-nowrap">{formatThaiShort(row.date)}</td>
                         <td className="px-3 py-1.5">
                           <div className="flex items-center justify-center">
-                            <EmployeeAvatar photoUrl={row.photoUrl} firstName={row.name} size="sm" rounded="lg" />
+                            <EmployeeAvatar photoUrl={photoMap.get(row.employeeId)} firstName={row.name} size="sm" rounded="lg" />
                           </div>
                         </td>
 
