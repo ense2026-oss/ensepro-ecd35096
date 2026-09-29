@@ -13,6 +13,8 @@ import { ImpersonationProvider } from "@/contexts/ImpersonationContext";
 import { PermissionsProvider } from "@/contexts/PermissionsContext";
 import { OrgProvider } from "@/contexts/OrgContext";
 import MainLayout from "@/components/layout/MainLayout";
+import { FullScreenLoader } from "@/components/ui/dots-loader";
+import { GlobalLoader } from "@/components/ui/global-loader";
 import Login from "@/pages/Login";
 import Dashboard from "@/pages/Dashboard";
 import Employees from "@/pages/Employees";
@@ -43,10 +45,15 @@ applyStartupDisplaySettings();
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 60_000, // serve cached data instantly for 1 min before refetching
-      gcTime: 10 * 60_000, // keep cache 10 min so returning to a page is instant
+      staleTime: 30_000, // a revisit inside 30s shows cache with no request at all; after that: instant cache + silent background refetch
+      gcTime: 15 * 60_000, // keep cache 15 min so returning to a page is instant
       refetchOnWindowFocus: false,
-      retry: 1,
+      refetchOnReconnect: true,
+      // Supabase intermittently answers 504 "upstream request timeout" under burst
+      // load (many pages fire several queries on mount). Retry with backoff before
+      // surfacing an error — this is what turned into "โหลดข้อมูลไม่สำเร็จ" toasts.
+      retry: 3,
+      retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 8000),
     },
   },
 });
@@ -56,14 +63,7 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
   const { user, loading } = useAuth();
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-3 border-primary border-t-transparent rounded-full animate-spin" />
-          <p className="text-sm text-muted-foreground">กำลังโหลด...</p>
-        </div>
-      </div>
-    );
+    return <FullScreenLoader label="กำลังโหลด..." />;
   }
 
   if (!user) {
@@ -147,6 +147,7 @@ const App = () => (
     <TooltipProvider delayDuration={300} skipDelayDuration={0}>
       <Toaster />
       <Sonner />
+      <GlobalLoader />
       <BrandingProvider>
         <AuthProvider>
           <BrowserRouter>

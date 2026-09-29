@@ -8,6 +8,7 @@ import { useImpersonation } from "@/contexts/ImpersonationContext";
 import { usePermissions } from "@/contexts/PermissionsContext";
 import { useModuleSettings } from "@/hooks/useModuleSettings";
 import { LogOut } from "lucide-react";
+import { FullScreenLoader } from "@/components/ui/dots-loader";
 
 // Map a base route to its module_settings key (for enable/disable gating)
 const routeToModuleSetting: Record<string, string> = {
@@ -58,14 +59,7 @@ const MainLayout = () => {
 
   // Still bootstrapping auth — show loader, don't redirect
   if (loading || !profileReady) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-3 border-primary border-t-transparent rounded-full animate-spin" />
-          <p className="text-sm text-muted-foreground">กำลังโหลด...</p>
-        </div>
-      </div>
-    );
+    return <FullScreenLoader label="กำลังโหลด..." />;
   }
 
   // No session at all → redirect to login
