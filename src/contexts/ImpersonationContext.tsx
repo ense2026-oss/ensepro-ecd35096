@@ -38,6 +38,22 @@ const readFlag = (): string | null => {
   }
 };
 
+// Supabase auth calls acquire an internal lock; in some environments a slow
+// network/storage round-trip leaves that call pending for a long time, which
+// would freeze the switch on the loading overlay forever. Race every auth call
+// against a timeout so the flow always resolves and can fall back to a reload.
+const TIMEOUT_SENTINEL = Symbol("timeout");
+function withTimeout<T>(p: Promise<T>, ms: number): Promise<T | typeof TIMEOUT_SENTINEL> {
+  return Promise.race([p, new Promise<typeof TIMEOUT_SENTINEL>((resolve) => setTimeout(() => resolve(TIMEOUT_SENTINEL), ms))]);
+}
+
+const clearFlags = () => {
+  try {
+    sessionStorage.removeItem(STASH_KEY);
+    sessionStorage.removeItem(FLAG_KEY);
+  } catch {}
+};
+
 export const ImpersonationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [impersonatedName, setImpersonatedName] = useState<string | null>(readFlag);
   const [busy, setBusy] = useState(false);
@@ -75,17 +91,19 @@ export const ImpersonationProvider: React.FC<{ children: React.ReactNode }> = ({
         return { error: "เบราว์เซอร์ปิดการเก็บ session ชั่วคราว ไม่สามารถใช้ Login as ได้" };
       }
 
-      const { error: verifyError } = await supabase.auth.verifyOtp({
-        token_hash: tokenHash,
-        type: "magiclink",
-      });
-      if (verifyError) {
-        try {
-          sessionStorage.removeItem(STASH_KEY);
-          sessionStorage.removeItem(FLAG_KEY);
-        } catch {}
+      const verifyRes = await withTimeout(
+        supabase.auth.verifyOtp({ token_hash: tokenHash, type: "magiclink" }),
+        20000,
+      );
+      if (verifyRes === TIMEOUT_SENTINEL) {
+        clearFlags();
         setBusy(false);
-        return { error: verifyError.message };
+        return { error: "สลับสิทธิ์ช้าผิดปกติ กรุณาลองใหม่อีกครั้ง" };
+      }
+      if (verifyRes.error) {
+        clearFlags();
+        setBusy(false);
+        return { error: verifyRes.error.message };
       }
 
       // Boot the app fresh as the target employee.
@@ -99,36 +117,41 @@ export const ImpersonationProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const stopImpersonation = useCallback(async (): Promise<void> => {
     setBusy(true);
-    let restored = false;
+    // true = admin session restored, false = definitely failed, null = unknown
+    // (setSession took too long; it usually still wrote the tokens to storage, so
+    // a fresh reload picks the admin session back up).
+    let restored: boolean | null = false;
     try {
       const raw = sessionStorage.getItem(STASH_KEY);
       if (raw) {
         const stash: StashedSession = JSON.parse(raw);
-        const { data, error } = await supabase.auth.setSession({
-          access_token: stash.access_token,
-          refresh_token: stash.refresh_token,
-        });
-        restored = !!data?.session && !error;
+        const res = await withTimeout(
+          supabase.auth.setSession({
+            access_token: stash.access_token,
+            refresh_token: stash.refresh_token,
+          }),
+          8000,
+        );
+        restored = res === TIMEOUT_SENTINEL ? null : !!res.data?.session && !res.error;
       }
     } catch (err) {
       console.warn("stopImpersonation restore failed:", err);
     }
 
-    try {
-      sessionStorage.removeItem(STASH_KEY);
-      sessionStorage.removeItem(FLAG_KEY);
-    } catch {}
+    clearFlags();
 
-    if (restored) {
-      // Back to admin — full reload so every provider re-initialises cleanly.
-      window.location.assign("/employees");
-    } else {
-      // The stashed admin session is gone/expired — don't leave the app in a
-      // broken half-state. Sign out cleanly and send them to log in again.
+    if (restored === false) {
+      // The stashed admin session is genuinely gone/expired — don't leave the app
+      // in a broken half-state. Sign out cleanly and send them to log in again.
       try {
-        await supabase.auth.signOut();
+        await withTimeout(supabase.auth.signOut(), 5000);
       } catch {}
       window.location.assign("/login?expired=1");
+    } else {
+      // Restored, or unknown-but-likely-written — reload fresh as admin. The full
+      // reload resets the auth client (clearing any stuck lock) and boots from the
+      // admin tokens now in storage.
+      window.location.assign("/employees");
     }
   }, []);
 
