@@ -67,10 +67,15 @@ Deno.serve(async (req) => {
     let targetUserId = empRow?.user_id as string | null | undefined;
 
     if (!targetUserId) {
-      // Fallback: search auth users by email
-      const { data: list } = await admin.auth.admin.listUsers();
-      const found = list?.users?.find((u) => (u.email || "").toLowerCase() === email);
-      targetUserId = found?.id;
+      // Fallback: search auth users by email, paging through all users so an
+      // account past the first page is still found (listUsers defaults to 50).
+      for (let page = 1; page <= 100 && !targetUserId; page++) {
+        const { data: list } = await admin.auth.admin.listUsers({ page, perPage: 200 });
+        const users = list?.users || [];
+        const found = users.find((u) => (u.email || "").toLowerCase() === email);
+        if (found) targetUserId = found.id;
+        if (users.length < 200) break; // last page reached
+      }
     }
 
     if (!targetUserId) {
@@ -80,7 +85,13 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { error: updateError } = await admin.auth.admin.updateUserById(targetUserId, { password });
+    // email_confirm: true guarantees the account can sign in right after the
+    // reset — an unconfirmed account accepts the new password but is blocked at
+    // login with "Email not confirmed", which reads as "the reset didn't work".
+    const { error: updateError } = await admin.auth.admin.updateUserById(targetUserId, {
+      password,
+      email_confirm: true,
+    });
     if (updateError) {
       return new Response(JSON.stringify({ error: updateError.message }), {
         status: 400,
@@ -88,9 +99,13 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Keep initial_password in sync so the records match
+    // Keep initial_password in sync so the records match, and backfill the
+    // employees.user_id link if it was missing (found via the fallback), so
+    // future operations resolve the account directly without paging.
     if (empRow?.id) {
-      await admin.from("employees").update({ initial_password: password }).eq("id", empRow.id);
+      const patch: { initial_password: string; user_id?: string } = { initial_password: password };
+      if (!empRow.user_id) patch.user_id = targetUserId;
+      await admin.from("employees").update(patch).eq("id", empRow.id);
     }
 
     return new Response(JSON.stringify({ success: true, userId: targetUserId }), {

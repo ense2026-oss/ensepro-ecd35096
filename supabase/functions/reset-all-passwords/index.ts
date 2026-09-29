@@ -11,14 +11,49 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { defaultPassword, excludeAdmins, batchStart = 0, batchSize = 20 } = await req.json();
-    const password = defaultPassword || "Password123!";
-
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+
+    // This endpoint bulk-resets every login to a shared default — a destructive
+    // action that must never run for an unauthenticated caller. Require a valid
+    // session belonging to an admin before doing anything.
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: "Missing Authorization header" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const callerClient = createClient(supabaseUrl, anonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const { data: userData, error: userError } = await callerClient.auth.getUser();
+    if (userError || !userData?.user) {
+      return new Response(JSON.stringify({ error: "Invalid session" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
       auth: { autoRefreshToken: false, persistSession: false },
     });
+
+    const { data: callerRoles } = await supabaseAdmin
+      .from("user_roles")
+      .select("role_name")
+      .eq("user_id", userData.user.id);
+    const callerRoleNames = (callerRoles || []).map((r: { role_name: string }) => r.role_name);
+    if (!callerRoleNames.includes("admin")) {
+      return new Response(JSON.stringify({ error: "Forbidden: admin role required" }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const { defaultPassword, excludeAdmins, batchStart = 0, batchSize = 20 } = await req.json();
+    const password = defaultPassword || "Password123!";
 
     // Get employees with user_id, with pagination
     let query = supabaseAdmin
