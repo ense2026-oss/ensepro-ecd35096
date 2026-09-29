@@ -66,7 +66,16 @@ Deno.serve(async (req) => {
     // itself, and create-employee-auth will use that address when the account is made.
     if (!emp.user_id) return json({ ok: true, linked: false });
 
-    if ((emp.email || "").toLowerCase() === newEmail) return json({ ok: true, linked: true, unchanged: true });
+    // Compare against the REAL Auth login email, not employees.email. Those two can
+    // drift (a typo/case/whitespace in Auth while the profile row shows the intended
+    // address), and staff then can't sign in with the email the app displays. Skipping
+    // on the profile row alone would leave that divergence unrepaired — the exact bug
+    // behind "changed the email/password but still can't log in".
+    const { data: authUser } = await admin.auth.admin.getUserById(emp.user_id);
+    const authEmail = (authUser?.user?.email || "").toLowerCase();
+    if (authEmail === newEmail && (emp.email || "").toLowerCase() === newEmail) {
+      return json({ ok: true, linked: true, unchanged: true });
+    }
 
     // Update the credential first; only if that succeeds do we touch the profile row,
     // so the two stores can never disagree.
