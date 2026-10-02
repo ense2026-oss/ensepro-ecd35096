@@ -1,6 +1,5 @@
 import { useEffect, useRef, useCallback } from "react";
 import { useQuery, useQueryClient, type QueryKey } from "@tanstack/react-query";
-import { beginLoad, endLoad } from "@/lib/loadProgress";
 
 // Page-level data loading on top of React Query, shaped to fit the existing
 // pages with minimal change: a page keeps its own useState fields and just
@@ -37,18 +36,6 @@ export function usePageQuery<T>(
   useEffect(() => {
     if (query.data !== undefined) applyRef.current(query.data);
   }, [query.data]);
-
-  // Report only an initial fetch that is actually in flight to the global
-  // preloader. `isLoading` = pending AND fetching; plain `isPending` is also true
-  // for a query that is disabled (`enabled: false`) and will never fetch, which
-  // kept the preloader on screen indefinitely on pages with such a query (e.g.
-  // the employee profile's photo query when the employee already has a photo).
-  const initialLoading = query.isLoading;
-  useEffect(() => {
-    if (!initialLoading) return;
-    beginLoad();
-    return () => endLoad();
-  }, [initialLoading]);
 
   const refetch = useCallback(
     // Accepts (and ignores) the old `showLoading` boolean so existing call sites compile unchanged.

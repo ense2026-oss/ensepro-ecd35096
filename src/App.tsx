@@ -15,8 +15,6 @@ import { ImpersonationProvider } from "@/contexts/ImpersonationContext";
 import { PermissionsProvider } from "@/contexts/PermissionsContext";
 import { OrgProvider } from "@/contexts/OrgContext";
 import MainLayout from "@/components/layout/MainLayout";
-import { FullScreenLoader } from "@/components/ui/dots-loader";
-import { GlobalLoader } from "@/components/ui/global-loader";
 import Login from "@/pages/Login";
 import Dashboard from "@/pages/Dashboard";
 import Employees from "@/pages/Employees";
@@ -65,7 +63,14 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
   const { user, loading } = useAuth();
 
   if (loading) {
-    return <FullScreenLoader label="กำลังโหลด..." />;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-3 border-primary border-t-transparent rounded-full animate-spin" />
+          <p className="text-sm text-muted-foreground">กำลังโหลด...</p>
+        </div>
+      </div>
+    );
   }
 
   if (!user) {
@@ -154,7 +159,6 @@ const App = () => (
     <TooltipProvider delayDuration={300} skipDelayDuration={0}>
       <Toaster />
       <Sonner />
-      <GlobalLoader />
       <BrandingProvider>
         <AuthProvider>
           <BrowserRouter>

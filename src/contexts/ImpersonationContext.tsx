@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { FullScreenLoader } from "@/components/ui/dots-loader";
 
 // Swaps the browser's real Supabase Auth session to the target employee's own
 // session (via a service-role generated magiclink), so RLS and every role/
@@ -174,7 +173,18 @@ export const ImpersonationProvider: React.FC<{ children: React.ReactNode }> = ({
       }}
     >
       {children}
-      {busy && <FullScreenLoader label="กำลังสลับสิทธิ์การเข้าใช้งาน..." />}
+      {busy && (
+        <div
+          className="fixed inset-0 z-[200] flex items-center justify-center bg-background/80 backdrop-blur-sm"
+          role="status"
+          aria-live="polite"
+        >
+          <div className="flex flex-col items-center gap-3">
+            <div className="w-9 h-9 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+            <p className="text-sm font-medium text-foreground">กำลังสลับสิทธิ์การเข้าใช้งาน...</p>
+          </div>
+        </div>
+      )}
     </ImpersonationContext.Provider>
   );
 };
