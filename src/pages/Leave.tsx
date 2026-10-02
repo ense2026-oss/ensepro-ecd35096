@@ -10,6 +10,7 @@ import { useEmployees } from "@/contexts/EmployeeContext";
 import { usePermissions } from "@/contexts/PermissionsContext";
 import { supabase } from "@/integrations/supabase/client";
 import { usePageQuery, unwrapAll } from "@/hooks/usePageQuery";
+import PaginationBar from "@/components/ui/pagination-bar";
 import { notifyApprovers, notifyRequester, getApprovalTiers, notifyTierApprover } from "@/utils/notifications";
 import {
   AlertDialog,
@@ -144,6 +145,12 @@ const Leave = () => {
   }, [leaves, scope, currentUser?.employeeId, currentDept]);
 
   const filtered = scopedLeaves.filter((l) => filterStatus === "all" || l.status === filterStatus);
+
+  // Pagination (20 rows per page); back to page 1 whenever the filter changes.
+  const LEAVE_PAGE_SIZE = 20;
+  const [leavePage, setLeavePage] = useState(1);
+  useEffect(() => { setLeavePage(1); }, [filterStatus]);
+  const pagedFiltered = filtered.slice((leavePage - 1) * LEAVE_PAGE_SIZE, leavePage * LEAVE_PAGE_SIZE);
 
   // Upload file to storage
   const uploadFile = async (file: File, leaveId: string): Promise<string | null> => {
@@ -465,13 +472,16 @@ const Leave = () => {
       </div>
 
       <LeaveTable
-        records={filtered}
+        records={pagedFiltered}
         onApprove={canApprove ? handleApprove : () => {}}
         onReject={canApprove ? handleReject : () => {}}
         hideActions={!canApprove}
         currentEmployeeId={currentUser?.employeeId}
         onEdit={handleEdit}
         onDelete={(id) => setDeleteId(id)}
+        footer={filtered.length > 0 ? (
+          <PaginationBar page={leavePage} pageSize={LEAVE_PAGE_SIZE} total={filtered.length} onPageChange={setLeavePage} />
+        ) : undefined}
       />
 
       <LeaveRequestDialog

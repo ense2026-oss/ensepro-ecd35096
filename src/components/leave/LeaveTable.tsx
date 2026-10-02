@@ -45,9 +45,11 @@ interface LeaveTableProps {
   currentEmployeeId?: string;
   onEdit?: (record: LeaveRecord) => void;
   onDelete?: (id: string) => void;
+  // Rendered inside the card below the table (e.g. a pagination bar).
+  footer?: React.ReactNode;
 }
 
-const LeaveTable = ({ records, onApprove, onReject, hideActions = false, currentEmployeeId, onEdit, onDelete }: LeaveTableProps) => {
+const LeaveTable = ({ records, onApprove, onReject, hideActions = false, currentEmployeeId, onEdit, onDelete, footer }: LeaveTableProps) => {
   const hasPending = !hideActions && records.some((r) => r.status === "pending");
   const [detail, setDetail] = useState<LeaveRecord | null>(null);
 
@@ -171,6 +173,7 @@ const LeaveTable = ({ records, onApprove, onReject, hideActions = false, current
           </tbody>
         </table>
       </div>
+      {footer}
 
       <Dialog open={!!detail} onOpenChange={(v) => { if (!v) setDetail(null); }}>
         <DialogContent className="sm:max-w-lg">
