@@ -17,6 +17,7 @@ import { notifyRequester, notifyTierApprover } from "@/utils/notifications";
 import EmployeeAvatar from "@/components/ui/employee-avatar";
 import FaceScanFileImportDialog from "@/components/attendance/FaceScanFileImportDialog";
 import { usePageQuery, unwrapAll } from "@/hooks/usePageQuery";
+import PaginationBar from "@/components/ui/pagination-bar";
 
 
 interface AttendanceRecord {
@@ -459,6 +460,15 @@ const Attendance = () => {
 
   // Time-edit requests: show every request (no employee/month/date filtering).
   // Pending requests appear first, then sorted newest → oldest by createdAt.
+  // Pagination (20 rows per page); back to page 1 whenever the filters change.
+  const ATT_PAGE_SIZE = 20;
+  const [attPage, setAttPage] = useState(1);
+  useEffect(() => { setAttPage(1); }, [search, filterStatus, filterEmployee, dateFrom, dateTo, filterMonth, activeView]);
+  const pagedRows = useMemo(
+    () => displayRows.slice((attPage - 1) * ATT_PAGE_SIZE, attPage * ATT_PAGE_SIZE),
+    [displayRows, attPage],
+  );
+
   const filteredRequests = useMemo(() => {
     return editRequests
       .filter((r) => !search || r.employeeName.includes(search))
@@ -935,7 +945,7 @@ const Attendance = () => {
                     <tr><td colSpan={10} className="text-center py-6 text-sm text-muted-foreground">กำลังโหลด...</td></tr>
                   ) : displayRows.length === 0 ? (
                     <tr><td colSpan={10} className="text-center py-6 text-sm text-muted-foreground">ไม่พบข้อมูล</td></tr>
-                  ) : displayRows.map((row) => {
+                  ) : pagedRows.map((row) => {
                     const conf = statusConf[row.status] || statusConf.present;
                     const Icon = conf.icon;
                     return (
@@ -987,6 +997,9 @@ const Attendance = () => {
                 </tbody>
               </table>
             </div>
+            {!loading && displayRows.length > 0 && (
+              <PaginationBar page={attPage} pageSize={ATT_PAGE_SIZE} total={displayRows.length} onPageChange={setAttPage} />
+            )}
           </div>
         </>
       ) : (

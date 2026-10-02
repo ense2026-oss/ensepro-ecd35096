@@ -10,6 +10,7 @@ import { usePermissions } from "@/contexts/PermissionsContext";
 import TimeInput24 from "@/components/ui/time-input-24";
 import { supabase } from "@/integrations/supabase/client";
 import { usePageQuery, unwrapAll } from "@/hooks/usePageQuery";
+import PaginationBar from "@/components/ui/pagination-bar";
 import { toast } from "sonner";
 import { notifyApprovers, notifyRequester, getApprovalTiers, notifyTierApprover } from "@/utils/notifications";
 import SearchableSelect from "@/components/ui/searchable-select";
@@ -401,6 +402,12 @@ const OvertimeRequest = () => {
     return true;
   });
 
+  // Pagination (20 rows per page); back to page 1 whenever the filters change.
+  const OT_PAGE_SIZE = 20;
+  const [otPage, setOtPage] = useState(1);
+  useEffect(() => { setOtPage(1); }, [statusFilter, typeFilter, filterEmployee, dateFrom, dateTo, filterMonth, search]);
+  const pagedFiltered = filtered.slice((otPage - 1) * OT_PAGE_SIZE, otPage * OT_PAGE_SIZE);
+
   // Stats widgets always show current user's own data
   const myOwnRequests = requests.filter((r) => currentUser && r.employeeId === (currentUser.employeeId || currentUser.id));
   const stats = {
@@ -790,7 +797,7 @@ const OvertimeRequest = () => {
                     <p>ไม่พบรายการคำขอ OT</p>
                   </td>
                 </tr>
-              ) : filtered.map((req) => {
+              ) : pagedFiltered.map((req) => {
                 const statusCfg = statusConfig[req.status];
                 const StatusIcon = statusCfg.icon;
                 const typeCfg = otTypeLabels[req.type];
@@ -851,8 +858,11 @@ const OvertimeRequest = () => {
             </tbody>
           </table>
         </div>
+        {!loading && filtered.length > 0 && (
+          <PaginationBar page={otPage} pageSize={OT_PAGE_SIZE} total={filtered.length} onPageChange={setOtPage} />
+        )}
         <div className="flex items-center justify-between px-4 py-3 border-t border-border bg-muted/20 text-xs text-muted-foreground">
-          <span>แสดง {filtered.length} จาก {userRequests.length} รายการ</span>
+          <span>ทั้งหมด {filtered.length} จาก {userRequests.length} รายการ</span>
           <span>รวม OT (อนุมัติ): <span className="font-bold text-foreground">{stats.totalHours} ชั่วโมง</span></span>
         </div>
       </div>
