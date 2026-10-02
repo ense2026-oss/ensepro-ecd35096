@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { User, Session } from "@supabase/supabase-js";
 import { useQueryClient } from "@tanstack/react-query";
 import { clearPersistedQueryCache } from "@/lib/queryPersist";
+import { withRetry } from "@/lib/retry";
 
 type AppRole = "admin" | "hr" | "manager" | "employee" | "accountant" | "executive";
 
@@ -96,25 +97,52 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const fetchProfileAndRole = useCallback(async (userId: string) => {
     try {
+      // withRetry: Supabase intermittently answers 504. Without it a failed
+      // lookup here was treated as "no employee row / role employee" AND cached
+      // for an hour, which sent self-only staff to /employees/<auth id> and a
+      // "ไม่พบข้อมูลพนักงาน" page until the cache expired.
       const [profileRes, roleRes, empRes] = await Promise.all([
-        supabase.from("profiles").select("*").eq("id", userId).maybeSingle(),
-        supabase.from("user_roles").select("role, role_name").eq("user_id", userId).maybeSingle(),
-        supabase.from("employees").select("id, photo_url, dept, position, first_name, last_name, avatar, avatar_color, avatar_text_color").eq("user_id", userId).maybeSingle(),
+        withRetry(() => supabase.from("profiles").select("*").eq("id", userId).maybeSingle()),
+        withRetry(() => supabase.from("user_roles").select("role, role_name").eq("user_id", userId).maybeSingle()),
+        // limit(1) rather than maybeSingle(): a duplicated user_id link would make
+        // maybeSingle() error out and drop the employee entirely.
+        withRetry(() =>
+          supabase
+            .from("employees")
+            .select("id, photo_url, dept, position, first_name, last_name, avatar, avatar_color, avatar_text_color")
+            .eq("user_id", userId)
+            .order("created_at")
+            .limit(1),
+        ),
       ]);
 
       const newProfile = profileRes.data as Profile | null;
-      // role_name is the source of truth (supports custom roles); fall back to enum role
-      const newRole = ((roleRes.data as any)?.role_name || (roleRes.data as any)?.role || "employee") as AppRole;
-      const newEmpId = empRes.data?.id ?? null;
-      const newEmpData = empRes.data ?? null;
-
       if (newProfile) setProfile(newProfile);
-      setRole(newRole);
-      setEmployeeId(newEmpId);
-      setEmployeeData(newEmpData);
 
-      // บันทึก cache สำหรับการโหลดครั้งถัดไป
-      saveAuthCache({ userId, profile: newProfile, role: newRole, employeeId: newEmpId, employeeData: newEmpData });
+      const roleOk = !roleRes.error;
+      const empOk = !empRes.error;
+      // role_name is the source of truth (supports custom roles); fall back to enum role
+      const newRole = roleOk
+        ? (((roleRes.data as any)?.role_name || (roleRes.data as any)?.role || "employee") as AppRole)
+        : null;
+      // undefined = lookup failed (keep whatever we had), null = genuinely no row
+      const empRow: any | null | undefined = empOk ? ((empRes.data as any[] | null)?.[0] ?? null) : undefined;
+
+      if (newRole) setRole(newRole);
+      if (empRow !== undefined) {
+        setEmployeeId(empRow?.id ?? null);
+        setEmployeeData(empRow);
+      }
+
+      // Only cache a fully successful lookup; never persist a transient failure.
+      if (roleOk && empOk && newRole) {
+        saveAuthCache({ userId, profile: newProfile, role: newRole, employeeId: empRow?.id ?? null, employeeData: empRow });
+      } else {
+        console.warn("profile/role lookup incomplete; keeping previous values", {
+          role: roleRes.error?.message,
+          employee: empRes.error?.message,
+        });
+      }
     } catch (err) {
       console.error("Error fetching profile/role:", err);
     } finally {

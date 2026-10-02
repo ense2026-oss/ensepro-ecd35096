@@ -73,8 +73,10 @@ const MainLayout = () => {
     return <Navigate to="/login" replace />;
   }
 
-  // Employee ID for self-routes (fallback to auth id)
-  const selfEmployeeId = currentUser?.employeeId || user.id;
+  // Employee ID for self-routes. No fallback to the auth id: that produced a
+  // /employees/<auth uid> URL that matches no employee and rendered
+  // "ไม่พบข้อมูลพนักงาน" whenever the employee link hadn't resolved.
+  const selfEmployeeId = currentUser?.employeeId ?? null;
 
   // Check role-based access for current path
   const currentPath = "/" + location.pathname.split("/")[1]; // e.g. /employees/123 → /employees
@@ -97,6 +99,24 @@ const MainLayout = () => {
   // permissions arrive.
   // Redirect self-only users from list view to their own profile
   if (!permLoading && isSelfOnly(role, "/employees") && location.pathname === "/employees") {
+    if (!selfEmployeeId) {
+      // This login isn't linked to an employee row (or the link is still
+      // resolving — AuthContext retries and this re-renders once it lands).
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-background p-6">
+          <div className="max-w-md w-full rounded-2xl border bg-card p-6 text-center space-y-3" style={{ borderColor: "hsl(var(--border))" }}>
+            <h2 className="text-lg font-bold">ไม่พบข้อมูลพนักงานของบัญชีนี้</h2>
+            <p className="text-sm text-muted-foreground">
+              บัญชีที่ใช้เข้าสู่ระบบยังไม่ได้ผูกกับข้อมูลพนักงาน กรุณาติดต่อฝ่ายบุคคลหรือผู้ดูแลระบบ
+              หรือลองโหลดหน้าใหม่อีกครั้งหากเพิ่งเข้าสู่ระบบ
+            </p>
+            <button onClick={() => window.location.reload()} className="px-4 py-2 rounded-xl text-sm font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors">
+              โหลดใหม่
+            </button>
+          </div>
+        </div>
+      );
+    }
     return <Navigate to={`/employees/${selfEmployeeId}`} replace />;
   }
 
@@ -104,7 +124,7 @@ const MainLayout = () => {
   if (!permLoading && isSelfOnly(role, "/employees") && location.pathname.startsWith("/employees/")) {
     const viewingId = location.pathname.split("/employees/")[1];
     if (viewingId && viewingId !== selfEmployeeId) {
-      return <Navigate to={`/employees/${selfEmployeeId}`} replace />;
+      return <Navigate to="/employees" replace />;
     }
   }
 
