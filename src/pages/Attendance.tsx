@@ -931,7 +931,60 @@ const Attendance = () => {
         <>
           {/* Table */}
           <div className="card-base overflow-hidden">
-            <div className="overflow-x-auto">
+            {/* Mobile: card grid (table is hidden below md) */}
+            <div className="md:hidden p-3">
+              {loading ? (
+                <p className="text-center py-6 text-sm text-muted-foreground">กำลังโหลด...</p>
+              ) : displayRows.length === 0 ? (
+                <p className="text-center py-6 text-sm text-muted-foreground">ไม่พบข้อมูล</p>
+              ) : (
+                <div className="grid grid-cols-2 gap-3">
+                  {pagedRows.map((row) => {
+                    const conf = statusConf[row.status] || statusConf.present;
+                    const Icon = conf.icon;
+                    const canEditRow = (canEditTime || row.employeeId === currentUser?.employeeId) && row.status !== "holiday" && row.status !== "dayoff";
+                    return (
+                      <div key={row.id} className="rounded-xl border p-3 flex flex-col gap-2" style={{ borderColor: "hsl(var(--border))" }}>
+                        <div className="flex items-center gap-2 min-w-0">
+                          <EmployeeAvatar photoUrl={photoMap.get(row.employeeId)} firstName={row.name} size="sm" rounded="lg" />
+                          <div className="min-w-0">
+                            <p className="text-xs font-semibold truncate">{row.name}</p>
+                            <p className="text-[10px] text-muted-foreground truncate">{row.dept}</p>
+                          </div>
+                        </div>
+                        <p className="text-xs font-medium">{formatThaiShort(row.date)}</p>
+                        <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-[11px]">
+                          <span className="text-muted-foreground">เข้า</span>
+                          <span className={`font-medium text-right ${row.late ? "text-orange-500" : ""}`}>
+                            {row.checkIn || "-"}{row.late && <span className="ml-1 text-[10px]">(สาย)</span>}
+                          </span>
+                          <span className="text-muted-foreground">ออก</span>
+                          <span className="font-medium text-right">{row.checkOut || "-"}</span>
+                          <span className="text-muted-foreground">OT เข้า/ออก</span>
+                          <span className="font-mono text-right">{row.otIn || "-"} / {row.otOut || "-"}</span>
+                          <span className="text-muted-foreground">OT (ชม.)</span>
+                          <span className="font-semibold text-right" style={{ color: row.ot > 0 ? "hsl(90 100% 30%)" : undefined }}>
+                            {row.ot > 0 ? `+${row.ot}` : "-"}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between gap-2 pt-1">
+                          <div className="flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full" style={{ background: conf.bg, color: conf.color }}>
+                            <Icon className="w-3 h-3" style={{ color: conf.color }} />
+                            {row.note || conf.label}
+                          </div>
+                          {canEditRow && (
+                            <button onClick={() => openEdit(row)} className="text-[10px] font-medium px-2 py-1 rounded-lg border hover:bg-muted transition-colors flex items-center gap-1">
+                              <RotateCcw className="w-3 h-3" /> แก้ไข
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+            <div className="overflow-x-auto hidden md:block">
               <table className="w-full">
                 <thead>
                   <tr className="border-b" style={{ borderColor: "hsl(var(--border))" }}>

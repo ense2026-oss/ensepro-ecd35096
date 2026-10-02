@@ -772,7 +772,73 @@ const OvertimeRequest = () => {
       </div>
 
       <div className="card-base overflow-hidden">
-        <div className="overflow-x-auto">
+        {/* Mobile: card grid (table is hidden below md) */}
+        <div className="md:hidden p-3">
+          {loading ? (
+            <p className="text-center py-10 text-muted-foreground">กำลังโหลด...</p>
+          ) : filtered.length === 0 ? (
+            <div className="text-center py-10 text-muted-foreground">
+              <AlertCircle className="w-8 h-8 mx-auto mb-2 opacity-40" />
+              <p>ไม่พบรายการคำขอ OT</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-3">
+              {pagedFiltered.map((req) => {
+                const statusCfg = statusConfig[req.status];
+                const StatusIcon = statusCfg.icon;
+                const typeCfg = otTypeLabels[req.type];
+                const actual = calcActualHours(req.actualIn, req.actualOut);
+                return (
+                  <div key={req.id} className="rounded-xl border border-border p-3 flex flex-col gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <EmployeeAvatar photoUrl={req.photoUrl} firstName={req.employeeName} size="sm" />
+                      <div className="min-w-0">
+                        <p className="text-xs font-semibold truncate">{req.employeeName}</p>
+                        <p className="text-[10px] text-muted-foreground truncate">{req.department || "-"}</p>
+                      </div>
+                    </div>
+                    <p className="text-xs font-medium">{req.date}</p>
+                    <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-[11px]">
+                      <span className="text-muted-foreground">เวลาที่ขอ</span>
+                      <span className="font-mono text-right">{req.startTime} - {req.endTime}</span>
+                      <span className="text-muted-foreground">เวลาจริง</span>
+                      <span className="font-mono text-right">
+                        {req.actualIn || req.actualOut ? `${req.actualIn || "-"} - ${req.actualOut || "-"}` : "ยังไม่บันทึก"}
+                      </span>
+                      <span className="text-muted-foreground">ชม. (ที่ขอ)</span>
+                      <span className="font-bold text-right">
+                        {actual !== null ? <span className="text-primary">{actual}</span> : "-"}
+                        <span className="text-muted-foreground font-normal"> ({req.hours})</span>
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${typeCfg.className}`}>{typeCfg.label}</span>
+                      <span className={`${statusCfg.className} inline-flex items-center gap-1 text-[10px]`}>
+                        <StatusIcon className="w-3 h-3" /> {statusCfg.label}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-end gap-1 pt-1 border-t border-border">
+                      <button onClick={() => setDetailReq(req)} className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground" title="ดูรายละเอียด">
+                        <Eye className="w-4 h-4" />
+                      </button>
+                      {canApprove && req.status === "pending" && (
+                        <>
+                          <button onClick={() => handleApprove(req.id)} className="p-1.5 rounded-lg hover:bg-muted transition-colors" style={{ color: "hsl(90 100% 30%)" }} title="อนุมัติ">
+                            <CheckCircle className="w-4 h-4" />
+                          </button>
+                          <button onClick={() => handleReject(req.id)} className="p-1.5 rounded-lg hover:bg-muted transition-colors text-destructive" title="ไม่อนุมัติ">
+                            <XCircle className="w-4 h-4" />
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+        <div className="overflow-x-auto hidden md:block">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-muted/40">
