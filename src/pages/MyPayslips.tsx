@@ -23,6 +23,7 @@ const MyPayslips = () => {
 
   const [rows, setRows] = useState<PayslipWithPeriod[]>([]);
   const [selected, setSelected] = useState<PayslipWithPeriod | null>(null);
+  const [selectedYear, setSelectedYear] = useState<number | "all">("all");
 
   // Cached via React Query: revisiting this page renders instantly from cache and
   // only refetches in the background; 504s are retried before showing an error.
@@ -68,6 +69,16 @@ const MyPayslips = () => {
     position: me.position, dept: me.dept, nationalId: me.national_id,
   } : null, [me]);
 
+  // ปี (ค.ศ.) ที่มีสลิป เรียงใหม่สุดก่อน — แสดงเป็น พ.ศ. ในตัวกรอง
+  const years = useMemo(
+    () => Array.from(new Set(rows.map((r) => r.period.year))).sort((a, b) => b - a),
+    [rows],
+  );
+  const displayRows = useMemo(
+    () => (selectedYear === "all" ? rows : rows.filter((r) => r.period.year === selectedYear)),
+    [rows, selectedYear],
+  );
+
   // Realtime: refresh when periods/payslips change
   useEffect(() => {
     if (!me?.id) return;
@@ -82,9 +93,21 @@ const MyPayslips = () => {
 
   return (
     <div className="space-y-5">
-      <div>
-        <h2 className="text-xl font-bold font-display">สลิปเงินเดือนของฉัน</h2>
-        <p className="text-sm text-muted-foreground mt-0.5">รายการสลิปเงินเดือนที่บริษัทเผยแพร่แล้ว</p>
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div>
+          <h2 className="text-xl font-bold font-display">สลิปเงินเดือนของฉัน</h2>
+          <p className="text-sm text-muted-foreground mt-0.5">รายการสลิปเงินเดือนที่บริษัทเผยแพร่แล้ว</p>
+        </div>
+        {rows.length > 0 && (
+          <select
+            value={String(selectedYear)}
+            onChange={(e) => setSelectedYear(e.target.value === "all" ? "all" : Number(e.target.value))}
+            className="px-3 py-2 text-sm rounded-xl border bg-muted/30 outline-none cursor-pointer"
+          >
+            <option value="all">ทุกปี</option>
+            {years.map((y) => <option key={y} value={y}>พ.ศ. {y + 543}</option>)}
+          </select>
+        )}
       </div>
 
       {loading && <p className="text-sm text-muted-foreground">กำลังโหลด...</p>}
@@ -96,7 +119,14 @@ const MyPayslips = () => {
         </div>
       )}
 
-      {rows.length > 0 && (
+      {rows.length > 0 && displayRows.length === 0 && (
+        <div className="card-base p-8 text-center text-muted-foreground">
+          <Receipt className="w-10 h-10 mx-auto mb-3 opacity-40" />
+          <p>ไม่มีสลิปเงินเดือนในปี พ.ศ. {selectedYear !== "all" ? Number(selectedYear) + 543 : ""}</p>
+        </div>
+      )}
+
+      {displayRows.length > 0 && (
         <div className="card-base overflow-hidden">
           <table className="w-full text-sm">
             <thead style={{ background: "hsl(var(--muted))" }}>
@@ -110,9 +140,9 @@ const MyPayslips = () => {
               </tr>
             </thead>
             <tbody>
-              {rows.map((r, idx) => (
+              {displayRows.map((r, idx) => (
                 <tr key={r.id} className="border-t hover:bg-muted/30">
-                  <td className="px-4 py-3 text-muted-foreground">{rows.length - idx}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{displayRows.length - idx}</td>
                   <td className="px-4 py-3">{THAI_MONTHS[r.period.month - 1]} {r.period.year + 543}</td>
                   <td className="text-right px-3 py-3 tabular-nums">{formatCurrency(Number(r.gross_pay))}</td>
                   <td className="text-right px-3 py-3 tabular-nums">{formatCurrency(Number(r.total_deduct))}</td>
