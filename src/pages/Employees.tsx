@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Search, Plus, Download, Upload, MoreHorizontal, Eye, Edit, Trash2, LogIn,
-  Phone, Mail, MapPin, ChevronLeft, ChevronRight, ListFilter,
+  Phone, Mail, MapPin, ChevronLeft, ChevronRight, ListFilter, Loader2,
 } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useEmployees } from "@/contexts/EmployeeContext";
@@ -13,7 +13,6 @@ import type { Position } from "@/contexts/OrgContext";
 import type { Employee } from "@/contexts/EmployeeContext";
 import EmployeeFormDialog from "@/components/employees/EmployeeFormDialog";
 import DeleteEmployeeDialog from "@/components/employees/DeleteEmployeeDialog";
-import LoginAsDialog from "@/components/employees/LoginAsDialog";
 import ImportEmployeesDialog from "@/components/employees/ImportEmployeesDialog";
 import ExportEmployeesDialog from "@/components/employees/ExportEmployeesDialog";
 import EmployeeStatsCards from "@/components/employees/EmployeeStatsCards";
@@ -52,7 +51,6 @@ const Employees = () => {
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deletingEmployee, setDeletingEmployee] = useState<Employee | null>(null);
-  const [loginAsOpen, setLoginAsOpen] = useState(false);
   const [loginAsEmployee, setLoginAsEmployee] = useState<Employee | null>(null);
   const [loginAsLoading, setLoginAsLoading] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
@@ -123,18 +121,19 @@ const Employees = () => {
   const canLoginAs = (emp: Employee) =>
     isAdmin && !!emp.userId && emp.id !== currentUser?.employeeId && !emp.isProtected;
 
-  const handleLoginAsClick = (emp: Employee) => { setLoginAsEmployee(emp); setLoginAsOpen(true); };
-  const handleLoginAsConfirm = async () => {
-    if (!loginAsEmployee) return;
+  // เข้าสู่ระบบในฐานะพนักงานทันที ไม่มี dialog ยืนยัน (startImpersonation จะ reload
+  // ไปหน้า /dashboard ในฐานะคนนั้นเอง จึงได้สิทธิ์ของคนนั้นครบสมบูรณ์)
+  const handleLoginAsClick = async (emp: Employee) => {
+    if (loginAsLoading) return; // กันดับเบิลคลิก
+    setLoginAsEmployee(emp);
     setLoginAsLoading(true);
-    const { error } = await startImpersonation(loginAsEmployee.id);
-    setLoginAsLoading(false);
+    const { error } = await startImpersonation(emp.id);
     if (error) {
+      setLoginAsLoading(false);
+      setLoginAsEmployee(null);
       toast.error(error);
-      return;
     }
-    setLoginAsOpen(false);
-    setLoginAsEmployee(null);
+    // สำเร็จ: startImpersonation จะ redirect เอง ไม่ต้องทำอะไรต่อ
   };
 
   const handleFormSave = async (data: Omit<Employee, "id" | "education" | "workHistory">) => {
@@ -328,7 +327,7 @@ const Employees = () => {
                           <button onClick={() => navigate(`/employees/${emp.id}`)} className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"><Eye className="w-4 h-4" /></button>
                           <button onClick={() => handleEdit(emp)} className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"><Edit className="w-4 h-4" /></button>
                           {canLoginAs(emp) && (
-                            <button onClick={() => handleLoginAsClick(emp)} title="เข้าสู่ระบบในฐานะพนักงาน" className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"><LogIn className="w-4 h-4" /></button>
+                            <button onClick={() => handleLoginAsClick(emp)} disabled={loginAsLoading} title="เข้าสู่ระบบในฐานะพนักงาน" className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground disabled:opacity-50 disabled:pointer-events-none">{loginAsLoading && loginAsEmployee?.id === emp.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogIn className="w-4 h-4" />}</button>
                           )}
                           <button onClick={() => handleDeleteClick(emp)} className="p-1.5 rounded-lg hover:bg-destructive/10 transition-colors text-muted-foreground hover:text-destructive"><Trash2 className="w-4 h-4" /></button>
                         </div>
@@ -498,10 +497,6 @@ const Employees = () => {
       <DeleteEmployeeDialog open={deleteOpen} onOpenChange={setDeleteOpen}
         employeeName={deletingEmployee ? `${deletingEmployee.prefix}${deletingEmployee.firstName} ${deletingEmployee.lastName}` : ""}
         onConfirm={handleDeleteConfirm} />
-      <LoginAsDialog open={loginAsOpen} onOpenChange={setLoginAsOpen}
-        employeeName={loginAsEmployee ? `${loginAsEmployee.prefix}${loginAsEmployee.firstName} ${loginAsEmployee.lastName}` : ""}
-        loading={loginAsLoading}
-        onConfirm={handleLoginAsConfirm} />
       <ImportEmployeesDialog open={importOpen} onOpenChange={setImportOpen} />
       <ExportEmployeesDialog open={exportOpen} onOpenChange={setExportOpen} employees={filtered} />
     </div>

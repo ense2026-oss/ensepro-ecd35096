@@ -211,6 +211,10 @@ const EmployeeProfile = () => {
   const [usernameSaving, setUsernameSaving] = useState(false);
   const [usernameError, setUsernameError] = useState("");
 
+  // Keep the username input in sync with whichever employee is loaded.
+  // Must stay above the early returns below so hook order is stable (Rules of Hooks).
+  useEffect(() => { setUsernameInput(employee?.username || ""); setUsernameError(""); }, [employee?.id, employee?.username]);
+
   const photoInputRef = useRef<HTMLInputElement>(null);
 
   const [slideState, setSlideState] = useState<"entering" | "visible" | "exiting">("entering");
@@ -312,9 +316,6 @@ const EmployeeProfile = () => {
       toast.error("บันทึกไม่สำเร็จ: " + (err?.message || "เกิดข้อผิดพลาด"));
     }
   };
-
-  // Keep the username input in sync with whichever employee is loaded.
-  useEffect(() => { setUsernameInput(employee?.username || ""); setUsernameError(""); }, [employee?.id, employee?.username]);
 
   const handleUsernameChange = async () => {
     const next = usernameInput.trim().toLowerCase();
@@ -921,14 +922,19 @@ const EmployeeProfile = () => {
             ) : (
               <LazyImage src={defaultAvatarImg} alt={emp.firstName || "Default"} className="w-24 h-24 rounded-2xl" />
             )}
-            <input ref={photoInputRef} type="file" accept="image/*" onChange={handlePhotoUpload} className="hidden" />
-            <button
-              type="button"
-              onClick={(e) => { e.stopPropagation(); photoInputRef.current?.click(); }}
-              className="absolute -bottom-2 -right-2 w-7 h-7 rounded-full flex items-center justify-center text-primary-foreground shadow-md cursor-pointer bg-primary"
-            >
-              <Camera className="w-3.5 h-3.5" />
-            </button>
+            {/* อัปโหลดรูปพนักงาน: เฉพาะ HR และ admin เท่านั้น (พนักงานอัปรูปตัวเองไม่ได้) */}
+            {isAdminOrHr && (
+              <>
+                <input ref={photoInputRef} type="file" accept="image/*" onChange={handlePhotoUpload} className="hidden" />
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); photoInputRef.current?.click(); }}
+                  className="absolute -bottom-2 -right-2 w-7 h-7 rounded-full flex items-center justify-center text-primary-foreground shadow-md cursor-pointer bg-primary"
+                >
+                  <Camera className="w-3.5 h-3.5" />
+                </button>
+              </>
+            )}
           </div>
           <div className="flex-1 text-center sm:text-left">
             <h3 className="text-xl font-bold font-display">
