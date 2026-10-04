@@ -2,7 +2,10 @@
 import jsPDF from "jspdf";
 import { supabase } from "@/integrations/supabase/client";
 import { formatCurrency } from "@/utils/taxCalculation";
-import letterheadAsset from "@/assets/payslip-letterhead.jpg.asset.json";
+// Import the letterhead directly from src/assets so Vite bundles it (served by
+// Vercel). The old *.asset.json pointed at a Lovable /__l5e/ URL that 404s in
+// production, which is why the logo disappeared from the payslip.
+import letterheadImg from "@/assets/payslip-letterhead.jpg";
 
 const THAI_MONTHS = [
   "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน",
@@ -32,7 +35,7 @@ const DEFAULTS: LetterSettings = {
   companyName: "บริษัท พลังงานนครพิงค์ จำกัด",
   signerName: "(นางสาวสุรีย์ ตียปรีชญา)",
   signerTitle: "พนักงานการเงิน",
-  headerImageUrl: letterheadAsset.url,
+  headerImageUrl: letterheadImg,
 };
 
 async function fetchLetterSettings(): Promise<LetterSettings> {
@@ -102,7 +105,7 @@ export async function renderPayslipLetter(doc: jsPDF, d: PayslipLetterData): Pro
   const contentW = pageW - M * 2;
 
   /* ── Header image (no border box) ── */
-  const imgH = (contentW * 265) / 1920;
+  const imgH = (contentW * 276) / 2000; // letterhead aspect ratio (2000×276)
   const img = await toDataUrl(cfg.headerImageUrl);
   if (img) {
     try {
