@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Search, Plus, Download, Upload, MoreHorizontal, Eye, Edit, Trash2, LogIn,
@@ -37,7 +37,14 @@ const Employees = () => {
   const { employees, addEmployee, updateEmployee, deleteEmployee } = useEmployees();
   const { affiliations } = useOrg();
   const { role, currentUser } = useAuth();
-  const { startImpersonation } = useImpersonation();
+  const { startImpersonation, prefetchImpersonation } = useImpersonation();
+  // Warm the target's session on hover so the actual Login as click is instant.
+  const prefetchTimer = useRef<ReturnType<typeof setTimeout>>();
+  const schedulePrefetch = (id: string) => {
+    clearTimeout(prefetchTimer.current);
+    prefetchTimer.current = setTimeout(() => prefetchImpersonation(id), 120);
+  };
+  const cancelPrefetch = () => clearTimeout(prefetchTimer.current);
   const isAdmin = role === "admin";
   const allRoleOptions = useRoleOptions();
   // สิทธิ์ที่เลือกได้ในตาราง (ไม่ให้ตั้งเป็น Admin จากตรงนี้ — จัดการใน ตั้งค่า → ผู้ดูแลระบบ)
@@ -365,7 +372,7 @@ const Employees = () => {
                           <button onClick={() => navigate(`/employees/${emp.id}`)} className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"><Eye className="w-4 h-4" /></button>
                           <button onClick={() => handleEdit(emp)} className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"><Edit className="w-4 h-4" /></button>
                           {canLoginAs(emp) && (
-                            <button onClick={() => handleLoginAsClick(emp)} disabled={loginAsLoading} title="เข้าสู่ระบบในฐานะพนักงาน" className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground disabled:opacity-50 disabled:pointer-events-none">{loginAsLoading && loginAsEmployee?.id === emp.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogIn className="w-4 h-4" />}</button>
+                            <button onClick={() => handleLoginAsClick(emp)} onMouseEnter={() => schedulePrefetch(emp.id)} onMouseLeave={cancelPrefetch} onFocus={() => prefetchImpersonation(emp.id)} disabled={loginAsLoading} title="เข้าสู่ระบบในฐานะพนักงาน" className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground disabled:opacity-50 disabled:pointer-events-none">{loginAsLoading && loginAsEmployee?.id === emp.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogIn className="w-4 h-4" />}</button>
                           )}
                           <button onClick={() => handleDeleteClick(emp)} className="p-1.5 rounded-lg hover:bg-destructive/10 transition-colors text-muted-foreground hover:text-destructive"><Trash2 className="w-4 h-4" /></button>
                         </div>
@@ -442,7 +449,7 @@ const Employees = () => {
                         <DropdownMenuItem onClick={() => navigate(`/employees/${emp.id}`)}><Eye className="w-4 h-4 mr-2" /> ดูข้อมูล</DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleEdit(emp)}><Edit className="w-4 h-4 mr-2" /> แก้ไข</DropdownMenuItem>
                         {canLoginAs(emp) && (
-                          <DropdownMenuItem onClick={() => handleLoginAsClick(emp)}><LogIn className="w-4 h-4 mr-2" /> เข้าสู่ระบบในฐานะพนักงาน</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleLoginAsClick(emp)} onMouseEnter={() => schedulePrefetch(emp.id)} onMouseLeave={cancelPrefetch}><LogIn className="w-4 h-4 mr-2" /> เข้าสู่ระบบในฐานะพนักงาน</DropdownMenuItem>
                         )}
                         <DropdownMenuItem onClick={() => handleDeleteClick(emp)} className="text-destructive focus:text-destructive"><Trash2 className="w-4 h-4 mr-2" /> ลบ</DropdownMenuItem>
                       </DropdownMenuContent>

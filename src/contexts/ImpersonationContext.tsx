@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback } from "react";
+import React, { createContext, useContext, useState, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 // Swaps the browser's real Supabase Auth session to the target employee's own
@@ -19,6 +19,17 @@ import { supabase } from "@/integrations/supabase/client";
 const STASH_KEY = "impersonation_admin_session";
 const FLAG_KEY = "impersonation_active_name";
 const AUTH_KEY_RE = /^sb-.*-auth-token$/;
+// How long a prefetched login-as session stays usable (well under the magiclink
+// session lifetime). Prefetching on hover makes the click itself as fast as the
+// instant admin-restore: no network in the critical path, just a storage write.
+const PREFETCH_TTL = 4 * 60 * 1000;
+
+interface Prefetched {
+  session?: { access_token?: string; refresh_token?: string };
+  tokenHash?: string;
+  targetName?: string;
+  ts: number;
+}
 
 interface AdminSnapshot {
   authKey: string;
@@ -30,6 +41,9 @@ interface ImpersonationContextType {
   impersonatedName: string | null;
   busy: boolean;
   startImpersonation: (employeeId: string) => Promise<{ error: string | null }>;
+  // Warm up a target's session ahead of the click (e.g. on hover) so the actual
+  // switch is instant. Safe to call repeatedly; no-op if already warm/in-flight.
+  prefetchImpersonation: (employeeId: string) => void;
   stopImpersonation: () => Promise<void>;
 }
 
@@ -75,6 +89,39 @@ export const ImpersonationProvider: React.FC<{ children: React.ReactNode }> = ({
   const [impersonatedName] = useState<string | null>(readFlag);
   const [busy, setBusy] = useState(false);
 
+  // Warm sessions keyed by employeeId, filled by prefetchImpersonation(hover).
+  const prefetchRef = useRef<Map<string, Prefetched>>(new Map());
+  const inflightRef = useRef<Set<string>>(new Set());
+
+  // Call the edge function once and return what it gives (session or tokenHash).
+  const callImpersonateFn = useCallback(async (employeeId: string) => {
+    const { data, error } = await supabase.functions.invoke("admin-impersonate-user", {
+      body: { employeeId },
+    });
+    if (error || (data as any)?.error) {
+      return { error: (data as any)?.error || error?.message || "เข้าสู่ระบบในฐานะพนักงานไม่สำเร็จ" };
+    }
+    return data as { session?: { access_token?: string; refresh_token?: string }; tokenHash?: string; targetName?: string };
+  }, []);
+
+  const prefetchImpersonation = useCallback((employeeId: string) => {
+    if (!employeeId) return;
+    const cached = prefetchRef.current.get(employeeId);
+    if (cached && Date.now() - cached.ts < PREFETCH_TTL) return; // already warm
+    if (inflightRef.current.has(employeeId)) return;             // already fetching
+    inflightRef.current.add(employeeId);
+    callImpersonateFn(employeeId)
+      .then((res) => {
+        if (!("error" in res) && (res.session?.access_token || res.tokenHash)) {
+          // Keep the cache tiny so we don't mint many unused sessions.
+          if (prefetchRef.current.size > 4) prefetchRef.current.clear();
+          prefetchRef.current.set(employeeId, { ...res, ts: Date.now() });
+        }
+      })
+      .catch(() => {})
+      .finally(() => inflightRef.current.delete(employeeId));
+  }, [callImpersonateFn]);
+
   const startImpersonation = useCallback(async (employeeId: string): Promise<{ error: string | null }> => {
     setBusy(true);
     try {
@@ -87,19 +134,22 @@ export const ImpersonationProvider: React.FC<{ children: React.ReactNode }> = ({
         return { error: "ไม่พบเซสชันผู้ดูแลระบบ กรุณาเข้าสู่ระบบใหม่" };
       }
 
-      const { data, error } = await supabase.functions.invoke("admin-impersonate-user", {
-        body: { employeeId },
-      });
-      if (error || data?.error) {
+      // Use a prefetched (hover-warmed) result if we have one — this makes the
+      // click itself instant, like the admin-restore. Otherwise fetch now.
+      const warm = prefetchRef.current.get(employeeId);
+      let data: { session?: { access_token?: string; refresh_token?: string }; tokenHash?: string; targetName?: string } | { error: string };
+      if (warm && Date.now() - warm.ts < PREFETCH_TTL) {
+        prefetchRef.current.delete(employeeId);
+        data = { session: warm.session, tokenHash: warm.tokenHash, targetName: warm.targetName };
+      } else {
+        data = await callImpersonateFn(employeeId);
+      }
+      if ("error" in data) {
         setBusy(false);
-        return { error: data?.error || error?.message || "เข้าสู่ระบบในฐานะพนักงานไม่สำเร็จ" };
+        return { error: data.error };
       }
 
-      const { session, tokenHash, targetName } = data as {
-        session?: { access_token?: string; refresh_token?: string };
-        tokenHash?: string;
-        targetName?: string;
-      };
+      const { session, tokenHash, targetName } = data;
 
       const snapshot: AdminSnapshot = { authKey, blob: adminBlob };
       try {
@@ -154,7 +204,7 @@ export const ImpersonationProvider: React.FC<{ children: React.ReactNode }> = ({
       setBusy(false);
       return { error: err?.message || "เกิดข้อผิดพลาด" };
     }
-  }, []);
+  }, [callImpersonateFn]);
 
   const stopImpersonation = useCallback(async (): Promise<void> => {
     setBusy(true);
@@ -195,6 +245,7 @@ export const ImpersonationProvider: React.FC<{ children: React.ReactNode }> = ({
         impersonatedName,
         busy,
         startImpersonation,
+        prefetchImpersonation,
         stopImpersonation,
       }}
     >
