@@ -663,16 +663,22 @@ const Reports = () => {
 
       // Determine which employees to show based on report type
       if (selectedReport === "emp-all") {
-        setEmpTableData(emps.map((e: any) => ({
-          id: e.username || "-",
-          name: `${e.first_name} ${e.last_name}`,
-          dept: e.dept || "-",
-          position: e.position || "-",
-          type: e.employee_type || "-",
-          startDate: e.start_date || "-",
-          status: e.status === "active" ? "ทำงาน" : e.status === "inactive" ? "ลาพัก" : e.status === "leave" ? "ลาออก" : e.status || "-",
-          rawStatus: e.status,
-        })));
+        // พนักงาน "ทำงาน" อยู่อันดับต้น ๆ จากนั้น "ลาพัก" แล้ว "พ้นสภาพ"
+        const statusRank: Record<string, number> = { active: 0, leave: 1, inactive: 2 };
+        setEmpTableData(
+          emps
+            .map((e: any) => ({
+              id: e.username || "-",
+              name: `${e.first_name} ${e.last_name}`,
+              dept: e.dept || "-",
+              position: e.position || "-",
+              type: e.employee_type || "-",
+              startDate: e.start_date || "-",
+              status: e.status === "active" ? "ทำงาน" : e.status === "leave" ? "ลาพัก" : e.status === "inactive" ? "พ้นสภาพ" : e.status || "-",
+              rawStatus: e.status,
+            }))
+            .sort((a: any, b: any) => (statusRank[a.rawStatus] ?? 9) - (statusRank[b.rawStatus] ?? 9) || a.name.localeCompare(b.name, "th"))
+        );
       } else if (selectedReport === "emp-new") {
         // New employees in the selected month/year
         const newEmps = emps.filter((e: any) => {
@@ -1147,8 +1153,8 @@ const Reports = () => {
               <span className="text-xs text-muted-foreground">สถานะ:</span>
               {[
                 { key: "active", label: "ทำงาน", bg: "hsl(var(--accent-green) / 0.15)", color: "#4CAF50" },
-                { key: "leave", label: "พ้นสภาพ", bg: "hsl(0 80% 95%)", color: "#ef4444" },
-                { key: "inactive", label: "ลาพัก", bg: "hsl(31 100% 95%)", color: "#FF870F" },
+                { key: "leave", label: "ลาพัก", bg: "hsl(31 100% 95%)", color: "#FF870F" },
+                { key: "inactive", label: "พ้นสภาพ", bg: "hsl(0 80% 95%)", color: "#ef4444" },
               ].map((opt) => {
                 const active = empStatusFilter.includes(opt.key);
                 return (
@@ -1278,8 +1284,8 @@ const Reports = () => {
               {(() => {
                 const statusMeta: Record<string, { label: string; color: string }> = {
                   active: { label: "ทำงาน", color: "#4CAF50" },
-                  inactive: { label: "ลาพัก", color: "#FF870F" },
-                  leave: { label: "พ้นสภาพ", color: "#ef4444" },
+                  leave: { label: "ลาพัก", color: "#FF870F" },
+                  inactive: { label: "พ้นสภาพ", color: "#ef4444" },
                 };
                 const filteredEmps = empTableData.filter((emp: any) => empStatusFilter.includes(emp.rawStatus));
                 const donutData = Object.keys(statusMeta)
@@ -1568,12 +1574,12 @@ const Reports = () => {
                           <span className="px-2 py-0.5 rounded-full text-xs font-medium" style={{
                             background: emp.rawStatus === "active" || emp.rawStatus === "new"
                               ? "hsl(var(--accent-green) / 0.15)"
-                              : emp.rawStatus === "inactive"
+                              : emp.rawStatus === "leave"
                                 ? "hsl(31 100% 95%)"
                                 : "hsl(0 80% 95%)",
                             color: emp.rawStatus === "active" || emp.rawStatus === "new"
                               ? "#4CAF50"
-                              : emp.rawStatus === "inactive"
+                              : emp.rawStatus === "leave"
                                 ? "#FF870F"
                                 : "#ef4444",
                           }}>{emp.status}</span>
