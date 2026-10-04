@@ -112,7 +112,7 @@ const MyPayslips = () => {
             <tbody>
               {rows.map((r, idx) => (
                 <tr key={r.id} className="border-t hover:bg-muted/30">
-                  <td className="px-4 py-3 text-muted-foreground">{idx + 1}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{rows.length - idx}</td>
                   <td className="px-4 py-3">{THAI_MONTHS[r.period.month - 1]} {r.period.year + 543}</td>
                   <td className="text-right px-3 py-3 tabular-nums">{formatCurrency(Number(r.gross_pay))}</td>
                   <td className="text-right px-3 py-3 tabular-nums">{formatCurrency(Number(r.total_deduct))}</td>

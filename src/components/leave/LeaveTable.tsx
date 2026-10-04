@@ -49,9 +49,11 @@ interface LeaveTableProps {
   footer?: React.ReactNode;
   // Running-number offset so "ลำดับ" continues across paginated pages.
   startIndex?: number;
+  // When set, "ลำดับ" counts DOWN from this total (latest/largest number first).
+  descendingTotal?: number;
 }
 
-const LeaveTable = ({ records, onApprove, onReject, hideActions = false, currentEmployeeId, onEdit, onDelete, footer, startIndex = 0 }: LeaveTableProps) => {
+const LeaveTable = ({ records, onApprove, onReject, hideActions = false, currentEmployeeId, onEdit, onDelete, footer, startIndex = 0, descendingTotal }: LeaveTableProps) => {
   const hasPending = !hideActions && records.some((r) => r.status === "pending");
   const [detail, setDetail] = useState<LeaveRecord | null>(null);
 
@@ -97,7 +99,7 @@ const LeaveTable = ({ records, onApprove, onReject, hideActions = false, current
               const isOwnPending = row.employeeId === currentEmployeeId && row.status === "pending";
               return (
                 <tr key={row.id} className="border-b hover:bg-muted/30 transition-colors" style={{ borderColor: "hsl(var(--border))" }}>
-                  <td className="px-3 py-2.5 text-sm text-muted-foreground">{startIndex + idx + 1}</td>
+                  <td className="px-3 py-2.5 text-sm text-muted-foreground">{descendingTotal != null ? descendingTotal - startIndex - idx : startIndex + idx + 1}</td>
                   <td className="px-3 py-2.5">
                     <div className="flex items-center gap-2">
                       <EmployeeAvatar

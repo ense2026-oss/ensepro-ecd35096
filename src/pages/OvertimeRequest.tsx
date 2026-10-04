@@ -870,7 +870,7 @@ const OvertimeRequest = () => {
                 const typeCfg = otTypeLabels[req.type];
                 return (
                   <tr key={req.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
-                    <td className="px-4 py-3 text-muted-foreground">{(otPage - 1) * OT_PAGE_SIZE + idx + 1}</td>
+                    <td className="px-4 py-3 text-muted-foreground">{filtered.length - ((otPage - 1) * OT_PAGE_SIZE + idx)}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2.5">
                         <EmployeeAvatar photoUrl={req.photoUrl} firstName={req.employeeName} size="sm" />
