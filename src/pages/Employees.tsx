@@ -32,6 +32,10 @@ const statusConfig: Record<string, { label: string; className: string }> = {
 
 const PAGE_SIZE_OPTIONS = [10, 20, 25, 50, 100];
 
+// ผู้บริหาร = role executive หรือ แผนก "ผู้บริหาร" (ซ่อนจากรายชื่อพนักงานเป็นค่าเริ่มต้น)
+const isExecutive = (e: Employee) =>
+  (e.role || "").toLowerCase() === "executive" || (e.dept || "").trim() === "ผู้บริหาร";
+
 const Employees = () => {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
@@ -75,6 +79,13 @@ const Employees = () => {
     () => employees.filter((e) => (e.role || "").toLowerCase() !== "admin"),
     [employees]
   );
+  // ซ่อนผู้บริหารเป็นค่าเริ่มต้น มีปุ่มสลับ "แสดงผู้บริหาร" ให้กดดู/จัดการได้
+  const [showExecutives, setShowExecutives] = useState(false);
+  const execCount = useMemo(() => nonAdmins.filter(isExecutive).length, [nonAdmins]);
+  const visibleBase = useMemo(
+    () => (showExecutives ? nonAdmins : nonAdmins.filter((e) => !isExecutive(e))),
+    [nonAdmins, showExecutives]
+  );
   // Departments come from the canonical affiliations defined in Settings, not from
   // free-text employee.dept values (which may contain stale/legacy entries).
   const depts = useMemo(
@@ -91,7 +102,7 @@ const Employees = () => {
     const aff = affiliations.find((a) => a.name === selectedDept);
     return ["all", ...Array.from(new Set(aff ? flatten(aff.positions) : []))];
   }, [affiliations, selectedDept]);
-  const filtered = useMemo(() => nonAdmins.filter((e) => {
+  const filtered = useMemo(() => visibleBase.filter((e) => {
     const q = search.trim().toLowerCase();
     const matchSearch =
       !q ||
@@ -104,7 +115,7 @@ const Employees = () => {
     const matchPos = selectedPosition === "all" || e.position === selectedPosition;
     const matchStatus = selectedStatus === "all" || e.status === selectedStatus;
     return matchSearch && matchDept && matchPos && matchStatus;
-  }), [nonAdmins, search, selectedDept, selectedPosition, selectedStatus]);
+  }), [visibleBase, search, selectedDept, selectedPosition, selectedStatus]);
 
   // Stats
   const stats = useMemo(() => ({
@@ -226,6 +237,12 @@ const Employees = () => {
         <option value="leave">ลาพัก</option>
         <option value="inactive">พ้นสภาพ</option>
       </select>
+      {execCount > 0 && (
+        <label className="flex items-center gap-2 px-1 py-1.5 cursor-pointer select-none">
+          <input type="checkbox" checked={showExecutives} onChange={(e) => setShowExecutives(e.target.checked)} className="w-4 h-4 accent-primary" />
+          <span className="text-sm">แสดงผู้บริหารในรายชื่อ ({execCount})</span>
+        </label>
+      )}
     </div>
   );
 
@@ -235,7 +252,7 @@ const Employees = () => {
       <div className="flex flex-row items-center justify-between gap-3">
         <div className="min-w-0">
           <h2 className="text-xl font-bold font-display">รายชื่อพนักงาน</h2>
-          <p className="hidden sm:block text-sm text-muted-foreground mt-0.5">พนักงานทั้งหมด {nonAdmins.length} คน</p>
+          <p className="hidden sm:block text-sm text-muted-foreground mt-0.5">พนักงานทั้งหมด {visibleBase.length} คน{!showExecutives && execCount > 0 ? ` (ซ่อนผู้บริหาร ${execCount})` : ""}</p>
         </div>
         <div className="flex items-center gap-2">
           {isMobile && (
@@ -292,6 +309,16 @@ const Employees = () => {
               className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${viewMode === "card" ? "text-primary-foreground" : "text-muted-foreground"}`}
               style={{ background: viewMode === "card" ? "hsl(var(--primary))" : "transparent" }}>การ์ด</button>
           </div>
+          {execCount > 0 && (
+            <button
+              onClick={() => setShowExecutives((v) => !v)}
+              title={showExecutives ? "ซ่อนผู้บริหารจากรายชื่อ" : "แสดงผู้บริหารในรายชื่อ"}
+              className={`px-3 py-2.5 rounded-xl border text-sm font-medium whitespace-nowrap transition-colors ${showExecutives ? "text-primary-foreground" : "hover:bg-muted"}`}
+              style={showExecutives ? { background: "hsl(var(--primary))", borderColor: "hsl(var(--primary))" } : undefined}
+            >
+              {showExecutives ? "ซ่อนผู้บริหาร" : `แสดงผู้บริหาร (${execCount})`}
+            </button>
+          )}
         </div>
       </div>
 
