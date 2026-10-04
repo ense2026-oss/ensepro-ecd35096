@@ -121,6 +121,13 @@ const categories: { key: ReportCategory; label: string; icon: React.ElementType;
   { key: "payroll", label: "เงินเดือน/ภาษี", icon: Banknote, color: "#0ea5e9" },
 ];
 
+// ไม่รวม "ผู้ดูแลระบบ" (role admin) และ "ผู้บริหาร" (role executive หรือ แผนก = "ผู้บริหาร")
+// ในรายงานหมวด พนักงาน / กะงาน / โอที / บันทึกเวลา
+const isMgmtOrAdmin = (role?: string | null, dept?: string | null): boolean => {
+  const r = (role || "").toLowerCase();
+  return r === "admin" || r === "executive" || (dept || "").trim() === "ผู้บริหาร";
+};
+
 const defaultLeavePieColors = ["#FF870F", "#9CA3AF", "#87FF0F", "#E5E5E5", "#3b82f6", "#a855f7", "#ef4444", "#14b8a6"];
 
 // All report data is fetched from the database (no mock data).
@@ -428,7 +435,7 @@ const Reports = () => {
 
       const res = await supabase
         .from("overtime_requests")
-        .select("*, employees!overtime_requests_employee_id_fkey(first_name, last_name, username, dept)")
+        .select("*, employees!overtime_requests_employee_id_fkey(first_name, last_name, username, dept, role)")
         .gte("date", startDate)
         .lte("date", endDate)
         .order("date", { ascending: false });
@@ -436,7 +443,9 @@ const Reports = () => {
       return { data: (res.data || []) as any[] };
     },
     (d) => {
-      const rows = d.data.map((r: any) => {
+      const rows = d.data
+        .filter((r: any) => !isMgmtOrAdmin(r.employees?.role, r.employees?.dept))
+        .map((r: any) => {
         const emp = r.employees;
         const name = emp ? `${emp.first_name} ${emp.last_name}` : "ไม่ทราบ";
         const dept = emp?.dept || "-";
@@ -477,7 +486,7 @@ const Reports = () => {
       const ceYear = parseInt(filterYear) - 543;
       const res = await supabase
         .from("overtime_requests")
-        .select("date, hours, status")
+        .select("date, hours, status, employees!overtime_requests_employee_id_fkey(role, dept)")
         .gte("date", `${ceYear}-01-01`)
         .lte("date", `${ceYear}-12-31`);
       if (res.error) throw new Error(res.error.message || "โหลดข้อมูลไม่สำเร็จ");
@@ -486,7 +495,9 @@ const Reports = () => {
     (d) => {
       const monthlyMap: Record<number, { hours: number; count: number }> = {};
       for (let i = 1; i <= 12; i++) monthlyMap[i] = { hours: 0, count: 0 };
-      d.data.forEach((r: any) => {
+      d.data
+        .filter((r: any) => !isMgmtOrAdmin(r.employees?.role, r.employees?.dept))
+        .forEach((r: any) => {
         const m = parseInt(r.date.split("-")[1]);
         if (monthlyMap[m]) {
           monthlyMap[m].hours += r.hours || 0;
@@ -520,11 +531,16 @@ const Reports = () => {
       const monthNum = monthIndexMap[filterMonth] || 1;
 
       const shifts = d.shifts;
-      const assignments = d.assignments;
       const emps = d.emps;
 
       const empMap = new Map(emps.map((e: any) => [e.id, e]));
       const shiftMap = new Map(shifts.map((s: any) => [s.id, s]));
+
+      // ตัดงานกะของผู้บริหาร/ผู้ดูแลระบบออกจากทุกรายงานกะ (ตาราง/สัดส่วน/ความครอบคลุม/ประวัติ)
+      const mgmtIds = new Set(
+        emps.filter((e: any) => isMgmtOrAdmin(e.role, e.dept)).map((e: any) => e.id),
+      );
+      const assignments = (d.assignments as any[]).filter((a: any) => !mgmtIds.has(a.employee_id));
 
       // Filter assignments by selected month/year
       const filteredAssignments = assignments.filter((a: any) => {
@@ -550,7 +566,7 @@ const Reports = () => {
             _role: (emp?.role || "").toLowerCase(),
           };
         })
-        .filter((r: any) => r._role !== "admin");
+        .filter((r: any) => !isMgmtOrAdmin(r._role, r.dept));
       setShiftData(tableRows);
 
       // Pie: count employees per shift
@@ -614,7 +630,7 @@ const Reports = () => {
       const dayAssignments = filteredAssignments.filter((a: any) => {
         if (a.assignment_type !== "day") return false;
         const emp = empMap.get(a.employee_id);
-        return (emp?.role || "").toLowerCase() !== "admin";
+        return !isMgmtOrAdmin(emp?.role, emp?.dept);
       });
       setShiftChangeLog(dayAssignments.map((a: any) => {
         const emp = empMap.get(a.employee_id);
@@ -659,7 +675,7 @@ const Reports = () => {
       const ceYear = parseInt(filterYear) - 543;
       const monthNum = monthIndexMap[filterMonth] || 1;
 
-      const emps = d.allEmps.filter((e: any) => (e.role || "").toLowerCase() !== "admin");
+      const emps = d.allEmps.filter((e: any) => !isMgmtOrAdmin(e.role, e.dept));
 
       // Determine which employees to show based on report type
       if (selectedReport === "emp-all") {
@@ -709,7 +725,7 @@ const Reports = () => {
         })));
       } else if (selectedReport === "emp-birthday") {
         const filtered = (d.bdEmps || []).filter((e: any) => {
-          if ((e.role || "").toLowerCase() === "admin") return false;
+          if (isMgmtOrAdmin(e.role, e.dept)) return false;
           const parsed = parseThaiDate(e.birth_date);
           return parsed && parsed.month === monthNum;
         });
@@ -876,7 +892,7 @@ const Reports = () => {
       const ceYear = parseInt(filterYear) - 543;
       const res = await supabase
         .from("attendance_records")
-        .select("*, employees!attendance_records_employee_id_fkey(first_name, last_name, username, dept)")
+        .select("*, employees!attendance_records_employee_id_fkey(first_name, last_name, username, dept, role)")
         .gte("date", `${ceYear}-01-01`)
         .lte("date", `${ceYear}-12-31`)
         .order("date", { ascending: false });
@@ -891,7 +907,9 @@ const Reports = () => {
         leave: "ลางาน", dayoff: "วันหยุด", holiday: "วันหยุด",
       };
 
-      const all = d.data.map((r: any) => {
+      const all = d.data
+        .filter((r: any) => !isMgmtOrAdmin(r.employees?.role, r.employees?.dept))
+        .map((r: any) => {
         const emp = r.employees;
         const parsed = parseThaiDate(r.date);
         const toMin = (t: string) => {
