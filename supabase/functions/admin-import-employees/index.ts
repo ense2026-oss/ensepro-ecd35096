@@ -93,11 +93,30 @@ Deno.serve(async (req) => {
     // ── Who stays / who goes ─────────────────────────────────────────────
     const { data: current, error: curErr } = await admin
       .from("employees")
-      .select("id, user_id, first_name, last_name, role, is_protected");
+      .select("id, user_id, first_name, last_name, national_id, face_scan_id, shift, role, is_protected");
     if (curErr) return json({ error: curErr.message }, 400);
 
     const keep = (current || []).filter((e: any) => d(e.role).toLowerCase() === "admin" || e.is_protected === true);
     const remove = (current || []).filter((e: any) => !(d(e.role).toLowerCase() === "admin" || e.is_protected === true));
+
+    // Preserve the face-scan link: the Excel has no PIN, so remember each current
+    // person's face_scan_id (and shift) by national id / name, then re-apply it to
+    // the matching new employee after import. The device_users rows survive the
+    // delete (matched_employee_id just goes NULL) and get re-linked below.
+    const nidKey = (s?: string) => d(s).replace(/[^\d]/g, "");
+    const nameKey = (f?: string, l?: string) => `${d(f)}|${d(l)}`.replace(/\s+/g, "");
+    const scanByNid = new Map<string, string>();
+    const scanByName = new Map<string, string>();
+    const shiftByNid = new Map<string, string>();
+    const shiftByName = new Map<string, string>();
+    for (const e of (current || []) as any[]) {
+      const nk = nidKey(e.national_id);
+      const nmk = nameKey(e.first_name, e.last_name);
+      if (d(e.face_scan_id)) { if (nk) scanByNid.set(nk, d(e.face_scan_id)); scanByName.set(nmk, d(e.face_scan_id)); }
+      if (d(e.shift)) { if (nk) shiftByNid.set(nk, d(e.shift)); shiftByName.set(nmk, d(e.shift)); }
+    }
+    const scanFor = (e: InEmp) => scanByNid.get(nidKey(e.national_id)) || scanByName.get(nameKey(e.first_name, e.last_name)) || "";
+    const shiftFor = (e: InEmp) => shiftByNid.get(nidKey(e.national_id)) || shiftByName.get(nameKey(e.first_name, e.last_name)) || "";
 
     // Map existing auth users by email so a re-run (or the 2 real @ensepro.com
     // accounts) updates in place instead of failing on "already registered".
@@ -111,6 +130,9 @@ Deno.serve(async (req) => {
 
     if (dryRun) {
       const willConflict = emps.filter((e) => authByEmail.has(d(e.auth_email).toLowerCase())).map((e) => e.auth_email);
+      const scanMatched = emps.filter((e) => scanFor(e));
+      const scanUnmatched = (current || []).filter((e: any) => d(e.face_scan_id) && !(d(e.role).toLowerCase() === "admin" || e.is_protected === true))
+        .filter((e: any) => !emps.some((n) => nidKey(n.national_id) === nidKey(e.national_id) || nameKey(n.first_name, n.last_name) === nameKey(e.first_name, e.last_name)));
       return json({
         ok: true,
         dryRun: true,
@@ -119,13 +141,18 @@ Deno.serve(async (req) => {
         willDeleteCount: remove.length,
         willCreateCount: emps.length,
         authEmailsAlreadyExist: willConflict, // will be updated, not created
-        sample: emps.slice(0, 5).map((e) => ({ username: e.username, auth_email: e.auth_email, name: `${e.first_name} ${e.last_name}`, dept: e.dept, position: e.position })),
+        faceScan: {
+          currentlyLinked: scanByName.size,
+          willRelink: scanMatched.length,
+          willLoseLink: scanUnmatched.map((e: any) => `${e.first_name} ${e.last_name} (PIN ${e.face_scan_id})`),
+        },
+        sample: emps.slice(0, 5).map((e) => ({ username: e.username, auth_email: e.auth_email, name: `${e.first_name} ${e.last_name}`, dept: e.dept, position: e.position, face_scan_id: scanFor(e) || "-" })),
         note: "ยังไม่มีการเขียนข้อมูลใด ๆ — เรียกซ้ำด้วย dryRun:false เพื่อทำจริง",
       });
     }
 
     // ── DESTRUCTIVE from here ────────────────────────────────────────────
-    const report = { deletedEmployees: 0, deletedAuthUsers: 0, created: 0, updatedExistingAuth: 0, failed: [] as unknown[] };
+    const report = { deletedEmployees: 0, deletedAuthUsers: 0, created: 0, updatedExistingAuth: 0, faceScanRelinked: 0, failed: [] as unknown[] };
 
     // 1) Delete the auth users linked to the employees we're removing, so no
     //    orphan logins are left behind. (Employee rows cascade on delete.)
@@ -167,7 +194,8 @@ Deno.serve(async (req) => {
         await admin.from("user_roles").delete().eq("user_id", userId);
         await admin.from("user_roles").insert({ user_id: userId, role: "employee", role_name: "employee" });
 
-        const { error: insErr } = await admin.from("employees").insert({
+        const faceScanId = scanFor(e); // preserved PIN from the deleted record (by national id / name)
+        const { data: inserted, error: insErr } = await admin.from("employees").insert({
           user_id: userId,
           username,
           email, // synthetic login email kept here so admin-reset-password/update-email resolve by it
@@ -187,6 +215,8 @@ Deno.serve(async (req) => {
           position: d(e.position),
           employee_type: "พนักงานประจำ",
           nationality: "ไทย",
+          face_scan_id: faceScanId,
+          shift: shiftFor(e),
           start_date: d(e.start_date) || null,
           trial_end_date: d(e.trial_end_date) || null,
           contract_end_date: d(e.contract_end_date) || null,
@@ -199,9 +229,18 @@ Deno.serve(async (req) => {
           daughters: Number(e.daughters) || 0,
           role: "Employee",
           status: d(e.status) || "active",
-        });
-        if (insErr) throw new Error(`insert employees: ${insErr.message}`);
+        }).select("id").single();
+        if (insErr || !inserted) throw new Error(`insert employees: ${insErr?.message || "no row"}`);
         report.created++;
+
+        // Re-link the face-scan device user back to this new employee row.
+        if (faceScanId) {
+          const { error: relErr } = await admin
+            .from("face_scan_device_users")
+            .update({ matched_employee_id: inserted.id })
+            .eq("pin", faceScanId);
+          if (!relErr) report.faceScanRelinked++;
+        }
       } catch (err) {
         report.failed.push({ username, email, name: fullName, reason: (err as Error).message });
       }
