@@ -267,9 +267,9 @@ const Dashboard = () => {
       const [ltRes, empLookup] = await Promise.all([
         supabase.from("leave_types").select("*"),
         empIdDirect
-          ? supabase.from("employees").select("id, first_name, last_name, dept, status, user_id, start_date").eq("id", empIdDirect).maybeSingle()
+          ? supabase.from("employees").select("id, first_name, last_name, dept, status, user_id, start_date, role").eq("id", empIdDirect).maybeSingle()
           : userId
-            ? supabase.from("employees").select("id, first_name, last_name, dept, status, user_id, start_date").eq("user_id", userId).maybeSingle()
+            ? supabase.from("employees").select("id, first_name, last_name, dept, status, user_id, start_date, role").eq("user_id", userId).maybeSingle()
             : Promise.resolve({ data: null, error: null }),
       ]);
 
@@ -302,7 +302,7 @@ const Dashboard = () => {
       if (viewType === "manager") {
         const myDept = employeeRow?.dept || "";
         const [empRes, attRes, leaveRes, otRes, teRes, monthAttRes, ciRes] = await Promise.all([
-          supabase.from("employees").select("id, first_name, last_name, dept, status, user_id, start_date").eq("dept", myDept),
+          supabase.from("employees").select("id, first_name, last_name, dept, status, user_id, start_date, role").eq("dept", myDept),
           supabase.from("attendance_records").select("id, employee_id, date, status, late").eq("date", today),
           supabase.from("leave_requests").select("id, employee_id, leave_type_name, date_from, date_to, days, status, created_at, employees(first_name, last_name)").lte("date_from", monthEnd).gte("date_to", monthStart),
           supabase.from("overtime_requests").select("id, employee_id, date, hours, status, ot_type, created_at, employees(first_name, last_name)").gte("date", monthStart).lte("date", monthEnd),
@@ -328,7 +328,7 @@ const Dashboard = () => {
 
       // Admin/HR: fetch everything in one parallel batch
       const [empRes, attRes, leaveRes, otRes, teRes, monthAttRes, ciRes] = await Promise.all([
-        supabase.from("employees").select("id, first_name, last_name, dept, status, user_id, start_date"),
+        supabase.from("employees").select("id, first_name, last_name, dept, status, user_id, start_date, role"),
         supabase.from("attendance_records").select("id, employee_id, date, status, late").eq("date", today),
         supabase.from("leave_requests").select("id, employee_id, leave_type_name, date_from, date_to, days, status, created_at, employees(first_name, last_name)").lte("date_from", monthEnd).gte("date_to", monthStart),
         supabase.from("overtime_requests").select("id, employee_id, date, hours, status, ot_type, created_at, employees(first_name, last_name)").gte("date", monthStart).lte("date", monthEnd),
