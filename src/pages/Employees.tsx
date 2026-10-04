@@ -29,7 +29,7 @@ const statusConfig: Record<string, { label: string; className: string }> = {
   inactive: { label: "พ้นสภาพ", className: "badge-absent" },
 };
 
-const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
+const PAGE_SIZE_OPTIONS = [10, 20, 25, 50, 100];
 
 const Employees = () => {
   const navigate = useNavigate();
@@ -45,7 +45,7 @@ const Employees = () => {
   const [selectedStatus, setSelectedStatus] = useState("active");
   const [viewMode, setViewMode] = useState<"table" | "card">("table");
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(20);
 
   // Dialog states
   const [formOpen, setFormOpen] = useState(false);

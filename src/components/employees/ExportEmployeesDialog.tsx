@@ -37,6 +37,7 @@ const DEFAULT_COLUMNS: ColumnOption[] = [
   { key: "shift", label: "กะทำงาน", checked: false, getValue: (e) => e.shift },
   { key: "emergencyName", label: "ผู้ติดต่อฉุกเฉิน", checked: false, getValue: (e) => e.emergencyName },
   { key: "emergencyPhone", label: "เบอร์ฉุกเฉิน", checked: false, getValue: (e) => e.emergencyPhone },
+  { key: "username", label: "ชื่อผู้ใช้", checked: false, getValue: (e) => e.username || "" },
   { key: "initialPassword", label: "รหัสผ่าน", checked: false, getValue: (e) => e.initialPassword || "" },
 ];
 
