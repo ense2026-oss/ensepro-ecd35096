@@ -473,6 +473,7 @@ const Leave = () => {
 
       <LeaveTable
         records={pagedFiltered}
+        startIndex={(leavePage - 1) * LEAVE_PAGE_SIZE}
         onApprove={canApprove ? handleApprove : () => {}}
         onReject={canApprove ? handleReject : () => {}}
         hideActions={!canApprove}

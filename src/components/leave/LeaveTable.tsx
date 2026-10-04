@@ -47,9 +47,11 @@ interface LeaveTableProps {
   onDelete?: (id: string) => void;
   // Rendered inside the card below the table (e.g. a pagination bar).
   footer?: React.ReactNode;
+  // Running-number offset so "ลำดับ" continues across paginated pages.
+  startIndex?: number;
 }
 
-const LeaveTable = ({ records, onApprove, onReject, hideActions = false, currentEmployeeId, onEdit, onDelete, footer }: LeaveTableProps) => {
+const LeaveTable = ({ records, onApprove, onReject, hideActions = false, currentEmployeeId, onEdit, onDelete, footer, startIndex = 0 }: LeaveTableProps) => {
   const hasPending = !hideActions && records.some((r) => r.status === "pending");
   const [detail, setDetail] = useState<LeaveRecord | null>(null);
 
@@ -68,6 +70,7 @@ const LeaveTable = ({ records, onApprove, onReject, hideActions = false, current
           <thead>
             <tr className="border-b" style={{ borderColor: "hsl(var(--border))" }}>
               {[
+                { label: "ลำดับ", width: "w-[56px]" },
                 { label: "พนักงาน", width: "w-[140px]" },
                 { label: "ประเภท", width: "w-[110px]" },
                 { label: "วันที่", width: "hidden md:table-cell w-[140px]" },
@@ -86,14 +89,15 @@ const LeaveTable = ({ records, onApprove, onReject, hideActions = false, current
           <tbody>
             {records.length === 0 && (
               <tr>
-                <td colSpan={8} className="text-center py-8 text-sm text-muted-foreground">ไม่พบข้อมูล</td>
+                <td colSpan={9} className="text-center py-8 text-sm text-muted-foreground">ไม่พบข้อมูล</td>
               </tr>
             )}
-            {records.map((row) => {
+            {records.map((row, idx) => {
               const conf = statusConf[row.status] || statusConf.pending;
               const isOwnPending = row.employeeId === currentEmployeeId && row.status === "pending";
               return (
                 <tr key={row.id} className="border-b hover:bg-muted/30 transition-colors" style={{ borderColor: "hsl(var(--border))" }}>
+                  <td className="px-3 py-2.5 text-sm text-muted-foreground">{startIndex + idx + 1}</td>
                   <td className="px-3 py-2.5">
                     <div className="flex items-center gap-2">
                       <EmployeeAvatar

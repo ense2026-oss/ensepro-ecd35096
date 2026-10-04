@@ -101,6 +101,7 @@ const MyPayslips = () => {
           <table className="w-full text-sm">
             <thead style={{ background: "hsl(var(--muted))" }}>
               <tr>
+                <th className="text-left px-4 py-3 font-semibold w-[56px]">ลำดับ</th>
                 <th className="text-left px-4 py-3 font-semibold">ประจำเดือน</th>
                 <th className="text-right px-3 py-3 font-semibold">รายได้รวม</th>
                 <th className="text-right px-3 py-3 font-semibold">รวมหัก</th>
@@ -109,8 +110,9 @@ const MyPayslips = () => {
               </tr>
             </thead>
             <tbody>
-              {rows.map((r) => (
+              {rows.map((r, idx) => (
                 <tr key={r.id} className="border-t hover:bg-muted/30">
+                  <td className="px-4 py-3 text-muted-foreground">{idx + 1}</td>
                   <td className="px-4 py-3">{THAI_MONTHS[r.period.month - 1]} {r.period.year + 543}</td>
                   <td className="text-right px-3 py-3 tabular-nums">{formatCurrency(Number(r.gross_pay))}</td>
                   <td className="text-right px-3 py-3 tabular-nums">{formatCurrency(Number(r.total_deduct))}</td>

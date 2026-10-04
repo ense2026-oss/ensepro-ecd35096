@@ -842,6 +842,7 @@ const OvertimeRequest = () => {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-muted/40">
+                <th className="text-left px-4 py-3 font-semibold text-muted-foreground w-[56px]">ลำดับ</th>
                 <th className="text-left px-4 py-3 font-semibold text-muted-foreground">พนักงาน</th>
                 <th className="text-left px-4 py-3 font-semibold text-muted-foreground hidden md:table-cell">แผนก</th>
                 <th className="text-left px-4 py-3 font-semibold text-muted-foreground">วันที่</th>
@@ -858,17 +859,18 @@ const OvertimeRequest = () => {
                 <tr><td colSpan={9} className="text-center py-12 text-muted-foreground">กำลังโหลด...</td></tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="text-center py-12 text-muted-foreground">
+                  <td colSpan={10} className="text-center py-12 text-muted-foreground">
                     <AlertCircle className="w-8 h-8 mx-auto mb-2 opacity-40" />
                     <p>ไม่พบรายการคำขอ OT</p>
                   </td>
                 </tr>
-              ) : pagedFiltered.map((req) => {
+              ) : pagedFiltered.map((req, idx) => {
                 const statusCfg = statusConfig[req.status];
                 const StatusIcon = statusCfg.icon;
                 const typeCfg = otTypeLabels[req.type];
                 return (
                   <tr key={req.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
+                    <td className="px-4 py-3 text-muted-foreground">{(otPage - 1) * OT_PAGE_SIZE + idx + 1}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2.5">
                         <EmployeeAvatar photoUrl={req.photoUrl} firstName={req.employeeName} size="sm" />
