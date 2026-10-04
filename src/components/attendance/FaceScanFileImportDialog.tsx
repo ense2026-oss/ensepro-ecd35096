@@ -47,13 +47,13 @@ export const FaceScanFileImportDialog = ({
   onOpenChange,
   onImported,
 }: FaceScanFileImportDialogProps) => {
-  const { employees } = useEmployees();
+  const { employees, updateEmployee } = useEmployees();
   const [file, setFile] = useState<File | null>(null);
   const [rows, setRows] = useState<ParsedRow[]>([]);
   const [step, setStep] = useState<"upload" | "preview" | "processing" | "done">("upload");
   const [overwrite, setOverwrite] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [result, setResult] = useState({ inserted: 0, updated: 0, skipped: 0, unmatched: 0 });
+  const [result, setResult] = useState({ inserted: 0, updated: 0, skipped: 0, linked: 0, unmatched: 0 });
   const [processing, setProcessing] = useState(false);
 
   const pinToEmployee = useMemo(() => {
@@ -65,6 +65,62 @@ export const FaceScanFileImportDialog = ({
     }
     return map;
   }, [employees]);
+
+  // ชื่อที่ตัดคำนำหน้า/ช่องว่างออก สำหรับจับคู่ชื่อในไฟล์กับพนักงาน
+  const normName = (s: string) => {
+    let t = (s || "").trim();
+    const prefixes = ["นางสาว", "นาง", "นาย", "น.ส.", "ด.ช.", "ด.ญ.", "ว่าที่ร้อยตรี", "ว่าที่ ร.ต."];
+    for (const p of prefixes) { if (t.startsWith(p)) { t = t.slice(p.length); break; } }
+    return t.replace(/\s+/g, "").toLowerCase();
+  };
+
+  // ชื่อ(ไม่มีคำนำหน้า) -> รายชื่อ employeeId (ใช้เช็กความกำกวม)
+  const empByName = useMemo(() => {
+    const map = new Map<string, string[]>();
+    for (const e of employees) {
+      const k = normName(`${e.firstName ?? ""} ${e.lastName ?? ""}`);
+      if (!k) continue;
+      const arr = map.get(k) || [];
+      arr.push(e.id);
+      map.set(k, arr);
+    }
+    return map;
+  }, [employees]);
+
+  // EnNo ที่ยังไม่ผูก แต่จับชื่อในไฟล์ได้ตรงกับพนักงานคนเดียวแบบไม่กำกวม
+  // และพนักงานคนนั้นยังไม่มี face_scan_id -> จะ "เรียนรู้" ผูกรหัสให้อัตโนมัติ
+  const autoLinks = useMemo(() => {
+    const pinName = new Map<string, string>();
+    for (const r of rows) {
+      if (pinToEmployee.has(r.pin)) continue;      // ผูกด้วย id อยู่แล้ว
+      if (!pinName.has(r.pin)) pinName.set(r.pin, r.name || "");
+      else if (!pinName.get(r.pin) && r.name) pinName.set(r.pin, r.name); // เติมชื่อถ้าอันแรกว่าง
+    }
+    const empWithScan = new Set(
+      employees.filter((e) => e.faceScanId && e.faceScanId.trim()).map((e) => e.id)
+    );
+    const tentative: { pin: string; employeeId: string; name: string }[] = [];
+    const claims = new Map<string, number>(); // employeeId -> จำนวน pin ที่อ้างสิทธิ์
+    for (const [pin, name] of pinName.entries()) {
+      const k = normName(name);
+      if (!k) continue;
+      const cands = empByName.get(k) || [];
+      if (cands.length !== 1) continue;            // ไม่เจอ หรือ ชื่อซ้ำ -> ไม่เดา
+      const employeeId = cands[0];
+      if (empWithScan.has(employeeId)) continue;   // มีรหัสเดิมอยู่แล้ว -> ไม่ทับ
+      tentative.push({ pin, employeeId, name });
+      claims.set(employeeId, (claims.get(employeeId) || 0) + 1);
+    }
+    // ถ้าพนักงานคนเดียวถูกหลาย pin อ้าง -> กำกวม ตัดทิ้งทั้งหมด
+    return tentative.filter((t) => (claims.get(t.employeeId) || 0) === 1);
+  }, [rows, pinToEmployee, empByName, employees]);
+
+  // แผนที่รวม: รหัสที่ผูกแล้ว + รหัสที่จะเรียนรู้ใหม่
+  const effectivePinToEmployee = useMemo(() => {
+    const m = new Map(pinToEmployee);
+    for (const a of autoLinks) m.set(a.pin, a.employeeId);
+    return m;
+  }, [pinToEmployee, autoLinks]);
 
   const employeeName = useCallback(
     (id: string) => {
@@ -137,7 +193,7 @@ export const FaceScanFileImportDialog = ({
     const serialNumber = rows[0]?.serialNumber || null;
 
     for (const r of rows) {
-      if (pinToEmployee.has(r.pin)) matchedPins.add(r.pin);
+      if (effectivePinToEmployee.has(r.pin)) matchedPins.add(r.pin);
       else unmatchedPins.add(r.pin);
     }
 
@@ -149,13 +205,13 @@ export const FaceScanFileImportDialog = ({
       serialNumber,
       matchedEmployees: matchedPins.size,
     };
-  }, [rows, pinToEmployee]);
+  }, [rows, effectivePinToEmployee]);
 
   const dailyRecords = useMemo<DailyRecord[]>(() => {
     const groups = new Map<string, ParsedRow[]>();
     for (const r of rows) {
-      if (!pinToEmployee.has(r.pin)) continue;
-      const key = `${pinToEmployee.get(r.pin)}|${r.date}`;
+      if (!effectivePinToEmployee.has(r.pin)) continue;
+      const key = `${effectivePinToEmployee.get(r.pin)}|${r.date}`;
       const list = groups.get(key) || [];
       list.push(r);
       groups.set(key, list);
@@ -175,23 +231,37 @@ export const FaceScanFileImportDialog = ({
       });
     }
     return records.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : a.employeeId.localeCompare(b.employeeId)));
-  }, [rows, pinToEmployee]);
+  }, [rows, effectivePinToEmployee]);
 
   const sampleUnmatched = useMemo(() => {
     const map = new Map<string, string>();
     for (const r of rows) {
-      if (!pinToEmployee.has(r.pin)) {
+      if (!effectivePinToEmployee.has(r.pin)) {
         map.set(r.pin, r.name);
       }
     }
     return Array.from(map.entries()).sort((a, b) => a[0].localeCompare(b[0])).slice(0, 20);
-  }, [rows, pinToEmployee]);
+  }, [rows, effectivePinToEmployee]);
+
+  // ตัวอย่างรายการที่จะผูกรหัสให้อัตโนมัติ (จับด้วยชื่อ)
+  const sampleAutoLinks = useMemo(
+    () => autoLinks.map((a) => ({ pin: a.pin, name: employeeName(a.employeeId) })).slice(0, 20),
+    [autoLinks, employeeName]
+  );
 
   const runImport = async () => {
     if (dailyRecords.length === 0) return;
     setProcessing(true);
     setStep("processing");
     setProgress(0);
+
+    // เรียนรู้รหัสจากไฟล์: ผูก face_scan_id = EnNo ให้พนักงานที่จับด้วยชื่อได้
+    // (ครั้งต่อไปจะจับด้วย id ตรง ๆ ไม่ต้องจับชื่ออีก) — ลงเวลาใช้ employeeId จึงลงได้แม้ขั้นนี้พลาด
+    let linked = 0;
+    for (const a of autoLinks) {
+      try { await updateEmployee(a.employeeId, { faceScanId: a.pin }); linked++; }
+      catch { /* ข้าม: ยังลงเวลาให้คนนี้ได้ด้วย employeeId */ }
+    }
 
     let inserted = 0;
     let updated = 0;
@@ -254,7 +324,7 @@ export const FaceScanFileImportDialog = ({
       sync_type: "file_import",
       status: "success",
       records_synced: inserted + updated,
-      message: `Inserted ${inserted}, updated ${updated}, skipped ${skipped}, unmatched ${unmatched}. File: ${file?.name || "-"}.`,
+      message: `Inserted ${inserted}, updated ${updated}, skipped ${skipped}, linked ${linked}, unmatched ${preview.unmatchedPins.length}. File: ${file?.name || "-"}.`,
       command_payload: {
         file_name: file?.name || null,
         serial_number: preview.serialNumber,
@@ -264,11 +334,11 @@ export const FaceScanFileImportDialog = ({
       },
     });
 
-    setResult({ inserted, updated, skipped, unmatched: preview.unmatchedPins.length });
+    setResult({ inserted, updated, skipped, linked, unmatched: preview.unmatchedPins.length });
     setStep("done");
     setProcessing(false);
     onImported?.();
-    toast.success(`นำเข้าเสร็จแล้ว: เพิ่ม ${inserted} / อัปเดต ${updated} / ข้าม ${skipped}`);
+    toast.success(`นำเข้าเสร็จแล้ว: เพิ่ม ${inserted} / อัปเดต ${updated} / ข้าม ${skipped}${linked ? ` / ผูกรหัสใหม่ ${linked}` : ""}`);
   };
 
   const reset = () => {
@@ -277,7 +347,7 @@ export const FaceScanFileImportDialog = ({
     setStep("upload");
     setOverwrite(false);
     setProgress(0);
-    setResult({ inserted: 0, updated: 0, skipped: 0, unmatched: 0 });
+    setResult({ inserted: 0, updated: 0, skipped: 0, linked: 0, unmatched: 0 });
   };
 
   const handleClose = (open: boolean) => {
@@ -291,7 +361,7 @@ export const FaceScanFileImportDialog = ({
         <DialogHeader>
           <DialogTitle>นำเข้าข้อมูลจากเครื่องสแกนใบหน้า</DialogTitle>
           <DialogDescription>
-            อัปโหลดไฟล์ .txt ที่ export จากเครื่องสแกนหน้า (UDISKLOG) แล้วระบบจะเทียบ EnNo กับรหัสพนักงานในระบบ
+            อัปโหลดไฟล์ .txt ที่ export จากเครื่องสแกนหน้า (UDISKLOG) ระบบจะเทียบ EnNo กับรหัสพนักงาน และถ้ายังไม่ผูก จะจับจากชื่อในไฟล์แล้วผูกรหัสให้อัตโนมัติ
           </DialogDescription>
         </DialogHeader>
 
@@ -354,10 +424,29 @@ export const FaceScanFileImportDialog = ({
                   <div className="text-xs text-muted-foreground">รหัสไม่จับคู่</div>
                 </Card>
                 <Card className="p-3 text-center">
-                  <div className="text-2xl font-bold">{rows.length}</div>
-                  <div className="text-xs text-muted-foreground">รายการแสกน</div>
+                  <div className="text-2xl font-bold" style={{ color: autoLinks.length > 0 ? "hsl(142 71% 40%)" : undefined }}>{autoLinks.length}</div>
+                  <div className="text-xs text-muted-foreground">ผูกรหัสใหม่ (จับชื่อ)</div>
                 </Card>
               </div>
+
+              {autoLinks.length > 0 && (
+                <div className="rounded-lg border border-green-200 bg-green-50 dark:bg-green-950/20 p-3">
+                  <div className="flex items-center gap-2 mb-2">
+                    <CheckCircle2 className="w-4 h-4 text-green-600" />
+                    <span className="text-sm font-medium text-green-700 dark:text-green-400">
+                      จะผูกรหัส (EnNo) ให้พนักงานอัตโนมัติจากชื่อในไฟล์ ({autoLinks.length} รหัส) — ครั้งหน้าจับด้วยรหัสได้เลย
+                    </span>
+                  </div>
+                  <div className="max-h-32 overflow-y-auto text-xs space-y-1">
+                    {sampleAutoLinks.map((a) => (
+                      <div key={a.pin} className="flex items-center gap-2">
+                        <Badge variant="outline" className="font-mono">{a.pin}</Badge>
+                        <span className="text-muted-foreground truncate">{a.name}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {preview.unmatchedPins.length > 0 && (
                 <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/20 p-3">
@@ -419,6 +508,12 @@ export const FaceScanFileImportDialog = ({
                   <div className="text-xs text-muted-foreground">ข้าม</div>
                 </Card>
               </div>
+              {result.linked > 0 && (
+                <div className="text-xs text-green-600 flex items-center justify-center gap-1">
+                  <CheckCircle2 className="w-3 h-3" />
+                  ผูกรหัส (EnNo) ให้พนักงานใหม่ {result.linked} คน จากการจับชื่อ
+                </div>
+              )}
               {result.unmatched > 0 && (
                 <div className="text-xs text-amber-600 flex items-center justify-center gap-1">
                   <XCircle className="w-3 h-3" />

@@ -1,5 +1,7 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import { useEmployees, Employee, CustomPayrollItem } from "@/contexts/EmployeeContext";
+import { useOrg } from "@/contexts/OrgContext";
+import type { Position } from "@/contexts/OrgContext";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Banknote, Users, TrendingUp, FileText, Search, Download, Eye, X,
@@ -424,6 +426,8 @@ const Payroll = () => {
   const { config: payrollConfig } = usePayrollConfig();
   const [search, setSearch] = useState("");
   const [filterDept, setFilterDept] = useState("all");
+  const [filterPosition, setFilterPosition] = useState("all");
+  const { affiliations } = useOrg();
   const [sortField, setSortField] = useState<"name" | "salary" | "net">("name");
   const [sortAsc, setSortAsc] = useState(true);
   const [payslipOpen, setPayslipOpen] = useState(false);
@@ -433,7 +437,7 @@ const Payroll = () => {
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(20);
 
   // Month/Year selector
   const now = new Date();
@@ -566,10 +570,17 @@ const Payroll = () => {
   }, [overrideMap, selectedMonth, selectedYear, fetchOverrides]);
 
 
-  const depts = useMemo(() => {
-    const s = new Set(activeEmployees.map((e) => e.dept));
-    return Array.from(s).sort();
-  }, [activeEmployees]);
+  // ตัวกรองแผนก/ตำแหน่งแบบเดียวกับหน้าพนักงาน: เลือกงาน(แผนก)ก่อน แล้วค่อยเลือกตำแหน่ง
+  const depts = useMemo(() => affiliations.map((a) => a.name), [affiliations]);
+  const positions = useMemo(() => {
+    const flatten = (list: Position[]): string[] =>
+      list.flatMap((p) => [p.name, ...(p.children ? flatten(p.children) : [])]);
+    if (filterDept === "all") {
+      return ["all", ...Array.from(new Set(affiliations.flatMap((a) => flatten(a.positions))))];
+    }
+    const aff = affiliations.find((a) => a.name === filterDept);
+    return ["all", ...Array.from(new Set(aff ? flatten(aff.positions) : []))];
+  }, [affiliations, filterDept]);
 
   // Period & snapshot integration
   const { period, payslips: snapshotRows, loading: periodLoading, refetch: refetchPeriod } = usePayrollPeriod(selectedYear, selectedMonth);
@@ -649,6 +660,9 @@ const Payroll = () => {
     if (filterDept !== "all") {
       list = list.filter(({ emp }) => emp.dept === filterDept);
     }
+    if (filterPosition !== "all") {
+      list = list.filter(({ emp }) => emp.position === filterPosition);
+    }
     list = [...list].sort((a, b) => {
       let cmp = 0;
       if (sortField === "name") cmp = `${a.emp.firstName}`.localeCompare(`${b.emp.firstName}`);
@@ -657,10 +671,10 @@ const Payroll = () => {
       return sortAsc ? cmp : -cmp;
     });
     return list;
-  }, [payrollData, search, filterDept, sortField, sortAsc]);
+  }, [payrollData, search, filterDept, filterPosition, sortField, sortAsc]);
 
   // Reset page when filters change
-  useEffect(() => { setCurrentPage(1); }, [search, filterDept, pageSize]);
+  useEffect(() => { setCurrentPage(1); }, [search, filterDept, filterPosition, pageSize]);
 
   // Pagination calculations
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
@@ -963,9 +977,12 @@ const Payroll = () => {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
           <input type="text" placeholder="ค้นหาพนักงาน..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-full pl-9 pr-3 py-2 text-sm rounded-xl border bg-muted/30 outline-none" />
         </div>
-        <select value={filterDept} onChange={(e) => setFilterDept(e.target.value)} className="flex-1 min-w-[120px] px-3 py-2 text-sm rounded-xl border bg-muted/30 outline-none cursor-pointer">
+        <select value={filterDept} onChange={(e) => { setFilterDept(e.target.value); setFilterPosition("all"); }} className="flex-1 min-w-[120px] px-3 py-2 text-sm rounded-xl border bg-muted/30 outline-none cursor-pointer">
           <option value="all">ทุกแผนก</option>
           {depts.map((d) => <option key={d} value={d}>{d}</option>)}
+        </select>
+        <select value={filterPosition} onChange={(e) => setFilterPosition(e.target.value)} disabled={filterDept === "all"} className="flex-1 min-w-[120px] px-3 py-2 text-sm rounded-xl border bg-muted/30 outline-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
+          {positions.map((p) => <option key={p} value={p}>{p === "all" ? (filterDept === "all" ? "เลือกงานก่อน" : "ทุกตำแหน่ง") : p}</option>)}
         </select>
         <select
           value={selectedMonth}

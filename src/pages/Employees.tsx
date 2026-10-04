@@ -9,6 +9,7 @@ import { useEmployees } from "@/contexts/EmployeeContext";
 import { useOrg } from "@/contexts/OrgContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useImpersonation } from "@/contexts/ImpersonationContext";
+import { useRoleOptions, matchRoleOption, roleDisplayName } from "@/hooks/useRoleOptions";
 import type { Position } from "@/contexts/OrgContext";
 import type { Employee } from "@/contexts/EmployeeContext";
 import EmployeeFormDialog from "@/components/employees/EmployeeFormDialog";
@@ -38,6 +39,10 @@ const Employees = () => {
   const { role, currentUser } = useAuth();
   const { startImpersonation } = useImpersonation();
   const isAdmin = role === "admin";
+  const allRoleOptions = useRoleOptions();
+  // สิทธิ์ที่เลือกได้ในตาราง (ไม่ให้ตั้งเป็น Admin จากตรงนี้ — จัดการใน ตั้งค่า → ผู้ดูแลระบบ)
+  const roleOptions = allRoleOptions.filter((o) => o.value.toLowerCase() !== "admin");
+  const [roleSavingId, setRoleSavingId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [selectedDept, setSelectedDept] = useState("all");
   const [selectedPosition, setSelectedPosition] = useState("all");
@@ -134,6 +139,20 @@ const Employees = () => {
       toast.error(error);
     }
     // สำเร็จ: startImpersonation จะ redirect เอง ไม่ต้องทำอะไรต่อ
+  };
+
+  // เปลี่ยนสิทธิ์ใช้งาน (RBAC role) ของพนักงานจากในตาราง — updateEmployee จะซิงก์ไป user_roles ให้
+  const handleRoleChange = async (emp: Employee, newValue: string) => {
+    if (!newValue || newValue === emp.role || roleSavingId) return;
+    setRoleSavingId(emp.id);
+    try {
+      await updateEmployee(emp.id, { role: newValue });
+      toast.success(`ตั้งสิทธิ์ของ ${emp.firstName} เป็น "${roleDisplayName(newValue)}" แล้ว`);
+    } catch (e: any) {
+      toast.error("เปลี่ยนสิทธิ์ไม่สำเร็จ: " + (e?.message || "เกิดข้อผิดพลาด"));
+    } finally {
+      setRoleSavingId(null);
+    }
   };
 
   const handleFormSave = async (data: Omit<Employee, "id" | "education" | "workHistory">) => {
@@ -293,7 +312,7 @@ const Employees = () => {
             <table className="w-full">
               <thead>
                 <tr className="border-b" style={{ borderColor: "hsl(var(--border))" }}>
-                  {["พนักงาน", "แผนก / ตำแหน่ง", "ประเภท", "เริ่มงาน", "สถานะ", ""].map((h) => (
+                  {["พนักงาน", "แผนก / ตำแหน่ง", "ประเภท", "เริ่มงาน", "สถานะ", "สิทธิ์ใช้งาน", ""].map((h) => (
                     <th key={h} className="text-left px-4 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
@@ -322,6 +341,24 @@ const Employees = () => {
                       </td>
                       <td className="px-4 py-3.5 text-sm text-muted-foreground whitespace-nowrap">{emp.startDate}</td>
                       <td className="px-4 py-3.5"><span className={sc?.className}>{sc?.label}</span></td>
+                      <td className="px-4 py-3.5">
+                        {isAdmin ? (
+                          <Select value={emp.role} onValueChange={(v) => handleRoleChange(emp, v)} disabled={roleSavingId === emp.id}>
+                            <SelectTrigger className="w-[150px] h-8 text-xs">
+                              {roleSavingId === emp.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <SelectValue placeholder="เลือกสิทธิ์" />}
+                            </SelectTrigger>
+                            <SelectContent>
+                              {roleOptions.map((o) => (
+                                <SelectItem key={o.value} value={o.value} className="text-xs">{o.label}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <span className="text-xs px-2 py-1 rounded-lg font-medium" style={{ background: "hsl(var(--primary-light))", color: "hsl(var(--primary))" }}>
+                            {matchRoleOption(allRoleOptions, emp.role)?.label?.split(" — ")[0] ?? roleDisplayName(emp.role)}
+                          </span>
+                        )}
+                      </td>
                       <td className="px-4 py-3.5">
                         <div className="flex items-center gap-1">
                           <button onClick={() => navigate(`/employees/${emp.id}`)} className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"><Eye className="w-4 h-4" /></button>

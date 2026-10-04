@@ -95,7 +95,11 @@ export const ImpersonationProvider: React.FC<{ children: React.ReactNode }> = ({
         return { error: data?.error || error?.message || "เข้าสู่ระบบในฐานะพนักงานไม่สำเร็จ" };
       }
 
-      const { tokenHash, targetName } = data as { tokenHash: string; targetName: string };
+      const { session, tokenHash, targetName } = data as {
+        session?: { access_token?: string; refresh_token?: string };
+        tokenHash?: string;
+        targetName?: string;
+      };
 
       const snapshot: AdminSnapshot = { authKey, blob: adminBlob };
       try {
@@ -106,6 +110,28 @@ export const ImpersonationProvider: React.FC<{ children: React.ReactNode }> = ({
         return { error: "เบราว์เซอร์ปิดการเก็บ session ชั่วคราว ไม่สามารถใช้ Login as ได้" };
       }
 
+      // Fast path: the function already exchanged the magiclink for a session.
+      // Write it straight to storage (synchronous, lock-free — same mechanism as
+      // the admin restore) and boot fresh as the target. No client verifyOtp
+      // round trip and no auth-lock contention.
+      if (session?.access_token && session?.refresh_token) {
+        try {
+          localStorage.setItem(authKey, JSON.stringify(session));
+        } catch {
+          clearFlags();
+          setBusy(false);
+          return { error: "เบราว์เซอร์ปิดการเก็บ session ไม่สามารถใช้ Login as ได้" };
+        }
+        window.location.assign("/dashboard");
+        return { error: null };
+      }
+
+      // Fallback (older function that returns only a token hash): exchange it here.
+      if (!tokenHash) {
+        clearFlags();
+        setBusy(false);
+        return { error: "สร้างเซสชันเข้าสู่ระบบไม่สำเร็จ" };
+      }
       const verifyRes = await withTimeout(
         supabase.auth.verifyOtp({ token_hash: tokenHash, type: "magiclink" }),
         20000,

@@ -58,7 +58,28 @@ async function fetchLetterSettings(): Promise<LetterSettings> {
 async function toDataUrl(url: string): Promise<{ dataUrl: string; format: string } | null> {
   try {
     const res = await fetch(url);
+    if (!res.ok) return null;
     const blob = await res.blob();
+    // Only real images may reach jsPDF. A missing/placeholder asset (e.g. a
+    // Lovable /__l5e/ URL that 404s to the SPA index.html) returns HTML — feeding
+    // that to addImage used to risk a corrupt, unopenable PDF.
+    if (!blob.type.startsWith("image/")) return null;
+    // Re-encode through a canvas so jsPDF always gets a clean, compatible PNG
+    // (normalises CMYK / progressive JPEGs and other formats that can corrupt output).
+    try {
+      const bitmap = await createImageBitmap(blob);
+      const canvas = document.createElement("canvas");
+      canvas.width = bitmap.width;
+      canvas.height = bitmap.height;
+      const ctx = canvas.getContext("2d");
+      bitmap.close?.();
+      if (ctx) {
+        ctx.drawImage(bitmap, 0, 0);
+        return { dataUrl: canvas.toDataURL("image/png"), format: "PNG" };
+      }
+    } catch { /* fall through to raw data-url below */ }
+    // Fallback: the content is a valid image type but couldn't be canvas-decoded —
+    // pass it through as-is (still a real image, so safe for addImage).
     const format = blob.type.includes("png") ? "PNG" : "JPEG";
     return await new Promise((resolve) => {
       const reader = new FileReader();

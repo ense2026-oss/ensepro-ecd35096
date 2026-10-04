@@ -22,7 +22,7 @@ export const SETTINGS_SUBMODULES: SettingsSubModule[] = [
   { key: "settings_admins", label: "ผู้ดูแลระบบ", actions: LIST_ACTIONS },
   { key: "settings_shifts", label: "กะการทำงาน", actions: LIST_ACTIONS },
   { key: "settings_payroll", label: "ตั้งค่าเงินเดือน", actions: FORM_ACTIONS },
-  { key: "settings_contracts", label: "ตั้งค่าสัญญาจ้าง", actions: FORM_ACTIONS },
+  // ซ่อน "ตั้งค่าสัญญาจ้าง" (settings_contracts) ตามที่ร้องขอ — ยังคงข้อมูลเดิมใน DB ไว้
   { key: "settings_modules", label: "ตั้งค่าโมดูล", actions: FORM_ACTIONS },
   { key: "settings_leave_types", label: "ประเภทการลา", actions: LIST_ACTIONS },
   { key: "settings_company_holidays", label: "วันหยุดบริษัท", actions: LIST_ACTIONS },

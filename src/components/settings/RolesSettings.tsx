@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plus, Edit, Trash2, Check, Users, Loader2, ChevronUp, ChevronDown } from "lucide-react";
+import { Plus, Edit, Trash2, Check, Users, Loader2, ChevronUp, ChevronDown, Copy } from "lucide-react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
@@ -208,6 +208,18 @@ const RolesSettings = () => {
     setDialogOpen(true);
   };
 
+  // ทำสำเนา Role: คัดลอกสิทธิ์ทั้งหมดจากต้นฉบับ แต่สร้างเป็น Role ใหม่
+  // (ชื่อว่างให้กรอกใหม่ เพื่อไม่ให้เขียนทับต้นฉบับ)
+  const openDuplicate = (role: RoleData) => {
+    setEditingRole(null);
+    setForm({
+      name: "",
+      desc: role.desc ? `${role.desc} (สำเนา)` : "",
+      permissions: structuredClone(role.permissions),
+    });
+    setDialogOpen(true);
+  };
+
   const toggleAction = (mod: ModuleKey, action: ActionKey) => {
     setForm((f) => ({
       ...f,
@@ -232,6 +244,11 @@ const RolesSettings = () => {
     }
     if (!/^[a-zA-Z0-9_ -]+$/.test(form.name.trim())) {
       toast({ title: "ชื่อ Role ต้องเป็นภาษาอังกฤษเท่านั้น", description: "กรุณาใส่ภาษาไทยในช่องคำอธิบายแทน", variant: "destructive" });
+      return;
+    }
+    // สร้างใหม่/ทำสำเนา: กันตั้งชื่อซ้ำกับ Role ที่มีอยู่ (จะเขียนทับโดยไม่ตั้งใจ)
+    if (!editingRole && roles.some((r) => r.name === form.name.trim().toLowerCase())) {
+      toast({ title: "มี Role ชื่อนี้อยู่แล้ว", description: "กรุณาตั้งชื่อใหม่สำหรับสำเนา", variant: "destructive" });
       return;
     }
     setSaving(true);
@@ -405,10 +422,13 @@ const RolesSettings = () => {
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex gap-1">
-                    <button onClick={() => openEdit(role)} className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground">
+                    <button onClick={() => openEdit(role)} title="แก้ไข" className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground">
                       <Edit className="w-4 h-4" />
                     </button>
-                    <button onClick={() => setDeleteRole(role.name)} className="p-1.5 rounded-lg hover:bg-destructive/10 transition-colors text-destructive">
+                    <button onClick={() => openDuplicate(role)} title="ทำสำเนา Role" className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground">
+                      <Copy className="w-4 h-4" />
+                    </button>
+                    <button onClick={() => setDeleteRole(role.name)} title="ลบ" className="p-1.5 rounded-lg hover:bg-destructive/10 transition-colors text-destructive">
                       <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
