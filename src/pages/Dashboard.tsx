@@ -388,7 +388,12 @@ const Dashboard = () => {
   // Derived stats (must be before any early return for hooks rules)
   // ═══════════════════════════════════════════════
   const totalEmployees = employees.length;
-  const activeEmployees = employees.filter((e) => e.status === "active").length;
+  // Widget "พนักงานทั้งหมด": นับเฉพาะพนักงานที่ "ทำงาน" และไม่รวมผู้บริหาร/ผู้ดูแลระบบ
+  const isMgmtEmp = (e: any) => {
+    const r = (e.role || "").toLowerCase();
+    return r === "admin" || r === "executive" || (e.dept || "").trim() === "ผู้บริหาร";
+  };
+  const activeStaffCount = employees.filter((e) => e.status === "active" && !isMgmtEmp(e)).length;
   const presentToday = todayAttendance.filter((a) => a.status === "present" || a.status === "late").length;
   const lateToday = todayAttendance.filter((a) => a.late).length;
   // Count leave today from leave_requests where today falls within date range and status is approved or pending
@@ -742,7 +747,7 @@ const Dashboard = () => {
       )}
 
       <StatCarousel>
-        <StatCard title={`พนักงาน${viewType === "manager" ? "ในแผนก" : "ทั้งหมด"}`} value={totalEmployees} subtitle={`ใช้งานอยู่ ${activeEmployees} คน`} icon={Users} color="#FF870F" bgColor="hsl(31 100% 93%)" loading={loading} />
+        <StatCard title={`พนักงาน${viewType === "manager" ? "ในแผนก" : "ทั้งหมด"}`} value={activeStaffCount} subtitle="เฉพาะที่ทำงานอยู่ (ไม่รวมผู้บริหาร)" icon={Users} color="#FF870F" bgColor="hsl(31 100% 93%)" loading={loading} />
         <StatCard title="มาทำงานวันนี้" value={presentToday} subtitle={`${presentPercent}% ของพนักงาน${viewType === "manager" ? "ในแผนก" : "ทั้งหมด"}`} icon={UserCheck} color="hsl(90 100% 35%)" bgColor="hsl(90 100% 92%)" loading={loading} />
         <StatCard title="ลางานวันนี้" value={leaveToday} subtitle={`${leavePercent}%`} icon={Calendar} color="hsl(220 90% 50%)" bgColor="hsl(220 90% 93%)" loading={loading} />
         <StatCard title="มาสายวันนี้" value={lateToday} subtitle={`${latePercent}%`} icon={Clock} color="hsl(0 84% 55%)" bgColor="hsl(0 84% 95%)" loading={loading} />
