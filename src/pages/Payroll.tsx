@@ -1010,8 +1010,8 @@ const Payroll = () => {
           <table className="w-full text-sm whitespace-nowrap">
             <thead className="sticky top-0 z-20">
               <tr style={{ background: "hsl(var(--muted))" }}>
-                <th className="text-left px-4 py-3 font-semibold sticky left-0 z-30 w-14" style={{ background: "hsl(var(--muted))" }}>ลำดับ</th>
-                <th className="text-left px-4 py-3 font-semibold sticky left-14 z-30" style={{ background: "hsl(var(--muted))" }}>พนักงาน</th>
+                <th className="text-right pr-2 pl-1 py-3 font-semibold sticky left-0 z-30 w-[72px]" style={{ background: "hsl(var(--muted))" }}>ลำดับ</th>
+                <th className="text-left pl-2 pr-4 py-3 font-semibold sticky left-[72px] z-30" style={{ background: "hsl(var(--muted))" }}>พนักงาน</th>
                 <th className="text-right px-3 py-3 font-semibold cursor-pointer select-none" onClick={() => toggleSort("salary")}>
                   เงินเดือน <SortIcon field="salary" />
                 </th>
@@ -1034,8 +1034,8 @@ const Payroll = () => {
             <tbody>
               {paginatedData.map(({ emp, payroll }, idx) => (
                 <tr key={emp.id} className="border-t hover:bg-muted/30 transition-colors">
-                  <td className="px-4 py-3 sticky left-0 z-10 bg-background text-muted-foreground w-14">{(currentPage - 1) * pageSize + idx + 1}</td>
-                  <td className="px-4 py-3 sticky left-14 z-10 bg-background">
+                  <td className="text-right pr-2 pl-1 py-3 sticky left-0 z-10 bg-background text-muted-foreground w-[72px]">{(currentPage - 1) * pageSize + idx + 1}</td>
+                  <td className="pl-2 pr-4 py-3 sticky left-[72px] z-10 bg-background">
                     <div className="flex items-center gap-2.5">
                       <EmployeeAvatar photoUrl={emp.photoUrl} avatar={emp.avatar} avatarColor={emp.avatarColor} avatarTextColor={emp.avatarTextColor} firstName={emp.firstName} size="sm" rounded="lg" />
                       <div>
@@ -1109,8 +1109,8 @@ const Payroll = () => {
             {paginatedData.length > 0 && (
               <tfoot>
                 <tr className="border-t-2 font-semibold" style={{ background: "hsl(var(--muted) / 0.5)" }}>
-                  <td className="px-4 py-3 sticky left-0 z-10 w-14" style={{ background: "hsl(var(--muted))" }}></td>
-                  <td className="px-4 py-3 sticky left-14 z-10 whitespace-nowrap" style={{ background: "hsl(var(--muted))" }}>รวมทั้งหมด ({filtered.length} คน)</td>
+                  <td className="pr-2 pl-1 py-3 sticky left-0 z-10 w-[72px]" style={{ background: "hsl(var(--muted))" }}></td>
+                  <td className="pl-2 pr-4 py-3 sticky left-[72px] z-10 whitespace-nowrap" style={{ background: "hsl(var(--muted))" }}>รวมทั้งหมด ({filtered.length} คน)</td>
                   <td className="text-right px-3 py-3 tabular-nums">{formatCurrency(filtered.reduce((s, r) => s + r.payroll.salary, 0))}</td>
                   <td className="text-right px-3 py-3 tabular-nums">{formatCurrency(filtered.reduce((s, r) => s + r.payroll.otPay, 0))}</td>
                   <td className="text-right px-3 py-3 tabular-nums">{formatCurrency(filtered.reduce((s, r) => s + r.payroll.diligence, 0))}</td>

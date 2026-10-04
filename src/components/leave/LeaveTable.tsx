@@ -72,7 +72,7 @@ const LeaveTable = ({ records, onApprove, onReject, hideActions = false, current
           <thead>
             <tr className="border-b" style={{ borderColor: "hsl(var(--border))" }}>
               {[
-                { label: "ลำดับ", width: "w-[56px]" },
+                { label: "ลำดับ", width: "w-[40px]" },
                 { label: "พนักงาน", width: "w-[140px]" },
                 { label: "ประเภท", width: "w-[110px]" },
                 { label: "วันที่", width: "hidden md:table-cell w-[140px]" },
@@ -82,7 +82,7 @@ const LeaveTable = ({ records, onApprove, onReject, hideActions = false, current
                 { label: "สถานะ", width: "hidden md:table-cell w-[120px]" },
                 { label: "จัดการ", width: "w-[110px]" },
               ].map((h) => (
-                <th key={h.label} className={`text-left px-3 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap ${h.width}`}>
+                <th key={h.label} className={`py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap ${h.label === "ลำดับ" ? "text-right pr-2 pl-1" : h.label === "พนักงาน" ? "text-left pl-2 pr-3" : "text-left px-3"} ${h.width}`}>
                   {h.label}
                 </th>
               ))}
@@ -99,8 +99,8 @@ const LeaveTable = ({ records, onApprove, onReject, hideActions = false, current
               const isOwnPending = row.employeeId === currentEmployeeId && row.status === "pending";
               return (
                 <tr key={row.id} className="border-b hover:bg-muted/30 transition-colors" style={{ borderColor: "hsl(var(--border))" }}>
-                  <td className="px-3 py-2.5 text-sm text-muted-foreground">{descendingTotal != null ? descendingTotal - startIndex - idx : startIndex + idx + 1}</td>
-                  <td className="px-3 py-2.5">
+                  <td className="text-right pr-2 pl-1 py-2.5 text-sm text-muted-foreground w-[40px]">{descendingTotal != null ? descendingTotal - startIndex - idx : startIndex + idx + 1}</td>
+                  <td className="pl-2 pr-3 py-2.5">
                     <div className="flex items-center gap-2">
                       <EmployeeAvatar
                         photoUrl={row.photoUrl}

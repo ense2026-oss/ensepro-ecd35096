@@ -843,8 +843,8 @@ const OvertimeRequest = () => {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-muted/40">
-                <th className="text-left px-4 py-3 font-semibold text-muted-foreground w-[56px]">ลำดับ</th>
-                <th className="text-left px-4 py-3 font-semibold text-muted-foreground">พนักงาน</th>
+                <th className="text-right pr-2 pl-1 py-3 font-semibold text-muted-foreground w-[40px]">ลำดับ</th>
+                <th className="text-left pl-2 pr-4 py-3 font-semibold text-muted-foreground">พนักงาน</th>
                 <th className="text-left px-4 py-3 font-semibold text-muted-foreground hidden md:table-cell">แผนก</th>
                 <th className="text-left px-4 py-3 font-semibold text-muted-foreground">วันที่</th>
                 <th className="text-left px-4 py-3 font-semibold text-muted-foreground hidden lg:table-cell">เวลาที่ขอ</th>
@@ -871,8 +871,8 @@ const OvertimeRequest = () => {
                 const typeCfg = otTypeLabels[req.type];
                 return (
                   <tr key={req.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
-                    <td className="px-4 py-3 text-muted-foreground">{filtered.length - ((otPage - 1) * OT_PAGE_SIZE + idx)}</td>
-                    <td className="px-4 py-3">
+                    <td className="text-right pr-2 pl-1 py-3 text-muted-foreground w-[40px]">{filtered.length - ((otPage - 1) * OT_PAGE_SIZE + idx)}</td>
+                    <td className="pl-2 pr-4 py-3">
                       <div className="flex items-center gap-2.5">
                         <EmployeeAvatar photoUrl={req.photoUrl} firstName={req.employeeName} size="sm" />
                         <p className="font-medium">{req.employeeName}</p>

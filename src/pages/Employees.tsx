@@ -348,7 +348,7 @@ const Employees = () => {
               <thead>
                 <tr className="border-b" style={{ borderColor: "hsl(var(--border))" }}>
                   {["ลำดับ", "พนักงาน", "แผนก / ตำแหน่ง", "ประเภท", "เริ่มงาน", "สถานะ", "สิทธิ์ใช้งาน", ""].map((h) => (
-                    <th key={h} className="text-left px-4 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
+                    <th key={h} className={`py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap ${h === "ลำดับ" ? "text-right pr-2 pl-1 w-10" : h === "พนักงาน" ? "text-left pl-2 pr-4" : "text-left px-4"}`}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -358,8 +358,8 @@ const Employees = () => {
                   const displayName = `${emp.prefix}${emp.firstName} ${emp.lastName}`;
                   return (
                     <tr key={emp.id} className="border-b hover:bg-muted/30 transition-colors" style={{ borderColor: "hsl(var(--border))" }}>
-                      <td className="px-4 py-3.5 text-sm text-muted-foreground">{(safePage - 1) * pageSize + idx + 1}</td>
-                      <td className="px-4 py-3.5">
+                      <td className="text-right pr-2 pl-1 py-3.5 text-sm text-muted-foreground w-10">{(safePage - 1) * pageSize + idx + 1}</td>
+                      <td className="pl-2 pr-4 py-3.5">
                         <div className="flex items-center gap-3">
                           <EmployeeAvatar photoUrl={emp.photoUrl} avatar={emp.avatar} avatarColor={emp.avatarColor} avatarTextColor={emp.avatarTextColor} firstName={emp.firstName} size="md" />
                           <div>
