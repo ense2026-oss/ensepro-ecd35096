@@ -46,7 +46,7 @@ const Login = () => {
     setSuccess("");
 
     if (!email.trim() || !password.trim()) {
-      setError("กรุณากรอก Email และรหัสผ่าน");
+      setError("กรุณากรอกชื่อผู้ใช้และรหัสผ่าน");
       return;
     }
 
@@ -57,8 +57,16 @@ const Login = () => {
 
     setIsLoading(true);
 
+    // Login identity is the username; the auth account stores it as
+    // <username>@ensepro.com. Entering a value that already has "@" (e.g. an
+    // admin's real email) is used as-is.
+    const toLoginEmail = (v: string) => {
+      const t = v.trim();
+      return t.includes("@") ? t : `${t.toLowerCase().replace(/\s+/g, "")}@ensepro.com`;
+    };
+
     if (isSignup) {
-      const { error: signupErr } = await auth.signup(email.trim(), password.trim(), fullName.trim());
+      const { error: signupErr } = await auth.signup(toLoginEmail(email), password.trim(), fullName.trim());
       setIsLoading(false);
       if (signupErr) {
         setError(signupErr);
@@ -67,10 +75,10 @@ const Login = () => {
       setSuccess("สมัครสมาชิกสำเร็จ! กำลังเข้าสู่ระบบ...");
       // Route guard (LoginRoute) will redirect once auth state updates
     } else {
-      const { error: loginErr } = await auth.login(email.trim(), password.trim());
+      const { error: loginErr } = await auth.login(toLoginEmail(email), password.trim());
       setIsLoading(false);
       if (loginErr) {
-        setError("Email หรือรหัสผ่านไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง");
+        setError("ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง");
         return;
       }
       // Route guard (LoginRoute) will redirect once auth state updates
@@ -225,7 +233,7 @@ const Login = () => {
               {isSignup ? "สร้างบัญชีใหม่ ✨" : "ยินดีต้อนรับ 👋"}
             </h2>
             <p className="text-muted-foreground">
-              {isSignup ? "กรอกข้อมูลเพื่อสมัครเข้าใช้ระบบ" : "กรุณาเข้าสู่ระบบด้วย Email ของคุณ"}
+              {isSignup ? "กรอกข้อมูลเพื่อสมัครเข้าใช้ระบบ" : "กรุณาเข้าสู่ระบบด้วยชื่อผู้ใช้ของคุณ"}
             </p>
           </div>
 
@@ -250,14 +258,16 @@ const Login = () => {
               </div>
             )}
 
-            {/* Email */}
+            {/* Username (or email for the admin) */}
             <div>
-              <label className="block text-sm font-semibold mb-2">Email</label>
+              <label className="block text-sm font-semibold mb-2">{isSignup ? "Email" : "ชื่อผู้ใช้"}</label>
               <input
-                type="email"
+                type={isSignup ? "email" : "text"}
+                autoCapitalize="none"
+                autoCorrect="off"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="email@company.com"
+                placeholder={isSignup ? "email@company.com" : "เช่น areenan.s"}
                 className="w-full px-4 py-3 rounded-xl border text-sm transition-all duration-200 outline-none focus:ring-2"
                 style={{
                   background: "hsl(var(--card))",

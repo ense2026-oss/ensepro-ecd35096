@@ -29,3 +29,4 @@ dist-ssr
 # contains the Supabase anon/publishable key, which is safe to expose.
 .env.local
 .env.*.local
+tools/out/

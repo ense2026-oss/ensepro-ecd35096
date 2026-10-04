@@ -207,7 +207,10 @@ const EmployeeProfile = () => {
   const [showInitialPassword, setShowInitialPassword] = useState(false);
   const [newPassword, setNewPassword] = useState("");
   const [passwordError, setPasswordError] = useState("");
-  
+  const [usernameInput, setUsernameInput] = useState("");
+  const [usernameSaving, setUsernameSaving] = useState(false);
+  const [usernameError, setUsernameError] = useState("");
+
   const photoInputRef = useRef<HTMLInputElement>(null);
 
   const [slideState, setSlideState] = useState<"entering" | "visible" | "exiting">("entering");
@@ -307,6 +310,30 @@ const EmployeeProfile = () => {
       // was never saved.
       if (employee) setData({ ...employee });
       toast.error("บันทึกไม่สำเร็จ: " + (err?.message || "เกิดข้อผิดพลาด"));
+    }
+  };
+
+  // Keep the username input in sync with whichever employee is loaded.
+  useEffect(() => { setUsernameInput(employee?.username || ""); setUsernameError(""); }, [employee?.id, employee?.username]);
+
+  const handleUsernameChange = async () => {
+    const next = usernameInput.trim().toLowerCase();
+    setUsernameError("");
+    if (!next || next === employee?.username) return;
+    if (!/^[a-z0-9._-]+$/.test(next)) { setUsernameError("ใช้ได้เฉพาะ a-z, 0-9, . _ - (ห้ามเว้นวรรค/ภาษาไทย)"); return; }
+    setUsernameSaving(true);
+    try {
+      const { data: fnData, error: fnErr } = await supabase.functions.invoke("admin-update-username", {
+        body: { employeeId: employee!.id, newUsername: next },
+      });
+      if (fnErr || fnData?.error) throw new Error(fnData?.error || fnErr?.message || "เปลี่ยนชื่อผู้ใช้ไม่สำเร็จ");
+      setData((dd) => dd ? { ...dd, username: next, email: `${next}@ensepro.com` } : dd);
+      await refetch();
+      toast.success(`เปลี่ยนชื่อผู้ใช้เป็น ${next} แล้ว`);
+    } catch (err: any) {
+      setUsernameError(err.message || "เกิดข้อผิดพลาด");
+    } finally {
+      setUsernameSaving(false);
     }
   };
 
@@ -703,6 +730,32 @@ const EmployeeProfile = () => {
                 <p className="text-xs text-muted-foreground">Role</p>
                 <span className="text-xs font-bold px-2.5 py-1 rounded-lg bg-primary/10 text-primary">{emp.role}</span>
               </div>
+              {emp.username && (
+                <div className="space-y-1 sm:col-span-2">
+                  <p className="text-xs text-muted-foreground">ชื่อผู้ใช้ (สำหรับเข้าสู่ระบบ)</p>
+                  {isAdminOrHr && !isOwnProfile ? (
+                    <div className="flex items-center gap-2">
+                      <input
+                        value={usernameInput}
+                        onChange={(e) => setUsernameInput(e.target.value.toLowerCase().replace(/\s+/g, ""))}
+                        className="flex-1 px-3 py-1.5 text-sm rounded-lg border border-border bg-muted/30 outline-none focus:ring-2 focus:ring-primary/30 font-mono"
+                        placeholder="เช่น areenan.s"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleUsernameChange}
+                        disabled={usernameSaving || !usernameInput.trim() || usernameInput.trim() === emp.username}
+                        className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors whitespace-nowrap"
+                      >
+                        {usernameSaving ? "กำลังบันทึก..." : "เปลี่ยน"}
+                      </button>
+                    </div>
+                  ) : (
+                    <p className="text-sm font-medium font-mono">{emp.username}</p>
+                  )}
+                  {usernameError && <p className="text-xs text-destructive">{usernameError}</p>}
+                </div>
+              )}
               <div className="space-y-1">
                 <p className="text-xs text-muted-foreground">รหัสผ่านเริ่มต้น</p>
                 <div className="flex items-center gap-2">
