@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { formatThaiDate } from "@/utils/thaiDate";
 import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, Check, Circle, Send, FileDown, Paperclip, X, Eye, Trash2, Download, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -178,7 +179,7 @@ const ContractDetail = () => {
                       {step.label}
                     </p>
                     {step.date && (
-                      <p className="text-xs text-muted-foreground mt-0.5">{step.date}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">{formatThaiDate(step.date)}</p>
                     )}
                   </div>
                 </div>
@@ -235,11 +236,11 @@ const ContractDetail = () => {
               </div>
               <div>
                 <p className="text-muted-foreground text-xs mb-0.5">วันที่เริ่มสัญญา</p>
-                <p className="font-medium text-primary">{contract.startDate}</p>
+                <p className="font-medium text-primary">{formatThaiDate(contract.startDate)}</p>
               </div>
               <div>
                 <p className="text-muted-foreground text-xs mb-0.5">วันที่สิ้นสุดสัญญา</p>
-                <p className="font-medium text-primary">{contract.endDate}</p>
+                <p className="font-medium text-primary">{formatThaiDate(contract.endDate)}</p>
               </div>
               <div>
                 <p className="text-muted-foreground text-xs mb-0.5">เงินเดือน</p>

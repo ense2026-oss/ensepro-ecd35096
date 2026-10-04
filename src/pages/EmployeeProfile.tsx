@@ -16,6 +16,7 @@ import { useRoleOptions } from "@/hooks/useRoleOptions";
 import { toast } from "sonner";
 import { TaxDeduction, DEFAULT_TAX_DEDUCTION, calculateTotalDeductions, calculateAnnualIncome, calculateExpenseDeduction, calculateProgressiveTax, formatCurrency } from "@/utils/taxCalculation";
 import { processFileUpload } from "@/utils/fileCompression";
+import { formatThaiDate } from "@/utils/thaiDate";
 import LazyImage from "@/components/ui/lazy-image";
 import defaultAvatarImg from "@/assets/default-avatar.png";
 import { supabase } from "@/integrations/supabase/client";
@@ -33,15 +34,6 @@ const TAB_CONFIG = [
   { key: "security",   label: "ความปลอดภัย",     icon: Shield },
   { key: "display",    label: "การแสดงผล",       icon: Palette },
 ];
-
-/* ───────────────────── Helpers ───────────────────── */
-const THAI_MONTHS = ["มกราคม","กุมภาพันธ์","มีนาคม","เมษายน","พฤษภาคม","มิถุนายน","กรกฎาคม","สิงหาคม","กันยายน","ตุลาคม","พฤศจิกายน","ธันวาคม"];
-const formatThaiDate = (dateStr: string): string => {
-  if (!dateStr) return "—";
-  const d = new Date(dateStr);
-  if (isNaN(d.getTime())) return dateStr;
-  return `${d.getDate()} ${THAI_MONTHS[d.getMonth()]} ${d.getFullYear() + 543}`;
-};
 
 /* ───────────────────── Sub-components ───────────────────── */
 const SectionLabel = ({ children }: { children: React.ReactNode }) => (
@@ -392,7 +384,7 @@ const EmployeeProfile = () => {
           <Field label="ชื่อ" value={emp.firstName} />
           <Field label="นามสกุล" value={emp.lastName} />
           <Field label="ชื่อเล่น" value={emp.nickname} />
-          <Field label="วันเกิด" value={emp.birthDate} icon={Calendar} />
+          <Field label="วันเกิด" value={formatThaiDate(emp.birthDate)} icon={Calendar} />
           <Field label="สัญชาติ" value={emp.nationality} />
           <Field label="ศาสนา" value={emp.religion} />
           <Field label="กรุ๊ปเลือด" value={emp.bloodGroup} icon={Droplets} />
@@ -411,8 +403,8 @@ const EmployeeProfile = () => {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-4">
           <Field label="เลขบัตรประชาชน" value={emp.nationalId} icon={CreditCard} />
-          <Field label="วันที่ออกบัตร" value={emp.idIssueDate} icon={Calendar} />
-          <Field label="วันหมดอายุ" value={emp.idExpireDate} icon={Calendar} />
+          <Field label="วันที่ออกบัตร" value={formatThaiDate(emp.idIssueDate)} icon={Calendar} />
+          <Field label="วันหมดอายุ" value={formatThaiDate(emp.idExpireDate)} icon={Calendar} />
         </div>
       )}
 

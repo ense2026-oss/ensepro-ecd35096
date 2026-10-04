@@ -10,6 +10,7 @@ import { useOrg } from "@/contexts/OrgContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useImpersonation } from "@/contexts/ImpersonationContext";
 import { useRoleOptions, matchRoleOption, roleDisplayName } from "@/hooks/useRoleOptions";
+import { formatThaiDate } from "@/utils/thaiDate";
 import type { Position } from "@/contexts/OrgContext";
 import type { Employee } from "@/contexts/EmployeeContext";
 import EmployeeFormDialog from "@/components/employees/EmployeeFormDialog";
@@ -347,7 +348,7 @@ const Employees = () => {
                       <td className="px-4 py-3.5">
                         <span className="text-xs px-2 py-1 rounded-lg font-medium" style={{ background: "hsl(var(--muted))" }}>{emp.employeeType}</span>
                       </td>
-                      <td className="px-4 py-3.5 text-sm text-muted-foreground whitespace-nowrap">{emp.startDate}</td>
+                      <td className="px-4 py-3.5 text-sm text-muted-foreground whitespace-nowrap">{formatThaiDate(emp.startDate)}</td>
                       <td className="px-4 py-3.5"><span className={sc?.className}>{sc?.label}</span></td>
                       <td className="px-4 py-3.5">
                         {isAdmin ? (
@@ -466,7 +467,7 @@ const Employees = () => {
                   <div className="space-y-1.5 pt-2 border-t" style={{ borderColor: "hsl(var(--border))" }}>
                     <div className="flex items-center gap-2 text-xs text-muted-foreground"><Phone className="w-3.5 h-3.5" />{emp.phone}</div>
                     <div className="flex items-center gap-2 text-xs text-muted-foreground"><Mail className="w-3.5 h-3.5" /><span className="truncate">{emp.email}</span></div>
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground"><MapPin className="w-3.5 h-3.5" />เริ่มงาน {emp.startDate}</div>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground"><MapPin className="w-3.5 h-3.5" />เริ่มงาน {formatThaiDate(emp.startDate)}</div>
                   </div>
                   <div className="flex gap-2 pt-1">
                     {isMobile ? (

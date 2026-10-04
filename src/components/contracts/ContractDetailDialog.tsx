@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { formatThaiDate } from "@/utils/thaiDate";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -106,8 +107,8 @@ const ContractDetailDialog = ({ open, onOpenChange, contract }: Props) => {
             <div><span className="text-muted-foreground">ประเภท:</span> {contract.contractType}</div>
             <div><span className="text-muted-foreground">พนักงาน:</span> {emp(contract.employeeId)}</div>
             <div><span className="text-muted-foreground">เงินเดือน:</span> {contract.salary.toLocaleString()} ฿</div>
-            <div><span className="text-muted-foreground">เริ่มต้น:</span> {contract.startDate}</div>
-            <div><span className="text-muted-foreground">สิ้นสุด:</span> {contract.endDate}</div>
+            <div><span className="text-muted-foreground">เริ่มต้น:</span> {formatThaiDate(contract.startDate)}</div>
+            <div><span className="text-muted-foreground">สิ้นสุด:</span> {formatThaiDate(contract.endDate)}</div>
             <div><span className="text-muted-foreground">พยาน 1:</span> {emp(contract.witness1Id)}</div>
             <div><span className="text-muted-foreground">พยาน 2:</span> {emp(contract.witness2Id)}</div>
             <div><span className="text-muted-foreground">ผู้บริหาร:</span> {emp(contract.executiveId)}</div>

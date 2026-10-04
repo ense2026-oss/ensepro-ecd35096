@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { formatThaiDate } from "@/utils/thaiDate";
 import { Plus, Search, Filter } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -121,7 +122,7 @@ const Contracts = () => {
                     <TableCell className="font-medium max-w-[200px] truncate">{c.title}</TableCell>
                     <TableCell>{emp(c.employeeId)}</TableCell>
                     <TableCell>{c.contractType}</TableCell>
-                    <TableCell className="text-xs">{c.startDate} — {c.endDate}</TableCell>
+                    <TableCell className="text-xs">{formatThaiDate(c.startDate)} — {formatThaiDate(c.endDate)}</TableCell>
                     <TableCell><ContractStatusBadge status={c.status} /></TableCell>
                     <TableCell className="text-right">
                       {canEditContract && c.status === "draft" && (

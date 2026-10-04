@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo, useRef, useCallback, forwardRef, Children, ReactNode } from "react";
+import { formatThaiDate } from "@/utils/thaiDate";
 import {
   Users, UserCheck, UserX, Clock, TrendingUp, TrendingDown,
   Calendar, Briefcase, AlertCircle, CheckCircle, MapPin,
@@ -657,7 +658,7 @@ const Dashboard = () => {
                       </div>
                       <div className="min-w-0">
                         <p className="text-sm font-medium truncate">{r.label}</p>
-                        <p className="text-xs text-muted-foreground">{r.date}</p>
+                        <p className="text-xs text-muted-foreground">{formatThaiDate(r.date)}</p>
                       </div>
                     </div>
                     {statusBadge(r.status)}
@@ -684,7 +685,7 @@ const Dashboard = () => {
                       </div>
                       <div className="min-w-0">
                         <p className="text-sm font-medium truncate">{r.label}</p>
-                        <p className="text-xs text-muted-foreground">{r.date}</p>
+                        <p className="text-xs text-muted-foreground">{formatThaiDate(r.date)}</p>
                       </div>
                     </div>
                     {statusBadge(r.status)}
@@ -939,7 +940,7 @@ const Dashboard = () => {
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="text-xs font-medium leading-tight truncate">{h.name}</p>
-                        <p className="text-[10px] text-muted-foreground">{f.date}</p>
+                        <p className="text-[10px] text-muted-foreground">{formatThaiDate(f.date)}</p>
                       </div>
                     </div>
                   );
@@ -970,7 +971,7 @@ const Dashboard = () => {
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="text-xs font-medium leading-tight truncate">{d.label}</p>
-                        <p className="text-[10px] text-muted-foreground">{f.date}</p>
+                        <p className="text-[10px] text-muted-foreground">{formatThaiDate(f.date)}</p>
                       </div>
                     </div>
                   );

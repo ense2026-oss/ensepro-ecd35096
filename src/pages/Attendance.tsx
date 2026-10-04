@@ -6,6 +6,7 @@ import { useEmployees } from "@/contexts/EmployeeContext";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogBody, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
+import { formatThaiDate } from "@/utils/thaiDate";
 import TimeInput24 from "@/components/ui/time-input-24";
 import SearchableSelect from "@/components/ui/searchable-select";
 import { useTimeEditRequests, type TimeEditRequest } from "@/contexts/TimeEditContext";
@@ -1230,7 +1231,7 @@ const Attendance = () => {
             <div className="space-y-4 py-2 mx-[24px]">
               <div className="grid grid-cols-2 gap-3">
                 <div><p className="text-xs text-muted-foreground">พนักงาน</p><p className="text-sm font-semibold mt-0.5">{detailReq.employeeName}</p></div>
-                <div><p className="text-xs text-muted-foreground">วันที่</p><p className="text-sm font-semibold mt-0.5">{detailReq.date}</p></div>
+                <div><p className="text-xs text-muted-foreground">วันที่</p><p className="text-sm font-semibold mt-0.5">{formatThaiDate(detailReq.date)}</p></div>
               </div>
               <div className="grid grid-cols-2 gap-3 p-3 rounded-xl bg-muted/40">
                 <div><p className="text-xs text-muted-foreground mb-1">เวลาเข้าเดิม</p><p className="text-sm font-semibold">{detailReq.originalCheckIn}</p></div>

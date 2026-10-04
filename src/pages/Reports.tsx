@@ -24,6 +24,7 @@ import {
   exportAttendanceSummaryExcel,
 } from "@/utils/exportGenericReports";
 import { toast } from "sonner";
+import { formatThaiDate } from "@/utils/thaiDate";
 import {
   Users,
   GitBranch,
@@ -560,7 +561,7 @@ const Reports = () => {
             dept: emp?.dept || "-",
             shift: shift?.name || "-",
             shiftColor: shift?.color || "#6B7280",
-            period: `${a.start_date} - ${a.end_date}`,
+            period: `${formatThaiDate(a.start_date)} - ${formatThaiDate(a.end_date)}`,
             assignmentType: a.assignment_type,
             status: "ปฏิบัติงาน",
             _role: (emp?.role || "").toLowerCase(),
@@ -1587,7 +1588,7 @@ const Reports = () => {
                         <td className="px-4 py-3">{emp.dept}</td>
                         <td className="px-4 py-3">{emp.position}</td>
                         <td className="px-4 py-3">{emp.type}</td>
-                        <td className="px-4 py-3">{emp.startDate}</td>
+                        <td className="px-4 py-3">{formatThaiDate(emp.startDate)}</td>
                         <td className="px-4 py-3">
                           <span className="px-2 py-0.5 rounded-full text-xs font-medium" style={{
                             background: emp.rawStatus === "active" || emp.rawStatus === "new"
@@ -1680,7 +1681,7 @@ const Reports = () => {
                         <td className="px-4 py-3 text-center">{i + 1}</td>
                         <td className="px-4 py-3 font-medium">{row.name}</td>
                         <td className="px-4 py-3">{row.dept}</td>
-                        <td className="px-4 py-3">{row.date}</td>
+                        <td className="px-4 py-3">{formatThaiDate(row.date)}</td>
                         <td className="px-4 py-3">{row.checkIn}</td>
                         <td className="px-4 py-3">{row.checkOut}</td>
                         <td className="px-4 py-3">{row.hours}</td>
@@ -1732,7 +1733,7 @@ const Reports = () => {
                         <td className="px-4 py-3 text-center">{otData.length - i}</td>
                         <td className="px-4 py-3 font-medium">{row.name}</td>
                         <td className="px-4 py-3">{row.dept}</td>
-                        <td className="px-4 py-3">{row.date}</td>
+                        <td className="px-4 py-3">{formatThaiDate(row.date)}</td>
                         <td className="px-4 py-3">{row.startTime}</td>
                         <td className="px-4 py-3">{row.endTime}</td>
                         <td className="px-4 py-3 text-right tabular-nums font-semibold">{row.hours}</td>
@@ -1972,7 +1973,7 @@ const Reports = () => {
                           {row.toShift}
                         </span>
                       </td>
-                      <td className="px-4 py-3">{row.date}</td>
+                      <td className="px-4 py-3">{formatThaiDate(row.date)}</td>
                       <td className="px-4 py-3">{row.reason}</td>
                     </tr>
                   ))}

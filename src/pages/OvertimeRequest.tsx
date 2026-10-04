@@ -11,6 +11,7 @@ import TimeInput24 from "@/components/ui/time-input-24";
 import { supabase } from "@/integrations/supabase/client";
 import { usePageQuery, unwrapAll } from "@/hooks/usePageQuery";
 import PaginationBar from "@/components/ui/pagination-bar";
+import { formatThaiDate } from "@/utils/thaiDate";
 import { toast } from "sonner";
 import { notifyApprovers, notifyRequester, getApprovalTiers, notifyTierApprover } from "@/utils/notifications";
 import SearchableSelect from "@/components/ui/searchable-select";
@@ -461,7 +462,7 @@ const OvertimeRequest = () => {
     notifyApprovers({
       type: "ot",
       title: "คำขอ OT ใหม่",
-      description: `${req.employeeName} ยื่นขอ OT ${req.date} (${req.startTime}-${req.endTime}) ${req.hours} ชม.`,
+      description: `${req.employeeName} ยื่นขอ OT ${formatThaiDate(req.date)} (${req.startTime}-${req.endTime}) ${req.hours} ชม.`,
       targetEmployee: req.employeeName,
     });
   };
@@ -509,7 +510,7 @@ const OvertimeRequest = () => {
       notifyRequester(req.employeeId, {
         type: "ot",
         title: "คำขอ OT ได้รับการอนุมัติ",
-        description: `คำขอ OT ${req.date} (${req.startTime}-${req.endTime}) ${req.hours} ชม. ได้รับการอนุมัติแล้ว`,
+        description: `คำขอ OT ${formatThaiDate(req.date)} (${req.startTime}-${req.endTime}) ${req.hours} ชม. ได้รับการอนุมัติแล้ว`,
         targetEmployee: req.employeeName,
       });
     } else {
@@ -523,7 +524,7 @@ const OvertimeRequest = () => {
       notifyTierApprover("ot", nextTier, {
         type: "ot",
         title: `คำขอ OT รอการอนุมัติ (ระดับ ${nextTier + 1}/${totalTiers})`,
-        description: `${req.employeeName} ยื่นขอ OT ${req.date} (${req.startTime}-${req.endTime}) ${req.hours} ชม. — ผ่านระดับ ${nextTier} แล้ว`,
+        description: `${req.employeeName} ยื่นขอ OT ${formatThaiDate(req.date)} (${req.startTime}-${req.endTime}) ${req.hours} ชม. — ผ่านระดับ ${nextTier} แล้ว`,
         targetEmployee: req.employeeName,
       });
     }
@@ -561,7 +562,7 @@ const OvertimeRequest = () => {
       notifyRequester(req.employeeId, {
         type: "ot",
         title: "คำขอ OT ไม่ได้รับการอนุมัติ",
-        description: `คำขอ OT ${req.date} (${req.startTime}-${req.endTime}) ${req.hours} ชม. ไม่ได้รับการอนุมัติ`,
+        description: `คำขอ OT ${formatThaiDate(req.date)} (${req.startTime}-${req.endTime}) ${req.hours} ชม. ไม่ได้รับการอนุมัติ`,
         targetEmployee: req.employeeName,
       });
     }
@@ -797,7 +798,7 @@ const OvertimeRequest = () => {
                         <p className="text-[10px] text-muted-foreground truncate">{req.department || "-"}</p>
                       </div>
                     </div>
-                    <p className="text-xs font-medium">{req.date}</p>
+                    <p className="text-xs font-medium">{formatThaiDate(req.date)}</p>
                     <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-[11px]">
                       <span className="text-muted-foreground">เวลาที่ขอ</span>
                       <span className="font-mono text-right">{req.startTime} - {req.endTime}</span>
@@ -878,7 +879,7 @@ const OvertimeRequest = () => {
                       </div>
                     </td>
                     <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">{req.department}</td>
-                    <td className="px-4 py-3">{req.date}</td>
+                    <td className="px-4 py-3">{formatThaiDate(req.date)}</td>
                     <td className="px-4 py-3 hidden lg:table-cell font-mono text-xs">{req.startTime} - {req.endTime}</td>
                     <td className="px-4 py-3 hidden lg:table-cell font-mono text-xs">
                       {req.actualIn || req.actualOut ? (
@@ -956,7 +957,7 @@ const OvertimeRequest = () => {
                   <div><p className="text-xs text-muted-foreground">แผนก</p><p className="text-sm font-semibold mt-0.5">{detailReq.department || "-"}</p></div>
                 </div>
                 <div className="grid grid-cols-2 gap-3 p-3 rounded-xl bg-muted/40">
-                  <div><p className="text-xs text-muted-foreground mb-1">วันที่</p><p className="text-sm font-semibold">{detailReq.date}</p></div>
+                  <div><p className="text-xs text-muted-foreground mb-1">วันที่</p><p className="text-sm font-semibold">{formatThaiDate(detailReq.date)}</p></div>
                   <div><p className="text-xs text-muted-foreground mb-1">เวลาที่ขอ</p><p className="text-sm font-semibold font-mono">{detailReq.startTime} - {detailReq.endTime}</p></div>
                   <div className="col-span-2"><p className="text-xs text-muted-foreground mb-1">เวลาที่ทำจริง</p><p className="text-sm font-semibold font-mono">{detailReq.actualIn || detailReq.actualOut ? `${detailReq.actualIn || "-"} - ${detailReq.actualOut || "-"}` : "ยังไม่บันทึก"}</p></div>
                 </div>
