@@ -113,6 +113,10 @@ const Attendance = () => {
   const canRequestOwnEdit = true;
   const attendanceScope = getScope(role, 'attendance');
   const canExport = attendanceScope !== 'self';
+  // Only users whose attendance scope is wider than "self" (HR/manager/admin)
+  // may file a time-edit request for someone else. Self-only users (พนักงาน)
+  // can only request for themselves, so the employee picker is hidden for them.
+  const canRequestForOthers = attendanceScope !== 'self';
   const { editRequests, addEditRequest, updateRequestStatus } = useTimeEditRequests();
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
   const [otMap, setOtMap] = useState<Record<string, number>>({});
@@ -520,7 +524,22 @@ const Attendance = () => {
   };
 
   const openNewRequest = () => {
-    setRequestForm({ employeeName: "", employeeId: "", date: "", originalCheckIn: "", originalCheckOut: "", newCheckIn: "", newCheckOut: "", reason: "" });
+    // Self-only users (พนักงาน) can't pick another employee — pre-fill their own
+    // identity and today's recorded times so the request is scoped to them.
+    if (!canRequestForOthers && currentUser) {
+      const myId = currentUser.employeeId || currentUser.id;
+      const match = attendance.find((a) => a.employeeId === myId);
+      setRequestForm({
+        employeeName: `${currentUser.firstName} ${currentUser.lastName}`,
+        employeeId: myId,
+        date: "",
+        originalCheckIn: match?.checkIn || "",
+        originalCheckOut: match?.checkOut || "",
+        newCheckIn: "", newCheckOut: "", reason: "",
+      });
+    } else {
+      setRequestForm({ employeeName: "", employeeId: "", date: "", originalCheckIn: "", originalCheckOut: "", newCheckIn: "", newCheckOut: "", reason: "" });
+    }
     setRequestOpen(true);
   };
 
@@ -1160,31 +1179,39 @@ const Attendance = () => {
             <DialogDescription className="sr-only">ฟอร์มขอแก้ไขเวลาใหม่</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">พนักงาน <span className="text-destructive">*</span></label>
-              <SearchableSelect
-                value={requestForm.employeeId}
-                onChange={(val) => {
-                  const emp = employees.find(e => e.id === val);
-                  if (emp) {
-                    const match = attendance.find((a) => a.employeeId === val);
-                    setRequestForm((f) => ({
-                      ...f,
-                      employeeId: val,
-                      employeeName: `${emp.firstName} ${emp.lastName}`,
-                      originalCheckIn: match?.checkIn || "",
-                      originalCheckOut: match?.checkOut || "",
-                    }));
-                  }
-                }}
-                options={employees.map((emp) => ({
-                  value: emp.id,
-                  label: `${emp.prefix || ""}${emp.firstName} ${emp.lastName}`,
-                  subtitle: emp.position,
-                }))}
-                placeholder="เลือกพนักงาน"
-              />
-            </div>
+            {canRequestForOthers ? (
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">พนักงาน <span className="text-destructive">*</span></label>
+                <SearchableSelect
+                  value={requestForm.employeeId}
+                  onChange={(val) => {
+                    const emp = employees.find(e => e.id === val);
+                    if (emp) {
+                      const match = attendance.find((a) => a.employeeId === val);
+                      setRequestForm((f) => ({
+                        ...f,
+                        employeeId: val,
+                        employeeName: `${emp.firstName} ${emp.lastName}`,
+                        originalCheckIn: match?.checkIn || "",
+                        originalCheckOut: match?.checkOut || "",
+                      }));
+                    }
+                  }}
+                  options={employees.map((emp) => ({
+                    value: emp.id,
+                    label: `${emp.prefix || ""}${emp.firstName} ${emp.lastName}`,
+                    subtitle: emp.position,
+                  }))}
+                  placeholder="เลือกพนักงาน"
+                />
+              </div>
+            ) : (
+              /* Self-only users request for themselves — show name read-only, no picker */
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">พนักงาน</label>
+                <div className="px-3 py-2.5 text-sm rounded-xl border bg-muted/30">{requestForm.employeeName || "-"}</div>
+              </div>
+            )}
             {requestForm.originalCheckIn && (
               <div className="grid grid-cols-2 gap-3 p-3 rounded-xl bg-muted/40">
                 <div><p className="text-xs text-muted-foreground mb-1">เวลาเข้าเดิม</p><p className="text-sm font-semibold">{requestForm.originalCheckIn}</p></div>

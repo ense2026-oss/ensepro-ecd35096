@@ -105,8 +105,12 @@ const OTRequestDialog = ({ open, onClose, onSubmit }: {
   // Can create OT for other people only when the OT scope is wider than "self"
   const isAdmin = canAdd && getScope(role, 'ot') !== 'self';
   const shouldLockEmployee = !isAdmin;
+  // Default the employee to the logged-in user for EVERYONE (incl. HR/admin who
+  // can pick someone else): the selector used to start empty for them, so HR had
+  // to choose their own name every time. Self-only users stay locked to self.
+  const defaultEmployeeId = currentUser ? (currentUser.employeeId || currentUser.id) : "";
   const [form, setForm] = useState({
-    employeeId: shouldLockEmployee && currentUser ? (currentUser.employeeId || currentUser.id) : "",
+    employeeId: defaultEmployeeId,
     dateFrom: "",
     dateTo: "",
     startTime: "18:00",
@@ -152,7 +156,7 @@ const OTRequestDialog = ({ open, onClose, onSubmit }: {
 
   const resetForm = () => {
     setForm({
-      employeeId: shouldLockEmployee && currentUser ? (currentUser.employeeId || currentUser.id) : "",
+      employeeId: defaultEmployeeId,
       dateFrom: "",
       dateTo: "",
       startTime: "18:00",
