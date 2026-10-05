@@ -131,7 +131,7 @@ const DayOff = () => {
   const initialEmp = params.get("employee") || "";
   const [activeTab, setActiveTab] = useState(initialEmp ? "employee" : "calendar");
   const [selectedEmpId, setSelectedEmpId] = useState<string>(initialEmp);
-  const [empColCollapsed, setEmpColCollapsed] = useState(false);
+  const [empColCollapsed, setEmpColCollapsed] = useState(true);
 
   // Reset to default tab if user lands on a hidden management tab
   useEffect(() => {

@@ -125,7 +125,7 @@ const OvertimeManagement = () => {
   const [deptFilter, setDeptFilter] = useState("all");
   const [activeTab, setActiveTab] = useState("calendar");
   const [selectedEmpId, setSelectedEmpId] = useState<string>("");
-  const [empColCollapsed, setEmpColCollapsed] = useState(false);
+  const [empColCollapsed, setEmpColCollapsed] = useState(true);
   // The employees × days grid renders one frame after the route commits so the
   // navigation (sidebar highlight, header, filters) is instant.
   const gridReady = useDeferredMount();

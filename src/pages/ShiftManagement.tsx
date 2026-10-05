@@ -161,7 +161,7 @@ const ShiftManagement = () => {
   const [deptFilter, setDeptFilter] = useState("all");
   const [activeTab, setActiveTab] = useState("calendar");
   const [selectedEmpId, setSelectedEmpId] = useState<string>("");
-  const [empColCollapsed, setEmpColCollapsed] = useState(false);
+  const [empColCollapsed, setEmpColCollapsed] = useState(true);
   // Route commits instantly; the employees × days grid mounts on the next frame.
   const gridReady = useDeferredMount();
   // One shared shift-picker popover for the whole grid (instead of one per cell).
