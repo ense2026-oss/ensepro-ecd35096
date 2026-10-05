@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { logEventSync } from "@/lib/systemLog";
 
 // Swaps the browser's real Supabase Auth session to the target employee's own
 // session (via a service-role generated magiclink), so RLS and every role/
@@ -190,6 +191,10 @@ export const ImpersonationProvider: React.FC<{ children: React.ReactNode }> = ({
           return { error: "เบราว์เซอร์ปิดการเก็บ session ชั่วคราว ไม่สามารถใช้ Login as ได้" };
         }
 
+        // Record the switch here — still authenticated as the admin and before
+        // either path swaps the session — and wait so it persists before reload.
+        await logEventSync({ level: "info", category: "login_as", message: `เข้าสู่ระบบในฐานะ: ${d.targetName || "พนักงาน"}`, details: { targetName: d.targetName, employeeId } });
+
         // Fast path: a full session — write it to storage (lock-free) and reload.
         if (d.session?.access_token && d.session?.refresh_token) {
           try {
@@ -247,6 +252,8 @@ export const ImpersonationProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const stopImpersonation = useCallback(async (): Promise<void> => {
     setBusy(true);
+    const whom = readFlag();
+    await logEventSync({ level: "info", category: "login_as", message: `ออกจากการเข้าใช้งานในฐานะ${whom ? `: ${whom}` : ""}`, details: { targetName: whom } });
     let restored = false;
     try {
       const raw = sessionStorage.getItem(STASH_KEY);

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { Plus, Download, CalendarDays } from "lucide-react";
 import LeaveQuotaCards, { type LeaveType } from "@/components/leave/LeaveQuotaCards";
 import LeaveTable, { type LeaveRecord } from "@/components/leave/LeaveTable";
+import { logInfo } from "@/lib/systemLog";
 import LeaveRequestDialog from "@/components/leave/LeaveRequestDialog";
 import LeaveCalendarDialog from "@/components/leave/LeaveCalendarDialog";
 import { useToast } from "@/hooks/use-toast";
@@ -223,6 +224,7 @@ const Leave = () => {
       }
 
       await supabase.from("leave_requests").update(updateData).eq("id", editingRecord.id);
+      logInfo("leave", `แก้ไขคำขอลา: ${record.name} (${record.type})`, { id: editingRecord.id, employee: record.name, type: record.type, days: record.days });
       setEditingRecord(null);
       fetchLeaves();
       toast({ title: "สำเร็จ", description: "แก้ไขคำขอลาเรียบร้อยแล้ว" });
@@ -273,6 +275,7 @@ const Leave = () => {
         return;
       }
 
+      logInfo("leave", `ยื่นคำขอลา: ${record.name} (${record.type} ${record.days} วัน)`, { employee: record.name, type: record.type, days: record.days, from: record.from, to: record.to });
       fetchLeaves();
       toast({ title: "สำเร็จ", description: "ยื่นคำขอลาเรียบร้อยแล้ว" });
 
@@ -299,6 +302,7 @@ const Leave = () => {
       await supabase.storage.from("leave-attachments").remove([record.fileUrl]);
     }
     await supabase.from("leave_requests").delete().eq("id", deleteId);
+    logInfo("leave", `ลบคำขอลา: ${record?.name || deleteId}`, { id: deleteId, employee: record?.name, type: record?.type });
     setDeleteId(null);
     fetchLeaves();
     toast({ title: "สำเร็จ", description: "ลบคำขอลาเรียบร้อยแล้ว" });
@@ -334,6 +338,8 @@ const Leave = () => {
       action: "approve",
       approver_user_id: user.id,
     });
+
+    logInfo("leave", `อนุมัติคำขอลา (ระดับ ${nextTier}/${totalTiers}): ${record.name}`, { id, employee: record.name, type: record.type, days: record.days, tier: nextTier, totalTiers });
 
     if (nextTier >= totalTiers) {
       await supabase.from("leave_requests").update({
@@ -397,6 +403,7 @@ const Leave = () => {
     setLeaves((prev) => prev.map((l) => l.id === id ? { ...l, status: "rejected" } : l));
     toast({ title: "ไม่อนุมัติ", description: "ปฏิเสธคำขอลาเรียบร้อยแล้ว", variant: "destructive" });
     const record = leaves.find((l) => l.id === id);
+    logInfo("leave", `ไม่อนุมัติคำขอลา: ${record?.name || id}`, { id, employee: record?.name, type: record?.type });
     if (record) {
       notifyRequester(record.employeeId, {
         type: "leave",

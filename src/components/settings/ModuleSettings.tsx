@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { logInfo } from "@/lib/systemLog";
 import { useModuleSettings } from "@/hooks/useModuleSettings";
 import {
   Users,
@@ -49,6 +50,7 @@ const ModuleSettings = () => {
       toast.error(`บันทึกไม่สำเร็จ: ${error}`);
       return;
     }
+    logInfo("settings", `${willEnable ? "เปิด" : "ปิด"}โมดูล: ${def.label}`, { module: id, enabled: willEnable });
     toast.success(`${def.label} ${willEnable ? "เปิดใช้งานแล้ว" : "ปิดใช้งานแล้ว"}`);
   };
 

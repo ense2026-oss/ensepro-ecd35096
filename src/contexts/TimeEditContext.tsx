@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { notifyApprovers, getApprovalTiers } from "@/utils/notifications";
 import { withRetry } from "@/lib/retry";
+import { logInfo } from "@/lib/systemLog";
 
 export interface TimeEditRequest {
   id: string;
@@ -189,6 +190,7 @@ export const TimeEditProvider = ({ children }: { children: ReactNode }) => {
       console.error("time_edit insert error:", error);
       return;
     }
+    logInfo("attendance", `ยื่นคำขอแก้ไขเวลา: ${req.employeeName} (${req.date})`, { employeeName: req.employeeName, date: req.date, newCheckIn: req.newCheckIn, newCheckOut: req.newCheckOut });
     // Refresh the list immediately so the new request shows right away, instead
     // of waiting for the debounced realtime event (matches the snappy OT page).
     fetchEditRequests();
@@ -203,7 +205,11 @@ export const TimeEditProvider = ({ children }: { children: ReactNode }) => {
 
   const updateRequestStatus = useCallback(async (id: string, status: "approved" | "rejected") => {
     await supabase.from("time_edit_requests").update({ status }).eq("id", id);
-    setEditRequests((prev) => prev.map((r) => (r.id === id ? { ...r, status } : r)));
+    setEditRequests((prev) => {
+      const r = prev.find((x) => x.id === id);
+      logInfo("attendance", `${status === "approved" ? "อนุมัติ" : "ไม่อนุมัติ"}คำขอแก้ไขเวลา: ${r?.employeeName || id}`, { id, status, employeeName: r?.employeeName });
+      return prev.map((x) => (x.id === id ? { ...x, status } : x));
+    });
   }, []);
 
   const addNotification = useCallback(async (notif: Omit<AppNotification, "id">) => {

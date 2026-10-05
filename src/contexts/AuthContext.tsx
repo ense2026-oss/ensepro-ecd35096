@@ -4,6 +4,7 @@ import type { User, Session } from "@supabase/supabase-js";
 import { useQueryClient } from "@tanstack/react-query";
 import { clearPersistedQueryCache } from "@/lib/queryPersist";
 import { withRetry } from "@/lib/retry";
+import { logInfo, logAction, logEventSync } from "@/lib/systemLog";
 
 type AppRole = "admin" | "hr" | "manager" | "employee" | "accountant" | "executive";
 
@@ -238,7 +239,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = useCallback(async (email: string, password: string) => {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) return { error: error.message };
+    if (error) {
+      logAction("warning", "auth", `เข้าสู่ระบบไม่สำเร็จ: ${email}`, { email, reason: error.message });
+      return { error: error.message };
+    }
+    logInfo("auth", `เข้าสู่ระบบสำเร็จ: ${email}`, { email, userId: data.user?.id });
 
     // Pre-fetch profile ทันทีหลัง login สำเร็จ — ไม่ต้องรอ onAuthStateChange
     if (data.user) {
@@ -262,6 +267,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const logout = useCallback(async () => {
+    // Log (and wait) before clearing state/session so the event still carries
+    // the user and persists before any redirect.
+    await logEventSync({ level: "info", category: "auth", message: "ออกจากระบบ" });
     setUser(null);
     setSession(null);
     setProfile(null);

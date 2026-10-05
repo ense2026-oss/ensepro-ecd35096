@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { withRetry } from "@/lib/retry";
 import { toast } from "sonner";
+import { logInfo } from "@/lib/systemLog";
 
 /* ───────────────────── Types ───────────────────── */
 export interface EducationRecord {
@@ -345,8 +346,9 @@ export const EmployeeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const dbData = employeeToDb(emp as Partial<Employee>);
     const { data, error } = await supabase.from("employees").insert(dbData).select().single();
     if (error) { console.error("Add employee error:", error); throw error; }
-    
+
     const empId = data.id;
+    logInfo("employee", `เพิ่มพนักงาน: ${emp.firstName} ${emp.lastName}`, { employeeId: empId, name: `${emp.firstName} ${emp.lastName}`, dept: emp.dept, role: emp.role });
     // Insert education
     if (emp.education?.length) {
       await supabase.from("employee_education").insert(
@@ -444,6 +446,7 @@ export const EmployeeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     if (!updated || updated.length === 0) {
       throw new Error("ไม่มีสิทธิ์แก้ไขข้อมูลพนักงานคนนี้");
     }
+    logInfo("employee", `แก้ไขข้อมูลพนักงาน: ${employees.find((e) => e.id === id)?.firstName || ""} ${employees.find((e) => e.id === id)?.lastName || ""}`.trim(), { employeeId: id, fields: Object.keys(data) });
 
     // Sync role to user_roles if role changed
     if (data.role !== undefined) {
@@ -519,6 +522,7 @@ export const EmployeeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
     const { error } = await supabase.from("employees").delete().eq("id", id);
     if (error) { console.error("Delete employee error:", error); throw error; }
+    logInfo("employee", `ลบพนักงาน: ${target ? `${target.firstName} ${target.lastName}` : id}`, { employeeId: id, name: target ? `${target.firstName} ${target.lastName}` : undefined });
     await fetchEmployees();
   }, [fetchEmployees, employees]);
 

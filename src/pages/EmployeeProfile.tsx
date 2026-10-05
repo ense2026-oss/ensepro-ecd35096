@@ -21,6 +21,7 @@ import LazyImage from "@/components/ui/lazy-image";
 import defaultAvatarImg from "@/assets/default-avatar.png";
 import { supabase } from "@/integrations/supabase/client";
 import { usePageQuery } from "@/hooks/usePageQuery";
+import { logInfo } from "@/lib/systemLog";
 import DisplaySettings, { getPersonalDisplayKey } from "@/components/settings/DisplaySettings";
 import EmployeeDocuments from "@/components/employees/EmployeeDocuments";
 
@@ -322,6 +323,7 @@ const EmployeeProfile = () => {
       if (fnErr || fnData?.error) throw new Error(fnData?.error || fnErr?.message || "เปลี่ยนชื่อผู้ใช้ไม่สำเร็จ");
       setData((dd) => dd ? { ...dd, username: next, email: `${next}@ensepro.com` } : dd);
       await refetch();
+      logInfo("account", `เปลี่ยนชื่อผู้ใช้: ${employee?.firstName || ""} → ${next}`, { employeeId: employee?.id, newUsername: next });
       toast.success(`เปลี่ยนชื่อผู้ใช้เป็น ${next} แล้ว`);
     } catch (err: any) {
       setUsernameError(err.message || "เกิดข้อผิดพลาด");
@@ -357,6 +359,7 @@ const EmployeeProfile = () => {
     }
 
     setNewPassword("");
+    logInfo("account", isOwnProfile ? "เปลี่ยนรหัสผ่านของตนเอง" : `รีเซ็ตรหัสผ่านของ ${employee?.firstName || "พนักงาน"} ${employee?.lastName || ""}`.trim(), { employeeId: employee?.id, own: isOwnProfile });
     toast.success(isOwnProfile ? "เปลี่ยนรหัสผ่านของคุณสำเร็จ" : `รีเซ็ตรหัสผ่านของ ${employee?.firstName || "พนักงาน"} สำเร็จ`);
   };
 

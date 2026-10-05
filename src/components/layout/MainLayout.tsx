@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { Outlet, useLocation, Navigate } from "react-router-dom";
+import { logInfo } from "@/lib/systemLog";
 import Sidebar from "./Sidebar";
 import Topbar from "./Topbar";
 import MobileFooterNav from "./MobileFooterNav";
@@ -54,6 +55,11 @@ const MainLayout = () => {
   useEffect(() => {
     mainRef.current?.scrollTo({ top: 0, left: 0, behavior: "auto" });
     window.scrollTo(0, 0);
+  }, [location.pathname]);
+
+  // Record every page the user opens as a navigation event.
+  useEffect(() => {
+    logInfo("navigation", `เปิดหน้า: ${location.pathname}`);
   }, [location.pathname]);
 
   // Still bootstrapping auth — show loader, don't redirect

@@ -21,27 +21,53 @@ export interface LogInput {
   source?: string;
 }
 
-let inLog = false;          // re-entrancy guard (never log while logging)
 let lastSig = "";
 let lastTs = 0;
 
 const trunc = (s: unknown, n: number) => (s == null ? "" : String(s)).slice(0, n);
 
+// Events are written one-at-a-time through a queue (not concurrently), so that
+// capturing *every* event never drops one the way the old re-entrancy guard did,
+// and a burst of events can't fire many overlapping inserts.
+interface QueuedLog { level: LogLevel; category: string; message: string; details: unknown; source?: string; }
+const queue: QueuedLog[] = [];
+let draining = false;
+const MAX_QUEUE = 300; // hard cap so a runaway loop can't grow memory unbounded
+
 export async function logEvent(input: LogInput): Promise<void> {
-  if (inLog) return;
   const message = trunc(input.message, 2000);
   if (!message) return;
   const level = input.level || "error";
   const category = input.category || "general";
 
-  // De-dupe identical bursts (e.g. an error firing in a render loop).
+  // De-dupe identical back-to-back events (e.g. an error firing in a render loop,
+  // or a double navigation). Keyed on the exact text, so distinct actions — which
+  // carry names/ids — are never collapsed.
   const sig = `${level}|${category}|${message}`;
   const now = Date.now();
-  if (sig === lastSig && now - lastTs < 3000) return;
+  if (sig === lastSig && now - lastTs < 1500) return;
   lastSig = sig;
   lastTs = now;
 
-  inLog = true;
+  if (queue.length >= MAX_QUEUE) return; // backpressure: drop the overflow
+  queue.push({ level, category, message, details: input.details, source: input.source });
+  void drainQueue();
+}
+
+async function drainQueue(): Promise<void> {
+  if (draining) return;
+  draining = true;
+  try {
+    while (queue.length) {
+      const item = queue.shift()!;
+      await writeOne(item);
+    }
+  } finally {
+    draining = false;
+  }
+}
+
+async function writeOne(item: QueuedLog): Promise<void> {
   try {
     let userId: string | null = null;
     let userEmail: string | null = null;
@@ -51,7 +77,7 @@ export async function logEvent(input: LogInput): Promise<void> {
       userEmail = data?.session?.user?.email ?? null;
     } catch { /* ignore */ }
 
-    let details: any = input.details;
+    let details: any = item.details;
     if (details instanceof Error) {
       details = { name: details.name, message: details.message, stack: trunc(details.stack, 4000) };
     }
@@ -62,11 +88,11 @@ export async function logEvent(input: LogInput): Promise<void> {
     }
 
     await (supabase as any).from("system_logs").insert({
-      level,
-      category,
-      message,
+      level: item.level,
+      category: item.category,
+      message: item.message,
       details,
-      source: input.source || "frontend",
+      source: item.source || "frontend",
       user_id: userId,
       user_email: userEmail,
       url: typeof location !== "undefined" ? location.pathname + location.search : null,
@@ -74,8 +100,6 @@ export async function logEvent(input: LogInput): Promise<void> {
     });
   } catch {
     // Logging must never surface an error of its own.
-  } finally {
-    inLog = false;
   }
 }
 
@@ -106,20 +130,57 @@ export function installGlobalErrorLogging(): void {
     });
   });
 
-  // Capture console.error too — the app logs most caught failures through it.
-  const orig = console.error.bind(console);
-  console.error = (...args: any[]) => {
-    try {
-      const msg = args
-        .map((a) =>
-          a instanceof Error ? a.message : typeof a === "string" ? a : (() => { try { return JSON.stringify(a); } catch { return String(a); } })(),
-        )
-        .join(" ");
-      // never log our own insert failures (avoid recursion/noise)
-      if (msg && !/system_logs/i.test(msg)) {
-        void logEvent({ level: "error", category: "console", message: msg, source: "console.error" });
-      }
-    } catch { /* ignore */ }
-    orig(...args);
+  // Capture console.error AND console.warn — the app logs most caught failures
+  // through console.error, and warnings are events worth keeping too.
+  const patchConsole = (method: "error" | "warn", level: LogLevel) => {
+    const orig = (console[method] as (...a: any[]) => void).bind(console);
+    console[method] = (...args: any[]) => {
+      try {
+        const msg = args
+          .map((a) =>
+            a instanceof Error ? a.message : typeof a === "string" ? a : (() => { try { return JSON.stringify(a); } catch { return String(a); } })(),
+          )
+          .join(" ");
+        // never log our own insert failures (avoid recursion/noise)
+        if (msg && !/system_logs/i.test(msg)) {
+          void logEvent({ level, category: "console", message: msg, source: `console.${method}` });
+        }
+      } catch { /* ignore */ }
+      orig(...args);
+    };
   };
+  patchConsole("error", "error");
+  patchConsole("warn", "warning");
+}
+
+/**
+ * Convenience for recording a normal (non-error) event — a successful action,
+ * a login, a navigation, etc. Fire-and-forget; never throws.
+ *
+ * Example: logInfo("leave", "ยื่นคำขอลา", { employee, type, days })
+ */
+export function logInfo(category: string, message: string, details?: unknown): void {
+  void logEvent({ level: "info", category, message, details });
+}
+
+/** Record an event at an explicit level (error | warning | info). */
+export function logAction(level: LogLevel, category: string, message: string, details?: unknown): void {
+  void logEvent({ level, category, message, details });
+}
+
+/**
+ * Write one event and AWAIT its insert — for critical audit events that are
+ * immediately followed by a page reload/navigation (login-as, logout), where a
+ * fire-and-forget insert would be cut off by the reload. Never throws.
+ */
+export async function logEventSync(input: LogInput): Promise<void> {
+  const message = trunc(input.message, 2000);
+  if (!message) return;
+  await writeOne({
+    level: input.level || "info",
+    category: input.category || "general",
+    message,
+    details: input.details,
+    source: input.source,
+  });
 }

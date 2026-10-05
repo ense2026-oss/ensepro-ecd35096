@@ -18,6 +18,7 @@ import SearchableSelect from "@/components/ui/searchable-select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogBody, DialogFooter } from "@/components/ui/dialog";
 import EmployeeAvatar from "@/components/ui/employee-avatar";
 import { Carousel, CarouselContent, CarouselItem } from "@/components/ui/carousel";
+import { logInfo } from "@/lib/systemLog";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 /* Stat-card wrapper — always a responsive grid (2 columns on mobile like the
@@ -447,6 +448,7 @@ const OvertimeRequest = () => {
       toast.error(`ยื่นคำขอ OT ไม่สำเร็จ: ${error.message}`);
       return;
     }
+    logInfo("ot", `ยื่นคำขอ OT: ${req.employeeName} (${req.date} ${req.hours} ชม.)`, { employee: req.employeeName, date: req.date, hours: req.hours, type: req.type });
     fetchRequests();
     toast.success("ยื่นคำขอ OT เรียบร้อย");
     notifyApprovers({
@@ -486,6 +488,8 @@ const OvertimeRequest = () => {
       action: "approve",
       approver_user_id: user.id,
     });
+
+    logInfo("ot", `อนุมัติคำขอ OT (ระดับ ${nextTier}/${totalTiers}): ${req.employeeName}`, { id, employee: req.employeeName, date: req.date, hours: req.hours, tier: nextTier, totalTiers });
 
     if (nextTier >= totalTiers) {
       await supabase.from("overtime_requests").update({
@@ -548,6 +552,7 @@ const OvertimeRequest = () => {
     setRequests((prev) => prev.map((r) => r.id === id ? { ...r, status: "rejected" as OTStatus } : r));
     toast.success("ปฏิเสธ OT เรียบร้อย");
     const req = requests.find((r) => r.id === id);
+    logInfo("ot", `ไม่อนุมัติคำขอ OT: ${req?.employeeName || id}`, { id, employee: req?.employeeName, date: req?.date });
     if (req) {
       notifyRequester(req.employeeId, {
         type: "ot",
