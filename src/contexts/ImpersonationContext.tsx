@@ -112,10 +112,13 @@ export const ImpersonationProvider: React.FC<{ children: React.ReactNode }> = ({
     inflightRef.current.add(employeeId);
     callImpersonateFn(employeeId)
       .then((res) => {
-        if (!("error" in res) && (res.session?.access_token || res.tokenHash)) {
-          // Keep the cache tiny so we don't mint many unused sessions.
+        // Only cache a full SESSION (long-lived access token). We deliberately do
+        // NOT cache a magiclink tokenHash: it is single-use and short-lived, so a
+        // cached hash used on click later fails with "Email link is invalid or has
+        // expired". With the old function (hash only), click just fetches fresh.
+        if (!("error" in res) && res.session?.access_token && res.session?.refresh_token) {
           if (prefetchRef.current.size > 4) prefetchRef.current.clear();
-          prefetchRef.current.set(employeeId, { ...res, ts: Date.now() });
+          prefetchRef.current.set(employeeId, { session: res.session, targetName: res.targetName, ts: Date.now() });
         }
       })
       .catch(() => {})
@@ -149,56 +152,67 @@ export const ImpersonationProvider: React.FC<{ children: React.ReactNode }> = ({
         return { error: data.error };
       }
 
-      const { session, tokenHash, targetName } = data;
-
-      const snapshot: AdminSnapshot = { authKey, blob: adminBlob };
-      try {
-        sessionStorage.setItem(STASH_KEY, JSON.stringify(snapshot));
-        sessionStorage.setItem(FLAG_KEY, targetName || "พนักงาน");
-      } catch {
-        setBusy(false);
-        return { error: "เบราว์เซอร์ปิดการเก็บ session ชั่วคราว ไม่สามารถใช้ Login as ได้" };
-      }
-
-      // Fast path: the function already exchanged the magiclink for a session.
-      // Write it straight to storage (synchronous, lock-free — same mechanism as
-      // the admin restore) and boot fresh as the target. No client verifyOtp
-      // round trip and no auth-lock contention.
-      if (session?.access_token && session?.refresh_token) {
+      // Apply one result: write the session directly, or exchange the magiclink.
+      // `retriable` means the magiclink was invalid/expired/used — we can get a
+      // fresh link and try again.
+      const applyData = async (
+        d: { session?: { access_token?: string; refresh_token?: string }; tokenHash?: string; targetName?: string },
+      ): Promise<{ error: string | null; retriable?: boolean }> => {
         try {
-          localStorage.setItem(authKey, JSON.stringify(session));
+          sessionStorage.setItem(STASH_KEY, JSON.stringify({ authKey, blob: adminBlob }));
+          sessionStorage.setItem(FLAG_KEY, d.targetName || "พนักงาน");
         } catch {
+          return { error: "เบราว์เซอร์ปิดการเก็บ session ชั่วคราว ไม่สามารถใช้ Login as ได้" };
+        }
+
+        // Fast path: a full session — write it to storage (lock-free) and reload.
+        if (d.session?.access_token && d.session?.refresh_token) {
+          try {
+            localStorage.setItem(authKey, JSON.stringify(d.session));
+          } catch {
+            clearFlags();
+            return { error: "เบราว์เซอร์ปิดการเก็บ session ไม่สามารถใช้ Login as ได้" };
+          }
+          window.location.assign("/dashboard");
+          return { error: null };
+        }
+
+        // Fallback (older function): exchange the (fresh) magiclink here.
+        if (!d.tokenHash) {
           clearFlags();
-          setBusy(false);
-          return { error: "เบราว์เซอร์ปิดการเก็บ session ไม่สามารถใช้ Login as ได้" };
+          return { error: "สร้างเซสชันเข้าสู่ระบบไม่สำเร็จ" };
+        }
+        const verifyRes = await withTimeout(
+          supabase.auth.verifyOtp({ token_hash: d.tokenHash, type: "magiclink" }),
+          20000,
+        );
+        if (verifyRes === TIMEOUT_SENTINEL) {
+          clearFlags();
+          return { error: "สลับสิทธิ์ช้าผิดปกติ กรุณาลองใหม่อีกครั้ง" };
+        }
+        if (verifyRes.error) {
+          clearFlags();
+          // Token invalid/expired/used — a fresh link will fix it.
+          return { error: verifyRes.error.message, retriable: true };
         }
         window.location.assign("/dashboard");
         return { error: null };
-      }
+      };
 
-      // Fallback (older function that returns only a token hash): exchange it here.
-      if (!tokenHash) {
-        clearFlags();
-        setBusy(false);
-        return { error: "สร้างเซสชันเข้าสู่ระบบไม่สำเร็จ" };
+      let result = await applyData(data);
+      // If the magiclink had expired or was already used, fetch a brand-new link
+      // and try once more — this is what caused the occasional
+      // "Email link is invalid or has expired" on Login as.
+      if (result.error && result.retriable) {
+        const fresh = await callImpersonateFn(employeeId);
+        if (!("error" in fresh)) {
+          result = await applyData(fresh);
+        }
       }
-      const verifyRes = await withTimeout(
-        supabase.auth.verifyOtp({ token_hash: tokenHash, type: "magiclink" }),
-        20000,
-      );
-      if (verifyRes === TIMEOUT_SENTINEL) {
-        clearFlags();
+      if (result.error) {
         setBusy(false);
-        return { error: "สลับสิทธิ์ช้าผิดปกติ กรุณาลองใหม่อีกครั้ง" };
+        return { error: result.error };
       }
-      if (verifyRes.error) {
-        clearFlags();
-        setBusy(false);
-        return { error: verifyRes.error.message };
-      }
-
-      // Boot the app fresh as the target employee.
-      window.location.assign("/dashboard");
       return { error: null };
     } catch (err: any) {
       setBusy(false);

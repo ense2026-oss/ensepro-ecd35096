@@ -29,6 +29,7 @@ export const SETTINGS_SUBMODULES: SettingsSubModule[] = [
   { key: "settings_approval", label: "ระบบอนุมัติ", actions: LIST_ACTIONS },
   { key: "settings_facescan", label: "เครื่องสแกนหน้า", actions: FORM_ACTIONS },
   { key: "settings_display", label: "การแสดงผล", actions: FORM_ACTIONS },
+  { key: "settings_logs", label: "บันทึกเหตุการณ์", actions: ["view", "delete"] },
 ];
 
 // Map Settings.tsx tab id -> permission module key
@@ -47,6 +48,7 @@ export const SETTINGS_TAB_TO_MODULE: Record<string, string> = {
   approval: "settings_approval",
   "face-scan-connect": "settings_facescan",
   display: "settings_display",
+  logs: "settings_logs",
 };
 
 export const SETTINGS_MODULE_KEYS = SETTINGS_SUBMODULES.map((m) => m.key);

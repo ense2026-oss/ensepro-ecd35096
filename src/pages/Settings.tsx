@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Building2, MapPin, Shield, Clock, Calendar, Workflow, ScanFace, Palette, Banknote, FileSignature, ToggleRight, ChevronRight, Network, Wifi, CalendarDays, ShieldCheck } from "lucide-react";
+import { Building2, MapPin, Shield, Clock, Calendar, Workflow, ScanFace, Palette, Banknote, FileSignature, ToggleRight, ChevronRight, Network, Wifi, CalendarDays, ShieldCheck, ScrollText } from "lucide-react";
 import { useModuleSettings } from "@/hooks/useModuleSettings";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Lock } from "lucide-react";
@@ -21,6 +21,7 @@ import DisplaySettings from "@/components/settings/DisplaySettings";
 import PayrollSettings from "@/components/settings/PayrollSettings";
 import ContractSettings from "@/components/settings/ContractSettings";
 import ModuleSettings from "@/components/settings/ModuleSettings";
+import SystemLogsSettings from "@/components/settings/SystemLogsSettings";
 import AffiliationSettings from "@/components/settings/AffiliationSettings";
 import CompanyHolidaysSettings from "@/components/settings/CompanyHolidaysSettings";
 import EmployeeFieldOptionsSettings from "@/components/settings/EmployeeFieldOptionsSettings";
@@ -39,6 +40,7 @@ const ALL_TABS = [
   { id: "approval", label: "ระบบอนุมัติ", icon: Workflow },
   { id: "face-scan-connect", label: "เครื่องสแกนหน้า", icon: ScanFace },
   { id: "display", label: "การแสดงผล", icon: Palette },
+  { id: "logs", label: "บันทึกเหตุการณ์", icon: ScrollText },
 ];
 
 
@@ -123,6 +125,9 @@ const Settings = () => {
 
       case "modules":
         return <ModuleSettings />;
+
+      case "logs":
+        return <SystemLogsSettings />;
 
       default:
         return null;
