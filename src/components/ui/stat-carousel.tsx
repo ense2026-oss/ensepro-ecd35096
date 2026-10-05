@@ -1,39 +1,26 @@
 import React from "react";
-import { Carousel, CarouselContent, CarouselItem } from "@/components/ui/carousel";
-import { useIsMobile } from "@/hooks/use-mobile";
 
 interface StatCarouselProps {
   children: React.ReactNode;
-  /** grid classes used on desktop */
+  /** grid classes (applies on every breakpoint; base is 2 columns on mobile) */
   className?: string;
-  /** width of each card on mobile */
+  /** deprecated — kept for backward compatibility, no longer used */
   basis?: string;
 }
 
-/** Mobile: horizontal swipeable cards (Dashboard style). Desktop: grid. */
+/**
+ * Responsive stat-card grid.
+ *
+ * Previously this rendered a horizontal swipeable carousel on mobile (one card
+ * at a time). Per request the mobile layout now shows 2 cards per row like the
+ * dashboard — so we always render the grid, whose base `grid-cols-2` gives two
+ * boxes per row on phones and the wider columns on desktop.
+ */
 const StatCarousel = ({
   children,
   className = "grid grid-cols-2 lg:grid-cols-4 gap-4",
-  basis = "basis-[70%]",
 }: StatCarouselProps) => {
-  const isMobile = useIsMobile();
-  const items = React.Children.toArray(children);
-
-  if (!isMobile) {
-    return <div className={className}>{children}</div>;
-  }
-
-  return (
-    <Carousel opts={{ align: "start", dragFree: true }} className="-mx-4 px-4">
-      <CarouselContent className="-ml-3">
-        {items.map((child, i) => (
-          <CarouselItem key={i} className={`pl-3 ${basis}`}>
-            {child}
-          </CarouselItem>
-        ))}
-      </CarouselContent>
-    </Carousel>
-  );
+  return <div className={className}>{children}</div>;
 };
 
 export default StatCarousel;
