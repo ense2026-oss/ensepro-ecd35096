@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from "react";
-import { Search, Download, CheckCircle, XCircle, Clock, AlertCircle, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Save, X, FileText, Check, RotateCcw, CalendarDays, Eye, Upload } from "lucide-react";
+import { Search, Download, CheckCircle, XCircle, Clock, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Save, X, FileText, Check, RotateCcw, CalendarDays, Eye, Upload } from "lucide-react";
 import { ThaiDatePicker } from "@/components/ui/thai-date-picker";
 import { format } from "date-fns";
 import { useEmployees } from "@/contexts/EmployeeContext";
@@ -8,7 +8,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { formatThaiDate } from "@/utils/thaiDate";
 import TimeInput24 from "@/components/ui/time-input-24";
-import SearchableSelect from "@/components/ui/searchable-select";
 import { useTimeEditRequests, type TimeEditRequest } from "@/contexts/TimeEditContext";
 import { supabase } from "@/integrations/supabase/client";
 import StatCarousel from "@/components/ui/stat-carousel";
@@ -109,14 +108,8 @@ const Attendance = () => {
   const { canAction, getScope } = usePermissions();
   const canApproveTime = canAction(role, 'attendance', 'approve');
   const canEditTime = canAction(role, 'attendance', 'edit');
-  // ทุกคนสามารถ "ขอแก้ไขเวลา" ของตัวเองได้ แม้ไม่มีสิทธิ์แก้ไขของผู้อื่น
-  const canRequestOwnEdit = true;
   const attendanceScope = getScope(role, 'attendance');
   const canExport = attendanceScope !== 'self';
-  // Only users whose attendance scope is wider than "self" (HR/manager/admin)
-  // may file a time-edit request for someone else. Self-only users (พนักงาน)
-  // can only request for themselves, so the employee picker is hidden for them.
-  const canRequestForOthers = attendanceScope !== 'self';
   const { editRequests, addEditRequest, updateRequestStatus } = useTimeEditRequests();
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
   const [otMap, setOtMap] = useState<Record<string, number>>({});
@@ -138,10 +131,6 @@ const Attendance = () => {
   const [editOpen, setEditOpen] = useState(false);
   const [editingRow, setEditingRow] = useState<AttendanceRecord | null>(null);
   const [editForm, setEditForm] = useState({ newCheckIn: "", newCheckOut: "", reason: "" });
-
-  // New request dialog
-  const [requestOpen, setRequestOpen] = useState(false);
-  const [requestForm, setRequestForm] = useState({ employeeName: "", employeeId: "", date: "", originalCheckIn: "", originalCheckOut: "", newCheckIn: "", newCheckOut: "", reason: "" });
 
   // Detail dialog
   const [detailOpen, setDetailOpen] = useState(false);
@@ -523,45 +512,6 @@ const Attendance = () => {
     toast.success("ส่งคำขอแก้ไขเวลาเรียบร้อย");
   };
 
-  const openNewRequest = () => {
-    // Self-only users (พนักงาน) can't pick another employee — pre-fill their own
-    // identity and today's recorded times so the request is scoped to them.
-    if (!canRequestForOthers && currentUser) {
-      const myId = currentUser.employeeId || currentUser.id;
-      const match = attendance.find((a) => a.employeeId === myId);
-      setRequestForm({
-        employeeName: `${currentUser.firstName} ${currentUser.lastName}`,
-        employeeId: myId,
-        date: "",
-        originalCheckIn: match?.checkIn || "",
-        originalCheckOut: match?.checkOut || "",
-        newCheckIn: "", newCheckOut: "", reason: "",
-      });
-    } else {
-      setRequestForm({ employeeName: "", employeeId: "", date: "", originalCheckIn: "", originalCheckOut: "", newCheckIn: "", newCheckOut: "", reason: "" });
-    }
-    setRequestOpen(true);
-  };
-
-  const handleRequestSave = () => {
-    if (!requestForm.employeeId || !requestForm.newCheckIn || !requestForm.newCheckOut || !requestForm.reason.trim()) {
-      toast.error("กรุณากรอกข้อมูลให้ครบถ้วน");
-      return;
-    }
-    addEditRequest({
-      employeeId: requestForm.employeeId,
-      employeeName: requestForm.employeeName,
-      date: requestForm.date || new Date().toISOString().slice(0, 10),
-      originalCheckIn: requestForm.originalCheckIn || "-",
-      originalCheckOut: requestForm.originalCheckOut || "-",
-      newCheckIn: requestForm.newCheckIn,
-      newCheckOut: requestForm.newCheckOut,
-      reason: requestForm.reason,
-    });
-    setRequestOpen(false);
-    toast.success("ส่งคำขอแก้ไขเวลาเรียบร้อย");
-  };
-
   const applyAttendanceChange = async (req: TimeEditRequest) => {
     const newCheckIn = req.newCheckIn || "-";
     const newCheckOut = req.newCheckOut || "-";
@@ -728,7 +678,7 @@ const Attendance = () => {
           <h2 className="text-xl font-bold font-display">บันทึกเวลาเข้าออกงาน</h2>
           <p className="hidden sm:block text-sm text-muted-foreground mt-0.5">ข้อมูลจากฐานข้อมูล</p>
         </div>
-        {(canExport || canEditTime || canRequestOwnEdit) && (
+        {(canExport || canEditTime) && (
           <div className="flex items-center gap-2">
             {canEditTime && (
               <button
@@ -747,18 +697,8 @@ const Attendance = () => {
                 <span className="hidden sm:inline">Export Excel</span>
               </button>
             )}
-            {(canEditTime || canRequestOwnEdit) && (
-              <button
-                onClick={openNewRequest}
-                aria-label="ขอแก้ไขเวลา"
-                title="ขอแก้ไขเวลา"
-                className="flex items-center justify-center gap-2 h-10 w-10 sm:w-auto sm:px-4 sm:py-2 rounded-xl text-sm font-bold"
-                style={{ background: "linear-gradient(135deg, hsl(var(--primary)), hsl(31 100% 60%))", color: "hsl(var(--primary-foreground))", boxShadow: "0 4px 12px hsl(var(--primary) / 0.3)" }}
-              >
-                <AlertCircle className="w-4 h-4" />
-                <span className="hidden sm:inline">ขอแก้ไขเวลา</span>
-              </button>
-            )}
+            {/* ปุ่ม "ขอแก้ไขเวลา" ด้านบนขวาถูกเอาออกตามคำขอ — ใช้ไอคอนขอแก้ไขเวลา
+                ในแต่ละแถวของตารางแทน (openEdit ต่อแถว) */}
           </div>
         )}
       </div>
@@ -993,8 +933,13 @@ const Attendance = () => {
                             {row.note || conf.label}
                           </div>
                           {canEditRow && (
-                            <button onClick={() => openEdit(row)} className="text-[10px] font-medium px-2 py-1 rounded-lg border hover:bg-muted transition-colors flex items-center gap-1">
-                              <RotateCcw className="w-3 h-3" /> แก้ไข
+                            <button
+                              onClick={() => openEdit(row)}
+                              title="ขอแก้ไขเวลา"
+                              aria-label="ขอแก้ไขเวลา"
+                              className="p-1.5 rounded-lg border hover:bg-muted transition-colors inline-flex items-center justify-center"
+                            >
+                              <RotateCcw className="w-3.5 h-3.5" />
                             </button>
                           )}
                         </div>
@@ -1055,9 +1000,13 @@ const Attendance = () => {
                         </td>
                         <td className="px-3 py-1.5">
                           {(canEditTime || row.employeeId === currentUser?.employeeId) && row.status !== "holiday" && row.status !== "dayoff" ? (
-                            <button onClick={() => openEdit(row)} className="text-[11px] font-medium px-2 py-1 rounded-lg border hover:bg-muted transition-colors flex items-center gap-1">
-                              <RotateCcw className="w-3 h-3" />
-                              แก้ไขเวลา
+                            <button
+                              onClick={() => openEdit(row)}
+                              title="ขอแก้ไขเวลา"
+                              aria-label="ขอแก้ไขเวลา"
+                              className="p-1.5 rounded-lg border hover:bg-muted transition-colors inline-flex items-center justify-center"
+                            >
+                              <RotateCcw className="w-3.5 h-3.5" />
                             </button>
                           ) : (
                             <span className="text-xs text-muted-foreground">-</span>
@@ -1162,82 +1111,6 @@ const Attendance = () => {
               <X className="w-4 h-4" /> ยกเลิก
             </button>
             <button onClick={handleEditSave} className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold text-primary-foreground" style={{ background: "linear-gradient(135deg, hsl(var(--primary)), hsl(31 100% 60%))" }}>
-              <Save className="w-4 h-4" /> ส่งคำขอ
-            </button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* ═══ New Request Dialog ═══ */}
-      <Dialog open={requestOpen} onOpenChange={setRequestOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-base font-bold">
-              <AlertCircle className="w-5 h-5 text-primary" />
-              ขอแก้ไขเวลา (คำขอใหม่)
-            </DialogTitle>
-            <DialogDescription className="sr-only">ฟอร์มขอแก้ไขเวลาใหม่</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-2">
-            {canRequestForOthers ? (
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">พนักงาน <span className="text-destructive">*</span></label>
-                <SearchableSelect
-                  value={requestForm.employeeId}
-                  onChange={(val) => {
-                    const emp = employees.find(e => e.id === val);
-                    if (emp) {
-                      const match = attendance.find((a) => a.employeeId === val);
-                      setRequestForm((f) => ({
-                        ...f,
-                        employeeId: val,
-                        employeeName: `${emp.firstName} ${emp.lastName}`,
-                        originalCheckIn: match?.checkIn || "",
-                        originalCheckOut: match?.checkOut || "",
-                      }));
-                    }
-                  }}
-                  options={employees.map((emp) => ({
-                    value: emp.id,
-                    label: `${emp.prefix || ""}${emp.firstName} ${emp.lastName}`,
-                    subtitle: emp.position,
-                  }))}
-                  placeholder="เลือกพนักงาน"
-                />
-              </div>
-            ) : (
-              /* Self-only users request for themselves — show name read-only, no picker */
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">พนักงาน</label>
-                <div className="px-3 py-2.5 text-sm rounded-xl border bg-muted/30">{requestForm.employeeName || "-"}</div>
-              </div>
-            )}
-            {requestForm.originalCheckIn && (
-              <div className="grid grid-cols-2 gap-3 p-3 rounded-xl bg-muted/40">
-                <div><p className="text-xs text-muted-foreground mb-1">เวลาเข้าเดิม</p><p className="text-sm font-semibold">{requestForm.originalCheckIn}</p></div>
-                <div><p className="text-xs text-muted-foreground mb-1">เวลาออกเดิม</p><p className="text-sm font-semibold">{requestForm.originalCheckOut}</p></div>
-              </div>
-            )}
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">เวลาเข้าใหม่ <span className="text-destructive">*</span></label>
-                <TimeInput24 value={requestForm.newCheckIn} onChange={(v) => setRequestForm((f) => ({ ...f, newCheckIn: v }))} />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">เวลาออกใหม่ <span className="text-destructive">*</span></label>
-                <TimeInput24 value={requestForm.newCheckOut} onChange={(v) => setRequestForm((f) => ({ ...f, newCheckOut: v }))} />
-              </div>
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">เหตุผล <span className="text-destructive">*</span></label>
-              <textarea value={requestForm.reason} onChange={(e) => setRequestForm((f) => ({ ...f, reason: e.target.value }))} rows={3} placeholder="ระบุเหตุผลในการขอแก้ไขเวลา..." className="w-full px-3 py-2.5 text-sm rounded-xl border bg-muted/30 outline-none resize-none" />
-            </div>
-          </div>
-          <DialogFooter className="gap-2">
-            <button onClick={() => setRequestOpen(false)} className="flex items-center gap-1.5 px-4 py-2 rounded-xl border text-sm font-medium hover:bg-muted transition-colors">
-              <X className="w-4 h-4" /> ยกเลิก
-            </button>
-            <button onClick={handleRequestSave} className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold text-primary-foreground" style={{ background: "linear-gradient(135deg, hsl(var(--primary)), hsl(31 100% 60%))" }}>
               <Save className="w-4 h-4" /> ส่งคำขอ
             </button>
           </DialogFooter>
