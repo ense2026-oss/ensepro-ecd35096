@@ -357,24 +357,7 @@ const Login = () => {
             </button>
           </form>
 
-          {/* Toggle login/signup */}
-          <div className="mt-6 text-center">
-            <p className="text-sm text-muted-foreground">
-              {isSignup ? "มีบัญชีอยู่แล้ว?" : "ยังไม่มีบัญชี?"}
-              <button
-                type="button"
-                onClick={() => {
-                  setIsSignup(!isSignup);
-                  setError("");
-                  setSuccess("");
-                }}
-                className="ml-2 font-semibold"
-                style={{ color: "hsl(var(--primary))" }}
-              >
-                {isSignup ? "เข้าสู่ระบบ" : "สมัครสมาชิก"}
-              </button>
-            </p>
-          </div>
+          {/* ปุ่มสมัครสมาชิกถูกเอาออกตามคำขอ — บัญชีถูกสร้างโดยผู้ดูแลระบบเท่านั้น */}
 
           <p className="text-center text-xs text-muted-foreground mt-6">
             © 2025 {programName}. ระบบบริหารจัดการพนักงานองค์กร
