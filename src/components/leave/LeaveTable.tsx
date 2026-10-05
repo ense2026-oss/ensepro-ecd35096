@@ -317,14 +317,14 @@ const LeaveTable = ({ records, onApprove, onReject, hideActions = false, current
           })()}
           <DialogFooter>
             {detail?.status === "pending" && !hideActions ? (
-              <>
-                <button onClick={() => { if (detail) onReject(detail.id); setDetail(null); }} className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold text-white" style={{ background: "hsl(0 84% 50%)" }}>
+              <div className="flex flex-row gap-2 w-full sm:w-auto">
+                <button onClick={() => { if (detail) onReject(detail.id); setDetail(null); }} className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold text-white" style={{ background: "hsl(0 84% 50%)" }}>
                   <XCircle className="w-4 h-4" /> ไม่อนุมัติ
                 </button>
-                <button onClick={() => { if (detail) onApprove(detail.id); setDetail(null); }} className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold text-white" style={{ background: "hsl(90 100% 30%)" }}>
+                <button onClick={() => { if (detail) onApprove(detail.id); setDetail(null); }} className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold text-white" style={{ background: "hsl(90 100% 30%)" }}>
                   <CheckCircle className="w-4 h-4" /> อนุมัติ
                 </button>
-              </>
+              </div>
             ) : (
               <button onClick={() => setDetail(null)} className="px-4 py-2 rounded-xl border text-sm font-medium hover:bg-muted transition-colors">ปิด</button>
             )}

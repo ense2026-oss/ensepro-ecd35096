@@ -1152,14 +1152,14 @@ const Attendance = () => {
           )}
           <DialogFooter className="gap-2">
             {detailReq?.status === "pending" && canApproveTime ? (
-              <>
-                <button onClick={() => detailReq && handleReject(detailReq.id)} className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold text-white" style={{ background: "hsl(0 84% 50%)" }}>
+              <div className="flex flex-row gap-2 w-full sm:w-auto">
+                <button onClick={() => detailReq && handleReject(detailReq.id)} className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold text-white" style={{ background: "hsl(0 84% 50%)" }}>
                   <X className="w-4 h-4" /> ไม่อนุมัติ
                 </button>
-                <button onClick={() => detailReq && handleApprove(detailReq.id)} className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold text-white" style={{ background: "hsl(90 100% 30%)" }}>
+                <button onClick={() => detailReq && handleApprove(detailReq.id)} className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold text-white" style={{ background: "hsl(90 100% 30%)" }}>
                   <Check className="w-4 h-4" /> อนุมัติ
                 </button>
-              </>
+              </div>
             ) : (
               <button onClick={() => setDetailOpen(false)} className="flex items-center gap-1.5 px-4 py-2 rounded-xl border text-sm font-medium hover:bg-muted transition-colors">
                 ปิด
