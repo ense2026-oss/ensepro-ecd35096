@@ -95,10 +95,35 @@ export const ImpersonationProvider: React.FC<{ children: React.ReactNode }> = ({
 
   // Call the edge function once and return what it gives (session or tokenHash).
   const callImpersonateFn = useCallback(async (employeeId: string) => {
-    const { data, error } = await supabase.functions.invoke("admin-impersonate-user", {
-      body: { employeeId },
-    });
+    const invoke = () =>
+      supabase.functions.invoke("admin-impersonate-user", { body: { employeeId } });
+
+    let { data, error } = await invoke();
+
+    // A stale/"zombie" admin session — a JWT that still passes PostgREST's local
+    // signature check (so the app keeps working) but whose GoTrue session was
+    // invalidated (e.g. after a previous Login as, a token that never refreshed,
+    // or a sign-in elsewhere) — makes the function's own getUser() reject the
+    // token with 401 "Invalid session", which the client surfaces as the generic
+    // "Edge Function returned a non-2xx status code". Refresh the caller's token
+    // and retry once; refreshSession re-establishes a valid server-side session.
+    if (error && (error as any)?.context?.status === 401) {
+      try {
+        // Race the refresh against a timeout: refreshSession acquires the auth
+        // lock, which can hang in some environments (see the setSession note
+        // above), and this must never freeze the Login as flow.
+        const refreshRes = await withTimeout(supabase.auth.refreshSession(), 8000);
+        if (refreshRes !== TIMEOUT_SENTINEL && !refreshRes.error) {
+          ({ data, error } = await invoke());
+        }
+      } catch { /* fall through to the error below */ }
+    }
+
     if (error || (data as any)?.error) {
+      // Still a 401 after refresh → the admin session can't be revived here.
+      if ((error as any)?.context?.status === 401) {
+        return { error: "เซสชันผู้ดูแลระบบหมดอายุ กรุณาเข้าสู่ระบบใหม่แล้วลองอีกครั้ง" };
+      }
       return { error: (data as any)?.error || error?.message || "เข้าสู่ระบบในฐานะพนักงานไม่สำเร็จ" };
     }
     return data as { session?: { access_token?: string; refresh_token?: string }; tokenHash?: string; targetName?: string };
