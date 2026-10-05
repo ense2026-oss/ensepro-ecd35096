@@ -49,9 +49,26 @@ const SystemLogsSettings = () => {
   const [level, setLevel] = useState("all");
   const [category, setCategory] = useState("all");
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [categories, setCategories] = useState<string[]>([]);
+
+  // Debounce the free-text search so we query ~300ms after the user stops typing
+  // instead of firing a request on every keystroke.
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search), 300);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  const hasActiveFilter = level !== "all" || category !== "all" || !!search || !!fromDate || !!toDate;
+  const clearFilters = () => {
+    setLevel("all");
+    setCategory("all");
+    setSearch("");
+    setFromDate("");
+    setToDate("");
+  };
 
   const fetchLogs = useCallback(async () => {
     setLoading(true);
@@ -64,7 +81,15 @@ const SystemLogsSettings = () => {
 
       if (level !== "all") q = q.eq("level", level);
       if (category !== "all") q = q.eq("category", category);
-      if (search.trim()) q = q.ilike("message", `%${search.trim()}%`);
+      // Search across all the text columns, not just the message. Strip chars
+      // that would break the PostgREST or() filter syntax ( , % ( ) ).
+      const term = debouncedSearch.trim().replace(/[,%()]/g, " ").trim();
+      if (term) {
+        const like = `%${term}%`;
+        q = q.or(
+          `message.ilike.${like},user_email.ilike.${like},source.ilike.${like},category.ilike.${like},url.ilike.${like}`
+        );
+      }
       if (fromDate) q = q.gte("created_at", `${fromDate}T00:00:00`);
       if (toDate) q = q.lte("created_at", `${toDate}T23:59:59`);
 
@@ -82,7 +107,7 @@ const SystemLogsSettings = () => {
     } finally {
       setLoading(false);
     }
-  }, [level, category, search, fromDate, toDate, page]);
+  }, [level, category, debouncedSearch, fromDate, toDate, page]);
 
   // Load the distinct categories once (for the filter dropdown).
   const loadCategories = useCallback(async () => {
@@ -100,7 +125,7 @@ const SystemLogsSettings = () => {
   useEffect(() => { fetchLogs(); }, [fetchLogs]);
   useEffect(() => { loadCategories(); }, [loadCategories]);
   // Reset to page 1 when filters change
-  useEffect(() => { setPage(1); }, [level, category, search, fromDate, toDate]);
+  useEffect(() => { setPage(1); }, [level, category, debouncedSearch, fromDate, toDate]);
 
   const handleClearOld = async () => {
     if (!confirm("ลบบันทึกที่เก่ากว่า 90 วันทั้งหมด? (ย้อนกลับไม่ได้)")) return;
@@ -147,7 +172,7 @@ const SystemLogsSettings = () => {
           <div className="card-base p-4 flex flex-wrap items-center gap-2.5">
             <div className="relative flex-1 min-w-[180px]">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
-              <input type="text" placeholder="ค้นหาข้อความ..." value={search} onChange={(e) => setSearch(e.target.value)}
+              <input type="text" placeholder="ค้นหา: ข้อความ / ผู้ใช้ / ที่มา / ประเภท / หน้า..." value={search} onChange={(e) => setSearch(e.target.value)}
                 className="w-full pl-9 pr-3 py-2 text-sm rounded-xl border bg-muted/30 outline-none" />
             </div>
             <select value={level} onChange={(e) => setLevel(e.target.value)} className="min-w-[120px] px-3 py-2 text-sm rounded-xl border bg-muted/30 outline-none cursor-pointer">
@@ -162,6 +187,11 @@ const SystemLogsSettings = () => {
             </select>
             <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} title="ตั้งแต่วันที่" className="px-3 py-2 text-sm rounded-xl border bg-muted/30 outline-none cursor-pointer" />
             <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} title="ถึงวันที่" className="px-3 py-2 text-sm rounded-xl border bg-muted/30 outline-none cursor-pointer" />
+            {hasActiveFilter && (
+              <button onClick={clearFilters} title="ล้างตัวกรอง" className="flex items-center gap-1.5 px-3 py-2 rounded-xl border text-sm text-muted-foreground hover:bg-muted transition-colors">
+                <XCircle className="w-4 h-4" /> ล้างตัวกรอง
+              </button>
+            )}
           </div>
 
           <div className="card-base overflow-hidden">

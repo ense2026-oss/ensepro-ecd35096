@@ -66,7 +66,11 @@ const Settings = () => {
   });
 
   const activeModule = SETTINGS_TAB_TO_MODULE[activeTab];
-  const canEditActiveTab = !activeModule || canAction(role, activeModule, "edit");
+  // The logs tab is a read-only viewer — its controls (search / filter / วันที่)
+  // are query inputs, not config edits — so it must never be locked by the
+  // view-only fieldset (which would disable the search box and dropdowns).
+  const isViewerTab = activeTab === "logs";
+  const canEditActiveTab = isViewerTab || !activeModule || canAction(role, activeModule, "edit");
 
 
   // If active tab got hidden, switch to first available
