@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   Clock, Plus, Search, Download, CheckCircle, CheckCircle2, XCircle,
   Hourglass, TrendingUp, FileText, ChevronDown, X, AlertCircle, Eye
@@ -260,7 +261,12 @@ const OvertimeRequest = () => {
   const [showForm, setShowForm] = useState(false);
   const [detailReq, setDetailReq] = useState<OTRequest | null>(null);
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<OTStatus | "all">("all");
+  // Initial status tab can come from the URL (e.g. dashboard → /overtime?status=approved).
+  const [searchParams] = useSearchParams();
+  const [statusFilter, setStatusFilter] = useState<OTStatus | "all">(() => {
+    const s = searchParams.get("status");
+    return s && ["pending", "approved", "rejected"].includes(s) ? (s as OTStatus) : "all";
+  });
   const [typeFilter, setTypeFilter] = useState<OTType | "all">("all");
   const [filterEmployee, setFilterEmployee] = useState("all");
   const [employeeSearch, setEmployeeSearch] = useState("");

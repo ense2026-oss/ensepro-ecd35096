@@ -9,6 +9,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, PieChart, Pie, Cell,
 } from "recharts";
+import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/contexts/PermissionsContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -60,11 +61,14 @@ interface StatCardProps {
   color: string;
   bgColor: string;
   loading?: boolean;
+  /** When set, the whole card becomes a link to this route (e.g. "/leave?status=pending"). */
+  to?: string;
 }
 
 const StatCard = forwardRef<HTMLDivElement, StatCardProps>(
-  ({ title, value, subtitle, icon: Icon, trend, color, bgColor, loading }, ref) => (
-    <div ref={ref} className="card-base p-3 sm:p-5 animate-fade-in">
+  ({ title, value, subtitle, icon: Icon, trend, color, bgColor, loading, to }, ref) => {
+    const card = (
+    <div ref={ref} className={`card-base p-3 sm:p-5 animate-fade-in h-full${to ? " hover:shadow-md hover:-translate-y-0.5 transition-all cursor-pointer" : ""}`}>
       <div className="flex items-start justify-between mb-2 sm:mb-4">
         <div className="flex-1 min-w-0">
           <p className="text-[11px] sm:text-sm text-muted-foreground font-medium leading-tight">{title}</p>
@@ -89,7 +93,9 @@ const StatCard = forwardRef<HTMLDivElement, StatCardProps>(
         </div>
       )}
     </div>
-  )
+    );
+    return to ? <Link to={to} className="block h-full">{card}</Link> : card;
+  }
 );
 StatCard.displayName = "StatCard";
 
@@ -614,9 +620,9 @@ const Dashboard = () => {
         </div>
         <StatCarousel>
           {leaveQuotaCards.map((lq) => (
-            <StatCard key={lq.name} title={`${lq.name}คงเหลือ`} value={loading ? "..." : Math.max(0, lq.quota - lq.used)} subtitle={`ใช้ไป ${lq.used} / ${lq.quota} วัน`} icon={Calendar} color={lq.color} bgColor={`${lq.color}20`} loading={loading} />
+            <StatCard key={lq.name} title={`${lq.name}คงเหลือ`} value={loading ? "..." : Math.max(0, lq.quota - lq.used)} subtitle={`ใช้ไป ${lq.used} / ${lq.quota} วัน`} icon={Calendar} color={lq.color} bgColor={`${lq.color}20`} loading={loading} to="/leave" />
           ))}
-          <StatCard title="OT เดือนนี้" value={loading ? "..." : myOtHoursMonth} subtitle="ชั่วโมง" icon={Clock} color="hsl(220 90% 50%)" bgColor="hsl(220 90% 93%)" loading={loading} />
+          <StatCard title="OT เดือนนี้" value={loading ? "..." : myOtHoursMonth} subtitle="ชั่วโมง" icon={Clock} color="hsl(220 90% 50%)" bgColor="hsl(220 90% 93%)" loading={loading} to="/overtime" />
         </StatCarousel>
         <div className="card-base p-5">
           <h3 className="font-bold font-display mb-3">สถานะวันนี้</h3>
@@ -735,14 +741,14 @@ const Dashboard = () => {
       )}
 
       <StatCarousel>
-        <StatCard title={`พนักงาน${viewType === "manager" ? "ในแผนก" : "ทั้งหมด"}`} value={activeStaffCount} subtitle="เฉพาะที่ทำงานอยู่ (ไม่รวมผู้บริหาร)" icon={Users} color="#FF870F" bgColor="hsl(31 100% 93%)" loading={loading} />
-        <StatCard title="มาทำงานวันนี้" value={presentToday} subtitle={`${presentPercent}% ของพนักงาน${viewType === "manager" ? "ในแผนก" : "ทั้งหมด"}`} icon={UserCheck} color="hsl(90 100% 35%)" bgColor="hsl(90 100% 92%)" loading={loading} />
-        <StatCard title="ลางานวันนี้" value={leaveToday} subtitle={`${leavePercent}%`} icon={Calendar} color="hsl(220 90% 50%)" bgColor="hsl(220 90% 93%)" loading={loading} />
-        <StatCard title="มาสายวันนี้" value={lateToday} subtitle={`${latePercent}%`} icon={Clock} color="hsl(0 84% 55%)" bgColor="hsl(0 84% 95%)" loading={loading} />
-        <StatCard title="OT เดือนนี้" value={`${monthOtHours} ชม.`} subtitle={`${otRequests.filter((o) => o.status === "approved" && o.date >= monthStart).length} รายการ`} icon={Briefcase} color="hsl(0 0% 45%)" bgColor="hsl(0 0% 92%)" loading={loading} />
-        <StatCard title="รออนุมัติ" value={totalPending} subtitle={`ลา ${pendingLeaves} / OT ${pendingOT} / แก้เวลา ${pendingTimeEdits}`} icon={AlertCircle} color="#FF870F" bgColor="hsl(31 100% 93%)" loading={loading} />
-        <StatCard title="อนุมัติแล้ว" value={approvedThisMonth} subtitle="เดือนนี้" icon={CheckCircle} color="hsl(90 100% 35%)" bgColor="hsl(90 100% 92%)" loading={loading} />
-        <StatCard title="พนักงานใหม่" value={newEmployeesThisMonth} subtitle="เดือนนี้" icon={UserX} color="hsl(220 90% 50%)" bgColor="hsl(220 90% 93%)" loading={loading} />
+        <StatCard title={`พนักงาน${viewType === "manager" ? "ในแผนก" : "ทั้งหมด"}`} value={activeStaffCount} subtitle="เฉพาะที่ทำงานอยู่ (ไม่รวมผู้บริหาร)" icon={Users} color="#FF870F" bgColor="hsl(31 100% 93%)" loading={loading} to="/employees" />
+        <StatCard title="มาทำงานวันนี้" value={presentToday} subtitle={`${presentPercent}% ของพนักงาน${viewType === "manager" ? "ในแผนก" : "ทั้งหมด"}`} icon={UserCheck} color="hsl(90 100% 35%)" bgColor="hsl(90 100% 92%)" loading={loading} to="/attendance?status=present" />
+        <StatCard title="ลางานวันนี้" value={leaveToday} subtitle={`${leavePercent}%`} icon={Calendar} color="hsl(220 90% 50%)" bgColor="hsl(220 90% 93%)" loading={loading} to="/attendance?status=leave" />
+        <StatCard title="มาสายวันนี้" value={lateToday} subtitle={`${latePercent}%`} icon={Clock} color="hsl(0 84% 55%)" bgColor="hsl(0 84% 95%)" loading={loading} to="/attendance?status=late" />
+        <StatCard title="OT เดือนนี้" value={`${monthOtHours} ชม.`} subtitle={`${otRequests.filter((o) => o.status === "approved" && o.date >= monthStart).length} รายการ`} icon={Briefcase} color="hsl(0 0% 45%)" bgColor="hsl(0 0% 92%)" loading={loading} to="/overtime?status=approved" />
+        <StatCard title="รออนุมัติ" value={totalPending} subtitle={`ลา ${pendingLeaves} / OT ${pendingOT} / แก้เวลา ${pendingTimeEdits}`} icon={AlertCircle} color="#FF870F" bgColor="hsl(31 100% 93%)" loading={loading} to="/leave?status=pending" />
+        <StatCard title="อนุมัติแล้ว" value={approvedThisMonth} subtitle="เดือนนี้" icon={CheckCircle} color="hsl(90 100% 35%)" bgColor="hsl(90 100% 92%)" loading={loading} to="/leave?status=approved" />
+        <StatCard title="พนักงานใหม่" value={newEmployeesThisMonth} subtitle="เดือนนี้" icon={UserX} color="hsl(220 90% 50%)" bgColor="hsl(220 90% 93%)" loading={loading} to="/employees" />
       </StatCarousel>
 
       {/* Charts Row */}

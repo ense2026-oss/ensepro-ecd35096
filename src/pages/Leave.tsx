@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Plus, Download, CalendarDays } from "lucide-react";
 import LeaveQuotaCards, { type LeaveType } from "@/components/leave/LeaveQuotaCards";
 import LeaveTable, { type LeaveRecord } from "@/components/leave/LeaveTable";
@@ -66,7 +67,12 @@ const Leave = () => {
 
   const [leaveTypes, setLeaveTypes] = useState<LeaveType[]>([]);
   const [leaves, setLeaves] = useState<LeaveRecord[]>([]);
-  const [filterStatus, setFilterStatus] = useState("all");
+  // Initial tab can come from the URL (e.g. dashboard → /leave?status=pending).
+  const [searchParams] = useSearchParams();
+  const [filterStatus, setFilterStatus] = useState(() => {
+    const s = searchParams.get("status");
+    return s && ["pending", "approved", "rejected"].includes(s) ? s : "all";
+  });
   const [dialogOpen, setDialogOpen] = useState(false);
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState<LeaveRecord | null>(null);

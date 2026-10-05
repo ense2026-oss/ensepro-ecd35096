@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Search, Download, CheckCircle, XCircle, Clock, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Save, X, FileText, Check, RotateCcw, CalendarDays, Eye, Upload } from "lucide-react";
 import { ThaiDatePicker } from "@/components/ui/thai-date-picker";
 import { format } from "date-fns";
@@ -115,7 +116,12 @@ const Attendance = () => {
   const [otMap, setOtMap] = useState<Record<string, number>>({});
   const [otTimeMap, setOtTimeMap] = useState<Record<string, { start: string; end: string }>>({});
   const [search, setSearch] = useState("");
-  const [filterStatus, setFilterStatus] = useState("all");
+  // Initial status filter can come from the URL (e.g. dashboard → /attendance?status=late).
+  const [searchParams] = useSearchParams();
+  const [filterStatus, setFilterStatus] = useState(() => {
+    const s = searchParams.get("status");
+    return s && ["present", "late", "absent", "leave", "dayoff", "holiday"].includes(s) ? s : "all";
+  });
   const [filterEmployee, setFilterEmployee] = useState("all");
   const [employeeSearch, setEmployeeSearch] = useState("");
   const [showEmployeeDropdown, setShowEmployeeDropdown] = useState(false);
