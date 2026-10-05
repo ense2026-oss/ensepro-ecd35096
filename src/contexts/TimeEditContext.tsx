@@ -142,7 +142,7 @@ export const TimeEditProvider = ({ children }: { children: ReactNode }) => {
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
   const debouncedFetchEdits = useCallback(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => fetchEditRequests(), 800);
+    debounceRef.current = setTimeout(() => fetchEditRequests(), 250);
   }, [fetchEditRequests]);
 
   const debouncedFetchNotifs = useCallback(() => {
@@ -172,7 +172,7 @@ export const TimeEditProvider = ({ children }: { children: ReactNode }) => {
 
   const addEditRequest = useCallback(async (req: Omit<TimeEditRequest, "id" | "status" | "createdAt">) => {
     const totalTiers = await getApprovalTiers("time_edit");
-    await supabase.from("time_edit_requests").insert({
+    const { error } = await supabase.from("time_edit_requests").insert({
       employee_id: req.employeeId,
       attendance_id: req.attendanceId || null,
       date: req.date,
@@ -185,6 +185,13 @@ export const TimeEditProvider = ({ children }: { children: ReactNode }) => {
       approved_tiers: 0,
       total_tiers: totalTiers,
     });
+    if (error) {
+      console.error("time_edit insert error:", error);
+      return;
+    }
+    // Refresh the list immediately so the new request shows right away, instead
+    // of waiting for the debounced realtime event (matches the snappy OT page).
+    fetchEditRequests();
     // Notify all configured approvers (any one can approve)
     notifyApprovers({
       type: "attendance",
@@ -192,7 +199,7 @@ export const TimeEditProvider = ({ children }: { children: ReactNode }) => {
       description: `${req.employeeName} ขอแก้ไขเวลา ${req.date} → เข้า ${req.newCheckIn} / ออก ${req.newCheckOut}`,
       targetEmployee: req.employeeName,
     });
-  }, []);
+  }, [fetchEditRequests]);
 
   const updateRequestStatus = useCallback(async (id: string, status: "approved" | "rejected") => {
     await supabase.from("time_edit_requests").update({ status }).eq("id", id);
