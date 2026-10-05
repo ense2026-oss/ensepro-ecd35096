@@ -440,7 +440,7 @@ const Leave = () => {
 
       <LeaveQuotaCards leaveTypes={leaveTypes} />
 
-      <div className="flex items-center gap-1 sm:gap-2 overflow-x-auto no-scrollbar">
+      <div className="relative z-20 flex items-center gap-1 sm:gap-2 overflow-x-auto overflow-y-visible no-scrollbar pt-2.5">
         {[
           { key: "all", label: "ทั้งหมด" },
           { key: "pending", label: "รออนุมัติ" },
