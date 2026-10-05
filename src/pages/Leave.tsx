@@ -230,6 +230,19 @@ const Leave = () => {
       // Get total tiers from approval config
       const totalTiers = await getApprovalTiers("leave");
 
+      // Upload the attachment BEFORE inserting and store file_url in the insert
+      // itself. Employees can INSERT their own leave row but RLS does NOT let
+      // them UPDATE it ("Leave manage update" = admin/edit/approve only), so a
+      // separate post-insert UPDATE to set file_url was silently dropped for
+      // them — the file landed in storage but file_url stayed null and the
+      // attachment never showed. The filename uses a random id (we don't have a
+      // row id yet); the full path is stored in file_url so viewing still works.
+      let fileUrl: string | null = null;
+      if (file) {
+        fileUrl = await uploadFile(file, crypto.randomUUID());
+        if (!fileUrl) return; // upload failed — uploadFile already showed a toast
+      }
+
       const { data: inserted, error: insertError } = await supabase.from("leave_requests").insert([{
         employee_id: emp.id,
         leave_type_id: lt.id,
@@ -239,15 +252,17 @@ const Leave = () => {
         days: record.days,
         reason: record.reason,
         status: "pending",
-        // has_file is set to true ONLY after the file actually uploads (below),
-        // so a record can never claim a file that isn't in storage.
-        has_file: false,
+        has_file: !!fileUrl,
+        file_url: fileUrl,
         current_tier: 1,
         approved_tiers: 0,
         total_tiers: totalTiers,
       }]).select("id").single();
 
       if (insertError) {
+        // Don't leave an orphaned file in storage if the insert was rejected
+        // (e.g. the quota trigger raised check_violation).
+        if (fileUrl) await supabase.storage.from("leave-attachments").remove([fileUrl]);
         toast({
           title: "ไม่สามารถยื่นคำขอลาได้",
           description: insertError.message?.includes("เกินโควต้า")
@@ -256,14 +271,6 @@ const Leave = () => {
           variant: "destructive",
         });
         return;
-      }
-
-      if (inserted && file) {
-        const fileUrl = await uploadFile(file, inserted.id);
-        await supabase
-          .from("leave_requests")
-          .update({ file_url: fileUrl, has_file: !!fileUrl })
-          .eq("id", inserted.id);
       }
 
       fetchLeaves();
