@@ -42,24 +42,12 @@ type DashboardData = {
   checkIn: any | null;
 };
 
-/* ─── Mobile carousel wrapper for stat cards ─── */
+/* ─── Stat-card wrapper ─── */
+// Always a responsive grid — 2 columns on mobile like the "บันทึกเวลา" page.
+// (Previously a swipeable carousel on mobile, which showed cards at 70% width
+// and cut the second card off at the screen edge.)
 const StatCarousel = ({ children }: { children: ReactNode }) => {
-  const isMobile = useIsMobile();
-  const items = Children.toArray(children);
-  if (!isMobile) {
-    return <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">{children}</div>;
-  }
-  return (
-    <Carousel opts={{ align: "start", dragFree: true }} className="-mx-4 px-4">
-      <CarouselContent className="-ml-3">
-        {items.map((child, i) => (
-          <CarouselItem key={i} className="pl-3 basis-[70%]">
-            {child}
-          </CarouselItem>
-        ))}
-      </CarouselContent>
-    </Carousel>
-  );
+  return <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">{children}</div>;
 };
 
 /* ─── StatCard ─── */

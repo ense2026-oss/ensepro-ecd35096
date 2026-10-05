@@ -20,24 +20,10 @@ import EmployeeAvatar from "@/components/ui/employee-avatar";
 import { Carousel, CarouselContent, CarouselItem } from "@/components/ui/carousel";
 import { useIsMobile } from "@/hooks/use-mobile";
 
-/* Mobile carousel wrapper for stat cards (same style as Dashboard) */
+/* Stat-card wrapper — always a responsive grid (2 columns on mobile like the
+   "บันทึกเวลา" page). Was a swipeable carousel on mobile that cut cards off. */
 const StatCarousel = ({ children }: { children: React.ReactNode }) => {
-  const isMobile = useIsMobile();
-  const items = Array.isArray(children) ? children : [children];
-  if (!isMobile) {
-    return <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">{children}</div>;
-  }
-  return (
-    <Carousel opts={{ align: "start", dragFree: true }} className="-mx-4 px-4">
-      <CarouselContent className="-ml-3">
-        {items.flat().map((child, i) => (
-          <CarouselItem key={i} className="pl-3 basis-[70%]">
-            {child}
-          </CarouselItem>
-        ))}
-      </CarouselContent>
-    </Carousel>
-  );
+  return <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">{children}</div>;
 };
 
 type OTStatus = "pending" | "approved" | "rejected";
