@@ -73,7 +73,7 @@ const Sidebar = ({ collapsed, onToggle, onNavigate }: SidebarProps) => {
   const { canAccessRoute, isSelfOnly: permSelfOnly, getAllRoles } = usePermissions();
 
   // Module settings from DB with realtime
-  const { modules: enabledModules } = useModuleSettings();
+  const { modules: enabledModules, loading: modulesLoading } = useModuleSettings();
 
   const pathToModule: Record<string, string> = {
     "/employees": "employees",
@@ -99,6 +99,9 @@ const Sidebar = ({ collapsed, onToggle, onNavigate }: SidebarProps) => {
       // Module settings
       const moduleId = pathToModule[item.path];
       if (moduleId && enabledModules[moduleId] === false) return false;
+      // Check-in defaults to enabled in the hook, so suppress its link until
+      // the real settings load — otherwise it flashes in when actually disabled.
+      if (item.path === "/check-in" && modulesLoading) return false;
       return true;
     }),
   })).filter((section) => section.items.length > 0);

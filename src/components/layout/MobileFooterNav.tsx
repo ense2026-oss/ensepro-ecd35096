@@ -48,7 +48,7 @@ const MobileFooterNav = React.forwardRef<HTMLDivElement>((_, ref) => {
   const isMobile = useIsMobile();
   const { canAccessRoute, isSelfOnly } = usePermissions();
 
-  const { modules: moduleSettings } = useModuleSettings();
+  const { modules: moduleSettings, loading: modulesLoading } = useModuleSettings();
 
   const menuItems = allMenuItems.filter((item) => {
     if (!canAccessRoute(role, item.path)) return false;
@@ -70,7 +70,11 @@ const MobileFooterNav = React.forwardRef<HTMLDivElement>((_, ref) => {
     return location.pathname === path || (path === "/employees" && location.pathname.startsWith("/employees/"));
   };
 
-  const isCheckInEnabled = moduleSettings['check-in'] !== false && canAccessRoute(role, "/check-in");
+  // Gate on `!modulesLoading`: the hook seeds DEFAULT_MODULES (check-in=true)
+  // before the DB value arrives, so without this the big center FAB flashes in
+  // on every load — even when the check-in module is turned off (what users,
+  // especially on mobile, were still seeing). Only render once settings load.
+  const isCheckInEnabled = !modulesLoading && moduleSettings['check-in'] !== false && canAccessRoute(role, "/check-in");
 
   const midIndex = Math.floor(menuItems.length / 2);
   const leftItems = menuItems.slice(0, midIndex);

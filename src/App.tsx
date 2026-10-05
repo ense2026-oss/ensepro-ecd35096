@@ -11,6 +11,7 @@ import { PendingCountsProvider } from "@/contexts/PendingCountsContext";
 import { TimeEditProvider } from "@/contexts/TimeEditContext";
 import { ContractProvider } from "@/contexts/ContractContext";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { useModuleSettings } from "@/hooks/useModuleSettings";
 import { ImpersonationProvider } from "@/contexts/ImpersonationContext";
 import { PermissionsProvider } from "@/contexts/PermissionsContext";
 import { OrgProvider } from "@/contexts/OrgContext";
@@ -83,10 +84,15 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
 // Redirect based on auth state
 const AuthRedirect = () => {
   const { user, loading } = useAuth();
-  if (loading) return null;
+  // Mobile users default to the check-in page — but only when the check-in
+  // module is actually enabled. Wait for the settings to load before deciding
+  // so we never bounce a mobile user into a disabled /check-in page.
+  const { modules: moduleSettings, loading: modulesLoading } = useModuleSettings();
+  if (loading || modulesLoading) return null;
   if (!user) return <Navigate to="/login" replace />;
   const isMobile = window.innerWidth < 1024;
-  return <Navigate to={isMobile ? "/check-in" : "/dashboard"} replace />;
+  const checkInEnabled = moduleSettings['check-in'] !== false;
+  return <Navigate to={isMobile && checkInEnabled ? "/check-in" : "/dashboard"} replace />;
 };
 
 // Redirect away from login if already authenticated. Honor ?next= (same-origin path).

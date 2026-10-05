@@ -26,9 +26,12 @@ const Topbar = ({ onMenuToggle, pageTitle = "Dashboard", pageSubtitle = "ภา�
   const notifRef = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
 
-  // Module settings for check-in visibility (from DB via hook)
-  const { modules: moduleSettings } = useModuleSettings();
-  const isCheckInEnabled = moduleSettings['check-in'] !== false;
+  // Module settings for check-in visibility (from DB via hook).
+  // Gate on `!loading`: the hook starts with DEFAULT_MODULES (check-in=true), so
+  // until the real settings arrive `!== false` is true and the button would
+  // flash in even when check-in is disabled. Only show once settings are loaded.
+  const { modules: moduleSettings, loading: modulesLoading } = useModuleSettings();
+  const isCheckInEnabled = !modulesLoading && moduleSettings['check-in'] !== false;
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
