@@ -205,8 +205,9 @@ const Leave = () => {
         date_to: record.to,
         days: record.days,
         reason: record.reason,
-        has_file: record.file,
       };
+      // has_file/file_url are only touched when the attachment actually changes
+      // (removed or re-uploaded below); otherwise the existing file is preserved.
 
       // Remove existing file from storage if requested
       if (removeExistingFile && editingRecord.fileUrl) {
@@ -238,7 +239,9 @@ const Leave = () => {
         days: record.days,
         reason: record.reason,
         status: "pending",
-        has_file: record.file,
+        // has_file is set to true ONLY after the file actually uploads (below),
+        // so a record can never claim a file that isn't in storage.
+        has_file: false,
         current_tier: 1,
         approved_tiers: 0,
         total_tiers: totalTiers,
