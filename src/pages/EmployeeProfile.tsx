@@ -726,7 +726,10 @@ const EmployeeProfile = () => {
               {emp.username && (
                 <div className="space-y-1 sm:col-span-2">
                   <p className="text-xs text-muted-foreground">ชื่อผู้ใช้ (สำหรับเข้าสู่ระบบ)</p>
-                  {isAdminOrHr && !isOwnProfile ? (
+                  {/* Admin/HR may change a username — including their OWN. The
+                      admin-update-username edge function already allows self-update
+                      (it only requires the caller to be admin/hr). */}
+                  {isAdminOrHr ? (
                     <div className="flex items-center gap-2">
                       <input
                         value={usernameInput}
@@ -753,12 +756,15 @@ const EmployeeProfile = () => {
                 <p className="text-xs text-muted-foreground">รหัสผ่านเริ่มต้น</p>
                 <div className="flex items-center gap-2">
                   <Lock className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
-                  {canEditRestricted ? (
+                  {/* Reveal with the eye toggle for admin/HR (any employee) and for
+                      everyone on their OWN profile — a user may always see their own
+                      default password (RLS lets them read their own employee row). */}
+                  {(canEditRestricted || isOwnProfile) ? (
                     <>
                       <p className="text-sm font-medium font-mono tracking-wider">
                         {showInitialPassword ? (emp.initialPassword || "Password123!") : "••••••••"}
                       </p>
-                      <button type="button" onClick={() => setShowInitialPassword(!showInitialPassword)} className="text-muted-foreground hover:text-foreground transition-colors">
+                      <button type="button" onClick={() => setShowInitialPassword(!showInitialPassword)} className="text-muted-foreground hover:text-foreground transition-colors" title={showInitialPassword ? "ซ่อนรหัสผ่าน" : "แสดงรหัสผ่าน"}>
                         {showInitialPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                       </button>
                     </>
