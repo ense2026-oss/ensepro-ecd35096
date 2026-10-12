@@ -214,7 +214,11 @@ const Employees = () => {
 
   const showAsCards = isMobile || viewMode === "card";
 
-  const FilterControls = () => (
+  // A JSX value, NOT a component defined inside render: a nested component gets a
+  // new identity every render, so React remounts the whole subtree on each
+  // keystroke and the search input loses focus (you could only type one character
+  // at a time on mobile). As an inline element it reconciles in place.
+  const filterControls = (
     <div className="flex flex-col gap-3">
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -330,7 +334,7 @@ const Employees = () => {
             <DialogDescription className="sr-only">ตัวกรองรายชื่อพนักงาน</DialogDescription>
           </DialogHeader>
           <DialogBody>
-            <FilterControls />
+            {filterControls}
           </DialogBody>
           <DialogFooter>
             <button onClick={() => setFilterDialogOpen(false)} className="w-full sm:w-auto px-4 py-2 rounded-xl text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors">
