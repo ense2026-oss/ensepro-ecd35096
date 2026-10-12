@@ -17,6 +17,7 @@ import {
 } from "@/utils/taxCalculation";
 import { toast } from "sonner";
 import StatCarousel from "@/components/ui/stat-carousel";
+import ResponsiveFilters from "@/components/ui/responsive-filters";
 import { exportPnd1Excel, exportPnd1Pdf, exportPayslipExcel, exportPayslipPdf, exportPayslipPdfFromSnapshot, exportAllPayslipsExcel, primePayrollExportData } from "@/utils/exportPayroll";
 import { createDownloadProgressToast } from "@/utils/downloadToast";
 import { Input } from "@/components/ui/input";
@@ -972,7 +973,7 @@ const Payroll = () => {
       </div>
 
       {/* Filters */}
-      <div className="card-base p-4 flex flex-wrap items-center gap-2.5">
+      <ResponsiveFilters activeCount={(filterDept !== "all" ? 1 : 0) + (filterPosition !== "all" ? 1 : 0) + (search.trim() ? 1 : 0)}>
         <div className="relative flex-1 min-w-[160px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
           <input type="text" placeholder="ค้นหาพนักงาน..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-full pl-9 pr-3 py-2 text-sm rounded-xl border bg-muted/30 outline-none" />
@@ -1002,7 +1003,7 @@ const Payroll = () => {
             <option key={y} value={y}>{y + 543}</option>
           ))}
         </select>
-      </div>
+      </ResponsiveFilters>
 
       {/* Table */}
       <div className="card-base overflow-hidden">
