@@ -716,70 +716,71 @@ const EmployeeProfile = () => {
       <div>
         <SectionLabel>ข้อมูล Account</SectionLabel>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* Role: editable dropdown in edit mode, read-only badge otherwise. */}
           {isEditing && canEditRestricted ? (
-            <>
-              <SelectField label="สิทธิ์การใช้งาน" value={emp.role} onChange={set("role")} options={ROLE_OPTIONS} />
-            </>
+            <SelectField label="สิทธิ์การใช้งาน" value={emp.role} onChange={set("role")} options={ROLE_OPTIONS} />
           ) : (
-            <>
-              <div className="space-y-1">
-                <p className="text-xs text-muted-foreground">Role</p>
-                <span className="text-xs font-bold px-2.5 py-1 rounded-lg bg-primary/10 text-primary">{emp.role}</span>
-              </div>
-              {emp.username && (
-                <div className="space-y-1 sm:col-span-2">
-                  <p className="text-xs text-muted-foreground">ชื่อผู้ใช้ (สำหรับเข้าสู่ระบบ)</p>
-                  {/* Anyone who can edit employees with full scope may change a
-                      username (admin, HR, or a custom HR-level role) — including
-                      their OWN. Permission-based so it isn't limited to the literal
-                      "admin"/"hr" role names. The admin-update-username edge
-                      function allows the same set. */}
-                  {(isAdminOrHr || canEditRestricted) ? (
-                    <div className="flex items-center gap-2">
-                      <input
-                        value={usernameInput}
-                        onChange={(e) => setUsernameInput(e.target.value.toLowerCase().replace(/\s+/g, ""))}
-                        className="flex-1 px-3 py-1.5 text-sm rounded-lg border border-border bg-muted/30 outline-none focus:ring-2 focus:ring-primary/30 font-mono"
-                        placeholder="เช่น areenan.s"
-                      />
-                      <button
-                        type="button"
-                        onClick={handleUsernameChange}
-                        disabled={usernameSaving || !usernameInput.trim() || usernameInput.trim() === emp.username}
-                        className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors whitespace-nowrap"
-                      >
-                        {usernameSaving ? "กำลังบันทึก..." : "เปลี่ยน"}
-                      </button>
-                    </div>
-                  ) : (
-                    <p className="text-sm font-medium font-mono">{emp.username}</p>
-                  )}
-                  {usernameError && <p className="text-xs text-destructive">{usernameError}</p>}
-                </div>
-              )}
-              <div className="space-y-1">
-                <p className="text-xs text-muted-foreground">รหัสผ่านเริ่มต้น</p>
-                <div className="flex items-center gap-2">
-                  <Lock className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
-                  {/* Reveal with the eye toggle for admin/HR (any employee) and for
-                      everyone on their OWN profile — a user may always see their own
-                      default password (RLS lets them read their own employee row). */}
-                  {(canEditRestricted || isOwnProfile) ? (
-                    <>
-                      <p className="text-sm font-medium font-mono tracking-wider">
-                        {showInitialPassword ? (emp.initialPassword || "Password123!") : "••••••••"}
-                      </p>
-                      <button type="button" onClick={() => setShowInitialPassword(!showInitialPassword)} className="text-muted-foreground hover:text-foreground transition-colors" title={showInitialPassword ? "ซ่อนรหัสผ่าน" : "แสดงรหัสผ่าน"}>
-                        {showInitialPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </button>
-                    </>
-                  ) : (
-                    <p className="text-sm font-medium font-mono tracking-wider">••••••••</p>
-                  )}
-                </div>
-              </div>
-            </>
+            <div className="space-y-1">
+              <p className="text-xs text-muted-foreground">Role</p>
+              <span className="text-xs font-bold px-2.5 py-1 rounded-lg bg-primary/10 text-primary">{emp.role}</span>
+            </div>
           )}
+
+          {/* ชื่อผู้ใช้ และ รหัสผ่านเริ่มต้น แสดง "ตลอด" ทั้งโหมดดูและโหมดแก้ไข —
+              ปุ่ม "เปลี่ยน"/ปุ่มตา เป็น action แยกของตัวเอง ไม่ผูกกับปุ่มบันทึกหลัก
+              (เดิมถูกซ่อนตอนกด "แก้ไขข้อมูล" ทำให้สับสน) */}
+          {emp.username && (
+            <div className="space-y-1 sm:col-span-2">
+              <p className="text-xs text-muted-foreground">ชื่อผู้ใช้ (สำหรับเข้าสู่ระบบ)</p>
+              {/* Anyone who can edit employees with full scope may change a
+                  username (admin, HR, or a custom HR-level role) — including
+                  their OWN. Permission-based so it isn't limited to the literal
+                  "admin"/"hr" role names. The admin-update-username edge
+                  function allows the same set. */}
+              {(isAdminOrHr || canEditRestricted) ? (
+                <div className="flex items-center gap-2">
+                  <input
+                    value={usernameInput}
+                    onChange={(e) => setUsernameInput(e.target.value.toLowerCase().replace(/\s+/g, ""))}
+                    className="flex-1 px-3 py-1.5 text-sm rounded-lg border border-border bg-muted/30 outline-none focus:ring-2 focus:ring-primary/30 font-mono"
+                    placeholder="เช่น areenan.s"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleUsernameChange}
+                    disabled={usernameSaving || !usernameInput.trim() || usernameInput.trim() === emp.username}
+                    className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors whitespace-nowrap"
+                  >
+                    {usernameSaving ? "กำลังบันทึก..." : "เปลี่ยน"}
+                  </button>
+                </div>
+              ) : (
+                <p className="text-sm font-medium font-mono">{emp.username}</p>
+              )}
+              {usernameError && <p className="text-xs text-destructive">{usernameError}</p>}
+            </div>
+          )}
+          <div className="space-y-1">
+            <p className="text-xs text-muted-foreground">รหัสผ่านเริ่มต้น</p>
+            <div className="flex items-center gap-2">
+              <Lock className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+              {/* Reveal with the eye toggle for admin/HR (any employee) and for
+                  everyone on their OWN profile — a user may always see their own
+                  default password (RLS lets them read their own employee row). */}
+              {(canEditRestricted || isOwnProfile) ? (
+                <>
+                  <p className="text-sm font-medium font-mono tracking-wider">
+                    {showInitialPassword ? (emp.initialPassword || "Password123!") : "••••••••"}
+                  </p>
+                  <button type="button" onClick={() => setShowInitialPassword(!showInitialPassword)} className="text-muted-foreground hover:text-foreground transition-colors" title={showInitialPassword ? "ซ่อนรหัสผ่าน" : "แสดงรหัสผ่าน"}>
+                    {showInitialPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </>
+              ) : (
+                <p className="text-sm font-medium font-mono tracking-wider">••••••••</p>
+              )}
+            </div>
+          </div>
         </div>
       </div>
 
