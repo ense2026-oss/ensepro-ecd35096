@@ -10,7 +10,7 @@ import { useOrg } from "@/contexts/OrgContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useImpersonation } from "@/contexts/ImpersonationContext";
 import { useRoleOptions, matchRoleOption, roleDisplayName } from "@/hooks/useRoleOptions";
-import { formatThaiDate } from "@/utils/thaiDate";
+import { formatThaiDate, formatThaiDateNumeric } from "@/utils/thaiDate";
 import type { Position } from "@/contexts/OrgContext";
 import type { Employee } from "@/contexts/EmployeeContext";
 import EmployeeFormDialog from "@/components/employees/EmployeeFormDialog";
@@ -379,13 +379,16 @@ const Employees = () => {
                       <td className="px-4 py-3.5">
                         <span className="text-xs px-2 py-1 rounded-lg font-medium" style={{ background: "hsl(var(--muted))" }}>{emp.employeeType}</span>
                       </td>
-                      <td className="px-4 py-3.5 text-sm text-muted-foreground whitespace-nowrap">{formatThaiDate(emp.startDate)}</td>
+                      <td className="px-4 py-3.5 text-sm text-muted-foreground whitespace-nowrap">{formatThaiDateNumeric(emp.startDate)}</td>
                       <td className="px-4 py-3.5"><span className={sc?.className}>{sc?.label}</span></td>
                       <td className="px-4 py-3.5">
                         {isAdmin ? (
                           <Select value={emp.role} onValueChange={(v) => handleRoleChange(emp, v)} disabled={roleSavingId === emp.id}>
                             <SelectTrigger className="w-[150px] h-8 text-xs">
-                              {roleSavingId === emp.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <SelectValue placeholder="เลือกสิทธิ์" />}
+                              {/* แสดงเฉพาะชื่อสิทธิ์ (ส่วนหน้า " — ") ไม่โชว์คำอธิบายหลังขีด */}
+                              {roleSavingId === emp.id
+                                ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                : <span className="truncate">{matchRoleOption(allRoleOptions, emp.role)?.label?.split(" — ")[0] ?? roleDisplayName(emp.role)}</span>}
                             </SelectTrigger>
                             <SelectContent>
                               {roleOptions.map((o) => (

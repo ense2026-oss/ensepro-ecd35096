@@ -38,6 +38,20 @@ export function formatThaiDate(input?: string | number | null, opts?: ThaiDateOp
   return `${d} ${months[mo - 1]} ${y + 543}`;
 }
 
+/** Numeric compact date: "2026-11-01" -> "01/11/69" (DD/MM/YY, Buddhist-era year). */
+export function formatThaiDateNumeric(input?: string | number | null): string {
+  const s = (input ?? "").toString().trim();
+  if (!s) return "—";
+  const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!m) return s; // already formatted / not a YYYY-MM-DD date → leave as-is
+  const y = parseInt(m[1], 10);
+  const mo = parseInt(m[2], 10);
+  const d = parseInt(m[3], 10);
+  if (mo < 1 || mo > 12 || d < 1 || d > 31) return s;
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${pad(d)}/${pad(mo)}/${pad((y + 543) % 100)}`;
+}
+
 /** Short variant helper: formatThaiDateShort("2521-...") -> "9 ก.ย. 2564". */
 export function formatThaiDateShort(input?: string | number | null): string {
   return formatThaiDate(input, { short: true });
