@@ -2,6 +2,7 @@ import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Search, Download, CheckCircle, XCircle, Clock, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Save, X, FileText, Check, RotateCcw, CalendarDays, Eye, Upload } from "lucide-react";
 import { ThaiDatePicker } from "@/components/ui/thai-date-picker";
+import ResponsiveFilters from "@/components/ui/responsive-filters";
 import { format } from "date-fns";
 import { useEmployees } from "@/contexts/EmployeeContext";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogBody, DialogFooter } from "@/components/ui/dialog";
@@ -771,8 +772,7 @@ const Attendance = () => {
 
       {/* Filters — attendance view only; the requests tab always shows every request */}
       {activeView === "attendance" && (
-      <div className="card-base p-3">
-        <div className="flex flex-wrap items-center gap-2">
+      <ResponsiveFilters activeCount={(filterEmployee !== "all" ? 1 : 0) + (filterStatus !== "all" ? 1 : 0) + ((dateFrom || dateTo) ? 1 : 0)}>
 
               <div className="relative flex-1 min-w-[140px]" ref={employeeDropdownRef}>
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none z-10" />
@@ -888,8 +888,7 @@ const Attendance = () => {
                   </button>
                 )}
           </div>
-        </div>
-      </div>
+      </ResponsiveFilters>
       )}
 
 

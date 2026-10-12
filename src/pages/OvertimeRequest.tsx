@@ -16,6 +16,7 @@ import { formatThaiDate } from "@/utils/thaiDate";
 import { toast } from "sonner";
 import { notifyApprovers, notifyRequester, getApprovalTiers, notifyTierApprover } from "@/utils/notifications";
 import SearchableSelect from "@/components/ui/searchable-select";
+import ResponsiveFilters from "@/components/ui/responsive-filters";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogBody, DialogFooter } from "@/components/ui/dialog";
 import EmployeeAvatar from "@/components/ui/employee-avatar";
 import { Carousel, CarouselContent, CarouselItem } from "@/components/ui/carousel";
@@ -663,8 +664,7 @@ const OvertimeRequest = () => {
       </div>
 
       {/* Filters — same set as the attendance page */}
-      <div className="card-base p-3">
-        <div className="flex flex-wrap items-center gap-2">
+      <ResponsiveFilters activeCount={(filterEmployee !== "all" ? 1 : 0) + (typeFilter !== "all" ? 1 : 0) + ((dateFrom || dateTo) ? 1 : 0)}>
           <div className="relative flex-1 min-w-[140px]" ref={employeeDropdownRef}>
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none z-10" />
             <input
@@ -770,8 +770,7 @@ const OvertimeRequest = () => {
               </button>
             )}
           </div>
-        </div>
-      </div>
+      </ResponsiveFilters>
 
       <div className="card-base overflow-hidden">
         {/* Mobile: card grid (table is hidden below md) */}
