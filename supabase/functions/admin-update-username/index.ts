@@ -24,7 +24,18 @@ Deno.serve(async (req) => {
     const admin = createClient(url, serviceKey, { auth: { autoRefreshToken: false, persistSession: false } });
     const { data: roles } = await admin.from("user_roles").select("role_name").eq("user_id", ures.user.id);
     const names = (roles || []).map((r: { role_name: string }) => r.role_name);
-    if (!names.includes("admin") && !names.includes("hr")) return json({ error: "Forbidden: admin or hr role required" }, 403);
+    // Allow admin/hr by name, OR any role that can edit employees with full scope
+    // (covers custom HR-level roles) — matches the client-side gate.
+    let allowed = names.includes("admin") || names.includes("hr");
+    if (!allowed && names.length) {
+      const { data: perms } = await admin
+        .from("role_permissions")
+        .select("can_edit, scope")
+        .eq("module", "employee")
+        .in("role_name", names);
+      allowed = (perms || []).some((p: { can_edit: boolean; scope: string }) => p.can_edit && p.scope === "all");
+    }
+    if (!allowed) return json({ error: "Forbidden: ต้องมีสิทธิ์แก้ไขข้อมูลพนักงาน (ขอบเขตทั้งองค์กร)" }, 403);
 
     const body = await req.json();
     const employeeId = body.employeeId as string | undefined;

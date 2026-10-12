@@ -729,10 +729,12 @@ const EmployeeProfile = () => {
               {emp.username && (
                 <div className="space-y-1 sm:col-span-2">
                   <p className="text-xs text-muted-foreground">ชื่อผู้ใช้ (สำหรับเข้าสู่ระบบ)</p>
-                  {/* Admin/HR may change a username — including their OWN. The
-                      admin-update-username edge function already allows self-update
-                      (it only requires the caller to be admin/hr). */}
-                  {isAdminOrHr ? (
+                  {/* Anyone who can edit employees with full scope may change a
+                      username (admin, HR, or a custom HR-level role) — including
+                      their OWN. Permission-based so it isn't limited to the literal
+                      "admin"/"hr" role names. The admin-update-username edge
+                      function allows the same set. */}
+                  {(isAdminOrHr || canEditRestricted) ? (
                     <div className="flex items-center gap-2">
                       <input
                         value={usernameInput}
