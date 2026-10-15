@@ -490,14 +490,30 @@ export const FaceScanFileImportDialog = ({
                   <div className="flex items-center gap-2 mb-2">
                     <AlertCircle className="w-4 h-4 text-amber-600" />
                     <span className="text-sm font-medium text-amber-700 dark:text-amber-400">
-                      รหัสต่อไปนี้ยังไม่ได้จับคู่กับพนักงาน ({preview.unmatchedPins.length} รหัส)
+                      รหัสต่อไปนี้ยังไม่ได้จับคู่กับพนักงาน ({preview.unmatchedPins.length} รหัส) — เลือกพนักงานเพื่อผูกรหัสได้ทันที
                     </span>
                   </div>
-                  <div className="max-h-32 overflow-y-auto text-xs space-y-1">
+                  <div className="max-h-48 overflow-y-auto text-xs space-y-2">
                     {sampleUnmatched.map(([pin, name]) => (
-                      <div key={pin} className="flex items-center gap-2">
-                        <Badge variant="outline" className="font-mono">{pin}</Badge>
-                        <span className="text-muted-foreground truncate">{name || "(ไม่มีชื่อ)"}</span>
+                      <div key={pin} className="flex items-center gap-2 flex-wrap">
+                        <Badge variant="outline" className="font-mono shrink-0">{pin}</Badge>
+                        <span className="text-muted-foreground truncate min-w-[80px]">{name || "(ไม่มีชื่อ)"}</span>
+                        <div className="flex-1 min-w-[180px]">
+                          <SearchableSelect
+                            value={manualLinks[pin] || ""}
+                            onChange={(v) =>
+                              setManualLinks((prev) => {
+                                const next = { ...prev };
+                                if (v) next[pin] = v;
+                                else delete next[pin];
+                                return next;
+                              })
+                            }
+                            options={linkableEmployeeOptions}
+                            placeholder="เลือกพนักงานเพื่อผูกรหัส..."
+                            allowClear
+                          />
+                        </div>
                       </div>
                     ))}
                   </div>
