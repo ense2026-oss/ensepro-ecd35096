@@ -9,6 +9,7 @@ import { Progress } from "@/components/ui/progress";
 import { Upload, FileText, AlertCircle, CheckCircle2, XCircle, Download } from "lucide-react";
 import { toast } from "sonner";
 import { useEmployees } from "@/contexts/EmployeeContext";
+import SearchableSelect from "@/components/ui/searchable-select";
 
 interface FaceScanFileImportDialogProps {
   open: boolean;
@@ -51,7 +52,8 @@ export const FaceScanFileImportDialog = ({
   const [file, setFile] = useState<File | null>(null);
   const [rows, setRows] = useState<ParsedRow[]>([]);
   const [step, setStep] = useState<"upload" | "preview" | "processing" | "done">("upload");
-  const [overwrite, setOverwrite] = useState(false);
+  const [overwrite, setOverwrite] = useState(true);
+  const [manualLinks, setManualLinks] = useState<Record<string, string>>({});
   const [progress, setProgress] = useState(0);
   const [result, setResult] = useState({ inserted: 0, updated: 0, skipped: 0, linked: 0, unmatched: 0 });
   const [processing, setProcessing] = useState(false);
