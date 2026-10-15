@@ -143,7 +143,7 @@ export const ImpersonationProvider: React.FC<{ children: React.ReactNode }> = ({
       }
       return { error: (data as any)?.error || error?.message || "เข้าสู่ระบบในฐานะพนักงานไม่สำเร็จ" };
     }
-    return data as { session?: { access_token?: string; refresh_token?: string }; tokenHash?: string; targetName?: string };
+    return data as ImpersonationResult;
   }, []);
 
   const prefetchImpersonation = useCallback((employeeId: string) => {
@@ -160,7 +160,7 @@ export const ImpersonationProvider: React.FC<{ children: React.ReactNode }> = ({
         // expired". With the old function (hash only), click just fetches fresh.
         if (!("error" in res) && res.session?.access_token && res.session?.refresh_token) {
           if (prefetchRef.current.size > 4) prefetchRef.current.clear();
-          prefetchRef.current.set(employeeId, { session: res.session, targetName: res.targetName, ts: Date.now() });
+          prefetchRef.current.set(employeeId, { session: res.session, targetName: res.targetName, boot: res.boot, ts: Date.now() });
         }
       })
       .catch(() => {})
