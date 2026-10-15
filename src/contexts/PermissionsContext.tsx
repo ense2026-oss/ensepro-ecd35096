@@ -214,8 +214,29 @@ export const PermissionsProvider: React.FC<{ children: React.ReactNode }> = ({ c
   );
 };
 
+// A missing provider used to throw straight through the page (blank screen).
+// That state only ever appears when the page boots from a half-reloaded module
+// graph (dev hot reload), so instead of crashing we hand back an inert,
+// fail-CLOSED context: every route/Action check denies, the layout still
+// renders, and the console records what actually happened.
+const inertPermissionsContext: PermissionsContextType = {
+  permissions: [],
+  loading: true,
+  canAccessRoute: () => false,
+  canAction: () => false,
+  getScope: () => "self",
+  isSelfOnly: () => true,
+  getModuleForRoute: () => undefined,
+  refreshPermissions: async () => {},
+  getRolePermissions: () => [],
+  getAllRoles: () => [],
+};
+
 export const usePermissions = () => {
   const ctx = useContext(PermissionsContext);
-  if (!ctx) throw new Error("usePermissions must be inside PermissionsProvider");
+  if (!ctx) {
+    console.warn("usePermissions: PermissionsProvider is missing from the tree — using inert fail-closed context");
+    return inertPermissionsContext;
+  }
   return ctx;
 };
