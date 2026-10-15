@@ -1025,6 +1025,9 @@ const Attendance = () => {
                       </tr>
                     );
                   })}
+                </tbody>
+              </table>
+            </div>
           </div>
         </>
       ) : (
