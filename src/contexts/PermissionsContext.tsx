@@ -69,8 +69,24 @@ interface PermissionsContextType {
 
 const PermissionsContext = createContext<PermissionsContextType | null>(null);
 
+// The permission matrix is global (same for every user) and small, so cache it
+// in localStorage: after a reload — including every Login as switch — the first
+// render already has the real matrix instead of a deny-all loading window.
+const PERMS_CACHE_KEY = "role_permissions_cache";
+
+function loadPermissionsCache(): RolePermission[] {
+  try {
+    const raw = localStorage.getItem(PERMS_CACHE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
 export const PermissionsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [permissions, setPermissions] = useState<RolePermission[]>([]);
+  const [permissions, setPermissions] = useState<RolePermission[]>(loadPermissionsCache);
   const [loading, setLoading] = useState(true);
   // `loaded` flips true only after a successful fetch. `loading` alone can't
   // distinguish "still fetching" from "fetch failed", and treating an empty
