@@ -92,6 +92,7 @@ export const PermissionsProvider: React.FC<{ children: React.ReactNode }> = ({ c
       );
       if (error) throw error;
       setPermissions((data as RolePermission[]) || []);
+      setLoaded(true);
     } catch (e) {
       console.error("Failed to load permissions:", e);
     } finally {
