@@ -370,10 +370,13 @@ const Attendance = () => {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  // Default the employee filter to the signed-in user (admin/hr/manager/executive included).
+  // Default the employee filter to the signed-in user only when their scope is
+  // "self" — admin/hr/manager (scope all/department) start from "all" so they
+  // see everyone's records right away.
   const selfFilterInit = useRef(false);
   useEffect(() => {
     if (selfFilterInit.current) return;
+    if (attendanceScope !== "self") return;
     const myName = `${currentUser?.firstName ?? ""} ${currentUser?.lastName ?? ""}`.trim();
     if (!myName || allNames.length === 0) return;
     selfFilterInit.current = true;
@@ -381,7 +384,7 @@ const Attendance = () => {
       setFilterEmployee(myName);
       setEmployeeSearch(myName);
     }
-  }, [allNames, currentUser?.firstName, currentUser?.lastName]);
+  }, [allNames, currentUser?.firstName, currentUser?.lastName, attendanceScope]);
 
   const filtered = useMemo(() => scopedAttendance.filter((a) => {
     const matchSearch = a.name.includes(search) || a.dept.includes(search);
