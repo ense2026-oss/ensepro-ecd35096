@@ -51,6 +51,9 @@ interface Prefetched extends ImpersonationResult {
 interface AdminSnapshot {
   authKey: string;
   blob: string;
+  // The admin's auth_profile_cache, stashed because the switch overwrites it
+  // with the target's — restoring it makes the return trip boot instantly too.
+  authCache?: string | null;
 }
 
 interface ImpersonationContextType {
