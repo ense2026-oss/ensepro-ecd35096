@@ -98,7 +98,13 @@ const lastDayOfMonthLocal = (year: number, month: number): string => {
   return `${year}-${String(month).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
 };
 
-const currentMonthLocal = (): string => String(new Date().getMonth() + 1).padStart(2, "0");
+// The page opens on last month's data, so the month filter defaults to month - 1.
+// Month and year move together — January's previous month is December of last year.
+const defaultMonthFilter = (): { month: string; year: number } => {
+  const now = new Date();
+  const d = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  return { month: String(d.getMonth() + 1).padStart(2, "0"), year: d.getFullYear() };
+};
 
 const Attendance = () => {
   const { employees } = useEmployees();
@@ -129,7 +135,9 @@ const Attendance = () => {
   const employeeDropdownRef = useRef<HTMLDivElement>(null);
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
-  const [filterMonth, setFilterMonth] = useState(currentMonthLocal);
+  const [defaultMonth] = useState(defaultMonthFilter);
+  const [filterMonth, setFilterMonth] = useState(defaultMonth.month);
+  const [filterMonthYear, setFilterMonthYear] = useState(defaultMonth.year);
   const [activeView, setActiveView] = useState<"attendance" | "requests">("attendance");
   const [importOpen, setImportOpen] = useState(false);
 
@@ -381,12 +389,12 @@ const Attendance = () => {
     const matchStatus = filterStatus === "all" || a.status === filterStatus;
     const matchEmployee = filterEmployee === "all" || a.name === filterEmployee;
     const matchDate = (!dateFrom || a.date >= dateFrom) && (!dateTo || a.date <= dateTo);
-    const matchMonth = !filterMonth || a.date.slice(5, 7) === filterMonth;
+    const matchMonth = !filterMonth || a.date.slice(0, 7) === `${filterMonthYear}-${filterMonth}`;
     // date range takes precedence over month; only one is active at a time.
     if (dateFrom || dateTo) return matchSearch && matchStatus && matchEmployee && matchDate;
     return matchSearch && matchStatus && matchEmployee && matchMonth;
   }).sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : a.name.localeCompare(b.name))),
-  [scopedAttendance, search, filterStatus, filterEmployee, dateFrom, dateTo, filterMonth]);
+  [scopedAttendance, search, filterStatus, filterEmployee, dateFrom, dateTo, filterMonth, filterMonthYear]);
 
   // Selected employee (one person) → fill every day of the selected period, even without a record.
   const selectedEmployee = useMemo(() => {
@@ -410,7 +418,7 @@ const Attendance = () => {
       start = dateFrom || dateTo;
       end = dateTo || dateFrom;
     } else if (filterMonth) {
-      const year = new Date().getFullYear();
+      const year = filterMonthYear;
       const m = parseInt(filterMonth, 10);
       start = `${year}-${filterMonth}-01`;
       end = lastDayOfMonthLocal(year, m);
@@ -464,7 +472,7 @@ const Attendance = () => {
   // Pagination (20 rows per page); back to page 1 whenever the filters change.
   const ATT_PAGE_SIZE = 20;
   const [attPage, setAttPage] = useState(1);
-  useEffect(() => { setAttPage(1); }, [search, filterStatus, filterEmployee, dateFrom, dateTo, filterMonth, activeView]);
+  useEffect(() => { setAttPage(1); }, [search, filterStatus, filterEmployee, dateFrom, dateTo, filterMonth, filterMonthYear, activeView]);
   const pagedRows = useMemo(
     () => displayRows.slice((attPage - 1) * ATT_PAGE_SIZE, attPage * ATT_PAGE_SIZE),
     [displayRows, attPage],
@@ -840,6 +848,8 @@ const Attendance = () => {
                   const month = e.target.value;
                   setFilterMonth(month);
                   if (month) {
+                    // Choosing a month by hand means this year; only the default steps back.
+                    setFilterMonthYear(new Date().getFullYear());
                     setDateFrom("");
                     setDateTo("");
                   }
@@ -880,7 +890,7 @@ const Attendance = () => {
                 />
                 {(dateFrom || dateTo) && (
                   <button
-                    onClick={() => { setDateFrom(""); setDateTo(""); setFilterMonth(currentMonthLocal()); }}
+                    onClick={() => { setDateFrom(""); setDateTo(""); setFilterMonth(defaultMonth.month); setFilterMonthYear(defaultMonth.year); }}
                     className="p-2 rounded-lg border hover:bg-muted transition-colors flex-shrink-0"
                     title="ล้างวันที่"
                   >
