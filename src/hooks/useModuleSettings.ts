@@ -120,6 +120,7 @@ export function useModuleSettings() {
       }
     }
 
+    setCompanySettingCache("module_settings", newModules);
     return {};
   }, []);
 
