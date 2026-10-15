@@ -9,6 +9,7 @@ import { Progress } from "@/components/ui/progress";
 import { Upload, FileText, AlertCircle, CheckCircle2, XCircle, Download } from "lucide-react";
 import { toast } from "sonner";
 import { useEmployees } from "@/contexts/EmployeeContext";
+import SearchableSelect from "@/components/ui/searchable-select";
 
 interface FaceScanFileImportDialogProps {
   open: boolean;
@@ -51,7 +52,8 @@ export const FaceScanFileImportDialog = ({
   const [file, setFile] = useState<File | null>(null);
   const [rows, setRows] = useState<ParsedRow[]>([]);
   const [step, setStep] = useState<"upload" | "preview" | "processing" | "done">("upload");
-  const [overwrite, setOverwrite] = useState(false);
+  const [overwrite, setOverwrite] = useState(true);
+  const [manualLinks, setManualLinks] = useState<Record<string, string>>({});
   const [progress, setProgress] = useState(0);
   const [result, setResult] = useState({ inserted: 0, updated: 0, skipped: 0, linked: 0, unmatched: 0 });
   const [processing, setProcessing] = useState(false);
@@ -115,12 +117,28 @@ export const FaceScanFileImportDialog = ({
     return tentative.filter((t) => (claims.get(t.employeeId) || 0) === 1);
   }, [rows, pinToEmployee, empByName, employees]);
 
-  // แผนที่รวม: รหัสที่ผูกแล้ว + รหัสที่จะเรียนรู้ใหม่
+  // แผนที่รวม: รหัสที่ผูกแล้ว + รหัสที่จะเรียนรู้ใหม่ + รหัสที่ HR เลือกผูกเองในหน้า Preview
   const effectivePinToEmployee = useMemo(() => {
     const m = new Map(pinToEmployee);
     for (const a of autoLinks) m.set(a.pin, a.employeeId);
+    for (const [pin, empId] of Object.entries(manualLinks)) {
+      if (empId) m.set(pin, empId);
+    }
     return m;
-  }, [pinToEmployee, autoLinks]);
+  }, [pinToEmployee, autoLinks, manualLinks]);
+
+  // ตัวเลือกพนักงานสำหรับผูกรหัสเอง (เฉพาะคนที่ยังไม่มี face_scan_id)
+  const linkableEmployeeOptions = useMemo(
+    () =>
+      employees
+        .filter((e) => !e.faceScanId || !e.faceScanId.trim())
+        .map((e) => ({
+          value: e.id,
+          label: `${e.firstName} ${e.lastName}`,
+          subtitle: `${e.dept ?? ""} · ${e.position ?? ""}`,
+        })),
+    [employees]
+  );
 
   const employeeName = useCallback(
     (id: string) => {
@@ -262,6 +280,12 @@ export const FaceScanFileImportDialog = ({
       try { await updateEmployee(a.employeeId, { faceScanId: a.pin }); linked++; }
       catch { /* ข้าม: ยังลงเวลาให้คนนี้ได้ด้วย employeeId */ }
     }
+    // ผูกรหัสที่ HR เลือกเองในหน้า Preview — บันทึกถาวรลงโปรไฟล์พนักงาน
+    for (const [pin, empId] of Object.entries(manualLinks)) {
+      if (!empId) continue;
+      try { await updateEmployee(empId, { faceScanId: pin }); linked++; }
+      catch { /* ข้าม */ }
+    }
 
     let inserted = 0;
     let updated = 0;
@@ -276,21 +300,33 @@ export const FaceScanFileImportDialog = ({
 
       const { data: existingRows } = await supabase
         .from("check_in_records")
-        .select("id, employee_id, date")
+        .select("id, employee_id, date, check_in, check_out")
         .in("employee_id", employeeIds)
         .in("date", dates);
 
-      const existingSet = new Set((existingRows || []).map((x: any) => `${x.employee_id}|${x.date}`));
-      const existingMap = new Map((existingRows || []).map((x: any) => [`${x.employee_id}|${x.date}`, x.id]));
+      const existingMap = new Map((existingRows || []).map((x: any) => [`${x.employee_id}|${x.date}`, x]));
 
       for (const rec of batch) {
         const key = `${rec.employeeId}|${rec.date}`;
-        const hasExisting = existingSet.has(key);
+        const existing = existingMap.get(key);
+        const hasExisting = !!existing;
+
+        // Smart Merge: เวลาเข้าเลือกเช้าสุด, เวลาออกเลือกดึกสุด, ไฟล์ไม่มีเวลาออกให้คงค่าเดิม
+        let checkIn = rec.checkIn;
+        let checkOut = rec.checkOut;
+        if (hasExisting && overwrite) {
+          const exIn = existing.check_in && existing.check_in !== "-" ? existing.check_in : null;
+          const exOut = existing.check_out && existing.check_out !== "-" ? existing.check_out : null;
+          if (exIn && exIn < checkIn) checkIn = exIn;
+          if (checkOut === "-") checkOut = exOut || "-";
+          else if (exOut && exOut > checkOut) checkOut = exOut;
+        }
+
         const payload = {
           employee_id: rec.employeeId,
           date: rec.date,
-          check_in: rec.checkIn,
-          check_out: rec.checkOut,
+          check_in: checkIn,
+          check_out: checkOut,
           location: rec.serialNumber || "Face Scanner",
           within_radius: true,
           source: "face_scan_file",
@@ -302,7 +338,7 @@ export const FaceScanFileImportDialog = ({
             const { error } = await supabase
               .from("check_in_records")
               .update(payload)
-              .eq("id", existingMap.get(key));
+              .eq("id", existing.id);
             if (!error) updated++;
             else skipped++;
           } else {
@@ -345,7 +381,8 @@ export const FaceScanFileImportDialog = ({
     setFile(null);
     setRows([]);
     setStep("upload");
-    setOverwrite(false);
+    setOverwrite(true);
+    setManualLinks({});
     setProgress(0);
     setResult({ inserted: 0, updated: 0, skipped: 0, linked: 0, unmatched: 0 });
   };
@@ -453,14 +490,30 @@ export const FaceScanFileImportDialog = ({
                   <div className="flex items-center gap-2 mb-2">
                     <AlertCircle className="w-4 h-4 text-amber-600" />
                     <span className="text-sm font-medium text-amber-700 dark:text-amber-400">
-                      รหัสต่อไปนี้ยังไม่ได้จับคู่กับพนักงาน ({preview.unmatchedPins.length} รหัส)
+                      รหัสต่อไปนี้ยังไม่ได้จับคู่กับพนักงาน ({preview.unmatchedPins.length} รหัส) — เลือกพนักงานเพื่อผูกรหัสได้ทันที
                     </span>
                   </div>
-                  <div className="max-h-32 overflow-y-auto text-xs space-y-1">
+                  <div className="max-h-48 overflow-y-auto text-xs space-y-2">
                     {sampleUnmatched.map(([pin, name]) => (
-                      <div key={pin} className="flex items-center gap-2">
-                        <Badge variant="outline" className="font-mono">{pin}</Badge>
-                        <span className="text-muted-foreground truncate">{name || "(ไม่มีชื่อ)"}</span>
+                      <div key={pin} className="flex items-center gap-2 flex-wrap">
+                        <Badge variant="outline" className="font-mono shrink-0">{pin}</Badge>
+                        <span className="text-muted-foreground truncate min-w-[80px]">{name || "(ไม่มีชื่อ)"}</span>
+                        <div className="flex-1 min-w-[180px]">
+                          <SearchableSelect
+                            value={manualLinks[pin] || ""}
+                            onChange={(v) =>
+                              setManualLinks((prev) => {
+                                const next = { ...prev };
+                                if (v) next[pin] = v;
+                                else delete next[pin];
+                                return next;
+                              })
+                            }
+                            options={linkableEmployeeOptions}
+                            placeholder="เลือกพนักงานเพื่อผูกรหัส..."
+                            allowClear
+                          />
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -474,7 +527,7 @@ export const FaceScanFileImportDialog = ({
                   onCheckedChange={(checked) => setOverwrite(checked === true)}
                 />
                 <label htmlFor="overwrite" className="text-sm cursor-pointer">
-                  เขียนทับข้อมูลที่มีอยู่แล้วในวันเดียวกัน (ค่าเริ่มต้นคือข้าม)
+                  เขียนทับข้อมูลที่มีอยู่แล้วในวันเดียวกัน (รวมเวลาอัตโนมัติ: เข้าเช้าสุด / ออกดึกสุด)
                 </label>
               </div>
             </div>
