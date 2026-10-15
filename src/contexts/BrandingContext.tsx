@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { getCompanySetting, setCompanySettingCache } from "@/lib/companySettings";
 
 interface BrandingState {
   programName: string;
@@ -95,6 +96,7 @@ export const BrandingProvider = ({ children }: { children: ReactNode }) => {
         .from("company_settings")
         .insert([{ key: "branding", value: jsonValue }]);
     }
+    setCompanySettingCache("branding", jsonValue);
   }, []);
 
   const update = (partial: Partial<BrandingState>) => {
