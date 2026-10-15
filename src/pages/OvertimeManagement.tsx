@@ -8,6 +8,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useDragScroll } from "@/hooks/useDragScroll";
 import { useDeferredMount } from "@/hooks/useDeferredMount";
 import { usePageQuery, unwrapAll } from "@/hooks/usePageQuery";
+import { useQueryClient } from "@tanstack/react-query";
+import { SHARED_KEY_PREFIX, fetchCompanyHolidays, fetchDayoffOverrides, fetchDayoffPatterns, fetchShiftAssignments, fetchShifts } from "@/lib/sharedQueries";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import SearchableSelect from "@/components/ui/searchable-select";
 import { ThaiDatePicker } from "@/components/ui/thai-date-picker";
