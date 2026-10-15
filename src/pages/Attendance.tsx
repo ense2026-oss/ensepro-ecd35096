@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Search, Download, CheckCircle, XCircle, Clock, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Save, X, FileText, Check, RotateCcw, CalendarDays, Eye, Upload } from "lucide-react";
+import { Search, Download, CheckCircle, XCircle, Clock, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Save, X, FileText, Check, RotateCcw, CalendarDays, Eye, Upload, Users } from "lucide-react";
 import { ThaiDatePicker } from "@/components/ui/thai-date-picker";
 import ResponsiveFilters from "@/components/ui/responsive-filters";
 import { format } from "date-fns";
@@ -964,7 +964,9 @@ const Attendance = () => {
               <table className="w-full">
                 <thead>
                   <tr className="border-b" style={{ borderColor: "hsl(var(--border))" }}>
-                    {["วันที่", "พนักงาน", "แผนก", "เวลาเข้า", "เวลาออก", "เข้าโอที", "ออกโอที", "OT (ชม.)", "สถานะ", ""].map((h, i) => (
+                    <th className="text-left px-2 py-2 w-px text-[11px] font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">วันที่</th>
+                    <th className="px-0 py-2 w-8 text-center" title="พนักงาน" aria-label="พนักงาน"><Users className="w-3.5 h-3.5 mx-auto text-muted-foreground" aria-hidden="true" /></th>
+                    {["แผนก", "เวลาเข้า", "เวลาออก", "เข้าโอที", "ออกโอที", "OT (ชม.)", "สถานะ", ""].map((h, i) => (
                       <th key={`${h}-${i}`} className="text-left px-3 py-2 text-[11px] font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
@@ -979,8 +981,8 @@ const Attendance = () => {
                     const Icon = conf.icon;
                     return (
                       <tr key={row.id} className="border-b hover:bg-muted/30 transition-colors" style={{ borderColor: "hsl(var(--border))" }}>
-                        <td className="px-3 py-1.5 text-sm font-medium whitespace-nowrap">{formatThaiShort(row.date)}</td>
-                        <td className="px-3 py-1.5">
+                        <td className="px-2 py-1.5 text-sm font-medium whitespace-nowrap">{formatThaiShort(row.date)}</td>
+                        <td className="px-0 py-1.5 w-8">
                           <div className="flex items-center justify-center">
                             <EmployeeAvatar photoUrl={photoMap.get(row.employeeId)} firstName={row.name} size="sm" rounded="lg" />
                           </div>
@@ -1042,7 +1044,9 @@ const Attendance = () => {
             <table className="w-full">
                 <thead>
                   <tr className="border-b" style={{ borderColor: "hsl(var(--border))" }}>
-                    {["วันที่", "พนักงาน", "เวลาเดิม", "เวลาใหม่", "เหตุผล", "สถานะ", ""].map((h, i) => (
+                    <th className="text-left px-2 py-2 w-px text-[11px] font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">วันที่</th>
+                    <th className="px-0 py-2 w-8 text-center" title="พนักงาน" aria-label="พนักงาน"><Users className="w-3.5 h-3.5 mx-auto text-muted-foreground" aria-hidden="true" /></th>
+                    {["เวลาเดิม", "เวลาใหม่", "เหตุผล", "สถานะ", ""].map((h, i) => (
                       <th key={`${h}-${i}`} className="text-left px-3 py-2 text-[11px] font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
@@ -1053,8 +1057,8 @@ const Attendance = () => {
                   const reqEmployee = employees.find((e) => e.id === req.employeeId);
                   return (
                     <tr key={req.id} className="border-b hover:bg-muted/30 transition-colors" style={{ borderColor: "hsl(var(--border))" }}>
-                      <td className="px-3 py-1.5 text-sm font-medium whitespace-nowrap">{formatThaiShort(req.date)}</td>
-                      <td className="px-3 py-1.5">
+                      <td className="px-2 py-1.5 text-sm font-medium whitespace-nowrap">{formatThaiShort(req.date)}</td>
+                      <td className="px-0 py-1.5 w-8">
                         <div className="flex items-center justify-center">
                           <EmployeeAvatar photoUrl={reqEmployee?.photoUrl} firstName={req.employeeName} size="sm" rounded="lg" />
                         </div>
