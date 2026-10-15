@@ -182,11 +182,11 @@ export function logAction(level: LogLevel, category: string, message: string, de
 export async function logEventSync(input: LogInput): Promise<void> {
   const message = trunc(input.message, 2000);
   if (!message) return;
-  await writeOne({
+  await writeBatch([{
     level: input.level || "info",
     category: input.category || "general",
     message,
     details: input.details,
     source: input.source,
-  });
+  }]);
 }
