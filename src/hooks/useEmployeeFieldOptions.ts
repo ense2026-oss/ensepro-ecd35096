@@ -4,6 +4,7 @@
  * ------------------------------------------------------------------------- */
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { getCompanySetting, setCompanySettingCache } from "@/lib/companySettings";
 
 export interface EmployeeFieldOptions {
   prefixes: string[];
@@ -46,16 +47,9 @@ export function mergeEmployeeFieldOptions(raw: unknown): EmployeeFieldOptions {
 }
 
 export async function fetchEmployeeFieldOptions(): Promise<EmployeeFieldOptions> {
-  try {
-    const { data } = await supabase
-      .from("company_settings")
-      .select("value")
-      .eq("key", EMPLOYEE_FIELD_OPTIONS_KEY)
-      .maybeSingle();
-    return mergeEmployeeFieldOptions(data?.value);
-  } catch {
-    return { ...DEFAULT_EMPLOYEE_FIELD_OPTIONS };
-  }
+  // Shared cached fetch — dedupes with other company_settings readers.
+  const value = await getCompanySetting(EMPLOYEE_FIELD_OPTIONS_KEY);
+  return mergeEmployeeFieldOptions(value);
 }
 
 export async function saveEmployeeFieldOptions(options: EmployeeFieldOptions): Promise<{ error: unknown }> {
@@ -71,9 +65,11 @@ export async function saveEmployeeFieldOptions(options: EmployeeFieldOptions): P
       .from("company_settings")
       .update({ value, updated_at: new Date().toISOString() })
       .eq("key", EMPLOYEE_FIELD_OPTIONS_KEY);
+    if (!error) setCompanySettingCache(EMPLOYEE_FIELD_OPTIONS_KEY, value);
     return { error };
   }
   const { error } = await supabase.from("company_settings").insert([{ key: EMPLOYEE_FIELD_OPTIONS_KEY, value }]);
+  if (!error) setCompanySettingCache(EMPLOYEE_FIELD_OPTIONS_KEY, value);
   return { error };
 }
 

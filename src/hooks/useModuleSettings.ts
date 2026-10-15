@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { withRetry } from "@/lib/retry";
+import { getCompanySetting, setCompanySettingCache } from "@/lib/companySettings";
 
 const DEFAULT_MODULES: Record<string, boolean> = {
   employees: true,
@@ -21,25 +21,12 @@ export function useModuleSettings() {
   const [loading, setLoading] = useState(true);
 
   const fetchSettings = useCallback(async (): Promise<void> => {
-    // Transient network/auth blips (incl. Supabase 504 "upstream request timeout",
-    // which arrives as `error`) shouldn't silently fall back to "everything
-    // enabled" — withRetry re-runs with exponential backoff before giving up.
-    const { data, error } = await withRetry(() =>
-      supabase
-        .from("company_settings")
-        .select("value")
-        .eq("key", "module_settings")
-        .maybeSingle()
-    );
+    // Shared cached fetch — dedupes with other company_settings readers so a
+    // page load costs at most one request for this key.
+    const value = await getCompanySetting<Record<string, boolean>>("module_settings");
 
-    if (error) {
-      console.error("Failed to load module settings", error);
-      setLoading(false);
-      return;
-    }
-
-    if (data?.value && typeof data.value === "object" && !Array.isArray(data.value)) {
-      const merged = { ...DEFAULT_MODULES, ...(data.value as Record<string, boolean>) };
+    if (value && typeof value === "object" && !Array.isArray(value)) {
+      const merged = { ...DEFAULT_MODULES, ...value };
       setModules(merged);
       window.dispatchEvent(new CustomEvent("module-settings-changed", { detail: merged }));
     }
@@ -133,6 +120,7 @@ export function useModuleSettings() {
       }
     }
 
+    setCompanySettingCache("module_settings", newModules);
     return {};
   }, []);
 

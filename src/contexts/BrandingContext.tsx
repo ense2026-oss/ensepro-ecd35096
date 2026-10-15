@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { getCompanySetting, setCompanySettingCache } from "@/lib/companySettings";
 
 interface BrandingState {
   programName: string;
@@ -59,30 +60,18 @@ export const BrandingProvider = ({ children }: { children: ReactNode }) => {
   // Fetch from DB in background, update cache
   useEffect(() => {
     const fetchBranding = async () => {
-      try {
-        const { data, error } = await supabase
-          .from("company_settings")
-          .select("value")
-          .eq("key", "branding")
-          .maybeSingle();
-        if (error) {
-          console.warn("Branding fetch skipped:", error.message);
-          return;
-        }
-        if (data?.value) {
-          const v = data.value as any;
-          const newState = {
-            programName: v.programName ?? defaults.programName,
-            programSubtitle: v.programSubtitle ?? defaults.programSubtitle,
-            logoUrl: v.logoUrl ?? null,
-            logoOnlyUrl: v.logoOnlyUrl ?? null,
-            displayMode: v.displayMode ?? defaults.displayMode,
-          };
-          setState(newState);
-          localStorage.setItem(BRANDING_CACHE_KEY, JSON.stringify(newState));
-        }
-      } catch {
-        // Use cached/defaults silently
+      // Shared cached fetch — dedupes with other company_settings readers.
+      const v = await getCompanySetting<any>("branding");
+      if (v) {
+        const newState = {
+          programName: v.programName ?? defaults.programName,
+          programSubtitle: v.programSubtitle ?? defaults.programSubtitle,
+          logoUrl: v.logoUrl ?? null,
+          logoOnlyUrl: v.logoOnlyUrl ?? null,
+          displayMode: v.displayMode ?? defaults.displayMode,
+        };
+        setState(newState);
+        localStorage.setItem(BRANDING_CACHE_KEY, JSON.stringify(newState));
       }
     };
     fetchBranding();
@@ -107,6 +96,7 @@ export const BrandingProvider = ({ children }: { children: ReactNode }) => {
         .from("company_settings")
         .insert([{ key: "branding", value: jsonValue }]);
     }
+    setCompanySettingCache("branding", jsonValue);
   }, []);
 
   const update = (partial: Partial<BrandingState>) => {
