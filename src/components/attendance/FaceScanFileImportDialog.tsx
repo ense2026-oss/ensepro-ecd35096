@@ -275,17 +275,18 @@ export const FaceScanFileImportDialog = ({
 
     // เรียนรู้รหัสจากไฟล์: ผูก face_scan_id = EnNo ให้พนักงานที่จับด้วยชื่อได้
     // (ครั้งต่อไปจะจับด้วย id ตรง ๆ ไม่ต้องจับชื่ออีก) — ลงเวลาใช้ employeeId จึงลงได้แม้ขั้นนี้พลาด
-    let linked = 0;
+    // ผูกรหัสแบบขนาน (ไม่รอทีละคน) เพื่อลดเวลารอเครือข่าย
+    const linkJobs: Promise<boolean>[] = [];
     for (const a of autoLinks) {
-      try { await updateEmployee(a.employeeId, { faceScanId: a.pin }); linked++; }
-      catch { /* ข้าม: ยังลงเวลาให้คนนี้ได้ด้วย employeeId */ }
+      linkJobs.push(updateEmployee(a.employeeId, { faceScanId: a.pin }).then(() => true).catch(() => false));
     }
     // ผูกรหัสที่ HR เลือกเองในหน้า Preview — บันทึกถาวรลงโปรไฟล์พนักงาน
     for (const [pin, empId] of Object.entries(manualLinks)) {
       if (!empId) continue;
-      try { await updateEmployee(empId, { faceScanId: pin }); linked++; }
-      catch { /* ข้าม */ }
+      linkJobs.push(updateEmployee(empId, { faceScanId: pin }).then(() => true).catch(() => false));
     }
+    const linkResults = await Promise.all(linkJobs);
+    const linked = linkResults.filter(Boolean).length;
 
     let inserted = 0;
     let updated = 0;
