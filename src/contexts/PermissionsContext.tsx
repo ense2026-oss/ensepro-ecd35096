@@ -125,8 +125,11 @@ export const PermissionsProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const canAccessRoute = useCallback((role: string, path: string): boolean => {
     const normalized = "/" + path.split("/")[1];
     if (alwaysAccessible.includes(normalized)) return true;
-    // Permissions not loaded yet: allow to avoid false lockout during initial fetch
-    if (permissions.length === 0) return true;
+    // Fail CLOSED while the matrix is loading or after a failed fetch: an empty
+    // matrix must deny known modules, never allow them (previously this allowed
+    // everything, so an impersonated employee kept admin access until the fetch
+    // landed — or permanently if it failed).
+    if (!loaded) return false;
     // Settings page: accessible if ANY settings sub-tab is viewable for this role
     if (normalized === "/settings") {
       const r = role.toLowerCase();
