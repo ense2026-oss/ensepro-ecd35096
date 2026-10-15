@@ -142,7 +142,7 @@ export const PermissionsProvider: React.FC<{ children: React.ReactNode }> = ({ c
     const perm = permissions.find((p) => p.role_name === role.toLowerCase() && p.module === mod);
     if (!perm) return false; // no permission record for a known module = deny access
     return perm.can_view;
-  }, [permissions]);
+  }, [permissions, loaded]);
 
 
   const canAction = useCallback((role: string, module: string, action: ActionKey): boolean => {

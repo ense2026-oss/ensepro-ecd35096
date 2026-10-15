@@ -84,6 +84,19 @@ const MainLayout = () => {
   // "ไม่พบข้อมูลพนักงาน" whenever the employee link hadn't resolved.
   const selfEmployeeId = currentUser?.employeeId ?? null;
 
+  // Wait for the permission matrix before any route decision: canAccessRoute
+  // now fails CLOSED while loading, so checking early would bounce everyone.
+  if (permLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-3 border-primary border-t-transparent rounded-full animate-spin" />
+          <p className="text-sm text-muted-foreground">กำลังโหลด...</p>
+        </div>
+      </div>
+    );
+  }
+
   // Check role-based access for current path
   const currentPath = "/" + location.pathname.split("/")[1]; // e.g. /employees/123 → /employees
   if (!canAccessRoute(role, currentPath)) {
