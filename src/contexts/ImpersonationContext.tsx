@@ -192,8 +192,9 @@ export const ImpersonationProvider: React.FC<{ children: React.ReactNode }> = ({
         }
 
         // Record the switch here — still authenticated as the admin and before
-        // either path swaps the session — and wait so it persists before reload.
-        await logEventSync({ level: "info", category: "login_as", message: `เข้าสู่ระบบในฐานะ: ${d.targetName || "พนักงาน"}`, details: { targetName: d.targetName, employeeId } });
+        // either path swaps the session. Fire-and-forget: awaiting this round
+        // trip used to add noticeable delay to every Login as.
+        void logEventSync({ level: "info", category: "login_as", message: `เข้าสู่ระบบในฐานะ: ${d.targetName || "พนักงาน"}`, details: { targetName: d.targetName, employeeId } });
 
         // Fast path: a full session — write it to storage (lock-free) and reload.
         if (d.session?.access_token && d.session?.refresh_token) {
@@ -253,7 +254,7 @@ export const ImpersonationProvider: React.FC<{ children: React.ReactNode }> = ({
   const stopImpersonation = useCallback(async (): Promise<void> => {
     setBusy(true);
     const whom = readFlag();
-    await logEventSync({ level: "info", category: "login_as", message: `ออกจากการเข้าใช้งานในฐานะ${whom ? `: ${whom}` : ""}`, details: { targetName: whom } });
+    void logEventSync({ level: "info", category: "login_as", message: `ออกจากการเข้าใช้งานในฐานะ${whom ? `: ${whom}` : ""}`, details: { targetName: whom } });
     let restored = false;
     try {
       const raw = sessionStorage.getItem(STASH_KEY);

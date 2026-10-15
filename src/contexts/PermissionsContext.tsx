@@ -72,6 +72,11 @@ const PermissionsContext = createContext<PermissionsContextType | null>(null);
 export const PermissionsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [permissions, setPermissions] = useState<RolePermission[]>([]);
   const [loading, setLoading] = useState(true);
+  // `loaded` flips true only after a successful fetch. `loading` alone can't
+  // distinguish "still fetching" from "fetch failed", and treating an empty
+  // matrix as "allow everything" is exactly how an impersonated employee (or
+  // anyone on a slow connection) briefly inherits admin access.
+  const [loaded, setLoaded] = useState(false);
   const { user } = useAuth();
 
   const fetchPermissions = useCallback(async () => {
@@ -87,6 +92,7 @@ export const PermissionsProvider: React.FC<{ children: React.ReactNode }> = ({ c
       );
       if (error) throw error;
       setPermissions((data as RolePermission[]) || []);
+      setLoaded(true);
     } catch (e) {
       console.error("Failed to load permissions:", e);
     } finally {
@@ -119,8 +125,11 @@ export const PermissionsProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const canAccessRoute = useCallback((role: string, path: string): boolean => {
     const normalized = "/" + path.split("/")[1];
     if (alwaysAccessible.includes(normalized)) return true;
-    // Permissions not loaded yet: allow to avoid false lockout during initial fetch
-    if (permissions.length === 0) return true;
+    // Fail CLOSED while the matrix is loading or after a failed fetch: an empty
+    // matrix must deny known modules, never allow them (previously this allowed
+    // everything, so an impersonated employee kept admin access until the fetch
+    // landed — or permanently if it failed).
+    if (!loaded) return false;
     // Settings page: accessible if ANY settings sub-tab is viewable for this role
     if (normalized === "/settings") {
       const r = role.toLowerCase();
@@ -133,7 +142,7 @@ export const PermissionsProvider: React.FC<{ children: React.ReactNode }> = ({ c
     const perm = permissions.find((p) => p.role_name === role.toLowerCase() && p.module === mod);
     if (!perm) return false; // no permission record for a known module = deny access
     return perm.can_view;
-  }, [permissions]);
+  }, [permissions, loaded]);
 
 
   const canAction = useCallback((role: string, module: string, action: ActionKey): boolean => {
@@ -205,8 +214,29 @@ export const PermissionsProvider: React.FC<{ children: React.ReactNode }> = ({ c
   );
 };
 
+// A missing provider used to throw straight through the page (blank screen).
+// That state only ever appears when the page boots from a half-reloaded module
+// graph (dev hot reload), so instead of crashing we hand back an inert,
+// fail-CLOSED context: every route/Action check denies, the layout still
+// renders, and the console records what actually happened.
+const inertPermissionsContext: PermissionsContextType = {
+  permissions: [],
+  loading: true,
+  canAccessRoute: () => false,
+  canAction: () => false,
+  getScope: () => "self",
+  isSelfOnly: () => true,
+  getModuleForRoute: () => undefined,
+  refreshPermissions: async () => {},
+  getRolePermissions: () => [],
+  getAllRoles: () => [],
+};
+
 export const usePermissions = () => {
   const ctx = useContext(PermissionsContext);
-  if (!ctx) throw new Error("usePermissions must be inside PermissionsProvider");
+  if (!ctx) {
+    console.warn("usePermissions: PermissionsProvider is missing from the tree — using inert fail-closed context");
+    return inertPermissionsContext;
+  }
   return ctx;
 };
