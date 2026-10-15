@@ -311,7 +311,7 @@ const OvertimeRequest = () => {
           id: r.id,
           employeeId: r.employee_id,
           employeeName: r.employees ? `${r.employees.first_name} ${r.employees.last_name}` : "",
-          photoUrl: r.employees?.photo_url || undefined,
+          photoUrl: photoById.get(r.employee_id) || undefined,
           department: r.employees?.dept || "",
           date: r.date,
           startTime: r.start_time,
