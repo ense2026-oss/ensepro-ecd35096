@@ -19,7 +19,6 @@ import { notifyRequester, notifyTierApprover } from "@/utils/notifications";
 import EmployeeAvatar from "@/components/ui/employee-avatar";
 import FaceScanFileImportDialog from "@/components/attendance/FaceScanFileImportDialog";
 import { usePageQuery, unwrapAll } from "@/hooks/usePageQuery";
-import PaginationBar from "@/components/ui/pagination-bar";
 
 
 interface AttendanceRecord {

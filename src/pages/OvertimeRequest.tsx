@@ -287,14 +287,17 @@ const OvertimeRequest = () => {
   const { loading, refetch: fetchRequests } = usePageQuery(
     ["overtime-requests"],
     async () => {
+      // ไม่ดึง photo_url ใน query นี้ (ไฟล์รูปทำให้โหลดช้ามาก) — ใช้รูปจาก EmployeeContext แทน
+      const photoById = new Map(employees.map((e) => [e.id, e.photoUrl]));
       const [data, actuals] = unwrapAll(await Promise.all([
         supabase
           .from("overtime_requests")
-          .select("*, employees(first_name, last_name, dept, photo_url)")
+          .select("*, employees(first_name, last_name, dept)")
           .order("created_at", { ascending: false }),
         supabase
           .from("check_in_records")
-          .select("employee_id, date, ot_actual_in, ot_actual_out"),
+          .select("employee_id, date, ot_actual_in, ot_actual_out")
+          .or("ot_actual_in.not.is.null,ot_actual_out.not.is.null"),
       ]));
       const actualMap = new Map<string, { in: string | null; out: string | null }>();
       (actuals as any[]).forEach((a: any) => {
