@@ -92,7 +92,7 @@ export const PermissionsProvider: React.FC<{ children: React.ReactNode }> = ({ c
   // distinguish "still fetching" from "fetch failed", and treating an empty
   // matrix as "allow everything" is exactly how an impersonated employee (or
   // anyone on a slow connection) briefly inherits admin access.
-  const [loaded, setLoaded] = useState(false);
+  const [loaded, setLoaded] = useState(() => loadPermissionsCache().length > 0);
   const { user } = useAuth();
 
   const fetchPermissions = useCallback(async () => {
@@ -107,8 +107,10 @@ export const PermissionsProvider: React.FC<{ children: React.ReactNode }> = ({ c
           .order("role_name")
       );
       if (error) throw error;
-      setPermissions((data as RolePermission[]) || []);
+      const rows = (data as RolePermission[]) || [];
+      setPermissions(rows);
       setLoaded(true);
+      try { localStorage.setItem(PERMS_CACHE_KEY, JSON.stringify(rows)); } catch {}
     } catch (e) {
       console.error("Failed to load permissions:", e);
     } finally {
