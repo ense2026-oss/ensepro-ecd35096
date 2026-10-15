@@ -275,17 +275,18 @@ export const FaceScanFileImportDialog = ({
 
     // เรียนรู้รหัสจากไฟล์: ผูก face_scan_id = EnNo ให้พนักงานที่จับด้วยชื่อได้
     // (ครั้งต่อไปจะจับด้วย id ตรง ๆ ไม่ต้องจับชื่ออีก) — ลงเวลาใช้ employeeId จึงลงได้แม้ขั้นนี้พลาด
-    let linked = 0;
+    // ผูกรหัสแบบขนาน (ไม่รอทีละคน) เพื่อลดเวลารอเครือข่าย
+    const linkJobs: Promise<boolean>[] = [];
     for (const a of autoLinks) {
-      try { await updateEmployee(a.employeeId, { faceScanId: a.pin }); linked++; }
-      catch { /* ข้าม: ยังลงเวลาให้คนนี้ได้ด้วย employeeId */ }
+      linkJobs.push(updateEmployee(a.employeeId, { faceScanId: a.pin }).then(() => true).catch(() => false));
     }
     // ผูกรหัสที่ HR เลือกเองในหน้า Preview — บันทึกถาวรลงโปรไฟล์พนักงาน
     for (const [pin, empId] of Object.entries(manualLinks)) {
       if (!empId) continue;
-      try { await updateEmployee(empId, { faceScanId: pin }); linked++; }
-      catch { /* ข้าม */ }
+      linkJobs.push(updateEmployee(empId, { faceScanId: pin }).then(() => true).catch(() => false));
     }
+    const linkResults = await Promise.all(linkJobs);
+    const linked = linkResults.filter(Boolean).length;
 
     let inserted = 0;
     let updated = 0;
@@ -305,6 +306,11 @@ export const FaceScanFileImportDialog = ({
         .in("date", dates);
 
       const existingMap = new Map((existingRows || []).map((x: any) => [`${x.employee_id}|${x.date}`, x]));
+
+      // รวมเป็นก้อนแล้วเขียนทีเดียวต่อ batch (ไม่ยิงทีละแถว) เพื่อลดรอบการรอเครือข่าย
+      const updatePayloads: any[] = [];
+      const insertPayloads: any[] = [];
+      let batchSkipped = 0;
 
       for (const rec of batch) {
         const key = `${rec.employeeId}|${rec.date}`;
@@ -334,22 +340,36 @@ export const FaceScanFileImportDialog = ({
         };
 
         if (hasExisting) {
-          if (overwrite) {
-            const { error } = await supabase
-              .from("check_in_records")
-              .update(payload)
-              .eq("id", existing.id);
-            if (!error) updated++;
-            else skipped++;
-          } else {
-            skipped++;
-          }
+          if (overwrite) updatePayloads.push({ id: existing.id, ...payload });
+          else batchSkipped++;
         } else {
-          const { error } = await supabase.from("check_in_records").insert(payload);
-          if (!error) inserted++;
-          else skipped++;
+          insertPayloads.push(payload);
         }
       }
+
+      const [updRes, insRes] = await Promise.all([
+        updatePayloads.length
+          ? supabase.from("check_in_records").upsert(updatePayloads, { onConflict: "id" })
+          : Promise.resolve({ error: null }),
+        insertPayloads.length
+          ? supabase.from("check_in_records").insert(insertPayloads)
+          : Promise.resolve({ error: null }),
+      ]);
+      if (updRes.error || insRes.error) {
+        // ถ้าเขียนก้อนไม่ผ่าน ลองทีละแถวเพื่อกู้เท่าที่ทำได้
+        for (const p of updatePayloads) {
+          const { error } = await supabase.from("check_in_records").update(p).eq("id", p.id);
+          if (!error) updated++; else skipped++;
+        }
+        for (const p of insertPayloads) {
+          const { error } = await supabase.from("check_in_records").insert(p);
+          if (!error) inserted++; else skipped++;
+        }
+      } else {
+        updated += updatePayloads.length;
+        inserted += insertPayloads.length;
+      }
+      skipped += batchSkipped;
 
       setProgress(Math.min(100, Math.round(((i + batch.length) / dailyRecords.length) * 100)));
     }
