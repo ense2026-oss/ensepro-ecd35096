@@ -72,6 +72,11 @@ const PermissionsContext = createContext<PermissionsContextType | null>(null);
 export const PermissionsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [permissions, setPermissions] = useState<RolePermission[]>([]);
   const [loading, setLoading] = useState(true);
+  // `loaded` flips true only after a successful fetch. `loading` alone can't
+  // distinguish "still fetching" from "fetch failed", and treating an empty
+  // matrix as "allow everything" is exactly how an impersonated employee (or
+  // anyone on a slow connection) briefly inherits admin access.
+  const [loaded, setLoaded] = useState(false);
   const { user } = useAuth();
 
   const fetchPermissions = useCallback(async () => {
