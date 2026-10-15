@@ -179,19 +179,21 @@ const ShiftManagement = () => {
   }, [isEmployeeRole, employeeId]);
 
   const canEdit = canAction(role, "shiftManagement", "edit");
+  const queryClient = useQueryClient();
 
   // Cached via React Query: revisiting this page renders instantly from cache and
   // only refetches in the background; 504s are retried before showing an error.
+  // ตารางอ้างอิง (กะ/วันหยุด/วันหยุดบริษัท) ใช้ cache กลางร่วมกับหน้าอื่น
   const { loading, refetch: fetchAll } = usePageQuery(
     ["shift-management"],
     async () => {
-      const [sh, asn, pr, or, hol] = unwrapAll(await Promise.all([
-        supabase.from("shifts").select("*").order("sort_order"),
-        supabase.from("shift_assignments").select("*").order("created_at", { ascending: false }),
-        supabase.from("employee_dayoff_patterns").select("*"),
-        supabase.from("employee_dayoff_overrides").select("*"),
-        supabase.from("company_holidays").select("*"),
-      ]));
+      const [sh, asn, pr, or, hol] = await Promise.all([
+        fetchShifts(queryClient),
+        fetchShiftAssignments(queryClient),
+        fetchDayoffPatterns(queryClient),
+        fetchDayoffOverrides(queryClient),
+        fetchCompanyHolidays(queryClient),
+      ]);
       return {
         shifts: sh as Shift[],
         assignments: asn as ShiftAssignment[],

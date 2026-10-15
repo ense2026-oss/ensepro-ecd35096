@@ -141,20 +141,23 @@ const OvertimeManagement = () => {
 
   const canEdit = canAction(role, "ot", "edit");
   const managerName = currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : "ผู้ดูแลระบบ";
+  const queryClient = useQueryClient();
 
   // Cached via React Query: revisiting this page renders instantly from cache and
   // only refetches in the background; 504s are retried before showing an error.
+  // ตารางอ้างอิง (กะ/วันหยุด/วันหยุดบริษัท) ใช้ cache กลางร่วมกับหน้าอื่น
   const { loading, refetch: fetchAll } = usePageQuery(
     ["overtime-management"],
     async () => {
-      const [ot, pr, or, hol, sh, asn] = unwrapAll(await Promise.all([
+      const [otRes, pr, or, hol, sh, asn] = await Promise.all([
         supabase.from("overtime_requests").select("id, employee_id, date, hours, ot_type, start_time, end_time, status").eq("status", "approved"),
-        supabase.from("employee_dayoff_patterns").select("*"),
-        supabase.from("employee_dayoff_overrides").select("*"),
-        supabase.from("company_holidays").select("*"),
-        supabase.from("shifts").select("*").order("sort_order"),
-        supabase.from("shift_assignments").select("*"),
-      ]));
+        fetchDayoffPatterns(queryClient),
+        fetchDayoffOverrides(queryClient),
+        fetchCompanyHolidays(queryClient),
+        fetchShifts(queryClient),
+        fetchShiftAssignments(queryClient),
+      ]);
+      const [ot] = unwrapAll([otRes]);
       return {
         entries: ot as OTEntry[],
         patterns: pr as Pattern[],

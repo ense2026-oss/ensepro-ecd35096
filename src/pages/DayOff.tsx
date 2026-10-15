@@ -151,14 +151,16 @@ const DayOff = () => {
 
   // Cached via React Query: revisiting this page renders instantly from cache and
   // only refetches in the background; 504s are retried before showing an error.
+  // ใช้ cache กลางร่วมกับหน้าจัดการกะ/จัดการโอที — สลับหน้าแล้วไม่ต้องโหลดซ้ำ
+  const queryClient = useQueryClient();
   const { loading, refetch: fetchAll } = usePageQuery(
     ["day-off"],
     async () => {
-      const [pr, or, hr] = unwrapAll(await Promise.all([
-        supabase.from("employee_dayoff_patterns").select("*"),
-        supabase.from("employee_dayoff_overrides").select("*"),
-        supabase.from("company_holidays").select("*"),
-      ]));
+      const [pr, or, hr] = await Promise.all([
+        fetchDayoffPatterns(queryClient),
+        fetchDayoffOverrides(queryClient),
+        fetchCompanyHolidays(queryClient),
+      ]);
       return {
         patterns: pr as Pattern[],
         overrides: or as Override[],
