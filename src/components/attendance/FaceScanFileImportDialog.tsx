@@ -280,6 +280,12 @@ export const FaceScanFileImportDialog = ({
       try { await updateEmployee(a.employeeId, { faceScanId: a.pin }); linked++; }
       catch { /* ข้าม: ยังลงเวลาให้คนนี้ได้ด้วย employeeId */ }
     }
+    // ผูกรหัสที่ HR เลือกเองในหน้า Preview — บันทึกถาวรลงโปรไฟล์พนักงาน
+    for (const [pin, empId] of Object.entries(manualLinks)) {
+      if (!empId) continue;
+      try { await updateEmployee(empId, { faceScanId: pin }); linked++; }
+      catch { /* ข้าม */ }
+    }
 
     let inserted = 0;
     let updated = 0;
