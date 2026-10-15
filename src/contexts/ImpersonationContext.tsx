@@ -182,10 +182,10 @@ export const ImpersonationProvider: React.FC<{ children: React.ReactNode }> = ({
       // Use a prefetched (hover-warmed) result if we have one — this makes the
       // click itself instant, like the admin-restore. Otherwise fetch now.
       const warm = prefetchRef.current.get(employeeId);
-      let data: { session?: { access_token?: string; refresh_token?: string }; tokenHash?: string; targetName?: string } | { error: string };
+      let data: ImpersonationResult | { error: string };
       if (warm && Date.now() - warm.ts < PREFETCH_TTL) {
         prefetchRef.current.delete(employeeId);
-        data = { session: warm.session, tokenHash: warm.tokenHash, targetName: warm.targetName };
+        data = { session: warm.session, tokenHash: warm.tokenHash, targetName: warm.targetName, boot: warm.boot };
       } else {
         data = await callImpersonateFn(employeeId);
       }
