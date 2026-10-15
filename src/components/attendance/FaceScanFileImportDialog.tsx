@@ -117,12 +117,28 @@ export const FaceScanFileImportDialog = ({
     return tentative.filter((t) => (claims.get(t.employeeId) || 0) === 1);
   }, [rows, pinToEmployee, empByName, employees]);
 
-  // แผนที่รวม: รหัสที่ผูกแล้ว + รหัสที่จะเรียนรู้ใหม่
+  // แผนที่รวม: รหัสที่ผูกแล้ว + รหัสที่จะเรียนรู้ใหม่ + รหัสที่ HR เลือกผูกเองในหน้า Preview
   const effectivePinToEmployee = useMemo(() => {
     const m = new Map(pinToEmployee);
     for (const a of autoLinks) m.set(a.pin, a.employeeId);
+    for (const [pin, empId] of Object.entries(manualLinks)) {
+      if (empId) m.set(pin, empId);
+    }
     return m;
-  }, [pinToEmployee, autoLinks]);
+  }, [pinToEmployee, autoLinks, manualLinks]);
+
+  // ตัวเลือกพนักงานสำหรับผูกรหัสเอง (เฉพาะคนที่ยังไม่มี face_scan_id)
+  const linkableEmployeeOptions = useMemo(
+    () =>
+      employees
+        .filter((e) => !e.faceScanId || !e.faceScanId.trim())
+        .map((e) => ({
+          value: e.id,
+          label: `${e.firstName} ${e.lastName}`,
+          subtitle: `${e.dept ?? ""} · ${e.position ?? ""}`,
+        })),
+    [employees]
+  );
 
   const employeeName = useCallback(
     (id: string) => {
