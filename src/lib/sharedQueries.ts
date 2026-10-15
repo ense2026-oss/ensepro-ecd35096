@@ -26,43 +26,43 @@ const sharedKeys = {
   shiftAssignments: [...SHARED_KEY_PREFIX, "shift-assignments"],
 } as const;
 
-async function run<T>(p: PromiseLike<{ data: T | null; error: { message: string } | null }>): Promise<T> {
+async function run(p: PromiseLike<{ data: unknown; error: { message: string } | null }>): Promise<any[]> {
   const { data, error } = await p;
   if (error) throw new Error(error.message || "โหลดข้อมูลไม่สำเร็จ");
-  return (data ?? ([] as unknown)) as T;
+  return (data as any[]) ?? [];
 }
 
-export const fetchCompanyHolidays = <T = any[]>(qc: QueryClient) =>
+export const fetchCompanyHolidays = (qc: QueryClient): Promise<any[]> =>
   qc.fetchQuery({
     queryKey: sharedKeys.holidays,
     staleTime: STALE_MS,
-    queryFn: () => run<T>(supabase.from("company_holidays").select("*")),
+    queryFn: () => run(supabase.from("company_holidays").select("*")),
   });
 
-export const fetchDayoffPatterns = <T = any[]>(qc: QueryClient) =>
+export const fetchDayoffPatterns = (qc: QueryClient): Promise<any[]> =>
   qc.fetchQuery({
     queryKey: sharedKeys.dayoffPatterns,
     staleTime: STALE_MS,
-    queryFn: () => run<T>(supabase.from("employee_dayoff_patterns").select("*")),
+    queryFn: () => run(supabase.from("employee_dayoff_patterns").select("*")),
   });
 
-export const fetchDayoffOverrides = <T = any[]>(qc: QueryClient) =>
+export const fetchDayoffOverrides = (qc: QueryClient): Promise<any[]> =>
   qc.fetchQuery({
     queryKey: sharedKeys.dayoffOverrides,
     staleTime: STALE_MS,
-    queryFn: () => run<T>(supabase.from("employee_dayoff_overrides").select("*")),
+    queryFn: () => run(supabase.from("employee_dayoff_overrides").select("*")),
   });
 
-export const fetchShifts = <T = any[]>(qc: QueryClient) =>
+export const fetchShifts = (qc: QueryClient): Promise<any[]> =>
   qc.fetchQuery({
     queryKey: sharedKeys.shifts,
     staleTime: STALE_MS,
-    queryFn: () => run<T>(supabase.from("shifts").select("*").order("sort_order")),
+    queryFn: () => run(supabase.from("shifts").select("*").order("sort_order")),
   });
 
-export const fetchShiftAssignments = <T = any[]>(qc: QueryClient) =>
+export const fetchShiftAssignments = (qc: QueryClient): Promise<any[]> =>
   qc.fetchQuery({
     queryKey: sharedKeys.shiftAssignments,
     staleTime: STALE_MS,
-    queryFn: () => run<T>(supabase.from("shift_assignments").select("*").order("created_at", { ascending: false })),
+    queryFn: () => run(supabase.from("shift_assignments").select("*").order("created_at", { ascending: false })),
   });
