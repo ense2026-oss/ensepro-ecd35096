@@ -8,6 +8,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useDragScroll } from "@/hooks/useDragScroll";
 import { useDeferredMount } from "@/hooks/useDeferredMount";
 import { usePageQuery, unwrapAll } from "@/hooks/usePageQuery";
+import { useQueryClient } from "@tanstack/react-query";
+import { SHARED_KEY_PREFIX, fetchCompanyHolidays, fetchDayoffOverrides, fetchDayoffPatterns, fetchShiftAssignments, fetchShifts } from "@/lib/sharedQueries";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import SearchableSelect from "@/components/ui/searchable-select";
 import { ThaiDatePicker } from "@/components/ui/thai-date-picker";
@@ -139,20 +141,23 @@ const OvertimeManagement = () => {
 
   const canEdit = canAction(role, "ot", "edit");
   const managerName = currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : "ผู้ดูแลระบบ";
+  const queryClient = useQueryClient();
 
   // Cached via React Query: revisiting this page renders instantly from cache and
   // only refetches in the background; 504s are retried before showing an error.
+  // ตารางอ้างอิง (กะ/วันหยุด/วันหยุดบริษัท) ใช้ cache กลางร่วมกับหน้าอื่น
   const { loading, refetch: fetchAll } = usePageQuery(
     ["overtime-management"],
     async () => {
-      const [ot, pr, or, hol, sh, asn] = unwrapAll(await Promise.all([
+      const [otRes, pr, or, hol, sh, asn] = await Promise.all([
         supabase.from("overtime_requests").select("id, employee_id, date, hours, ot_type, start_time, end_time, status").eq("status", "approved"),
-        supabase.from("employee_dayoff_patterns").select("*"),
-        supabase.from("employee_dayoff_overrides").select("*"),
-        supabase.from("company_holidays").select("*"),
-        supabase.from("shifts").select("*").order("sort_order"),
-        supabase.from("shift_assignments").select("*"),
-      ]));
+        fetchDayoffPatterns(queryClient),
+        fetchDayoffOverrides(queryClient),
+        fetchCompanyHolidays(queryClient),
+        fetchShifts(queryClient),
+        fetchShiftAssignments(queryClient),
+      ]);
+      const [ot] = unwrapAll([otRes]);
       return {
         entries: ot as OTEntry[],
         patterns: pr as Pattern[],
@@ -173,7 +178,7 @@ const OvertimeManagement = () => {
   );
 
   useEffect(() => {
-    const refetch = () => { fetchAll(false); };
+    const refetch = () => { queryClient.invalidateQueries({ queryKey: SHARED_KEY_PREFIX }); fetchAll(false); };
     const channel = supabase
       .channel("ot-mgmt-realtime")
       .on("postgres_changes", { event: "*", schema: "public", table: "overtime_requests" }, refetch)
@@ -310,9 +315,7 @@ const OvertimeManagement = () => {
     if (!canEdit) return;
     try {
       const existing = otFor(empId, dateIso);
-      for (const ex of existing) {
-        await supabase.from("overtime_requests").delete().eq("id", ex.id);
-      }
+      await Promise.all(existing.map((ex) => supabase.from("overtime_requests").delete().eq("id", ex.id)));
       if (hours > 0) {
         const { error } = await supabase.from("overtime_requests").insert({
           employee_id: empId,
@@ -339,9 +342,7 @@ const OvertimeManagement = () => {
     if (!canEdit) return;
     try {
       const existing = otFor(empId, dateIso);
-      for (const ex of existing) {
-        await supabase.from("overtime_requests").delete().eq("id", ex.id);
-      }
+      await Promise.all(existing.map((ex) => supabase.from("overtime_requests").delete().eq("id", ex.id)));
     } catch (err: any) {
       toast({ title: "ไม่สามารถลบได้", description: err.message, variant: "destructive" });
     }

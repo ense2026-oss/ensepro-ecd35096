@@ -6,7 +6,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/contexts/PermissionsContext";
 import { useToast } from "@/hooks/use-toast";
 import { useDragScroll } from "@/hooks/useDragScroll";
-import { usePageQuery, unwrapAll } from "@/hooks/usePageQuery";
+import { usePageQuery } from "@/hooks/usePageQuery";
+import { useQueryClient } from "@tanstack/react-query";
+import { SHARED_KEY_PREFIX, fetchCompanyHolidays, fetchDayoffOverrides, fetchDayoffPatterns, fetchShiftAssignments, fetchShifts } from "@/lib/sharedQueries";
 import { useDeferredMount } from "@/hooks/useDeferredMount";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import SearchableSelect from "@/components/ui/searchable-select";
@@ -177,19 +179,21 @@ const ShiftManagement = () => {
   }, [isEmployeeRole, employeeId]);
 
   const canEdit = canAction(role, "shiftManagement", "edit");
+  const queryClient = useQueryClient();
 
   // Cached via React Query: revisiting this page renders instantly from cache and
   // only refetches in the background; 504s are retried before showing an error.
+  // ตารางอ้างอิง (กะ/วันหยุด/วันหยุดบริษัท) ใช้ cache กลางร่วมกับหน้าอื่น
   const { loading, refetch: fetchAll } = usePageQuery(
     ["shift-management"],
     async () => {
-      const [sh, asn, pr, or, hol] = unwrapAll(await Promise.all([
-        supabase.from("shifts").select("*").order("sort_order"),
-        supabase.from("shift_assignments").select("*").order("created_at", { ascending: false }),
-        supabase.from("employee_dayoff_patterns").select("*"),
-        supabase.from("employee_dayoff_overrides").select("*"),
-        supabase.from("company_holidays").select("*"),
-      ]));
+      const [sh, asn, pr, or, hol] = await Promise.all([
+        fetchShifts(queryClient),
+        fetchShiftAssignments(queryClient),
+        fetchDayoffPatterns(queryClient),
+        fetchDayoffOverrides(queryClient),
+        fetchCompanyHolidays(queryClient),
+      ]);
       return {
         shifts: sh as Shift[],
         assignments: asn as ShiftAssignment[],
@@ -209,7 +213,7 @@ const ShiftManagement = () => {
 
   // Realtime — silent updates (no loading flash)
   useEffect(() => {
-    const refetch = () => { fetchAll(false); };
+    const refetch = () => { queryClient.invalidateQueries({ queryKey: SHARED_KEY_PREFIX }); fetchAll(false); };
     const channel = supabase
       .channel("shift-mgmt-realtime")
       .on("postgres_changes", { event: "*", schema: "public", table: "shift_assignments" }, refetch)

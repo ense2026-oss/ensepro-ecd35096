@@ -7,7 +7,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/contexts/PermissionsContext";
 import { useToast } from "@/hooks/use-toast";
 import { useDragScroll } from "@/hooks/useDragScroll";
-import { usePageQuery, unwrapAll } from "@/hooks/usePageQuery";
+import { usePageQuery } from "@/hooks/usePageQuery";
+import { useQueryClient } from "@tanstack/react-query";
+import { SHARED_KEY_PREFIX, fetchCompanyHolidays, fetchDayoffOverrides, fetchDayoffPatterns } from "@/lib/sharedQueries";
 import { useDeferredMount } from "@/hooks/useDeferredMount";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import SearchableSelect from "@/components/ui/searchable-select";
@@ -149,14 +151,16 @@ const DayOff = () => {
 
   // Cached via React Query: revisiting this page renders instantly from cache and
   // only refetches in the background; 504s are retried before showing an error.
+  // ใช้ cache กลางร่วมกับหน้าจัดการกะ/จัดการโอที — สลับหน้าแล้วไม่ต้องโหลดซ้ำ
+  const queryClient = useQueryClient();
   const { loading, refetch: fetchAll } = usePageQuery(
     ["day-off"],
     async () => {
-      const [pr, or, hr] = unwrapAll(await Promise.all([
-        supabase.from("employee_dayoff_patterns").select("*"),
-        supabase.from("employee_dayoff_overrides").select("*"),
-        supabase.from("company_holidays").select("*"),
-      ]));
+      const [pr, or, hr] = await Promise.all([
+        fetchDayoffPatterns(queryClient),
+        fetchDayoffOverrides(queryClient),
+        fetchCompanyHolidays(queryClient),
+      ]);
       return {
         patterns: pr as Pattern[],
         overrides: or as Override[],
@@ -172,7 +176,7 @@ const DayOff = () => {
 
   // Realtime
   useEffect(() => {
-    const refetch = () => { fetchAll(false); };
+    const refetch = () => { queryClient.invalidateQueries({ queryKey: SHARED_KEY_PREFIX }); fetchAll(false); };
     const channel = supabase
       .channel("dayoff-realtime")
       .on("postgres_changes", { event: "*", schema: "public", table: "employee_dayoff_overrides" }, refetch)
