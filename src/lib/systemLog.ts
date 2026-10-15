@@ -54,20 +54,46 @@ export async function logEvent(input: LogInput): Promise<void> {
   void drainQueue();
 }
 
+// Drain in batches: everything currently queued goes out as ONE multi-row
+// insert instead of one POST per event — a busy page used to fire 10+
+// sequential inserts, each a full network round-trip.
 async function drainQueue(): Promise<void> {
   if (draining) return;
   draining = true;
   try {
     while (queue.length) {
-      const item = queue.shift()!;
-      await writeOne(item);
+      const batch = queue.splice(0, 50);
+      await writeBatch(batch);
     }
   } finally {
     draining = false;
   }
 }
 
-async function writeOne(item: QueuedLog): Promise<void> {
+function toRow(item: QueuedLog, userId: string | null, userEmail: string | null) {
+  let details: any = item.details;
+  if (details instanceof Error) {
+    details = { name: details.name, message: details.message, stack: trunc(details.stack, 4000) };
+  }
+  try {
+    details = details === undefined ? null : JSON.parse(JSON.stringify(details));
+  } catch {
+    details = { note: "unserializable", value: trunc(details, 1000) };
+  }
+  return {
+    level: item.level,
+    category: item.category,
+    message: item.message,
+    details,
+    source: item.source || "frontend",
+    user_id: userId,
+    user_email: userEmail,
+    url: typeof location !== "undefined" ? location.pathname + location.search : null,
+    user_agent: typeof navigator !== "undefined" ? trunc(navigator.userAgent, 300) : null,
+  };
+}
+
+async function writeBatch(items: QueuedLog[]): Promise<void> {
   try {
     let userId: string | null = null;
     let userEmail: string | null = null;
@@ -77,27 +103,7 @@ async function writeOne(item: QueuedLog): Promise<void> {
       userEmail = data?.session?.user?.email ?? null;
     } catch { /* ignore */ }
 
-    let details: any = item.details;
-    if (details instanceof Error) {
-      details = { name: details.name, message: details.message, stack: trunc(details.stack, 4000) };
-    }
-    try {
-      details = details === undefined ? null : JSON.parse(JSON.stringify(details));
-    } catch {
-      details = { note: "unserializable", value: trunc(details, 1000) };
-    }
-
-    await (supabase as any).from("system_logs").insert({
-      level: item.level,
-      category: item.category,
-      message: item.message,
-      details,
-      source: item.source || "frontend",
-      user_id: userId,
-      user_email: userEmail,
-      url: typeof location !== "undefined" ? location.pathname + location.search : null,
-      user_agent: typeof navigator !== "undefined" ? trunc(navigator.userAgent, 300) : null,
-    });
+    await (supabase as any).from("system_logs").insert(items.map((i) => toRow(i, userId, userEmail)));
   } catch {
     // Logging must never surface an error of its own.
   }
