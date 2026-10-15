@@ -277,6 +277,7 @@ const OvertimeRequest = () => {
   const [dateTo, setDateTo] = useState("");
   const [filterMonth, setFilterMonth] = useState(currentMonthLocal);
   const { currentUser, role, user } = useAuth();
+  const { employees } = useEmployees();
   const { canAction, getScope } = usePermissions();
   const canApprove = canAction(role, 'ot', 'approve');
   const canAdd = canAction(role, 'ot', 'add');
@@ -287,14 +288,17 @@ const OvertimeRequest = () => {
   const { loading, refetch: fetchRequests } = usePageQuery(
     ["overtime-requests"],
     async () => {
+      // ไม่ดึง photo_url ใน query นี้ (ไฟล์รูปทำให้โหลดช้ามาก) — ใช้รูปจาก EmployeeContext แทน
+      const photoById = new Map<string, string | undefined>(employees.map((e) => [e.id, e.photoUrl]));
       const [data, actuals] = unwrapAll(await Promise.all([
         supabase
           .from("overtime_requests")
-          .select("*, employees(first_name, last_name, dept, photo_url)")
+          .select("*, employees(first_name, last_name, dept)")
           .order("created_at", { ascending: false }),
         supabase
           .from("check_in_records")
-          .select("employee_id, date, ot_actual_in, ot_actual_out"),
+          .select("employee_id, date, ot_actual_in, ot_actual_out")
+          .or("ot_actual_in.not.is.null,ot_actual_out.not.is.null"),
       ]));
       const actualMap = new Map<string, { in: string | null; out: string | null }>();
       (actuals as any[]).forEach((a: any) => {
@@ -308,7 +312,7 @@ const OvertimeRequest = () => {
           id: r.id,
           employeeId: r.employee_id,
           employeeName: r.employees ? `${r.employees.first_name} ${r.employees.last_name}` : "",
-          photoUrl: r.employees?.photo_url || undefined,
+          photoUrl: photoById.get(r.employee_id) || undefined,
           department: r.employees?.dept || "",
           date: r.date,
           startTime: r.start_time,

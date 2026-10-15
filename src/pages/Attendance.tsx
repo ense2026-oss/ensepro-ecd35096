@@ -19,7 +19,6 @@ import { notifyRequester, notifyTierApprover } from "@/utils/notifications";
 import EmployeeAvatar from "@/components/ui/employee-avatar";
 import FaceScanFileImportDialog from "@/components/attendance/FaceScanFileImportDialog";
 import { usePageQuery, unwrapAll } from "@/hooks/usePageQuery";
-import PaginationBar from "@/components/ui/pagination-bar";
 
 
 interface AttendanceRecord {
@@ -371,10 +370,13 @@ const Attendance = () => {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  // Default the employee filter to the signed-in user (admin/hr/manager/executive included).
+  // Default the employee filter to the signed-in user only when their scope is
+  // "self" — admin/hr/manager (scope all/department) start from "all" so they
+  // see everyone's records right away.
   const selfFilterInit = useRef(false);
   useEffect(() => {
     if (selfFilterInit.current) return;
+    if (attendanceScope !== "self") return;
     const myName = `${currentUser?.firstName ?? ""} ${currentUser?.lastName ?? ""}`.trim();
     if (!myName || allNames.length === 0) return;
     selfFilterInit.current = true;
@@ -382,7 +384,7 @@ const Attendance = () => {
       setFilterEmployee(myName);
       setEmployeeSearch(myName);
     }
-  }, [allNames, currentUser?.firstName, currentUser?.lastName]);
+  }, [allNames, currentUser?.firstName, currentUser?.lastName, attendanceScope]);
 
   const filtered = useMemo(() => scopedAttendance.filter((a) => {
     const matchSearch = a.name.includes(search) || a.dept.includes(search);
@@ -469,14 +471,8 @@ const Attendance = () => {
 
   // Time-edit requests: show every request (no employee/month/date filtering).
   // Pending requests appear first, then sorted newest → oldest by createdAt.
-  // Pagination (20 rows per page); back to page 1 whenever the filters change.
-  const ATT_PAGE_SIZE = 20;
-  const [attPage, setAttPage] = useState(1);
-  useEffect(() => { setAttPage(1); }, [search, filterStatus, filterEmployee, dateFrom, dateTo, filterMonth, filterMonthYear, activeView]);
-  const pagedRows = useMemo(
-    () => displayRows.slice((attPage - 1) * ATT_PAGE_SIZE, attPage * ATT_PAGE_SIZE),
-    [displayRows, attPage],
-  );
+  // แสดงทุกแถวในหน้าเดียว (ไม่แบ่งหน้า) ตามที่ผู้ใช้ต้องการเห็นทั้งเดือน
+  const pagedRows = displayRows;
 
   const filteredRequests = useMemo(() => {
     return editRequests
@@ -1034,9 +1030,6 @@ const Attendance = () => {
                 </tbody>
               </table>
             </div>
-            {!loading && displayRows.length > 0 && (
-              <PaginationBar page={attPage} pageSize={ATT_PAGE_SIZE} total={displayRows.length} onPageChange={setAttPage} />
-            )}
           </div>
         </>
       ) : (

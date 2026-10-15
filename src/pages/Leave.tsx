@@ -83,11 +83,13 @@ const Leave = () => {
   const { refetch: fetchLeaves } = usePageQuery(
     ["leave", currentUser?.employeeId ?? null],
     async () => {
+      // ไม่ดึง photo_url ใน query นี้ (ไฟล์รูปทำให้โหลดช้ามาก) — ใช้รูปจาก EmployeeContext แทน
+      const photoById = new Map<string, string | undefined>(allEmployees.map((e) => [e.id, e.photoUrl]));
       const [types, reqs] = unwrapAll(await Promise.all([
         supabase.from("leave_types").select("*").order("sort_order"),
         supabase
           .from("leave_requests")
-          .select("*, employees(first_name, last_name, dept, photo_url)")
+          .select("*, employees(first_name, last_name, dept)")
           .order("created_at", { ascending: false }),
       ]));
       const leaveTypes: LeaveType[] = (types as any[]).map((lt: any) => ({
@@ -103,7 +105,7 @@ const Leave = () => {
         id: r.id,
         employeeId: r.employee_id,
         name: r.employees ? `${r.employees.first_name} ${r.employees.last_name}` : "",
-        photoUrl: r.employees?.photo_url || undefined,
+        photoUrl: photoById.get(r.employee_id) || undefined,
         dept: r.employees?.dept || "",
         type: r.leave_type_name,
         from: r.date_from,
