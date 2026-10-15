@@ -300,21 +300,33 @@ export const FaceScanFileImportDialog = ({
 
       const { data: existingRows } = await supabase
         .from("check_in_records")
-        .select("id, employee_id, date")
+        .select("id, employee_id, date, check_in, check_out")
         .in("employee_id", employeeIds)
         .in("date", dates);
 
-      const existingSet = new Set((existingRows || []).map((x: any) => `${x.employee_id}|${x.date}`));
-      const existingMap = new Map((existingRows || []).map((x: any) => [`${x.employee_id}|${x.date}`, x.id]));
+      const existingMap = new Map((existingRows || []).map((x: any) => [`${x.employee_id}|${x.date}`, x]));
 
       for (const rec of batch) {
         const key = `${rec.employeeId}|${rec.date}`;
-        const hasExisting = existingSet.has(key);
+        const existing = existingMap.get(key);
+        const hasExisting = !!existing;
+
+        // Smart Merge: เวลาเข้าเลือกเช้าสุด, เวลาออกเลือกดึกสุด, ไฟล์ไม่มีเวลาออกให้คงค่าเดิม
+        let checkIn = rec.checkIn;
+        let checkOut = rec.checkOut;
+        if (hasExisting && overwrite) {
+          const exIn = existing.check_in && existing.check_in !== "-" ? existing.check_in : null;
+          const exOut = existing.check_out && existing.check_out !== "-" ? existing.check_out : null;
+          if (exIn && exIn < checkIn) checkIn = exIn;
+          if (checkOut === "-") checkOut = exOut || "-";
+          else if (exOut && exOut > checkOut) checkOut = exOut;
+        }
+
         const payload = {
           employee_id: rec.employeeId,
           date: rec.date,
-          check_in: rec.checkIn,
-          check_out: rec.checkOut,
+          check_in: checkIn,
+          check_out: checkOut,
           location: rec.serialNumber || "Face Scanner",
           within_radius: true,
           source: "face_scan_file",
@@ -326,7 +338,7 @@ export const FaceScanFileImportDialog = ({
             const { error } = await supabase
               .from("check_in_records")
               .update(payload)
-              .eq("id", existingMap.get(key));
+              .eq("id", existing.id);
             if (!error) updated++;
             else skipped++;
           } else {
