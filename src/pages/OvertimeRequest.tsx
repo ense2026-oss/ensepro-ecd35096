@@ -277,6 +277,7 @@ const OvertimeRequest = () => {
   const [dateTo, setDateTo] = useState("");
   const [filterMonth, setFilterMonth] = useState(currentMonthLocal);
   const { currentUser, role, user } = useAuth();
+  const { employees } = useEmployees();
   const { canAction, getScope } = usePermissions();
   const canApprove = canAction(role, 'ot', 'approve');
   const canAdd = canAction(role, 'ot', 'add');
@@ -288,7 +289,7 @@ const OvertimeRequest = () => {
     ["overtime-requests"],
     async () => {
       // ไม่ดึง photo_url ใน query นี้ (ไฟล์รูปทำให้โหลดช้ามาก) — ใช้รูปจาก EmployeeContext แทน
-      const photoById = new Map(employees.map((e) => [e.id, e.photoUrl]));
+      const photoById = new Map<string, string | undefined>(employees.map((e) => [e.id, e.photoUrl]));
       const [data, actuals] = unwrapAll(await Promise.all([
         supabase
           .from("overtime_requests")
