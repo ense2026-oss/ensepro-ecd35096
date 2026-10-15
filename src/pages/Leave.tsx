@@ -84,7 +84,7 @@ const Leave = () => {
     ["leave", currentUser?.employeeId ?? null],
     async () => {
       // ไม่ดึง photo_url ใน query นี้ (ไฟล์รูปทำให้โหลดช้ามาก) — ใช้รูปจาก EmployeeContext แทน
-      const photoById = new Map(allEmployees.map((e) => [e.id, e.photoUrl]));
+      const photoById = new Map<string, string | undefined>(allEmployees.map((e) => [e.id, e.photoUrl]));
       const [types, reqs] = unwrapAll(await Promise.all([
         supabase.from("leave_types").select("*").order("sort_order"),
         supabase
