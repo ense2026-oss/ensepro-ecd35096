@@ -198,11 +198,23 @@ export const ImpersonationProvider: React.FC<{ children: React.ReactNode }> = ({
       // `retriable` means the magiclink was invalid/expired/used — we can get a
       // fresh link and try again.
       const applyData = async (
-        d: { session?: { access_token?: string; refresh_token?: string }; tokenHash?: string; targetName?: string },
+        d: ImpersonationResult,
       ): Promise<{ error: string | null; retriable?: boolean }> => {
         try {
           sessionStorage.setItem(STASH_KEY, JSON.stringify({ authKey, blob: adminBlob }));
           sessionStorage.setItem(FLAG_KEY, d.targetName || "พนักงาน");
+          // Pre-seed the auth cache with the target's identity so the fresh boot
+          // renders as that employee immediately (no profile/role round trips).
+          if (d.boot?.userId) {
+            localStorage.setItem("auth_profile_cache", JSON.stringify({
+              userId: d.boot.userId,
+              profile: d.boot.profile ?? null,
+              role: d.boot.role || "employee",
+              employeeId: d.boot.employeeId ?? null,
+              employeeData: d.boot.employeeData ?? null,
+              timestamp: Date.now(),
+            }));
+          }
         } catch {
           return { error: "เบราว์เซอร์ปิดการเก็บ session ชั่วคราว ไม่สามารถใช้ Login as ได้" };
         }
