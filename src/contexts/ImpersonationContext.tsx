@@ -312,8 +312,29 @@ export const ImpersonationProvider: React.FC<{ children: React.ReactNode }> = ({
   );
 };
 
+// A missing provider used to throw straight through MainLayout, which unmounted
+// the whole app and left a blank screen. That state only ever appears when the
+// page boots from a half-reloaded module graph (dev hot reload), so instead of
+// crashing we hand back an inert context: the layout still renders, "Login as"
+// reports a plain error toast, and the console records what actually happened.
+const inertContext: ImpersonationContextType = {
+  isImpersonating: false,
+  impersonatedName: null,
+  busy: false,
+  startImpersonation: async () => ({
+    error: "ระบบสลับสิทธิ์การเข้าใช้งานไม่พร้อมใช้งาน โปรดรีเฟรชหน้า",
+  }),
+  prefetchImpersonation: () => {},
+  stopImpersonation: async () => {},
+};
+
 export const useImpersonation = (): ImpersonationContextType => {
   const ctx = useContext(ImpersonationContext);
-  if (!ctx) throw new Error("useImpersonation must be used within ImpersonationProvider");
+  if (!ctx) {
+    console.warn(
+      "useImpersonation: ImpersonationProvider is missing from the tree — using inert context"
+    );
+    return inertContext;
+  }
   return ctx;
 };
