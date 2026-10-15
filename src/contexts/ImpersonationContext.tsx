@@ -204,7 +204,7 @@ export const ImpersonationProvider: React.FC<{ children: React.ReactNode }> = ({
         d: ImpersonationResult,
       ): Promise<{ error: string | null; retriable?: boolean }> => {
         try {
-          sessionStorage.setItem(STASH_KEY, JSON.stringify({ authKey, blob: adminBlob }));
+          sessionStorage.setItem(STASH_KEY, JSON.stringify({ authKey, blob: adminBlob, authCache: localStorage.getItem("auth_profile_cache") }));
           sessionStorage.setItem(FLAG_KEY, d.targetName || "พนักงาน");
           // Pre-seed the auth cache with the target's identity so the fresh boot
           // renders as that employee immediately (no profile/role round trips).
@@ -295,6 +295,8 @@ export const ImpersonationProvider: React.FC<{ children: React.ReactNode }> = ({
           // Write the admin session blob straight back over the target's — the
           // next boot reads it as the admin session. Synchronous, no lock, no hang.
           localStorage.setItem(snap.authKey, snap.blob);
+          if (snap.authCache) localStorage.setItem("auth_profile_cache", snap.authCache);
+          else localStorage.removeItem("auth_profile_cache");
           restored = true;
         }
       }
