@@ -122,10 +122,10 @@ Deno.serve(async (req) => {
 
     if (verifyError || !verifyData?.session) {
       // Fallback for older clients: let them verify the hash themselves.
-      return json({ ok: true, tokenHash: hashedToken, targetName });
+      return json({ ok: true, tokenHash: hashedToken, targetName, boot });
     }
 
-    return json({ ok: true, session: verifyData.session, targetName });
+    return json({ ok: true, session: verifyData.session, targetName, boot });
   } catch (err) {
     return json({ error: (err as Error).message }, 500);
   }
