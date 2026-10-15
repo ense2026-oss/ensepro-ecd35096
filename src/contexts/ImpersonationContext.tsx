@@ -25,10 +25,26 @@ const AUTH_KEY_RE = /^sb-.*-auth-token$/;
 // instant admin-restore: no network in the critical path, just a storage write.
 const PREFETCH_TTL = 4 * 60 * 1000;
 
-interface Prefetched {
+// Boot payload returned by the edge function: the target's role, profile and
+// employee row. Written into the auth cache before reload so the fresh boot
+// renders with the target's identity immediately instead of waiting for the
+// profile/role round trips.
+interface ImpersonationBoot {
+  userId: string;
+  role: string;
+  profile: unknown;
+  employeeId: string;
+  employeeData: unknown;
+}
+
+interface ImpersonationResult {
   session?: { access_token?: string; refresh_token?: string };
   tokenHash?: string;
   targetName?: string;
+  boot?: ImpersonationBoot;
+}
+
+interface Prefetched extends ImpersonationResult {
   ts: number;
 }
 
