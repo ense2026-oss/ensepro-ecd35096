@@ -178,7 +178,7 @@ const OvertimeManagement = () => {
   );
 
   useEffect(() => {
-    const refetch = () => { fetchAll(false); };
+    const refetch = () => { queryClient.invalidateQueries({ queryKey: SHARED_KEY_PREFIX }); fetchAll(false); };
     const channel = supabase
       .channel("ot-mgmt-realtime")
       .on("postgres_changes", { event: "*", schema: "public", table: "overtime_requests" }, refetch)
@@ -315,9 +315,7 @@ const OvertimeManagement = () => {
     if (!canEdit) return;
     try {
       const existing = otFor(empId, dateIso);
-      for (const ex of existing) {
-        await supabase.from("overtime_requests").delete().eq("id", ex.id);
-      }
+      await Promise.all(existing.map((ex) => supabase.from("overtime_requests").delete().eq("id", ex.id)));
       if (hours > 0) {
         const { error } = await supabase.from("overtime_requests").insert({
           employee_id: empId,
@@ -344,9 +342,7 @@ const OvertimeManagement = () => {
     if (!canEdit) return;
     try {
       const existing = otFor(empId, dateIso);
-      for (const ex of existing) {
-        await supabase.from("overtime_requests").delete().eq("id", ex.id);
-      }
+      await Promise.all(existing.map((ex) => supabase.from("overtime_requests").delete().eq("id", ex.id)));
     } catch (err: any) {
       toast({ title: "ไม่สามารถลบได้", description: err.message, variant: "destructive" });
     }

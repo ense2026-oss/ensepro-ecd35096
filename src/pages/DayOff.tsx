@@ -7,7 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/contexts/PermissionsContext";
 import { useToast } from "@/hooks/use-toast";
 import { useDragScroll } from "@/hooks/useDragScroll";
-import { usePageQuery, unwrapAll } from "@/hooks/usePageQuery";
+import { usePageQuery } from "@/hooks/usePageQuery";
 import { useQueryClient } from "@tanstack/react-query";
 import { SHARED_KEY_PREFIX, fetchCompanyHolidays, fetchDayoffOverrides, fetchDayoffPatterns } from "@/lib/sharedQueries";
 import { useDeferredMount } from "@/hooks/useDeferredMount";
@@ -176,7 +176,7 @@ const DayOff = () => {
 
   // Realtime
   useEffect(() => {
-    const refetch = () => { fetchAll(false); };
+    const refetch = () => { queryClient.invalidateQueries({ queryKey: SHARED_KEY_PREFIX }); fetchAll(false); };
     const channel = supabase
       .channel("dayoff-realtime")
       .on("postgres_changes", { event: "*", schema: "public", table: "employee_dayoff_overrides" }, refetch)

@@ -6,7 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/contexts/PermissionsContext";
 import { useToast } from "@/hooks/use-toast";
 import { useDragScroll } from "@/hooks/useDragScroll";
-import { usePageQuery, unwrapAll } from "@/hooks/usePageQuery";
+import { usePageQuery } from "@/hooks/usePageQuery";
 import { useQueryClient } from "@tanstack/react-query";
 import { SHARED_KEY_PREFIX, fetchCompanyHolidays, fetchDayoffOverrides, fetchDayoffPatterns, fetchShiftAssignments, fetchShifts } from "@/lib/sharedQueries";
 import { useDeferredMount } from "@/hooks/useDeferredMount";
@@ -213,7 +213,7 @@ const ShiftManagement = () => {
 
   // Realtime — silent updates (no loading flash)
   useEffect(() => {
-    const refetch = () => { fetchAll(false); };
+    const refetch = () => { queryClient.invalidateQueries({ queryKey: SHARED_KEY_PREFIX }); fetchAll(false); };
     const channel = supabase
       .channel("shift-mgmt-realtime")
       .on("postgres_changes", { event: "*", schema: "public", table: "shift_assignments" }, refetch)
