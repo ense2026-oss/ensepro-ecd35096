@@ -25,16 +25,35 @@ const AUTH_KEY_RE = /^sb-.*-auth-token$/;
 // instant admin-restore: no network in the critical path, just a storage write.
 const PREFETCH_TTL = 4 * 60 * 1000;
 
-interface Prefetched {
+// Boot payload returned by the edge function: the target's role, profile and
+// employee row. Written into the auth cache before reload so the fresh boot
+// renders with the target's identity immediately instead of waiting for the
+// profile/role round trips.
+interface ImpersonationBoot {
+  userId: string;
+  role: string;
+  profile: unknown;
+  employeeId: string;
+  employeeData: unknown;
+}
+
+interface ImpersonationResult {
   session?: { access_token?: string; refresh_token?: string };
   tokenHash?: string;
   targetName?: string;
+  boot?: ImpersonationBoot;
+}
+
+interface Prefetched extends ImpersonationResult {
   ts: number;
 }
 
 interface AdminSnapshot {
   authKey: string;
   blob: string;
+  // The admin's auth_profile_cache, stashed because the switch overwrites it
+  // with the target's — restoring it makes the return trip boot instantly too.
+  authCache?: string | null;
 }
 
 interface ImpersonationContextType {
@@ -127,7 +146,7 @@ export const ImpersonationProvider: React.FC<{ children: React.ReactNode }> = ({
       }
       return { error: (data as any)?.error || error?.message || "เข้าสู่ระบบในฐานะพนักงานไม่สำเร็จ" };
     }
-    return data as { session?: { access_token?: string; refresh_token?: string }; tokenHash?: string; targetName?: string };
+    return data as ImpersonationResult;
   }, []);
 
   const prefetchImpersonation = useCallback((employeeId: string) => {
@@ -144,7 +163,7 @@ export const ImpersonationProvider: React.FC<{ children: React.ReactNode }> = ({
         // expired". With the old function (hash only), click just fetches fresh.
         if (!("error" in res) && res.session?.access_token && res.session?.refresh_token) {
           if (prefetchRef.current.size > 4) prefetchRef.current.clear();
-          prefetchRef.current.set(employeeId, { session: res.session, targetName: res.targetName, ts: Date.now() });
+          prefetchRef.current.set(employeeId, { session: res.session, targetName: res.targetName, boot: res.boot, ts: Date.now() });
         }
       })
       .catch(() => {})
@@ -166,10 +185,10 @@ export const ImpersonationProvider: React.FC<{ children: React.ReactNode }> = ({
       // Use a prefetched (hover-warmed) result if we have one — this makes the
       // click itself instant, like the admin-restore. Otherwise fetch now.
       const warm = prefetchRef.current.get(employeeId);
-      let data: { session?: { access_token?: string; refresh_token?: string }; tokenHash?: string; targetName?: string } | { error: string };
+      let data: ImpersonationResult | { error: string };
       if (warm && Date.now() - warm.ts < PREFETCH_TTL) {
         prefetchRef.current.delete(employeeId);
-        data = { session: warm.session, tokenHash: warm.tokenHash, targetName: warm.targetName };
+        data = { session: warm.session, tokenHash: warm.tokenHash, targetName: warm.targetName, boot: warm.boot };
       } else {
         data = await callImpersonateFn(employeeId);
       }
@@ -182,11 +201,23 @@ export const ImpersonationProvider: React.FC<{ children: React.ReactNode }> = ({
       // `retriable` means the magiclink was invalid/expired/used — we can get a
       // fresh link and try again.
       const applyData = async (
-        d: { session?: { access_token?: string; refresh_token?: string }; tokenHash?: string; targetName?: string },
+        d: ImpersonationResult,
       ): Promise<{ error: string | null; retriable?: boolean }> => {
         try {
-          sessionStorage.setItem(STASH_KEY, JSON.stringify({ authKey, blob: adminBlob }));
+          sessionStorage.setItem(STASH_KEY, JSON.stringify({ authKey, blob: adminBlob, authCache: localStorage.getItem("auth_profile_cache") }));
           sessionStorage.setItem(FLAG_KEY, d.targetName || "พนักงาน");
+          // Pre-seed the auth cache with the target's identity so the fresh boot
+          // renders as that employee immediately (no profile/role round trips).
+          if (d.boot?.userId) {
+            localStorage.setItem("auth_profile_cache", JSON.stringify({
+              userId: d.boot.userId,
+              profile: d.boot.profile ?? null,
+              role: d.boot.role || "employee",
+              employeeId: d.boot.employeeId ?? null,
+              employeeData: d.boot.employeeData ?? null,
+              timestamp: Date.now(),
+            }));
+          }
         } catch {
           return { error: "เบราว์เซอร์ปิดการเก็บ session ชั่วคราว ไม่สามารถใช้ Login as ได้" };
         }
@@ -264,6 +295,8 @@ export const ImpersonationProvider: React.FC<{ children: React.ReactNode }> = ({
           // Write the admin session blob straight back over the target's — the
           // next boot reads it as the admin session. Synchronous, no lock, no hang.
           localStorage.setItem(snap.authKey, snap.blob);
+          if (snap.authCache) localStorage.setItem("auth_profile_cache", snap.authCache);
+          else localStorage.removeItem("auth_profile_cache");
           restored = true;
         }
       }

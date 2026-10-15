@@ -69,14 +69,30 @@ interface PermissionsContextType {
 
 const PermissionsContext = createContext<PermissionsContextType | null>(null);
 
+// The permission matrix is global (same for every user) and small, so cache it
+// in localStorage: after a reload — including every Login as switch — the first
+// render already has the real matrix instead of a deny-all loading window.
+const PERMS_CACHE_KEY = "role_permissions_cache";
+
+function loadPermissionsCache(): RolePermission[] {
+  try {
+    const raw = localStorage.getItem(PERMS_CACHE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
 export const PermissionsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [permissions, setPermissions] = useState<RolePermission[]>([]);
+  const [permissions, setPermissions] = useState<RolePermission[]>(loadPermissionsCache);
   const [loading, setLoading] = useState(true);
   // `loaded` flips true only after a successful fetch. `loading` alone can't
   // distinguish "still fetching" from "fetch failed", and treating an empty
   // matrix as "allow everything" is exactly how an impersonated employee (or
   // anyone on a slow connection) briefly inherits admin access.
-  const [loaded, setLoaded] = useState(false);
+  const [loaded, setLoaded] = useState(() => loadPermissionsCache().length > 0);
   const { user } = useAuth();
 
   const fetchPermissions = useCallback(async () => {
@@ -91,8 +107,10 @@ export const PermissionsProvider: React.FC<{ children: React.ReactNode }> = ({ c
           .order("role_name")
       );
       if (error) throw error;
-      setPermissions((data as RolePermission[]) || []);
+      const rows = (data as RolePermission[]) || [];
+      setPermissions(rows);
       setLoaded(true);
+      try { localStorage.setItem(PERMS_CACHE_KEY, JSON.stringify(rows)); } catch {}
     } catch (e) {
       console.error("Failed to load permissions:", e);
     } finally {

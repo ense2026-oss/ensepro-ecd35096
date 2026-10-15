@@ -51,7 +51,7 @@ Deno.serve(async (req) => {
       admin.from("user_roles").select("role_name").eq("user_id", callerId),
       admin
         .from("employees")
-        .select("id, email, user_id, role, is_protected, first_name, last_name")
+        .select("id, email, user_id, role, is_protected, first_name, last_name, dept, position, avatar, avatar_color, avatar_text_color")
         .eq("id", employeeId)
         .maybeSingle(),
     ]);
@@ -88,10 +88,33 @@ Deno.serve(async (req) => {
     const anon = createClient(supabaseUrl, anonKey, {
       auth: { autoRefreshToken: false, persistSession: false },
     });
-    const { data: verifyData, error: verifyError } = await anon.auth.verifyOtp({
-      token_hash: hashedToken,
-      type: "magiclink",
-    });
+    // Exchange the link and read the target's role/profile in parallel, so the
+    // client can pre-seed its auth cache and render instantly after reload.
+    const [verifyRes, targetRoleRes, targetProfileRes] = await Promise.all([
+      anon.auth.verifyOtp({ token_hash: hashedToken, type: "magiclink" }),
+      admin.from("user_roles").select("role, role_name").eq("user_id", target.user_id).maybeSingle(),
+      admin.from("profiles").select("*").eq("id", target.user_id).maybeSingle(),
+    ]);
+    const { data: verifyData, error: verifyError } = verifyRes;
+    const targetRole =
+      (targetRoleRes.data as any)?.role_name || (targetRoleRes.data as any)?.role || "employee";
+    const boot = {
+      userId: target.user_id,
+      role: targetRole,
+      profile: targetProfileRes.data ?? null,
+      employeeId: target.id,
+      employeeData: {
+        id: target.id,
+        photo_url: null,
+        dept: target.dept,
+        position: target.position,
+        first_name: target.first_name,
+        last_name: target.last_name,
+        avatar: target.avatar,
+        avatar_color: target.avatar_color,
+        avatar_text_color: target.avatar_text_color,
+      },
+    };
 
     console.log(
       `[impersonate] admin ${callerId} (${userData.user.email}) started session as employee ${target.id} (${target.email})`,
@@ -99,10 +122,10 @@ Deno.serve(async (req) => {
 
     if (verifyError || !verifyData?.session) {
       // Fallback for older clients: let them verify the hash themselves.
-      return json({ ok: true, tokenHash: hashedToken, targetName });
+      return json({ ok: true, tokenHash: hashedToken, targetName, boot });
     }
 
-    return json({ ok: true, session: verifyData.session, targetName });
+    return json({ ok: true, session: verifyData.session, targetName, boot });
   } catch (err) {
     return json({ error: (err as Error).message }, 500);
   }
