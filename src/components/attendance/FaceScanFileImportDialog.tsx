@@ -381,7 +381,8 @@ export const FaceScanFileImportDialog = ({
     setFile(null);
     setRows([]);
     setStep("upload");
-    setOverwrite(false);
+    setOverwrite(true);
+    setManualLinks({});
     setProgress(0);
     setResult({ inserted: 0, updated: 0, skipped: 0, linked: 0, unmatched: 0 });
   };
@@ -510,7 +511,7 @@ export const FaceScanFileImportDialog = ({
                   onCheckedChange={(checked) => setOverwrite(checked === true)}
                 />
                 <label htmlFor="overwrite" className="text-sm cursor-pointer">
-                  เขียนทับข้อมูลที่มีอยู่แล้วในวันเดียวกัน (ค่าเริ่มต้นคือข้าม)
+                  เขียนทับข้อมูลที่มีอยู่แล้วในวันเดียวกัน (รวมเวลาอัตโนมัติ: เข้าเช้าสุด / ออกดึกสุด)
                 </label>
               </div>
             </div>
