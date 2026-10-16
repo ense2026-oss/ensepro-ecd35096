@@ -170,6 +170,22 @@ const AppRoutes = () => (
   </Routes>
 );
 
+// Prefetch the most-visited pages once the browser is idle, so switching to
+// them later is instant (chunk already downloaded, no spinner at all).
+const prefetchPages = () => {
+  const load = () => {
+    import("@/pages/Dashboard");
+    import("@/pages/Notifications");
+    import("@/pages/CheckIn");
+  };
+  if ("requestIdleCallback" in window) {
+    (window as Window).requestIdleCallback(load, { timeout: 4000 });
+  } else {
+    setTimeout(load, 2000);
+  }
+};
+prefetchPages();
+
 const App = () => (
   // Restores page data from localStorage on boot (so F5 doesn't reload everything)
   // and keeps the snapshot updated while the app runs.
