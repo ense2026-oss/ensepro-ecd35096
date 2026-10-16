@@ -164,6 +164,7 @@ const AppRoutes = () => (
     </Route>
     <Route path="*" element={<NotFound />} />
   </Routes>
+  </Suspense>
 );
 
 const App = () => (
