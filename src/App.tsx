@@ -146,29 +146,28 @@ const AppRoutes = () => (
         </PermissionsProvider>
       </ProtectedRoute>
     }>
-      <Route path="/dashboard" element={<Dashboard />} />
-      <Route path="/employees" element={<Employees />} />
-      <Route path="/employees/:id" element={<EmployeeProfile />} />
-      <Route path="/organization" element={<Organization />} />
-      <Route path="/contracts" element={<Contracts />} />
-      <Route path="/contracts/:id" element={<ContractDetail />} />
-      <Route path="/attendance" element={<Attendance />} />
-      <Route path="/leave" element={<Leave />} />
-      <Route path="/overtime" element={<OvertimeRequest />} />
-      <Route path="/check-in" element={<CheckIn />} />
-      <Route path="/shift-management" element={<ShiftManagement />} />
-      <Route path="/overtime-management" element={<OvertimeManagement />} />
-      <Route path="/payroll" element={<Payroll />} />
-      <Route path="/my-payslips" element={<MyPayslips />} />
-      <Route path="/day-off" element={<DayOff />} />
-      <Route path="/reports" element={<Reports />} />
-      <Route path="/notifications" element={<Notifications />} />
-      <Route path="/settings" element={<Settings />} />
-      <Route path="/profile" element={<Profile />} />
+      <Route path="/dashboard" element={P(<Dashboard />)} />
+      <Route path="/employees" element={P(<Employees />)} />
+      <Route path="/employees/:id" element={P(<EmployeeProfile />)} />
+      <Route path="/organization" element={P(<Organization />)} />
+      <Route path="/contracts" element={P(<Contracts />)} />
+      <Route path="/contracts/:id" element={P(<ContractDetail />)} />
+      <Route path="/attendance" element={P(<Attendance />)} />
+      <Route path="/leave" element={P(<Leave />)} />
+      <Route path="/overtime" element={P(<OvertimeRequest />)} />
+      <Route path="/check-in" element={P(<CheckIn />)} />
+      <Route path="/shift-management" element={P(<ShiftManagement />)} />
+      <Route path="/overtime-management" element={P(<OvertimeManagement />)} />
+      <Route path="/payroll" element={P(<Payroll />)} />
+      <Route path="/my-payslips" element={P(<MyPayslips />)} />
+      <Route path="/day-off" element={P(<DayOff />)} />
+      <Route path="/reports" element={P(<Reports />)} />
+      <Route path="/notifications" element={P(<Notifications />)} />
+      <Route path="/settings" element={P(<Settings />)} />
+      <Route path="/profile" element={P(<Profile />)} />
     </Route>
-    <Route path="*" element={<NotFound />} />
+    <Route path="*" element={P(<NotFound />)} />
   </Routes>
-  </Suspense>
 );
 
 const App = () => (
