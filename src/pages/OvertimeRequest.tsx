@@ -11,6 +11,7 @@ import { usePermissions } from "@/contexts/PermissionsContext";
 import TimeInput24 from "@/components/ui/time-input-24";
 import { supabase } from "@/integrations/supabase/client";
 import { usePageQuery, unwrapAll } from "@/hooks/usePageQuery";
+import { fetchAllRows } from "@/lib/fetchAll";
 import PaginationBar from "@/components/ui/pagination-bar";
 import { formatThaiDate } from "@/utils/thaiDate";
 import { toast } from "sonner";
@@ -290,16 +291,23 @@ const OvertimeRequest = () => {
     async () => {
       // ไม่ดึง photo_url ใน query นี้ (ไฟล์รูปทำให้โหลดช้ามาก) — ใช้รูปจาก EmployeeContext แทน
       const photoById = new Map<string, string | undefined>(employees.map((e) => [e.id, e.photoUrl]));
-      const [data, actuals] = unwrapAll(await Promise.all([
-        supabase
-          .from("overtime_requests")
-          .select("*, employees(first_name, last_name, dept)")
-          .order("created_at", { ascending: false }),
-        supabase
-          .from("check_in_records")
-          .select("employee_id, date, ot_actual_in, ot_actual_out")
-          .or("ot_actual_in.not.is.null,ot_actual_out.not.is.null"),
-      ]));
+      // Page past PostgREST's ~1000-row cap so old requests/records aren't dropped.
+      const [data, actuals] = await Promise.all([
+        fetchAllRows((from, to) =>
+          supabase
+            .from("overtime_requests")
+            .select("*, employees(first_name, last_name, dept)")
+            .order("created_at", { ascending: false })
+            .range(from, to)
+        ),
+        fetchAllRows((from, to) =>
+          supabase
+            .from("check_in_records")
+            .select("employee_id, date, ot_actual_in, ot_actual_out")
+            .or("ot_actual_in.not.is.null,ot_actual_out.not.is.null")
+            .range(from, to)
+        ),
+      ]);
       const actualMap = new Map<string, { in: string | null; out: string | null }>();
       (actuals as any[]).forEach((a: any) => {
         if (!a.ot_actual_in && !a.ot_actual_out) return;
@@ -406,10 +414,12 @@ const OvertimeRequest = () => {
   });
 
   // Pagination (20 rows per page); back to page 1 whenever the filters change.
+  // Selecting one employee shows their whole month at once (no page split).
+  const singleEmployeeView = filterEmployee !== "all";
   const OT_PAGE_SIZE = 20;
   const [otPage, setOtPage] = useState(1);
   useEffect(() => { setOtPage(1); }, [statusFilter, typeFilter, filterEmployee, dateFrom, dateTo, filterMonth, search]);
-  const pagedFiltered = filtered.slice((otPage - 1) * OT_PAGE_SIZE, otPage * OT_PAGE_SIZE);
+  const pagedFiltered = singleEmployeeView ? filtered : filtered.slice((otPage - 1) * OT_PAGE_SIZE, otPage * OT_PAGE_SIZE);
 
   // Stats widgets always show current user's own data
   const myOwnRequests = requests.filter((r) => currentUser && r.employeeId === (currentUser.employeeId || currentUser.id));
@@ -931,7 +941,7 @@ const OvertimeRequest = () => {
             </tbody>
           </table>
         </div>
-        {!loading && filtered.length > 0 && (
+        {!loading && !singleEmployeeView && filtered.length > 0 && (
           <PaginationBar page={otPage} pageSize={OT_PAGE_SIZE} total={filtered.length} onPageChange={setOtPage} />
         )}
         <div className="flex items-center justify-between px-4 py-3 border-t border-border bg-muted/20 text-xs text-muted-foreground">

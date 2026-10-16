@@ -26,6 +26,7 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { usePayrollPeriod, type PayslipRow } from "@/hooks/usePayrollPeriod";
 import { usePageQuery, unwrapAll } from "@/hooks/usePageQuery";
+import { fetchAllRows } from "@/lib/fetchAll";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/contexts/PermissionsContext";
 import { usePayrollConfig, DEFAULT_PAYROLL_CONFIG, type PayrollConfig } from "@/utils/payrollConfig";
@@ -459,16 +460,18 @@ const Payroll = () => {
     ["payroll", selectedYear, selectedMonth],
     async () => {
       const { startDate, endDate } = getMonthDateRange(selectedYear, selectedMonth);
-      const [attRows, leaveRows, otRows] = unwrapAll(await Promise.all([
-        supabase.from("attendance_records").select("employee_id, status, late, ot_hours, date")
-          .gte("date", startDate).lte("date", endDate),
-        supabase.from("leave_requests").select("employee_id, days, status, date_from, date_to")
+      // Page past PostgREST's ~1000-row cap — a full month of attendance easily
+      // exceeds it, and missing rows would understate pay.
+      const [attRows, leaveRows, otRows] = await Promise.all([
+        fetchAllRows((from, to) => supabase.from("attendance_records").select("employee_id, status, late, ot_hours, date")
+          .gte("date", startDate).lte("date", endDate).range(from, to)),
+        fetchAllRows((from, to) => supabase.from("leave_requests").select("employee_id, days, status, date_from, date_to")
           .or(`date_from.lte.${endDate},date_to.gte.${startDate}`)
-          .in("status", ["approved"]),
-        supabase.from("overtime_requests").select("employee_id, hours, status")
+          .in("status", ["approved"]).range(from, to)),
+        fetchAllRows((from, to) => supabase.from("overtime_requests").select("employee_id, hours, status")
           .gte("date", startDate).lte("date", endDate)
-          .eq("status", "approved"),
-      ]));
+          .eq("status", "approved").range(from, to)),
+      ]);
       return { attRows: attRows as any[], leaveRows: leaveRows as any[], otRows: otRows as any[] };
     },
     (d) => {

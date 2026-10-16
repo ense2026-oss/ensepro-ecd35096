@@ -12,6 +12,7 @@ import { useEmployees } from "@/contexts/EmployeeContext";
 import { usePermissions } from "@/contexts/PermissionsContext";
 import { supabase } from "@/integrations/supabase/client";
 import { usePageQuery, unwrapAll } from "@/hooks/usePageQuery";
+import { fetchAllRows } from "@/lib/fetchAll";
 import PaginationBar from "@/components/ui/pagination-bar";
 import { notifyApprovers, notifyRequester, getApprovalTiers, notifyTierApprover } from "@/utils/notifications";
 import {
@@ -85,13 +86,17 @@ const Leave = () => {
     async () => {
       // ไม่ดึง photo_url ใน query นี้ (ไฟล์รูปทำให้โหลดช้ามาก) — ใช้รูปจาก EmployeeContext แทน
       const photoById = new Map<string, string | undefined>(allEmployees.map((e) => [e.id, e.photoUrl]));
-      const [types, reqs] = unwrapAll(await Promise.all([
-        supabase.from("leave_types").select("*").order("sort_order"),
-        supabase
-          .from("leave_requests")
-          .select("*, employees(first_name, last_name, dept)")
-          .order("created_at", { ascending: false }),
-      ]));
+      // Page past PostgREST's ~1000-row cap so old leave requests aren't dropped.
+      const [[types], reqs] = await Promise.all([
+        Promise.all([supabase.from("leave_types").select("*").order("sort_order")]).then(unwrapAll),
+        fetchAllRows((from, to) =>
+          supabase
+            .from("leave_requests")
+            .select("*, employees(first_name, last_name, dept)")
+            .order("created_at", { ascending: false })
+            .range(from, to)
+        ),
+      ]);
       const leaveTypes: LeaveType[] = (types as any[]).map((lt: any) => ({
         id: lt.id,
         name: lt.name,

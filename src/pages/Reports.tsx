@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePageQuery, unwrapAll } from "@/hooks/usePageQuery";
+import { fetchAllRows } from "@/lib/fetchAll";
 import StatCarousel from "@/components/ui/stat-carousel";
 import { useEmployees } from "@/contexts/EmployeeContext";
 import {
@@ -485,13 +486,15 @@ const Reports = () => {
     ["reports-ot-trend", filterYear],
     async () => {
       const ceYear = parseInt(filterYear) - 543;
-      const res = await supabase
-        .from("overtime_requests")
-        .select("date, hours, status, employees!overtime_requests_employee_id_fkey(role, dept)")
-        .gte("date", `${ceYear}-01-01`)
-        .lte("date", `${ceYear}-12-31`);
-      if (res.error) throw new Error(res.error.message || "โหลดข้อมูลไม่สำเร็จ");
-      return { data: (res.data || []) as any[] };
+      const data = await fetchAllRows((from, to) =>
+        supabase
+          .from("overtime_requests")
+          .select("date, hours, status, employees!overtime_requests_employee_id_fkey(role, dept)")
+          .gte("date", `${ceYear}-01-01`)
+          .lte("date", `${ceYear}-12-31`)
+          .range(from, to)
+      );
+      return { data };
     },
     (d) => {
       const monthlyMap: Record<number, { hours: number; count: number }> = {};
@@ -891,14 +894,18 @@ const Reports = () => {
     ["reports-attendance", selectedReport, filterYear, filterMonth],
     async () => {
       const ceYear = parseInt(filterYear) - 543;
-      const res = await supabase
-        .from("attendance_records")
-        .select("*, employees!attendance_records_employee_id_fkey(first_name, last_name, username, dept, role)")
-        .gte("date", `${ceYear}-01-01`)
-        .lte("date", `${ceYear}-12-31`)
-        .order("date", { ascending: false });
-      if (res.error) throw new Error(res.error.message || "โหลดข้อมูลไม่สำเร็จ");
-      return { data: (res.data || []) as any[] };
+      // A full year of attendance is tens of thousands of rows — far past the
+      // ~1000-row cap — so page through to get the whole year.
+      const data = await fetchAllRows((from, to) =>
+        supabase
+          .from("attendance_records")
+          .select("*, employees!attendance_records_employee_id_fkey(first_name, last_name, username, dept, role)")
+          .gte("date", `${ceYear}-01-01`)
+          .lte("date", `${ceYear}-12-31`)
+          .order("date", { ascending: false })
+          .range(from, to)
+      );
+      return { data };
     },
     (d) => {
       const monthNum = monthIndexMap[filterMonth] || 1;

@@ -19,6 +19,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Carousel, CarouselContent, CarouselItem } from "@/components/ui/carousel";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { usePageQuery, unwrapAll } from "@/hooks/usePageQuery";
+import { fetchAllRows } from "@/lib/fetchAll";
 
 // Unwraps a single Supabase `.maybeSingle()` (or placeholder) result: throws on
 // error so React Query retries, otherwise returns `data` as-is (may be null).
@@ -300,20 +301,23 @@ const Dashboard = () => {
 
       if (viewType === "manager") {
         const myDept = employeeRow?.dept || "";
-        const [empRes, attRes, leaveRes, otRes, teRes, monthAttRes, pendLeaveRes, pendOtRes, ciRes] = await Promise.all([
-          supabase.from("employees").select("id, first_name, last_name, dept, status, user_id, start_date, role").eq("dept", myDept),
-          supabase.from("attendance_records").select("id, employee_id, date, status, late").eq("date", today),
-          supabase.from("leave_requests").select("id, employee_id, leave_type_name, date_from, date_to, days, status, created_at, employees(first_name, last_name)").lte("date_from", monthEnd).gte("date_to", monthStart),
-          supabase.from("overtime_requests").select("id, employee_id, date, hours, status, ot_type, created_at, employees(first_name, last_name)").gte("date", monthStart).lte("date", monthEnd),
-          supabase.from("time_edit_requests").select("id, employee_id").eq("status", "pending"),
-          supabase.from("attendance_records").select("date, status, late, employee_id").gte("date", monthStart).lte("date", monthEnd),
-          // All-dates pending (scoped to the department below), so "รออนุมัติ"
-          // isn't undercounted by the month-scoped lists.
-          supabase.from("leave_requests").select("id, employee_id").eq("status", "pending"),
-          supabase.from("overtime_requests").select("id, employee_id").eq("status", "pending"),
-          empId ? supabase.from("check_in_records").select("*").eq("employee_id", empId).eq("date", today).maybeSingle() : Promise.resolve({ data: null, error: null }),
+        const [[empRes, attRes, leaveRes, otRes, teRes, pendLeaveRes, pendOtRes, ciRes], monthAtt] = await Promise.all([
+          Promise.all([
+            supabase.from("employees").select("id, first_name, last_name, dept, status, user_id, start_date, role").eq("dept", myDept),
+            supabase.from("attendance_records").select("id, employee_id, date, status, late").eq("date", today),
+            supabase.from("leave_requests").select("id, employee_id, leave_type_name, date_from, date_to, days, status, created_at, employees(first_name, last_name)").lte("date_from", monthEnd).gte("date_to", monthStart),
+            supabase.from("overtime_requests").select("id, employee_id, date, hours, status, ot_type, created_at, employees(first_name, last_name)").gte("date", monthStart).lte("date", monthEnd),
+            supabase.from("time_edit_requests").select("id, employee_id").eq("status", "pending"),
+            // All-dates pending (scoped to the department below), so "รออนุมัติ"
+            // isn't undercounted by the month-scoped lists.
+            supabase.from("leave_requests").select("id, employee_id").eq("status", "pending"),
+            supabase.from("overtime_requests").select("id, employee_id").eq("status", "pending"),
+            empId ? supabase.from("check_in_records").select("*").eq("employee_id", empId).eq("date", today).maybeSingle() : Promise.resolve({ data: null, error: null }),
+          ]),
+          // Paged separately — a full month of attendance exceeds the ~1000 cap.
+          fetchAllRows((from, to) => supabase.from("attendance_records").select("date, status, late, employee_id").gte("date", monthStart).lte("date", monthEnd).range(from, to)),
         ]);
-        const [employees, attToday, leaves, ots, timeEdits, monthAtt, pendLeave, pendOt] = unwrapAll([empRes, attRes, leaveRes, otRes, teRes, monthAttRes, pendLeaveRes, pendOtRes]);
+        const [employees, attToday, leaves, ots, timeEdits, pendLeave, pendOt] = unwrapAll([empRes, attRes, leaveRes, otRes, teRes, pendLeaveRes, pendOtRes]);
 
         const deptEmpIds = new Set(employees.map((e: any) => e.id));
         return {
@@ -331,22 +335,25 @@ const Dashboard = () => {
         };
       }
 
-      // Admin/HR: fetch everything in one parallel batch
-      const [empRes, attRes, leaveRes, otRes, teRes, monthAttRes, pendLeaveRes, pendOtRes, ciRes] = await Promise.all([
-        supabase.from("employees").select("id, first_name, last_name, dept, status, user_id, start_date, role"),
-        supabase.from("attendance_records").select("id, employee_id, date, status, late").eq("date", today),
-        supabase.from("leave_requests").select("id, employee_id, leave_type_name, date_from, date_to, days, status, created_at, employees(first_name, last_name)").lte("date_from", monthEnd).gte("date_to", monthStart),
-        supabase.from("overtime_requests").select("id, employee_id, date, hours, status, ot_type, created_at, employees(first_name, last_name)").gte("date", monthStart).lte("date", monthEnd),
-        supabase.from("time_edit_requests").select("id").eq("status", "pending"),
-        supabase.from("attendance_records").select("date, status, late, employee_id").gte("date", monthStart).lte("date", monthEnd),
-        // Pending counts must span ALL dates (a request needs approval regardless
-        // of the month its leave/OT falls in) — the month-scoped lists above would
-        // undercount "รออนุมัติ".
-        supabase.from("leave_requests").select("id").eq("status", "pending"),
-        supabase.from("overtime_requests").select("id").eq("status", "pending"),
-        empId ? supabase.from("check_in_records").select("*").eq("employee_id", empId).eq("date", today).maybeSingle() : Promise.resolve({ data: null, error: null }),
+      // Admin/HR: fetch everything in one parallel batch. monthAtt is paged
+      // separately (a full month of attendance exceeds PostgREST's ~1000 cap).
+      const [[empRes, attRes, leaveRes, otRes, teRes, pendLeaveRes, pendOtRes, ciRes], monthAtt] = await Promise.all([
+        Promise.all([
+          supabase.from("employees").select("id, first_name, last_name, dept, status, user_id, start_date, role"),
+          supabase.from("attendance_records").select("id, employee_id, date, status, late").eq("date", today),
+          supabase.from("leave_requests").select("id, employee_id, leave_type_name, date_from, date_to, days, status, created_at, employees(first_name, last_name)").lte("date_from", monthEnd).gte("date_to", monthStart),
+          supabase.from("overtime_requests").select("id, employee_id, date, hours, status, ot_type, created_at, employees(first_name, last_name)").gte("date", monthStart).lte("date", monthEnd),
+          supabase.from("time_edit_requests").select("id").eq("status", "pending"),
+          // Pending counts must span ALL dates (a request needs approval regardless
+          // of the month its leave/OT falls in) — the month-scoped lists above would
+          // undercount "รออนุมัติ".
+          supabase.from("leave_requests").select("id").eq("status", "pending"),
+          supabase.from("overtime_requests").select("id").eq("status", "pending"),
+          empId ? supabase.from("check_in_records").select("*").eq("employee_id", empId).eq("date", today).maybeSingle() : Promise.resolve({ data: null, error: null }),
+        ]),
+        fetchAllRows((from, to) => supabase.from("attendance_records").select("date, status, late, employee_id").gte("date", monthStart).lte("date", monthEnd).range(from, to)),
       ]);
-      const [employees, attToday, leaves, ots, timeEdits, monthAtt, pendLeave, pendOt] = unwrapAll([empRes, attRes, leaveRes, otRes, teRes, monthAttRes, pendLeaveRes, pendOtRes]);
+      const [employees, attToday, leaves, ots, timeEdits, pendLeave, pendOt] = unwrapAll([empRes, attRes, leaveRes, otRes, teRes, pendLeaveRes, pendOtRes]);
       return { ...common, branch: "all", employees, attToday, leaves, ots, timeEdits, monthAtt, checkIn: single(ciRes), pendingLeavesTotal: pendLeave.length, pendingOTTotal: pendOt.length };
     },
     (d) => {

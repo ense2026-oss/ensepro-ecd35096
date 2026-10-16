@@ -19,6 +19,7 @@ import { notifyRequester, notifyTierApprover } from "@/utils/notifications";
 import EmployeeAvatar from "@/components/ui/employee-avatar";
 import FaceScanFileImportDialog from "@/components/attendance/FaceScanFileImportDialog";
 import { usePageQuery, unwrapAll } from "@/hooks/usePageQuery";
+import { fetchAllRows } from "@/lib/fetchAll";
 
 
 interface AttendanceRecord {
@@ -165,27 +166,17 @@ const Attendance = () => {
   const { loading, error: attendanceError, refetch: refetchAttendance } = usePageQuery(
     ["attendance-records"],
     async () => {
-      // PostgREST caps a single response at ~1000 rows. With one row per
-      // employee per day this fills up fast, and because we order by date DESC
-      // the OLDEST days were silently dropped past the 1000th row — showing as
-      // "absent" even though the records exist (e.g. the first days of a month
-      // once a full month of ~87 employees exceeds 1000 rows). Page through to
-      // fetch every row.
-      const PAGE = 1000;
-      const raw: any[] = [];
-      for (let from = 0; ; from += PAGE) {
-        const [rows] = unwrapAll([
-          await supabase
-            .from("attendance_records")
-            .select("*, employees(first_name, last_name, dept)")
-            .order("date", { ascending: false })
-            .order("created_at", { ascending: false })
-            .range(from, from + PAGE - 1),
-        ]);
-        const chunk = rows as any[];
-        raw.push(...chunk);
-        if (chunk.length < PAGE) break;
-      }
+      // Page past PostgREST's ~1000-row cap: with one row per employee per day
+      // and an order() applied, rows beyond 1000 were silently dropped — the
+      // oldest days of a month vanished and showed as "absent".
+      const raw = await fetchAllRows((from, to) =>
+        supabase
+          .from("attendance_records")
+          .select("*, employees(first_name, last_name, dept)")
+          .order("date", { ascending: false })
+          .order("created_at", { ascending: false })
+          .range(from, to)
+      );
       const records: AttendanceRecord[] = raw.map((r: any) => ({
         id: r.id,
         employeeId: r.employee_id,
@@ -214,11 +205,12 @@ const Attendance = () => {
   const { refetch: refetchOvertime } = usePageQuery(
     ["attendance-overtime"],
     async () => {
-      const [rows] = unwrapAll([
-        await supabase
+      const rows = await fetchAllRows((from, to) =>
+        supabase
           .from("overtime_requests")
-          .select("employee_id, date, hours, status, start_time, end_time"),
-      ]);
+          .select("employee_id, date, hours, status, start_time, end_time")
+          .range(from, to)
+      );
       const map: Record<string, number> = {};
       const timeMap: Record<string, { start: string; end: string }> = {};
       (rows as any[]).forEach((r: any) => {
@@ -242,12 +234,16 @@ const Attendance = () => {
   const { refetch: refetchCalendar } = usePageQuery(
     ["attendance-calendar-context"],
     async () => {
-      const [leaveRows, holidayRows, patternRows, overrideRows] = unwrapAll(await Promise.all([
-        supabase.from("leave_requests").select("employee_id, leave_type_name, date_from, date_to, status").neq("status", "rejected"),
-        supabase.from("company_holidays").select("date, name"),
-        supabase.from("employee_dayoff_patterns").select("employee_id, weekdays, effective_from, effective_to"),
-        supabase.from("employee_dayoff_overrides").select("employee_id, date, is_dayoff"),
-      ]));
+      const [leaveRows, [holidayRows, patternRows, overrideRows]] = await Promise.all([
+        fetchAllRows((from, to) =>
+          supabase.from("leave_requests").select("employee_id, leave_type_name, date_from, date_to, status").neq("status", "rejected").range(from, to)
+        ),
+        Promise.all([
+          supabase.from("company_holidays").select("date, name"),
+          supabase.from("employee_dayoff_patterns").select("employee_id, weekdays, effective_from, effective_to"),
+          supabase.from("employee_dayoff_overrides").select("employee_id, date, is_dayoff"),
+        ]).then(unwrapAll),
+      ]);
 
       const lm: Record<string, string> = {};
       (leaveRows as any[]).forEach((r: any) => {
