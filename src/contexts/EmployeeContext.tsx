@@ -261,8 +261,20 @@ export const EmployeeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
   const { session } = useAuth();
+  // ป้องกันการดึงข้อมูลซ้ำ: Supabase ยิง onAuthStateChange หลายครั้ง (SIGNED_IN,
+  // TOKEN_REFRESHED, revalidate ตอนสลับแท็บ) → session object เปลี่ยน identity ทุกครั้ง
+  // ถ้าไม่กัน จะ fetchEmployees ซ้ำ ๆ และโหลด photo_url (~1.4MB) ซ้ำจนเน็ตตัน
+  const inFlightRef = useRef(false);
+  const rerunRef = useRef(false);
 
   const fetchEmployees = useCallback(async () => {
+    // กันการเรียกซ้อน: ถ้ากำลังดึงอยู่แล้ว ไม่ยิงซ้ำ (เลี่ยงโหลด photo_url ซ้ำ)
+    // แต่จดไว้ว่ามีคำขอใหม่เข้ามา เพื่อดึงอีกรอบหลังรอบปัจจุบันจบ (กัน realtime update หาย)
+    if (inFlightRef.current) {
+      rerunRef.current = true;
+      return;
+    }
+    inFlightRef.current = true;
     try {
       setLoading(true);
       // Fetch employees first (essential), then related data in parallel
@@ -310,21 +322,31 @@ export const EmployeeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     } catch (err) {
       console.error("Failed to fetch employees:", err);
       setLoading(false);
+    } finally {
+      inFlightRef.current = false;
+      // มีคำขอค้างระหว่างที่กำลังดึงอยู่ → ดึงอีกรอบให้ข้อมูลล่าสุด
+      if (rerunRef.current) {
+        rerunRef.current = false;
+        fetchEmployees();
+      }
     }
   }, []);
 
+  // ยึดตาม user id ไม่ใช่ตัว session object — session เปลี่ยน reference ทุกครั้งที่
+  // token refresh / สลับแท็บ แต่ถ้าเป็น user เดิมก็ไม่ต้องดึงข้อมูลพนักงานใหม่
+  const userId = session?.user?.id ?? null;
   useEffect(() => {
-    if (session) {
+    if (userId) {
       // Defer initial fetch so it doesn't block the first render
       const timer = setTimeout(() => fetchEmployees(), 50);
       return () => clearTimeout(timer);
     }
-  }, [session, fetchEmployees]);
+  }, [userId, fetchEmployees]);
 
   // Realtime: refetch when employees or related tables change (any device)
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
   useEffect(() => {
-    if (!session) return;
+    if (!userId) return;
     const debounced = () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
       debounceRef.current = setTimeout(() => fetchEmployees(), 250);
@@ -340,7 +362,7 @@ export const EmployeeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       if (debounceRef.current) clearTimeout(debounceRef.current);
       supabase.removeChannel(channel);
     };
-  }, [session, fetchEmployees]);
+  }, [userId, fetchEmployees]);
 
   const addEmployee = useCallback(async (emp: Omit<Employee, "id">) => {
     const dbData = employeeToDb(emp as Partial<Employee>);
