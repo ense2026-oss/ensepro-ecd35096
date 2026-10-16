@@ -165,14 +165,28 @@ const Attendance = () => {
   const { loading, error: attendanceError, refetch: refetchAttendance } = usePageQuery(
     ["attendance-records"],
     async () => {
-      const [rows] = unwrapAll([
-        await supabase
-          .from("attendance_records")
-          .select("*, employees(first_name, last_name, dept)")
-          .order("date", { ascending: false })
-          .order("created_at", { ascending: false }),
-      ]);
-      const records: AttendanceRecord[] = (rows as any[]).map((r: any) => ({
+      // PostgREST caps a single response at ~1000 rows. With one row per
+      // employee per day this fills up fast, and because we order by date DESC
+      // the OLDEST days were silently dropped past the 1000th row — showing as
+      // "absent" even though the records exist (e.g. the first days of a month
+      // once a full month of ~87 employees exceeds 1000 rows). Page through to
+      // fetch every row.
+      const PAGE = 1000;
+      const raw: any[] = [];
+      for (let from = 0; ; from += PAGE) {
+        const [rows] = unwrapAll([
+          await supabase
+            .from("attendance_records")
+            .select("*, employees(first_name, last_name, dept)")
+            .order("date", { ascending: false })
+            .order("created_at", { ascending: false })
+            .range(from, from + PAGE - 1),
+        ]);
+        const chunk = rows as any[];
+        raw.push(...chunk);
+        if (chunk.length < PAGE) break;
+      }
+      const records: AttendanceRecord[] = raw.map((r: any) => ({
         id: r.id,
         employeeId: r.employee_id,
         name: r.employees ? `${r.employees.first_name} ${r.employees.last_name}` : "",
