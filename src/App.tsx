@@ -18,27 +18,36 @@ import { PermissionsProvider } from "@/contexts/PermissionsContext";
 import { OrgProvider } from "@/contexts/OrgContext";
 import MainLayout from "@/components/layout/MainLayout";
 import Login from "@/pages/Login";
-import Dashboard from "@/pages/Dashboard";
-import Employees from "@/pages/Employees";
-import EmployeeProfile from "@/pages/EmployeeProfile";
-import Organization from "@/pages/Organization";
-import Attendance from "@/pages/Attendance";
-import Leave from "@/pages/Leave";
-import Reports from "@/pages/Reports";
-import Notifications from "@/pages/Notifications";
-import Settings from "@/pages/Settings";
-import Profile from "@/pages/Profile";
-import OvertimeRequest from "@/pages/OvertimeRequest";
-import CheckIn from "@/pages/CheckIn";
-import ShiftManagement from "@/pages/ShiftManagement";
-import OvertimeManagement from "@/pages/OvertimeManagement";
-import Payroll from "@/pages/Payroll";
-import MyPayslips from "@/pages/MyPayslips";
-import Contracts from "@/pages/Contracts";
-import ContractDetail from "@/pages/ContractDetail";
-import DayOff from "@/pages/DayOff";
-import NotFound from "@/pages/NotFound";
-import OAuthConsent from "@/pages/OAuthConsent";
+// Every page is code-split and loaded on demand: the first paint only downloads
+// the shell + Login, and heavy pages (Reports/xlsx, Payroll/jspdf, Dashboard/
+// recharts) arrive as separate chunks only when the user opens them.
+const Dashboard = lazy(() => import("@/pages/Dashboard"));
+const Employees = lazy(() => import("@/pages/Employees"));
+const EmployeeProfile = lazy(() => import("@/pages/EmployeeProfile"));
+const Organization = lazy(() => import("@/pages/Organization"));
+const Attendance = lazy(() => import("@/pages/Attendance"));
+const Leave = lazy(() => import("@/pages/Leave"));
+const Reports = lazy(() => import("@/pages/Reports"));
+const Notifications = lazy(() => import("@/pages/Notifications"));
+const Settings = lazy(() => import("@/pages/Settings"));
+const Profile = lazy(() => import("@/pages/Profile"));
+const OvertimeRequest = lazy(() => import("@/pages/OvertimeRequest"));
+const CheckIn = lazy(() => import("@/pages/CheckIn"));
+const ShiftManagement = lazy(() => import("@/pages/ShiftManagement"));
+const OvertimeManagement = lazy(() => import("@/pages/OvertimeManagement"));
+const Payroll = lazy(() => import("@/pages/Payroll"));
+const MyPayslips = lazy(() => import("@/pages/MyPayslips"));
+const Contracts = lazy(() => import("@/pages/Contracts"));
+const ContractDetail = lazy(() => import("@/pages/ContractDetail"));
+const DayOff = lazy(() => import("@/pages/DayOff"));
+const NotFound = lazy(() => import("@/pages/NotFound"));
+const OAuthConsent = lazy(() => import("@/pages/OAuthConsent"));
+
+const PageLoader = (
+  <div className="min-h-[40vh] flex items-center justify-center">
+    <div className="w-8 h-8 border-3 border-primary border-t-transparent rounded-full animate-spin" />
+  </div>
+);
 import { applyStartupDisplaySettings } from "@/components/settings/DisplaySettings";
 
 // Apply saved display settings on load (personal preferences take precedence)
