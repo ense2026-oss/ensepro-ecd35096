@@ -48,6 +48,11 @@ const PageLoader = (
     <div className="w-8 h-8 border-3 border-primary border-t-transparent rounded-full animate-spin" />
   </div>
 );
+
+// Wrap each lazy page in its own Suspense so a loading page never unmounts
+// the sidebar/topbar around it — without this the whole screen flashed white
+// on every navigation to a not-yet-loaded page.
+const P = (el: React.ReactNode) => <Suspense fallback={PageLoader}>{el}</Suspense>;
 import { applyStartupDisplaySettings } from "@/components/settings/DisplaySettings";
 
 // Apply saved display settings on load (personal preferences take precedence)
@@ -119,11 +124,10 @@ const LoginRoute = () => {
 };
 
 const AppRoutes = () => (
-  <Suspense fallback={PageLoader}>
   <Routes>
     <Route path="/" element={<AuthRedirect />} />
     <Route path="/login" element={<LoginRoute />} />
-    <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
+    <Route path="/.lovable/oauth/consent" element={P(<OAuthConsent />)} />
 
     <Route element={
       <ProtectedRoute>
@@ -142,30 +146,45 @@ const AppRoutes = () => (
         </PermissionsProvider>
       </ProtectedRoute>
     }>
-      <Route path="/dashboard" element={<Dashboard />} />
-      <Route path="/employees" element={<Employees />} />
-      <Route path="/employees/:id" element={<EmployeeProfile />} />
-      <Route path="/organization" element={<Organization />} />
-      <Route path="/contracts" element={<Contracts />} />
-      <Route path="/contracts/:id" element={<ContractDetail />} />
-      <Route path="/attendance" element={<Attendance />} />
-      <Route path="/leave" element={<Leave />} />
-      <Route path="/overtime" element={<OvertimeRequest />} />
-      <Route path="/check-in" element={<CheckIn />} />
-      <Route path="/shift-management" element={<ShiftManagement />} />
-      <Route path="/overtime-management" element={<OvertimeManagement />} />
-      <Route path="/payroll" element={<Payroll />} />
-      <Route path="/my-payslips" element={<MyPayslips />} />
-      <Route path="/day-off" element={<DayOff />} />
-      <Route path="/reports" element={<Reports />} />
-      <Route path="/notifications" element={<Notifications />} />
-      <Route path="/settings" element={<Settings />} />
-      <Route path="/profile" element={<Profile />} />
+      <Route path="/dashboard" element={P(<Dashboard />)} />
+      <Route path="/employees" element={P(<Employees />)} />
+      <Route path="/employees/:id" element={P(<EmployeeProfile />)} />
+      <Route path="/organization" element={P(<Organization />)} />
+      <Route path="/contracts" element={P(<Contracts />)} />
+      <Route path="/contracts/:id" element={P(<ContractDetail />)} />
+      <Route path="/attendance" element={P(<Attendance />)} />
+      <Route path="/leave" element={P(<Leave />)} />
+      <Route path="/overtime" element={P(<OvertimeRequest />)} />
+      <Route path="/check-in" element={P(<CheckIn />)} />
+      <Route path="/shift-management" element={P(<ShiftManagement />)} />
+      <Route path="/overtime-management" element={P(<OvertimeManagement />)} />
+      <Route path="/payroll" element={P(<Payroll />)} />
+      <Route path="/my-payslips" element={P(<MyPayslips />)} />
+      <Route path="/day-off" element={P(<DayOff />)} />
+      <Route path="/reports" element={P(<Reports />)} />
+      <Route path="/notifications" element={P(<Notifications />)} />
+      <Route path="/settings" element={P(<Settings />)} />
+      <Route path="/profile" element={P(<Profile />)} />
     </Route>
-    <Route path="*" element={<NotFound />} />
+    <Route path="*" element={P(<NotFound />)} />
   </Routes>
-  </Suspense>
 );
+
+// Prefetch the most-visited pages once the browser is idle, so switching to
+// them later is instant (chunk already downloaded, no spinner at all).
+const prefetchPages = () => {
+  const load = () => {
+    import("@/pages/Dashboard");
+    import("@/pages/Notifications");
+    import("@/pages/CheckIn");
+  };
+  if ("requestIdleCallback" in window) {
+    (window as Window).requestIdleCallback(load, { timeout: 4000 });
+  } else {
+    setTimeout(load, 2000);
+  }
+};
+prefetchPages();
 
 const App = () => (
   // Restores page data from localStorage on boot (so F5 doesn't reload everything)
