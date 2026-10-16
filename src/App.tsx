@@ -124,11 +124,10 @@ const LoginRoute = () => {
 };
 
 const AppRoutes = () => (
-  <Suspense fallback={PageLoader}>
   <Routes>
     <Route path="/" element={<AuthRedirect />} />
     <Route path="/login" element={<LoginRoute />} />
-    <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
+    <Route path="/.lovable/oauth/consent" element={P(<OAuthConsent />)} />
 
     <Route element={
       <ProtectedRoute>
