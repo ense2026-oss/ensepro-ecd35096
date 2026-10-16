@@ -15,6 +15,7 @@ import { usePageQuery, unwrapAll } from "@/hooks/usePageQuery";
 import { fetchAllRows } from "@/lib/fetchAll";
 import PaginationBar from "@/components/ui/pagination-bar";
 import { notifyApprovers, notifyRequester, getApprovalTiers, notifyTierApprover } from "@/utils/notifications";
+import { prepareUpload } from "@/utils/fileCompression";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -170,9 +171,10 @@ const Leave = () => {
   const uploadFile = async (file: File, leaveId: string): Promise<string | null> => {
     const userId = user?.id;
     if (!userId) return null;
-    const ext = file.name.split(".").pop();
-    const path = `${userId}/${leaveId}.${ext}`;
-    const { error } = await supabase.storage.from("leave-attachments").upload(path, file, { upsert: true });
+    // บีบอัดรูปเป็น WebP ก่อนอัปโหลด (PDF/ไฟล์อื่นอัปตามเดิม)
+    const prepared = await prepareUpload(file);
+    const path = `${userId}/${leaveId}.${prepared.ext}`;
+    const { error } = await supabase.storage.from("leave-attachments").upload(path, prepared.body, { upsert: true, contentType: prepared.contentType });
     if (error) {
       console.error("Upload error:", error);
       toast({

@@ -87,6 +87,90 @@ export function compressImage(
 }
 
 /**
+ * Convert a base64 data URL to a Blob (for Storage upload / migrating legacy data).
+ */
+export function dataUrlToBlob(dataUrl: string): Blob | null {
+  try {
+    const comma = dataUrl.indexOf(",");
+    if (comma < 0) return null;
+    const header = dataUrl.slice(0, comma);
+    const b64 = dataUrl.slice(comma + 1);
+    const mime = /data:([^;]+)/.exec(header)?.[1] || "application/octet-stream";
+    const bin = atob(b64);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return new Blob([bytes], { type: mime });
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Compress an image (File or Blob) to a WebP Blob via Canvas — for Storage upload.
+ * WebP gives noticeably smaller files than JPEG at the same quality. Returns null
+ * if the input isn't an image or can't be decoded (e.g. HEIC).
+ */
+export function compressImageToBlob(
+  file: Blob,
+  options: CompressOptions = { maxWidth: 1600, maxHeight: 1600, quality: 0.8 }
+): Promise<Blob | null> {
+  return new Promise((resolve) => {
+    if (!file.type.startsWith("image/")) {
+      resolve(null);
+      return;
+    }
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      let { width, height } = img;
+      const { maxWidth, maxHeight, quality } = options;
+      if (width > maxWidth || height > maxHeight) {
+        const ratio = Math.min(maxWidth / width, maxHeight / height);
+        width = Math.round(width * ratio);
+        height = Math.round(height * ratio);
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        resolve(null);
+        return;
+      }
+      ctx.drawImage(img, 0, 0, width, height);
+      canvas.toBlob((blob) => resolve(blob), "image/webp", quality);
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      resolve(null);
+    };
+    img.src = url;
+  });
+}
+
+/**
+ * Prepare any upload for Storage: compress images to WebP, pass PDFs/other files
+ * through untouched. Returns the body to upload plus the matching extension and
+ * content type. Used by employee documents / leave attachments so every image
+ * lands in the bucket already optimized.
+ */
+export async function prepareUpload(
+  file: File,
+  imageOptions?: CompressOptions
+): Promise<{ body: Blob; ext: string; contentType: string }> {
+  if (file.type.startsWith("image/")) {
+    const blob = await compressImageToBlob(file, imageOptions);
+    if (blob) return { body: blob, ext: "webp", contentType: "image/webp" };
+  }
+  return {
+    body: file,
+    ext: (file.name.split(".").pop() || "bin").toLowerCase(),
+    contentType: file.type || "application/octet-stream",
+  };
+}
+
+/**
  * Create a small thumbnail from an image file.
  */
 export function createThumbnail(file: File, size: number = 150): Promise<string> {

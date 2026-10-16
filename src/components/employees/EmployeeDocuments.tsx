@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { Paperclip, Upload, Trash2, FileText, Eye, Loader2, FileImage, File as FileIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { prepareUpload } from "@/utils/fileCompression";
 
 export type DocumentCategory = "education" | "work" | "personal";
 
@@ -79,11 +80,13 @@ const EmployeeDocuments = ({ employeeId, category, canEdit, title, description }
 
     setUploading(true);
     try {
-      const safeName = file.name.replace(/[^\w.\-]+/g, "_");
-      const path = `${employeeId}/${category}/${Date.now()}-${safeName}`;
+      // บีบอัดรูปเป็น WebP ก่อนอัปโหลด (PDF/ไฟล์อื่นอัปตามเดิม)
+      const prepared = await prepareUpload(file);
+      const safeBase = file.name.replace(/[^\w.\-]+/g, "_").replace(/\.[^.]+$/, "");
+      const path = `${employeeId}/${category}/${Date.now()}-${safeBase}.${prepared.ext}`;
       const { error: upErr } = await supabase.storage
         .from("employee-documents")
-        .upload(path, file, { upsert: false });
+        .upload(path, prepared.body, { upsert: false, contentType: prepared.contentType });
       if (upErr) throw upErr;
 
       const { data: auth } = await supabase.auth.getUser();
@@ -93,7 +96,7 @@ const EmployeeDocuments = ({ employeeId, category, canEdit, title, description }
         name: name.trim(),
         file_url: path,
         file_name: file.name,
-        file_type: file.type || "",
+        file_type: prepared.contentType,
         uploaded_by: auth.user?.id ?? null,
       });
       if (insErr) {

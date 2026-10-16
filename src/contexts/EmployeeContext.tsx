@@ -3,6 +3,7 @@ import { TaxDeduction, DEFAULT_TAX_DEDUCTION } from "@/utils/taxCalculation";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { withRetry } from "@/lib/retry";
+import { isStoragePath, uploadEmployeePhoto, removeEmployeePhoto, resolveEmployeePhotoUrls } from "@/lib/employeePhoto";
 import { toast } from "sonner";
 import { logInfo } from "@/lib/systemLog";
 
@@ -306,9 +307,17 @@ export const EmployeeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       const eduData = eduRes.data || [];
       const whData = whRes.data || [];
       const piData = piRes.data || [];
-      const photoMap = new Map<string, string | null>(
-        (photoRes.data || []).map((r: any) => [r.id, r.photo_url])
+      // photo_url อาจเป็น (ก) path ใน Storage → เซ็นเป็น signed URL (batch ครั้งเดียว)
+      // หรือ (ข) base64 เก่า / http → ใช้ตรง ๆ
+      const rawPhotos = (photoRes.data || []) as { id: string; photo_url: string | null }[];
+      const signedMap = await resolveEmployeePhotoUrls(
+        rawPhotos.map((r) => r.photo_url).filter(isStoragePath) as string[]
       );
+      const photoMap = new Map<string, string | null>();
+      for (const r of rawPhotos) {
+        const v = r.photo_url;
+        photoMap.set(r.id, !v ? null : isStoragePath(v) ? signedMap.get(v) ?? null : v);
+      }
 
       const enrichedRows = (empRes.data || []).map((row: any) => ({
         ...row,
@@ -366,10 +375,24 @@ export const EmployeeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const addEmployee = useCallback(async (emp: Omit<Employee, "id">) => {
     const dbData = employeeToDb(emp as Partial<Employee>);
+    // อย่าเก็บ base64 ลงแถว — อัปโหลดขึ้น Storage หลัง insert (ตอนนั้นถึงจะมี id)
+    const newPhotoData =
+      typeof dbData.photo_url === "string" && dbData.photo_url.startsWith("data:") ? dbData.photo_url : null;
+    if (newPhotoData) delete dbData.photo_url;
     const { data, error } = await supabase.from("employees").insert(dbData).select().single();
     if (error) { console.error("Add employee error:", error); throw error; }
 
     const empId = data.id;
+    if (newPhotoData) {
+      try {
+        const path = await uploadEmployeePhoto(empId, newPhotoData);
+        await supabase.from("employees").update({ photo_url: path }).eq("id", empId);
+      } catch (e) {
+        console.warn("Upload employee photo failed, keeping inline:", e);
+        // สำรอง: เก็บ base64 ไว้เหมือนเดิม จะได้ไม่เสียรูป (เผื่อ bucket ยังไม่ถูกสร้าง)
+        await supabase.from("employees").update({ photo_url: newPhotoData }).eq("id", empId);
+      }
+    }
     logInfo("employee", `เพิ่มพนักงาน: ${emp.firstName} ${emp.lastName}`, { employeeId: empId, name: `${emp.firstName} ${emp.lastName}`, dept: emp.dept, role: emp.role });
     // Insert education
     if (emp.education?.length) {
@@ -459,6 +482,29 @@ export const EmployeeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
 
     const dbData = employeeToDb(data);
+    // จัดการรูปโปรไฟล์:
+    //  - base64 (รูปใหม่/รูปเก่าที่ยังไม่ย้าย) → อัปโหลดขึ้น Storage เก็บเป็น path + ลบไฟล์เดิม
+    //  - "" (ลบรูป) → เคลียร์ค่า + ลบไฟล์เดิม
+    //  - signed URL / path เดิม (ฟอร์มไม่ได้เปลี่ยนรูป) → อย่าเขียนทับ photo_url
+    if (dbData.photo_url !== undefined) {
+      const v = dbData.photo_url as string;
+      if (typeof v === "string" && v.startsWith("data:")) {
+        try {
+          const { data: cur } = await supabase.from("employees").select("photo_url").eq("id", id).maybeSingle();
+          dbData.photo_url = await uploadEmployeePhoto(id, v);
+          await removeEmployeePhoto(cur?.photo_url);
+        } catch (e) {
+          console.warn("Upload employee photo failed, keeping inline:", e);
+          // คง base64 ไว้ใน dbData.photo_url เพื่อไม่ให้รูปหาย (เผื่อ bucket ยังไม่ถูกสร้าง)
+        }
+      } else if (v === "") {
+        const { data: cur } = await supabase.from("employees").select("photo_url").eq("id", id).maybeSingle();
+        await removeEmployeePhoto(cur?.photo_url);
+        // คง dbData.photo_url = "" ไว้เพื่อเคลียร์
+      } else {
+        delete dbData.photo_url;
+      }
+    }
     // .select() after update lets us detect an RLS policy silently blocking the
     // write (0 rows returned, no error) instead of reporting a false success —
     // without this, a caller lacking edit rights on this row sees "saved" while
