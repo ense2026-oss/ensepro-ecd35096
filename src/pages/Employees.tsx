@@ -365,7 +365,7 @@ const Employees = () => {
                       <td className="text-right pr-2 pl-1 py-3.5 text-sm text-muted-foreground w-10">{(safePage - 1) * pageSize + idx + 1}</td>
                       <td className="pl-2 pr-4 py-3.5">
                         <div className="flex items-center gap-3">
-                          <EmployeeAvatar photoUrl={emp.photoUrl} avatar={emp.avatar} avatarColor={emp.avatarColor} avatarTextColor={emp.avatarTextColor} firstName={emp.firstName} size="md" />
+                          <EmployeeAvatar photoUrl={emp.photoUrl} avatar={emp.avatar} avatarColor={emp.avatarColor} avatarTextColor={emp.avatarTextColor} firstName={emp.firstName} size="sm" rounded="full" />
                           <div>
                             <p className="text-sm font-semibold">{displayName}</p>
                             <p className="text-xs text-muted-foreground">({emp.nickname})</p>
@@ -475,7 +475,7 @@ const Employees = () => {
               return (
                 <div key={emp.id} className="card-base p-3 sm:p-5 flex flex-col gap-2 sm:gap-3 animate-fade-in">
                   <div className="flex items-start justify-between">
-                    <EmployeeAvatar photoUrl={emp.photoUrl} avatar={emp.avatar} avatarColor={emp.avatarColor} avatarTextColor={emp.avatarTextColor} firstName={emp.firstName} size="xl" rounded="2xl" />
+                    <EmployeeAvatar photoUrl={emp.photoUrl} avatar={emp.avatar} avatarColor={emp.avatarColor} avatarTextColor={emp.avatarTextColor} firstName={emp.firstName} size="sm" rounded="full" />
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <button className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground"><MoreHorizontal className="w-4 h-4" /></button>

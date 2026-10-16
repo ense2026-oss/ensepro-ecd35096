@@ -937,7 +937,7 @@ const Attendance = () => {
                     return (
                       <div key={row.id} className="rounded-xl border p-3 flex flex-col gap-2" style={{ borderColor: "hsl(var(--border))" }}>
                         <div className="flex items-center gap-2 min-w-0">
-                          <EmployeeAvatar photoUrl={photoMap.get(row.employeeId)} firstName={row.name} size="sm" rounded="lg" />
+                          <EmployeeAvatar photoUrl={photoMap.get(row.employeeId)} firstName={row.name} size="sm" rounded="full" />
                           <div className="min-w-0">
                             <p className="text-xs font-semibold truncate">{row.name}</p>
                             <p className="text-[10px] text-muted-foreground truncate">{row.dept}</p>
@@ -1004,7 +1004,7 @@ const Attendance = () => {
                         <td className="px-2 py-1.5 text-sm font-medium whitespace-nowrap">{formatThaiShort(row.date)}</td>
                         <td className="px-0 py-1.5 w-8">
                           <div className="flex items-center justify-center">
-                            <EmployeeAvatar photoUrl={photoMap.get(row.employeeId)} firstName={row.name} size="sm" rounded="lg" />
+                            <EmployeeAvatar photoUrl={photoMap.get(row.employeeId)} firstName={row.name} size="sm" rounded="full" />
                           </div>
                         </td>
 
@@ -1083,7 +1083,7 @@ const Attendance = () => {
                       <td className="px-2 py-1.5 text-sm font-medium whitespace-nowrap">{formatThaiShort(req.date)}</td>
                       <td className="px-0 py-1.5 w-8">
                         <div className="flex items-center justify-center">
-                          <EmployeeAvatar photoUrl={reqEmployee?.photoUrl} firstName={req.employeeName} size="sm" rounded="lg" />
+                          <EmployeeAvatar photoUrl={reqEmployee?.photoUrl} firstName={req.employeeName} size="sm" rounded="full" />
                         </div>
                       </td>
                       <td className="px-3 py-1.5 text-sm text-muted-foreground">{req.originalCheckIn} - {req.originalCheckOut}</td>
