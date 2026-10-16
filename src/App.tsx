@@ -48,6 +48,11 @@ const PageLoader = (
     <div className="w-8 h-8 border-3 border-primary border-t-transparent rounded-full animate-spin" />
   </div>
 );
+
+// Wrap each lazy page in its own Suspense so a loading page never unmounts
+// the sidebar/topbar around it — without this the whole screen flashed white
+// on every navigation to a not-yet-loaded page.
+const P = (el: React.ReactNode) => <Suspense fallback={PageLoader}>{el}</Suspense>;
 import { applyStartupDisplaySettings } from "@/components/settings/DisplaySettings";
 
 // Apply saved display settings on load (personal preferences take precedence)
