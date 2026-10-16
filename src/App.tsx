@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient } from "@tanstack/react-query";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import { queryPersister, QUERY_CACHE_MAX_AGE, QUERY_CACHE_VERSION } from "@/lib/queryPersist";
+import { lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route, Navigate, useSearchParams } from "react-router-dom";
 import { EmployeeProvider } from "@/contexts/EmployeeContext";
 import { BrandingProvider } from "@/contexts/BrandingContext";
