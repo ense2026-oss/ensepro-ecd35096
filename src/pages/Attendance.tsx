@@ -18,6 +18,7 @@ import { usePermissions } from "@/contexts/PermissionsContext";
 import { notifyRequester, notifyTierApprover } from "@/utils/notifications";
 import EmployeeAvatar from "@/components/ui/employee-avatar";
 import FaceScanFileImportDialog from "@/components/attendance/FaceScanFileImportDialog";
+import PaginationBar from "@/components/ui/pagination-bar";
 import { usePageQuery, unwrapAll } from "@/hooks/usePageQuery";
 import { fetchAllRows } from "@/lib/fetchAll";
 
@@ -130,6 +131,7 @@ const Attendance = () => {
     return s && ["present", "late", "absent", "leave", "dayoff", "holiday"].includes(s) ? s : "all";
   });
   const [filterEmployee, setFilterEmployee] = useState("all");
+  const [attPage, setAttPage] = useState(1);
   const [employeeSearch, setEmployeeSearch] = useState("");
   const [showEmployeeDropdown, setShowEmployeeDropdown] = useState(false);
   const employeeDropdownRef = useRef<HTMLDivElement>(null);
@@ -479,10 +481,18 @@ const Attendance = () => {
   }, [selectedEmployee, filtered, dateFrom, dateTo, filterMonth, leaveMap, holidayMap, isDayoffFor, otMap, otTimeMap, filterStatus]);
 
 
-  // Time-edit requests: show every request (no employee/month/date filtering).
-  // Pending requests appear first, then sorted newest → oldest by createdAt.
-  // แสดงทุกแถวในหน้าเดียว (ไม่แบ่งหน้า) ตามที่ผู้ใช้ต้องการเห็นทั้งเดือน
-  const pagedRows = displayRows;
+  // แบ่งหน้า 20 รายการ/หน้า เป็นค่าเริ่มต้น แต่ถ้ากรองด้วยชื่อพนักงาน (เลือกคนเดียว)
+  // ให้แสดงครบทั้งเดือนในหน้าเดียว ไม่แบ่งหน้า
+  const ATT_PAGE_SIZE = 20;
+  const singleEmployeeView = filterEmployee !== "all";
+  const pagedRows = singleEmployeeView
+    ? displayRows
+    : displayRows.slice((attPage - 1) * ATT_PAGE_SIZE, attPage * ATT_PAGE_SIZE);
+
+  // รีเซ็ตกลับหน้าแรกเมื่อเงื่อนไขการกรองเปลี่ยน
+  useEffect(() => {
+    setAttPage(1);
+  }, [filterEmployee, filterStatus, search, dateFrom, dateTo, filterMonth, filterMonthYear]);
 
   const filteredRequests = useMemo(() => {
     return editRequests
@@ -1042,6 +1052,9 @@ const Attendance = () => {
                 </tbody>
               </table>
             </div>
+            {!loading && !singleEmployeeView && displayRows.length > 0 && (
+              <PaginationBar page={attPage} pageSize={ATT_PAGE_SIZE} total={displayRows.length} onPageChange={setAttPage} />
+            )}
           </div>
         </>
       ) : (
