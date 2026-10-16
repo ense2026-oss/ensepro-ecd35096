@@ -119,6 +119,7 @@ const LoginRoute = () => {
 };
 
 const AppRoutes = () => (
+  <Suspense fallback={PageLoader}>
   <Routes>
     <Route path="/" element={<AuthRedirect />} />
     <Route path="/login" element={<LoginRoute />} />
