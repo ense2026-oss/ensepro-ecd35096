@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { ChevronLeft, ChevronRight, CalendarDays, Users, Settings2, Loader2, Plus, Trash2, Save, Copy, Search } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useEmployees } from "@/contexts/EmployeeContext";
+import { isManagementEmployee } from "@/lib/management";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/contexts/PermissionsContext";
 import { useToast } from "@/hooks/use-toast";
@@ -110,7 +111,8 @@ const DayOff = () => {
   const { canAction, getScope } = usePermissions();
   const scope = getScope(role, "day_off");
   const employees = useMemo(() => {
-    const base = allEmployees.filter((e: any) => (e.role || "").toLowerCase() !== "admin");
+    // ซ่อนผู้บริหารออกจากรายชื่อทั้งหมด (admin/executive/แผนกผู้บริหาร)
+    const base = allEmployees.filter((e: any) => !isManagementEmployee(e));
     if (scope === "department") return base.filter((e: any) => e.dept && e.dept === currentUser?.dept);
     if (scope === "self") return base.filter((e: any) => e.id === employeeId);
     return base;
