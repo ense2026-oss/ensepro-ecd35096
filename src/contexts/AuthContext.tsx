@@ -5,6 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { clearPersistedQueryCache } from "@/lib/queryPersist";
 import { withRetry } from "@/lib/retry";
 import { logInfo, logAction, logEventSync } from "@/lib/systemLog";
+import { isStoragePath, resolveEmployeePhotoUrls } from "@/lib/employeePhoto";
 
 type AppRole = "admin" | "hr" | "manager" | "employee" | "accountant" | "executive";
 
@@ -127,7 +128,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         ? (((roleRes.data as any)?.role_name || (roleRes.data as any)?.role || "employee") as AppRole)
         : null;
       // undefined = lookup failed (keep whatever we had), null = genuinely no row
-      const empRow: any | null | undefined = empOk ? ((empRes.data as any[] | null)?.[0] ?? null) : undefined;
+      let empRow: any | null | undefined = empOk ? ((empRes.data as any[] | null)?.[0] ?? null) : undefined;
+
+      // รูปโปรไฟล์เก็บใน Storage เป็น "path" — แปลงเป็น signed URL ให้ใช้แสดงได้
+      // (ไม่งั้น avatar ของคนที่ล็อกอินอยู่จะเป็น path ที่โหลดรูปไม่ขึ้น)
+      if (empRow && isStoragePath(empRow.photo_url)) {
+        try {
+          const map = await resolveEmployeePhotoUrls([empRow.photo_url]);
+          empRow = { ...empRow, photo_url: map.get(empRow.photo_url) ?? empRow.photo_url };
+        } catch { /* ใช้ค่าเดิมถ้าเซ็น URL ไม่สำเร็จ */ }
+      }
 
       if (newRole) setRole(newRole);
       if (empRow !== undefined) {
