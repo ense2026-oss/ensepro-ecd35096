@@ -13,7 +13,7 @@ import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/contexts/PermissionsContext";
 import { supabase } from "@/integrations/supabase/client";
-import { format, startOfMonth, endOfMonth } from "date-fns";
+import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek } from "date-fns";
 import { th } from "date-fns/locale";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Carousel, CarouselContent, CarouselItem } from "@/components/ui/carousel";
@@ -250,6 +250,9 @@ const Dashboard = () => {
   const today = format(new Date(), "yyyy-MM-dd");
   const monthStart = format(startOfMonth(new Date()), "yyyy-MM-dd");
   const monthEnd = format(endOfMonth(new Date()), "yyyy-MM-dd");
+  // สัปดาห์นี้ (จันทร์–อาทิตย์) สำหรับ widget "OT สัปดาห์นี้"
+  const weekStart = format(startOfWeek(new Date(), { weekStartsOn: 1 }), "yyyy-MM-dd");
+  const weekEnd = format(endOfWeek(new Date(), { weekStartsOn: 1 }), "yyyy-MM-dd");
 
   // Determine view type based on dynamic permissions scope
   const employeeScope = getScope(role, 'employee');
@@ -305,7 +308,7 @@ const Dashboard = () => {
           Promise.all([
             supabase.from("employees").select("id, first_name, last_name, dept, status, user_id, start_date, role").eq("dept", myDept),
             supabase.from("attendance_records").select("id, employee_id, date, status, late").eq("date", today),
-            supabase.from("leave_requests").select("id, employee_id, leave_type_name, date_from, date_to, days, status, created_at, employees(first_name, last_name)").lte("date_from", monthEnd).gte("date_to", monthStart),
+            supabase.from("leave_requests").select("id, employee_id, leave_type_name, date_from, date_to, days, status, created_at, employees(first_name, last_name)"),
             supabase.from("overtime_requests").select("id, employee_id, date, hours, status, ot_type, created_at, employees(first_name, last_name)").gte("date", monthStart).lte("date", monthEnd),
             supabase.from("time_edit_requests").select("id, employee_id").eq("status", "pending"),
             // All-dates pending (scoped to the department below), so "รออนุมัติ"
@@ -341,7 +344,7 @@ const Dashboard = () => {
         Promise.all([
           supabase.from("employees").select("id, first_name, last_name, dept, status, user_id, start_date, role"),
           supabase.from("attendance_records").select("id, employee_id, date, status, late").eq("date", today),
-          supabase.from("leave_requests").select("id, employee_id, leave_type_name, date_from, date_to, days, status, created_at, employees(first_name, last_name)").lte("date_from", monthEnd).gte("date_to", monthStart),
+          supabase.from("leave_requests").select("id, employee_id, leave_type_name, date_from, date_to, days, status, created_at, employees(first_name, last_name)"),
           supabase.from("overtime_requests").select("id, employee_id, date, hours, status, ot_type, created_at, employees(first_name, last_name)").gte("date", monthStart).lte("date", monthEnd),
           supabase.from("time_edit_requests").select("id").eq("status", "pending"),
           // Pending counts must span ALL dates (a request needs approval regardless
@@ -447,13 +450,34 @@ const Dashboard = () => {
   const totalPending = pendingLeaves + pendingOT + pendingTimeEdits;
 
   const approvedThisMonth = [
-    ...leaveRequests.filter((l) => l.status === "approved" && l.date_from >= monthStart && l.date_from <= monthEnd),
+    ...leaveRequests.filter((l) => { const df = toIso(l.date_from); return l.status === "approved" && df >= monthStart && df <= monthEnd; }),
     ...otRequests.filter((o) => o.status === "approved" && o.date >= monthStart && o.date <= monthEnd),
   ].length;
 
-  const monthOtHours = otRequests
-    .filter((o) => o.status === "approved" && o.date >= monthStart && o.date <= monthEnd)
-    .reduce((sum, o) => sum + Number(o.hours || 0), 0);
+  // ชั่วโมง OT ของคำขอ (date เป็น ISO เดี่ยว "yyyy-mm-dd" หรือช่วง "from ~ to")
+  // ที่ตกอยู่ในหน้าต่าง [winStart, winEnd] — เฉลี่ยชั่วโมงต่อวันแล้วคูณจำนวนวันที่ทับกัน
+  // เพื่อให้คำขอหลายวันถูกนับเฉพาะวันที่อยู่ในสัปดาห์นั้นจริง ๆ
+  const DAY_MS = 86400000;
+  const otHoursInWindow = (o: { date: string; hours: number }, winStart: string, winEnd: string): number => {
+    const raw = String(o.date || "");
+    const [fromRaw, toRaw] = raw.includes("~") ? raw.split("~").map((s) => s.trim()) : [raw, raw];
+    const from = fromRaw, to = toRaw || fromRaw;
+    const fromT = Date.parse(from), toT = Date.parse(to);
+    const hours = Number(o.hours) || 0;
+    if (isNaN(fromT) || isNaN(toT) || toT < fromT) return 0;
+    const totalDays = Math.round((toT - fromT) / DAY_MS) + 1;
+    const oStart = Math.max(fromT, Date.parse(winStart));
+    const oEnd = Math.min(toT, Date.parse(winEnd));
+    if (oEnd < oStart) return 0;
+    const overlapDays = Math.round((oEnd - oStart) / DAY_MS) + 1;
+    return (hours / totalDays) * overlapDays;
+  };
+
+  const approvedOt = otRequests.filter((o) => o.status === "approved");
+  const weekOtHours = Math.round(
+    approvedOt.reduce((sum, o) => sum + otHoursInWindow(o, weekStart, weekEnd), 0) * 10
+  ) / 10;
+  const weekOtCount = approvedOt.filter((o) => otHoursInWindow(o, weekStart, weekEnd) > 0).length;
 
   const newEmployeesThisMonth = employees.filter(
     (e) => e.start_date >= monthStart && e.start_date <= monthEnd
@@ -465,7 +489,7 @@ const Dashboard = () => {
 
   // Leave pie data
   const leavePieData = useMemo(() => {
-    const monthLeaves = leaveRequests.filter((l) => l.date_from >= monthStart && l.date_from <= monthEnd);
+    const monthLeaves = leaveRequests.filter((l) => { const df = toIso(l.date_from); return df >= monthStart && df <= monthEnd; });
     const grouped: Record<string, number> = {};
     monthLeaves.forEach((l) => {
       const name = l.leave_type_name || "อื่นๆ";
@@ -771,7 +795,7 @@ const Dashboard = () => {
         <StatCard title="มาทำงานวันนี้" value={presentToday} subtitle={`${presentPercent}% ของพนักงาน${viewType === "manager" ? "ในแผนก" : "ทั้งหมด"}`} icon={UserCheck} color="hsl(90 100% 35%)" bgColor="hsl(90 100% 92%)" loading={loading} to="/attendance?status=present" />
         <StatCard title="ลางานวันนี้" value={leaveToday} subtitle={`${leavePercent}%`} icon={Calendar} color="hsl(220 90% 50%)" bgColor="hsl(220 90% 93%)" loading={loading} to="/attendance?status=leave" />
         <StatCard title="มาสายวันนี้" value={lateToday} subtitle={`${latePercent}%`} icon={Clock} color="hsl(0 84% 55%)" bgColor="hsl(0 84% 95%)" loading={loading} to="/attendance?status=late" />
-        <StatCard title="OT เดือนนี้" value={`${monthOtHours} ชม.`} subtitle={`${otRequests.filter((o) => o.status === "approved" && o.date >= monthStart).length} รายการ`} icon={Briefcase} color="hsl(0 0% 45%)" bgColor="hsl(0 0% 92%)" loading={loading} to="/overtime?status=approved" />
+        <StatCard title="OT สัปดาห์นี้" value={`${weekOtHours} ชม.`} subtitle={`${weekOtCount} รายการ`} icon={Briefcase} color="hsl(0 0% 45%)" bgColor="hsl(0 0% 92%)" loading={loading} to="/overtime?status=approved" />
         <StatCard title="รออนุมัติ" value={totalPending} subtitle={`ลา ${pendingLeaves} / OT ${pendingOT} / แก้เวลา ${pendingTimeEdits}`} icon={AlertCircle} color="#FF870F" bgColor="hsl(31 100% 93%)" loading={loading} to="/leave?status=pending" />
         <StatCard title="อนุมัติแล้ว" value={approvedThisMonth} subtitle="เดือนนี้" icon={CheckCircle} color="hsl(90 100% 35%)" bgColor="hsl(90 100% 92%)" loading={loading} to="/leave?status=approved" />
         <StatCard title="พนักงานใหม่" value={newEmployeesThisMonth} subtitle="เดือนนี้" icon={UserX} color="hsl(220 90% 50%)" bgColor="hsl(220 90% 93%)" loading={loading} to="/employees" />
