@@ -88,15 +88,18 @@ const Employees = () => {
   );
   // Departments come from the canonical affiliations defined in Settings, not from
   // free-text employee.dept values (which may contain stale/legacy entries).
+  // ไม่แสดงสังกัด "ผู้บริหาร" ในตัวกรอง (มีปุ่ม "ซ่อนผู้บริหาร" แยกอยู่แล้ว)
   const depts = useMemo(
-    () => ["all", ...affiliations.map((a) => a.name)],
+    () => ["all", ...affiliations.map((a) => a.name).filter((n) => (n || "").trim() !== "ผู้บริหาร")],
     [affiliations]
   );
   const positions = useMemo(() => {
     const flatten = (list: Position[]): string[] =>
       list.flatMap((p) => [p.name, ...(p.children ? flatten(p.children) : [])]);
     if (selectedDept === "all") {
-      const names = affiliations.flatMap((a) => flatten(a.positions));
+      const names = affiliations
+        .filter((a) => (a.name || "").trim() !== "ผู้บริหาร")
+        .flatMap((a) => flatten(a.positions));
       return ["all", ...Array.from(new Set(names))];
     }
     const aff = affiliations.find((a) => a.name === selectedDept);
