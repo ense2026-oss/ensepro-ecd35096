@@ -2,8 +2,12 @@ import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
   Clock, Plus, Search, Download, CheckCircle, CheckCircle2, XCircle,
-  Hourglass, TrendingUp, FileText, ChevronDown, X, AlertCircle, Eye
+  Hourglass, TrendingUp, FileText, ChevronDown, X, AlertCircle, Eye, Trash2
 } from "lucide-react";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useEmployees } from "@/contexts/EmployeeContext";
 import { ThaiDatePicker } from "@/components/ui/thai-date-picker";
 import { useAuth } from "@/contexts/AuthContext";
@@ -262,6 +266,7 @@ const OvertimeRequest = () => {
   const [requests, setRequests] = useState<OTRequest[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [detailReq, setDetailReq] = useState<OTRequest | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   // Initial status tab can come from the URL (e.g. dashboard → /overtime?status=approved).
   const [searchParams] = useSearchParams();
@@ -282,6 +287,8 @@ const OvertimeRequest = () => {
   const { canAction, getScope } = usePermissions();
   const canApprove = canAction(role, 'ot', 'approve');
   const canAdd = canAction(role, 'ot', 'add');
+  // hr/admin (หรือ role ใดที่มีสิทธิ์ลบ module ot): ลบคำขอ OT ได้ทุกชนิดทุกสถานะ
+  const canDeleteOt = canAction(role, 'ot', 'delete');
   const otScope = getScope(role, 'ot');
 
   // Cached via React Query: revisiting this page renders instantly from cache and
@@ -584,6 +591,29 @@ const OvertimeRequest = () => {
     }
   };
 
+  const handleDelete = async () => {
+    if (!deleteId) return;
+    const req = requests.find((r) => r.id === deleteId);
+    // ลบแถวแล้ว .select() เพื่อจับกรณี RLS บล็อก (0 แถว = ไม่มีสิทธิ์) จะได้ไม่แจ้งสำเร็จลวง
+    const { data: deleted, error } = await supabase
+      .from("overtime_requests")
+      .delete()
+      .eq("id", deleteId)
+      .select("id");
+    if (error) {
+      toast.error("ลบไม่สำเร็จ: " + error.message);
+      return;
+    }
+    if (!deleted || deleted.length === 0) {
+      toast.error("ลบไม่สำเร็จ: ไม่มีสิทธิ์ลบคำขอ OT นี้");
+      return;
+    }
+    logInfo("ot", `ลบคำขอ OT: ${req?.employeeName || deleteId}`, { id: deleteId, employee: req?.employeeName, date: req?.date, status: req?.status });
+    setRequests((prev) => prev.filter((r) => r.id !== deleteId));
+    setDeleteId(null);
+    toast.success("ลบคำขอ OT เรียบร้อยแล้ว");
+  };
+
   return (
     <div className="space-y-5">
       <div className="flex flex-row items-center justify-between gap-3">
@@ -846,6 +876,11 @@ const OvertimeRequest = () => {
                           </button>
                         </>
                       )}
+                      {canDeleteOt && (
+                        <button onClick={() => setDeleteId(req.id)} className="p-1.5 rounded-lg hover:bg-muted transition-colors text-destructive" title="ลบ">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
                     </div>
                   </div>
                 );
@@ -933,6 +968,11 @@ const OvertimeRequest = () => {
                             </button>
                           </>
                         )}
+                        {canDeleteOt && (
+                          <button onClick={() => setDeleteId(req.id)} className="p-1.5 rounded-lg hover:bg-muted transition-colors text-destructive" title="ลบ">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -951,6 +991,23 @@ const OvertimeRequest = () => {
       </div>
 
       <OTRequestDialog open={showForm} onClose={() => setShowForm(false)} onSubmit={handleAdd} />
+
+      <AlertDialog open={!!deleteId} onOpenChange={(v) => { if (!v) setDeleteId(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>ยืนยันการลบ</AlertDialogTitle>
+            <AlertDialogDescription>
+              คุณต้องการลบคำขอ OT นี้หรือไม่? การดำเนินการนี้ไม่สามารถย้อนกลับได้
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>ยกเลิก</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              ลบ
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <Dialog open={!!detailReq} onOpenChange={(v) => { if (!v) setDetailReq(null); }}>
         <DialogContent className="sm:max-w-lg">
