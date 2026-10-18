@@ -307,7 +307,7 @@ const Reports = () => {
         // Fetch leave balance (quota remaining) for all employees
         const leaveTypes = d.leaveTypes;
         const allRequests = d.allRequests;
-        const emps = d.emps.filter((e: any) => (e.role || "").toLowerCase() !== "admin");
+        const emps = d.emps.filter((e: any) => !isMgmtOrAdmin(e.role, e.dept));
 
         // Filter by year client-side
         const requests = allRequests.filter((r: any) => {

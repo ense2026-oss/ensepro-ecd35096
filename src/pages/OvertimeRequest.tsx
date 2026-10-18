@@ -9,6 +9,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useEmployees } from "@/contexts/EmployeeContext";
+import { isManagementEmployee, managementIdSet } from "@/lib/management";
 import { ThaiDatePicker } from "@/components/ui/thai-date-picker";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/contexts/PermissionsContext";
@@ -177,11 +178,13 @@ const OTRequestDialog = ({ open, onClose, onSubmit }: {
               <SearchableSelect
                 value={form.employeeId}
                 onChange={(val) => setForm({ ...form, employeeId: val })}
-                options={employees.map((emp) => ({
-                  value: emp.id,
-                  label: `${emp.firstName} ${emp.lastName}`,
-                  subtitle: emp.dept,
-                }))}
+                options={employees
+                  .filter((emp) => !isManagementEmployee(emp) || emp.id === form.employeeId)
+                  .map((emp) => ({
+                    value: emp.id,
+                    label: `${emp.firstName} ${emp.lastName}`,
+                    subtitle: emp.dept,
+                  }))}
                 placeholder="-- เลือกพนักงาน --"
               />
             </div>
@@ -371,15 +374,21 @@ const OvertimeRequest = () => {
     return () => { supabase.removeChannel(channel); };
   }, [fetchRequests]);
 
+  // ซ่อนผู้บริหารออกจากรายชื่อ (ยกเว้นตัวเอง) — หน้าเงินเดือน/องค์กรไม่ซ่อน
+  const mgmtIds = useMemo(() => managementIdSet(employees as any), [employees]);
+  const scopedRequests = useMemo(
+    () => requests.filter((r) => !mgmtIds.has(r.employeeId) || r.employeeId === currentUser?.employeeId),
+    [requests, mgmtIds, currentUser?.employeeId],
+  );
   // Filter based on scope
   const userRequests = otScope === "all"
-    ? requests
+    ? scopedRequests
     : otScope === "department"
-      ? requests.filter((r) => {
+      ? scopedRequests.filter((r) => {
           const myDept = currentUser?.dept || "";
           return r.department === myDept;
         })
-      : requests.filter((r) => currentUser && r.employeeId === (currentUser.employeeId || currentUser.id));
+      : scopedRequests.filter((r) => currentUser && r.employeeId === (currentUser.employeeId || currentUser.id));
   const pendingCount = userRequests.filter((r) => r.status === "pending").length;
   const approvedCount = userRequests.filter((r) => r.status === "approved").length;
 

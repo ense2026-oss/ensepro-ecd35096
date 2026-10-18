@@ -590,8 +590,10 @@ const Dashboard = () => {
 
   // Recent activity
   const recentActivity = useMemo(() => {
+    // ซ่อนผู้บริหารออกจากฟีดกิจกรรม (ยกเว้นหน้าเงินเดือน/องค์กร)
+    const mgmtIds = new Set(employees.filter(isMgmtEmp).map((e: any) => e.id));
     const items: { id: string; name: string; action: string; time: string; createdAt: string; type: string; status: string }[] = [];
-    leaveRequests.forEach((l) => {
+    leaveRequests.filter((l) => !mgmtIds.has((l as any).employee_id)).forEach((l) => {
       const emp = (l as any).employees;
       items.push({
         id: l.id,
@@ -603,7 +605,7 @@ const Dashboard = () => {
         status: l.status === "approved" ? "success" : l.status === "pending" ? "pending" : l.status === "rejected" ? "rejected" : "info",
       });
     });
-    otRequests.forEach((o) => {
+    otRequests.filter((o) => !mgmtIds.has((o as any).employee_id)).forEach((o) => {
       const emp = (o as any).employees;
       items.push({
         id: o.id,
@@ -616,7 +618,7 @@ const Dashboard = () => {
       });
     });
     return items.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 6);
-  }, [leaveRequests, otRequests]);
+  }, [leaveRequests, otRequests, employees]);
 
   const scopeLabel = viewType === "manager" ? `แผนก${myEmployee?.dept || ""}` : "ทั้งองค์กร";
 

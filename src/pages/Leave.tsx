@@ -9,6 +9,7 @@ import LeaveCalendarDialog from "@/components/leave/LeaveCalendarDialog";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEmployees } from "@/contexts/EmployeeContext";
+import { isManagementEmployee, managementIdSet } from "@/lib/management";
 import { usePermissions } from "@/contexts/PermissionsContext";
 import { supabase } from "@/integrations/supabase/client";
 import { usePageQuery, unwrapAll } from "@/hooks/usePageQuery";
@@ -43,10 +44,17 @@ const Leave = () => {
   const currentEmployee = allEmployees.find((e) => e.id === currentUser?.employeeId);
   const currentDept = currentEmployee?.dept || currentUser?.dept || "";
 
+  // ซ่อนผู้บริหารออกจากรายชื่อ (ยกเว้นตัวเอง) — หน้าเงินเดือน/องค์กรไม่ซ่อน
+  const mgmtIds = React.useMemo(() => managementIdSet(allEmployees as any), [allEmployees]);
+  const notMgmtOrSelf = React.useCallback(
+    (empId: string | undefined) => !mgmtIds.has(empId || "") || empId === currentUser?.employeeId,
+    [mgmtIds, currentUser?.employeeId],
+  );
   const scopedEmployees = React.useMemo(() => {
-    if (scope === "self") return allEmployees.filter((e) => e.id === currentUser?.employeeId);
-    if (scope === "department") return allEmployees.filter((e) => e.dept === currentDept);
-    return allEmployees;
+    const base = allEmployees.filter((e) => !isManagementEmployee(e) || e.id === currentUser?.employeeId);
+    if (scope === "self") return base.filter((e) => e.id === currentUser?.employeeId);
+    if (scope === "department") return base.filter((e) => e.dept === currentDept);
+    return base;
   }, [allEmployees, scope, currentUser?.employeeId, currentDept]);
 
   const currentUserName = currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : "";
@@ -156,10 +164,11 @@ const Leave = () => {
   }, [fetchLeaves]);
 
   const scopedLeaves = React.useMemo(() => {
-    if (scope === "self") return leaves.filter((l) => l.employeeId === currentUser?.employeeId);
-    if (scope === "department") return leaves.filter((l) => l.dept === currentDept);
-    return leaves;
-  }, [leaves, scope, currentUser?.employeeId, currentDept]);
+    const base = leaves.filter((l) => notMgmtOrSelf(l.employeeId));
+    if (scope === "self") return base.filter((l) => l.employeeId === currentUser?.employeeId);
+    if (scope === "department") return base.filter((l) => l.dept === currentDept);
+    return base;
+  }, [leaves, scope, currentUser?.employeeId, currentDept, notMgmtOrSelf]);
 
   const filtered = scopedLeaves.filter((l) => filterStatus === "all" || l.status === filterStatus);
 

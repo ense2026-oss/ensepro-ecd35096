@@ -5,6 +5,7 @@ import { ThaiDatePicker } from "@/components/ui/thai-date-picker";
 import ResponsiveFilters from "@/components/ui/responsive-filters";
 import { format } from "date-fns";
 import { useEmployees } from "@/contexts/EmployeeContext";
+import { managementIdSet } from "@/lib/management";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogBody, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
@@ -352,15 +353,18 @@ const Attendance = () => {
 
 
   // Enforce the configured permission scope on the client (defense-in-depth + correct counts).
+  // ซ่อนผู้บริหารออกจากรายชื่อ (ยกเว้นหน้าเงินเดือน/องค์กร)
+  const mgmtIds = useMemo(() => managementIdSet(employees as any), [employees]);
   const scopedAttendance = useMemo(() => {
-    if (attendanceScope === "all") return attendanceWithOt;
+    const base = attendanceWithOt.filter((a) => !mgmtIds.has(a.employeeId) || a.employeeId === currentUser?.employeeId);
+    if (attendanceScope === "all") return base;
     if (attendanceScope === "department") {
       const myDept = currentUser?.dept || "";
-      return attendanceWithOt.filter((a) => a.dept === myDept);
+      return base.filter((a) => a.dept === myDept);
     }
     // self
-    return attendanceWithOt.filter((a) => a.employeeId === currentUser?.employeeId);
-  }, [attendanceWithOt, attendanceScope, currentUser?.dept, currentUser?.employeeId]);
+    return base.filter((a) => a.employeeId === currentUser?.employeeId);
+  }, [attendanceWithOt, attendanceScope, currentUser?.dept, currentUser?.employeeId, mgmtIds]);
 
   const allNames = useMemo(() => {
     const names = new Set(scopedAttendance.map((a) => a.name));
