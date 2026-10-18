@@ -36,6 +36,8 @@ const Leave = () => {
   const roleKey = role || "employee";
   const canAdd = canAction(roleKey, "leave", "add");
   const canApprove = canAction(roleKey, "leave", "approve");
+  // hr/admin (หรือ role ใดที่มีสิทธิ์ลบ module leave): ลบคำขอลาได้ทุกชนิดทุกสถานะ
+  const canDeleteLeave = canAction(roleKey, "leave", "delete");
   const scope = getScope(roleKey, "leave");
 
   const currentEmployee = allEmployees.find((e) => e.id === currentUser?.employeeId);
@@ -311,13 +313,27 @@ const Leave = () => {
 
   const handleDelete = async () => {
     if (!deleteId) return;
-    // Delete attached file if exists
     const record = leaves.find((l) => l.id === deleteId);
+    // ลบแถวก่อน แล้ว .select() เพื่อจับกรณี RLS บล็อก (ได้ 0 แถว = ไม่มีสิทธิ์)
+    // จะได้ไม่แจ้ง "สำเร็จ" ทั้งที่จริงลบไม่ได้
+    const { data: deleted, error } = await supabase
+      .from("leave_requests")
+      .delete()
+      .eq("id", deleteId)
+      .select("id");
+    if (error) {
+      toast({ title: "ลบไม่สำเร็จ", description: error.message, variant: "destructive" });
+      return;
+    }
+    if (!deleted || deleted.length === 0) {
+      toast({ title: "ลบไม่สำเร็จ", description: "ไม่มีสิทธิ์ลบคำขอลานี้", variant: "destructive" });
+      return;
+    }
+    // ลบไฟล์แนบหลังจากลบแถวสำเร็จแล้ว (กันไฟล์หายทั้งที่ลบแถวไม่ได้)
     if (record?.fileUrl) {
       await supabase.storage.from("leave-attachments").remove([record.fileUrl]);
     }
-    await supabase.from("leave_requests").delete().eq("id", deleteId);
-    logInfo("leave", `ลบคำขอลา: ${record?.name || deleteId}`, { id: deleteId, employee: record?.name, type: record?.type });
+    logInfo("leave", `ลบคำขอลา: ${record?.name || deleteId}`, { id: deleteId, employee: record?.name, type: record?.type, status: record?.status });
     setDeleteId(null);
     fetchLeaves();
     toast({ title: "สำเร็จ", description: "ลบคำขอลาเรียบร้อยแล้ว" });
@@ -513,6 +529,7 @@ const Leave = () => {
         currentEmployeeId={currentUser?.employeeId}
         onEdit={handleEdit}
         onDelete={(id) => setDeleteId(id)}
+        canDeleteAny={canDeleteLeave}
         footer={filtered.length > 0 ? (
           <PaginationBar page={leavePage} pageSize={LEAVE_PAGE_SIZE} total={filtered.length} onPageChange={setLeavePage} />
         ) : undefined}

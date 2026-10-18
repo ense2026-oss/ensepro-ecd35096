@@ -45,6 +45,8 @@ interface LeaveTableProps {
   currentEmployeeId?: string;
   onEdit?: (record: LeaveRecord) => void;
   onDelete?: (id: string) => void;
+  // hr/admin (or any role with leave.delete): can delete ANY request, any status.
+  canDeleteAny?: boolean;
   // Rendered inside the card below the table (e.g. a pagination bar).
   footer?: React.ReactNode;
   // Running-number offset so "ลำดับ" continues across paginated pages.
@@ -53,7 +55,7 @@ interface LeaveTableProps {
   descendingTotal?: number;
 }
 
-const LeaveTable = ({ records, onApprove, onReject, hideActions = false, currentEmployeeId, onEdit, onDelete, footer, startIndex = 0, descendingTotal }: LeaveTableProps) => {
+const LeaveTable = ({ records, onApprove, onReject, hideActions = false, currentEmployeeId, onEdit, onDelete, canDeleteAny = false, footer, startIndex = 0, descendingTotal }: LeaveTableProps) => {
   const hasPending = !hideActions && records.some((r) => r.status === "pending");
   const [detail, setDetail] = useState<LeaveRecord | null>(null);
 
@@ -127,7 +129,7 @@ const LeaveTable = ({ records, onApprove, onReject, hideActions = false, current
                         <Pencil className="w-4 h-4" />
                       </button>
                     )}
-                    {isOwnPending && onDelete && (
+                    {(isOwnPending || canDeleteAny) && onDelete && (
                       <button onClick={() => onDelete(row.id)} className="p-1.5 rounded-lg hover:bg-muted transition-colors text-destructive" title="ลบ">
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -240,7 +242,7 @@ const LeaveTable = ({ records, onApprove, onReject, hideActions = false, current
                           <Pencil className="w-4 h-4" />
                         </button>
                       )}
-                      {isOwnPending && onDelete && (
+                      {(isOwnPending || canDeleteAny) && onDelete && (
                         <button onClick={() => onDelete(row.id)} className="p-1.5 rounded-lg hover:bg-muted transition-colors text-destructive" title="ลบ">
                           <Trash2 className="w-4 h-4" />
                         </button>
