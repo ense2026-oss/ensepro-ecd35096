@@ -6,7 +6,6 @@ import { Receipt, FileText, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { formatCurrency } from "@/utils/taxCalculation";
-import { exportPayslipPdfFromSnapshot } from "@/utils/exportPayroll";
 import { createDownloadProgressToast } from "@/utils/downloadToast";
 import type { PayslipRow } from "@/hooks/usePayrollPeriod";
 import { toast } from "sonner";
@@ -159,6 +158,7 @@ const MyPayslips = () => {
                           if (!meForExport) return;
                           const { onProgress, onError } = createDownloadProgressToast("กำลังดาวน์โหลดสลิป");
                           try {
+                            const { exportPayslipPdfFromSnapshot } = await import("@/utils/exportPayroll");
                             await exportPayslipPdfFromSnapshot(meForExport!, r, THAI_MONTHS[r.period.month - 1], r.period.year + 543, onProgress);
                           } catch (e: any) {
                             onError(e?.message || "ดาวน์โหลดไม่สำเร็จ");
@@ -214,6 +214,7 @@ const MyPayslips = () => {
                   if (!meForExport) return;
                   const { onProgress, onError } = createDownloadProgressToast("กำลังดาวน์โหลดสลิป");
                   try {
+                    const { exportPayslipPdfFromSnapshot } = await import("@/utils/exportPayroll");
                     await exportPayslipPdfFromSnapshot(meForExport!, selected, THAI_MONTHS[selected.period.month - 1], selected.period.year + 543, onProgress);
                   } catch (e: any) {
                     onError(e?.message || "ดาวน์โหลดไม่สำเร็จ");

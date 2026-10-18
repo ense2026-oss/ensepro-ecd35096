@@ -856,7 +856,28 @@ const Dashboard = () => {
           ) : (
             <ResponsiveContainer width="100%" height={200}>
               <PieChart>
-                <Pie data={leavePieData} cx="50%" cy="50%" innerRadius={55} outerRadius={85} paddingAngle={3} dataKey="value">
+                <Pie
+                  data={leavePieData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={55}
+                  outerRadius={85}
+                  paddingAngle={3}
+                  dataKey="value"
+                  labelLine={false}
+                  label={({ cx, cy, midAngle, innerRadius, outerRadius, percent }: any) => {
+                    if (!percent || percent < 0.05) return null;
+                    const RAD = Math.PI / 180;
+                    const r = innerRadius + (outerRadius - innerRadius) / 2;
+                    const x = cx + r * Math.cos(-midAngle * RAD);
+                    const y = cy + r * Math.sin(-midAngle * RAD);
+                    return (
+                      <text x={x} y={y} fill="#fff" textAnchor="middle" dominantBaseline="central" fontSize={12} fontWeight={700}>
+                        {Math.round(percent * 100)}%
+                      </text>
+                    );
+                  }}
+                >
                   {leavePieData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
@@ -866,15 +887,18 @@ const Dashboard = () => {
             </ResponsiveContainer>
           )}
           <div className="space-y-2 mt-2">
-            {leavePieData.map((item) => (
-              <div key={item.name} className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-2.5 h-2.5 rounded-full" style={{ background: item.color }} />
-                  <span className="text-xs text-muted-foreground">{item.name}</span>
+            {leavePieData.map((item) => {
+              const pct = totalLeaveDays > 0 ? Math.round((item.value / totalLeaveDays) * 100) : 0;
+              return (
+                <div key={item.name} className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2.5 h-2.5 rounded-full" style={{ background: item.color }} />
+                    <span className="text-xs text-muted-foreground">{item.name}</span>
+                  </div>
+                  <span className="text-xs font-semibold" style={{ color: item.color }}>{item.value} วัน ({pct}%)</span>
                 </div>
-                <span className="text-xs font-semibold">{item.value} วัน</span>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </div>
