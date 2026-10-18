@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Eye, EyeOff, Building2, Shield, UserPlus, LogIn } from "lucide-react";
 import { useBranding } from "@/contexts/BrandingContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 
 const floatingOrbs = [
   { size: 420, x: 60, y: -5, color: "#FF870F", opacity: 0.12, duration: 18, delay: 0 },
@@ -39,6 +40,19 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+
+  // สถิติจริงบนหน้า login (พนักงาน/สังกัด/ตำแหน่ง) — ดึงผ่าน RPC แบบ public
+  // (SECURITY DEFINER) เพราะหน้านี้ยังไม่ล็อกอิน RLS จึงอ่านตารางตรง ๆ ไม่ได้
+  const [orgStats, setOrgStats] = useState<{ employees: number; affiliations: number; positions: number } | null>(null);
+  useEffect(() => {
+    let active = true;
+    (supabase.rpc as any)("public_login_stats").then(({ data, error }: { data: any; error: any }) => {
+      if (!active || error || !data) return;
+      const d = data as { employees?: number; affiliations?: number; positions?: number };
+      setOrgStats({ employees: d.employees ?? 0, affiliations: d.affiliations ?? 0, positions: d.positions ?? 0 });
+    });
+    return () => { active = false; };
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -185,9 +199,9 @@ const Login = () => {
 
         <div className="relative z-10 grid grid-cols-3 gap-4">
           {[
-            { label: "พนักงาน", value: "500+" },
-            { label: "แผนก", value: "24" },
-            { label: "สาขา", value: "8" },
+            { label: "พนักงาน", value: orgStats ? orgStats.employees.toLocaleString("th-TH") : "…" },
+            { label: "สังกัด", value: orgStats ? orgStats.affiliations.toLocaleString("th-TH") : "…" },
+            { label: "ตำแหน่ง", value: orgStats ? orgStats.positions.toLocaleString("th-TH") : "…" },
           ].map((s) => (
             <div
               key={s.label}
