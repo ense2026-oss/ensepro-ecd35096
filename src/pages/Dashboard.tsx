@@ -280,31 +280,37 @@ const Dashboard = () => {
       const employeeRow: any | null = single(empLookup);
       const empId = employeeRow?.id || empIdDirect || null;
 
-      // Holidays + personal day-offs (common to all views)
-      const [holidays, patterns, overrides] = unwrapAll(await Promise.all([
+      // Holidays + personal day-offs (common to all views). Fetched in PARALLEL
+      // with the branch queries below (not as a separate earlier await) so the
+      // dashboard doesn't pay an extra sequential round-trip before loading.
+      const commonP = Promise.all([
         supabase.from("company_holidays").select("date, name, is_paid").gte("date", today).order("date").limit(12),
         empId ? supabase.from("employee_dayoff_patterns").select("*").eq("employee_id", empId) : Promise.resolve({ data: [] as any[], error: null }),
         empId ? supabase.from("employee_dayoff_overrides").select("*").eq("employee_id", empId).gte("date", today) : Promise.resolve({ data: [] as any[], error: null }),
-      ]));
-
-      const common = { leaveTypes, employeeRow, holidays, patterns, overrides };
+      ]);
+      const buildCommon = (res: Awaited<typeof commonP>) => {
+        const [holidays, patterns, overrides] = unwrapAll(res);
+        return { leaveTypes, employeeRow, holidays, patterns, overrides };
+      };
 
       if (viewType === "employee") {
         if (!empId) {
-          return { ...common, branch: "self", employees: [], attToday: [], leaves: [], ots: [], timeEdits: [], monthAtt: [], checkIn: null };
+          return { ...buildCommon(await commonP), branch: "self", employees: [], attToday: [], leaves: [], ots: [], timeEdits: [], monthAtt: [], checkIn: null };
         }
-        const [leaveRes, otRes, ciRes] = await Promise.all([
+        const [commonRes, leaveRes, otRes, ciRes] = await Promise.all([
+          commonP,
           supabase.from("leave_requests").select("*").eq("employee_id", empId),
           supabase.from("overtime_requests").select("*").eq("employee_id", empId),
           supabase.from("check_in_records").select("*").eq("employee_id", empId).eq("date", today).maybeSingle(),
         ]);
         const [leaves, ots] = unwrapAll([leaveRes, otRes]);
-        return { ...common, branch: "self", employees: [], attToday: [], leaves, ots, timeEdits: [], monthAtt: [], checkIn: single(ciRes) };
+        return { ...buildCommon(commonRes), branch: "self", employees: [], attToday: [], leaves, ots, timeEdits: [], monthAtt: [], checkIn: single(ciRes) };
       }
 
       if (viewType === "manager") {
         const myDept = employeeRow?.dept || "";
-        const [[empRes, attRes, leaveRes, otRes, teRes, pendLeaveRes, pendOtRes, ciRes], monthAtt] = await Promise.all([
+        const [commonRes, [empRes, attRes, leaveRes, otRes, teRes, pendLeaveRes, pendOtRes, ciRes], monthAtt] = await Promise.all([
+          commonP,
           Promise.all([
             supabase.from("employees").select("id, first_name, last_name, dept, status, user_id, start_date, role").eq("dept", myDept),
             supabase.from("attendance_records").select("id, employee_id, date, status, late").eq("date", today),
@@ -324,7 +330,7 @@ const Dashboard = () => {
 
         const deptEmpIds = new Set(employees.map((e: any) => e.id));
         return {
-          ...common,
+          ...buildCommon(commonRes),
           branch: "dept",
           employees,
           attToday: attToday.filter((a: any) => deptEmpIds.has(a.employee_id)),
@@ -340,7 +346,8 @@ const Dashboard = () => {
 
       // Admin/HR: fetch everything in one parallel batch. monthAtt is paged
       // separately (a full month of attendance exceeds PostgREST's ~1000 cap).
-      const [[empRes, attRes, leaveRes, otRes, teRes, pendLeaveRes, pendOtRes, ciRes], monthAtt] = await Promise.all([
+      const [commonRes, [empRes, attRes, leaveRes, otRes, teRes, pendLeaveRes, pendOtRes, ciRes], monthAtt] = await Promise.all([
+        commonP,
         Promise.all([
           supabase.from("employees").select("id, first_name, last_name, dept, status, user_id, start_date, role"),
           supabase.from("attendance_records").select("id, employee_id, date, status, late").eq("date", today),
@@ -357,7 +364,7 @@ const Dashboard = () => {
         fetchAllRows((from, to) => supabase.from("attendance_records").select("date, status, late, employee_id").gte("date", monthStart).lte("date", monthEnd).range(from, to)),
       ]);
       const [employees, attToday, leaves, ots, timeEdits, pendLeave, pendOt] = unwrapAll([empRes, attRes, leaveRes, otRes, teRes, pendLeaveRes, pendOtRes]);
-      return { ...common, branch: "all", employees, attToday, leaves, ots, timeEdits, monthAtt, checkIn: single(ciRes), pendingLeavesTotal: pendLeave.length, pendingOTTotal: pendOt.length };
+      return { ...buildCommon(commonRes), branch: "all", employees, attToday, leaves, ots, timeEdits, monthAtt, checkIn: single(ciRes), pendingLeavesTotal: pendLeave.length, pendingOTTotal: pendOt.length };
     },
     (d) => {
       setLeaveTypes(d.leaveTypes);
