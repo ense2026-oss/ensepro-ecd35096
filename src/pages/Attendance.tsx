@@ -1,6 +1,7 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Search, Download, CheckCircle, XCircle, Clock, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Save, X, FileText, Check, RotateCcw, CalendarDays, Eye, Upload, Users } from "lucide-react";
+import { Search, Download, CheckCircle, XCircle, Clock, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Save, X, FileText, Check, RotateCcw, CalendarDays, Eye, Upload, Users, MoreVertical } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { ThaiDatePicker } from "@/components/ui/thai-date-picker";
 import ResponsiveFilters from "@/components/ui/responsive-filters";
 import { format } from "date-fns";
@@ -115,7 +116,7 @@ const Attendance = () => {
   // joining base64 photo_url onto every attendance row — that join shipped a full
   // photo per record and was the bulk of this page's payload.
   const photoMap = useMemo(() => new Map(employees.map((e) => [e.id, e.photoUrl])), [employees]);
-  const positionMap = useMemo(() => new Map(employees.map((e) => [e.id, e.position])), [employees]);
+  const nicknameMap = useMemo(() => new Map(employees.map((e) => [e.id, e.nickname])), [employees]);
   const { role, user, currentUser } = useAuth();
   const { canAction, getScope } = usePermissions();
   const canApproveTime = canAction(role, 'attendance', 'approve');
@@ -967,7 +968,7 @@ const Attendance = () => {
         <>
           {/* Table */}
           <div className="card-base overflow-hidden">
-            {/* Mobile: ตารางกะทัดรัด 2 บรรทัดต่อแถว — วันที่ | รูป/ตำแหน่ง | เข้า/ออก | OT | สถานะ | จัดการ (ตารางเต็มแสดงตั้งแต่ md ขึ้นไป) */}
+            {/* Mobile: ตารางกะทัดรัด 2 บรรทัดต่อแถว — วันที่ | รูป/ชื่อเล่น | เข้า/ออก | สถานะ+OT | จัดการ (ตารางเต็มแสดงตั้งแต่ md ขึ้นไป) */}
             <div className="md:hidden">
               {loading ? (
                 <p className="text-center py-6 text-sm text-muted-foreground">กำลังโหลด...</p>
@@ -978,8 +979,8 @@ const Attendance = () => {
                 <table className="w-full">
                   <thead>
                     <tr className="border-b" style={{ borderColor: "hsl(var(--border))" }}>
-                      {["วันที่", "พนักงาน", "เวลา", "OT", "สถานะ", "จัดการ"].map((h, i) => (
-                        <th key={h} className={`px-1 py-2 text-[10px] font-semibold text-muted-foreground whitespace-nowrap ${i === 1 || i === 5 ? "text-center" : "text-left"}`}>{h}</th>
+                      {["วันที่", "พนักงาน", "เวลา", "สถานะ", "จัดการ"].map((h, i) => (
+                        <th key={h} className={`px-1 py-2 text-[10px] font-semibold text-muted-foreground whitespace-nowrap ${i === 1 || i === 4 ? "text-center" : "text-left"}`}>{h}</th>
                       ))}
                     </tr>
                   </thead>
@@ -1004,7 +1005,7 @@ const Attendance = () => {
                           <td className="px-1 py-2">
                             <div className="flex flex-col items-center gap-0.5 w-12">
                               <EmployeeAvatar photoUrl={photoMap.get(row.employeeId)} firstName={row.name} size="sm" rounded="full" />
-                              <span className="text-[10px] leading-tight text-muted-foreground text-center w-full truncate">{positionMap.get(row.employeeId) || row.dept || "-"}</span>
+                              <span className="text-[10px] leading-tight text-muted-foreground text-center w-full truncate">{nicknameMap.get(row.employeeId) || "-"}</span>
                             </div>
                           </td>
                           <td className="px-1 py-2 text-[10px] leading-tight whitespace-nowrap">
@@ -1017,32 +1018,50 @@ const Attendance = () => {
                               <span className="font-semibold">{fmtTime(row.checkOut)}</span>
                             </p>
                           </td>
-                          <td className="px-1 py-2 text-[10px] leading-tight whitespace-nowrap">
-                            {hasOt ? (
-                              <>
-                                <p className="font-mono" style={{ color: "hsl(270 70% 45%)" }}>{shortTime(row.otIn)} - {shortTime(row.otOut)}</p>
-                                <p className="mt-1 font-semibold" style={{ color: row.ot > 0 ? "hsl(90 100% 30%)" : undefined }}>{row.ot > 0 ? `+${row.ot} ชม.` : "-"}</p>
-                              </>
-                            ) : (
-                              <span className="text-muted-foreground">-</span>
-                            )}
-                          </td>
                           <td className="px-1 py-2">
                             <div className="inline-flex items-center gap-1 text-[10px] leading-tight font-semibold px-1.5 py-1 rounded-full whitespace-nowrap" style={{ background: conf.bg, color: conf.color }}>
                               <Icon className="w-3 h-3 flex-shrink-0" style={{ color: conf.color }} />
                               {row.note || conf.label}
                             </div>
+                            <p className="mt-1 text-[10px] leading-tight whitespace-nowrap">
+                              {hasOt ? (
+                                <>
+                                  <span className="text-muted-foreground">OT </span>
+                                  <span className="font-mono" style={{ color: "hsl(270 70% 45%)" }}>{shortTime(row.otIn)}-{shortTime(row.otOut)}</span>
+                                  {row.ot > 0 && <span className="ml-1 font-semibold" style={{ color: "hsl(90 100% 30%)" }}>+{row.ot} ชม.</span>}
+                                </>
+                              ) : (
+                                <span className="text-muted-foreground">OT -</span>
+                              )}
+                            </p>
                           </td>
                           <td className="px-1 py-2 text-center">
                             {canEditRow ? (
-                              <button
-                                onClick={() => openEdit(row)}
-                                title="ขอแก้ไขเวลา"
-                                aria-label="ขอแก้ไขเวลา"
-                                className="p-1.5 rounded-lg border hover:bg-muted transition-colors inline-flex items-center justify-center"
-                              >
-                                <RotateCcw className="w-3.5 h-3.5" />
-                              </button>
+                              canEditTime ? (
+                                // admin / hr / ผู้มีสิทธิ์แก้ไข: รวมเครื่องมือไว้ในเมนู ⋮
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <button className="p-1.5 rounded-lg border hover:bg-muted transition-colors inline-flex items-center justify-center" aria-label="จัดการ">
+                                      <MoreVertical className="w-4 h-4" />
+                                    </button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    <DropdownMenuItem onClick={() => openEdit(row)}>
+                                      <RotateCcw className="w-4 h-4 mr-2" /> ขอแก้ไขเวลา
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              ) : (
+                                // พนักงาน: แสดงไอคอนขอแก้ไขเวลาตรง ๆ
+                                <button
+                                  onClick={() => openEdit(row)}
+                                  title="ขอแก้ไขเวลา"
+                                  aria-label="ขอแก้ไขเวลา"
+                                  className="p-1.5 rounded-lg border hover:bg-muted transition-colors inline-flex items-center justify-center"
+                                >
+                                  <RotateCcw className="w-3.5 h-3.5" />
+                                </button>
+                              )
                             ) : (
                               <span className="text-xs text-muted-foreground">-</span>
                             )}
