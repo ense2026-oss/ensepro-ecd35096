@@ -39,7 +39,8 @@ export interface AppNotification {
 interface TimeEditContextType {
   editRequests: TimeEditRequest[];
   addEditRequest: (req: Omit<TimeEditRequest, "id" | "status" | "createdAt" | "currentTier" | "approvedTiers" | "totalTiers">) => void;
-  updateRequestStatus: (id: string, status: "approved" | "rejected") => void;
+  // skipDb: ฝั่ง DB ถูกอัปเดตไปแล้ว (เช่นผ่าน decide_time_edit_request) — แค่ให้แถวในหน้าจอเปลี่ยนทันที
+  updateRequestStatus: (id: string, status: "approved" | "rejected", opts?: { skipDb?: boolean }) => void;
   notifications: AppNotification[];
   addNotification: (notif: Omit<AppNotification, "id">) => void;
   markNotifRead: (id: string) => void;
@@ -207,14 +208,17 @@ export const TimeEditProvider = ({ children }: { children: ReactNode }) => {
     void notifyAssignedApprovers("time_edit", req.employeeId, "time_edit", notifyParams, () => notifyApprovers(notifyParams));
   }, [fetchEditRequests]);
 
-  const updateRequestStatus = useCallback(async (id: string, status: "approved" | "rejected") => {
-    await supabase.from("time_edit_requests").update({ status }).eq("id", id);
+  const updateRequestStatus = useCallback(async (id: string, status: "approved" | "rejected", opts?: { skipDb?: boolean }) => {
+    // เปลี่ยนสถานะในหน้าจอก่อนทันที (optimistic) ไม่รอรอบไป-กลับของ DB ซึ่งบางครั้งช้าหลายวินาที
     setEditRequests((prev) => {
       const r = prev.find((x) => x.id === id);
       logInfo("attendance", `${status === "approved" ? "อนุมัติ" : "ไม่อนุมัติ"}คำขอแก้ไขเวลา: ${r?.employeeName || id}`, { id, status, employeeName: r?.employeeName });
       return prev.map((x) => (x.id === id ? { ...x, status } : x));
     });
-  }, []);
+    if (opts?.skipDb) return;
+    const { error } = await supabase.from("time_edit_requests").update({ status }).eq("id", id);
+    if (error) fetchEditRequests(); // บันทึกไม่สำเร็จ — ดึงสถานะจริงกลับมา
+  }, [fetchEditRequests]);
 
   const addNotification = useCallback(async (notif: Omit<AppNotification, "id">) => {
     if (!user) return;

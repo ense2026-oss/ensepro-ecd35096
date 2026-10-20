@@ -614,7 +614,7 @@ const Attendance = () => {
       toast.error(error.message || "ดำเนินการไม่สำเร็จ");
       return;
     }
-    updateRequestStatus(req.id, action === "approve" ? "approved" : "rejected");
+    updateRequestStatus(req.id, action === "approve" ? "approved" : "rejected", { skipDb: true });
     setDetailOpen(false);
     if (action === "approve") {
       toast.success("อนุมัติคำขอแก้ไขเวลาเรียบร้อย");
