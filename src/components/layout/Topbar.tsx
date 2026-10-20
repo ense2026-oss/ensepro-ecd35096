@@ -78,7 +78,7 @@ const Topbar = ({ onMenuToggle, pageTitle = "Dashboard", pageSubtitle = "ภา�
         backgroundColor: "hsl(var(--topbar-background))",
         backgroundImage: `url(${headerBg})`,
         backgroundSize: "cover",
-        backgroundPosition: "center bottom",
+        backgroundPosition: "center top",
         backgroundRepeat: "no-repeat",
         borderColor: "hsl(var(--topbar-border))",
       }}
