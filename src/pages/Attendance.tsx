@@ -10,6 +10,7 @@ import { managementIdSet } from "@/lib/management";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogBody, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
+import { logInfo } from "@/lib/systemLog";
 import { formatThaiDate } from "@/utils/thaiDate";
 import TimeInput24 from "@/components/ui/time-input-24";
 import { useTimeEditRequests, type TimeEditRequest } from "@/contexts/TimeEditContext";
@@ -127,6 +128,8 @@ const Attendance = () => {
   const canDecideRequest = (r: { employeeId?: string }) =>
     canApproveTime || (!!r.employeeId && myTimeEditApproveeIds.has(r.employeeId));
   const canEditTime = canAction(role, 'attendance', 'edit');
+  // admin/hr (แก้ไข + อนุมัติได้) แก้เวลาตรง ๆ ได้ทันที ไม่ต้องยื่นคำขอแล้วอนุมัติเอง
+  const canDirectEdit = canEditTime && canApproveTime;
   const attendanceScope = getScope(role, 'attendance');
   const canExport = attendanceScope !== 'self';
   const { editRequests, addEditRequest, updateRequestStatus } = useTimeEditRequests();
@@ -541,6 +544,10 @@ const Attendance = () => {
       toast.error("กรุณาระบุเวลาเข้า-ออกใหม่");
       return;
     }
+    if (canDirectEdit) {
+      void saveDirectEdit(editingRow, editForm.newCheckIn, editForm.newCheckOut, editForm.reason);
+      return;
+    }
     addEditRequest({
       attendanceId: editingRow.virtual ? undefined : editingRow.id,
       employeeId: editingRow.employeeId,
@@ -554,6 +561,56 @@ const Attendance = () => {
     });
     setEditOpen(false);
     toast.success("ส่งคำขอแก้ไขเวลาเรียบร้อย");
+  };
+
+  // แก้เวลาโดยตรง (admin/hr): บันทึกเป็นคำขอที่ "อนุมัติแล้ว" เพื่อเก็บประวัติ + บันทึกการอนุมัติ แล้วปรับเวลาจริงทันที
+  const saveDirectEdit = async (row: AttendanceRecord, newCheckIn: string, newCheckOut: string, reason: string) => {
+    if (!user?.id) return;
+    const { data: inserted, error } = await supabase.from("time_edit_requests").insert({
+      employee_id: row.employeeId,
+      attendance_id: row.virtual ? null : row.id,
+      date: row.date,
+      original_check_in: row.checkIn,
+      original_check_out: row.checkOut,
+      new_check_in: newCheckIn,
+      new_check_out: newCheckOut,
+      reason: `[แก้ไขโดยผู้ดูแล] ${reason}`,
+      status: "approved",
+      current_tier: 1,
+      approved_tiers: 1,
+      total_tiers: 1,
+    }).select("id").single();
+    if (error || !inserted) {
+      toast.error(error?.message || "บันทึกการแก้ไขเวลาไม่สำเร็จ");
+      return;
+    }
+    await supabase.from("approval_logs").insert({
+      request_id: inserted.id,
+      request_type: "time_edit",
+      tier: 1,
+      action: "approve",
+      approver_user_id: user.id,
+    });
+    await applyAttendanceChange({
+      id: inserted.id,
+      attendanceId: row.virtual ? undefined : row.id,
+      employeeId: row.employeeId,
+      employeeName: row.name,
+      date: row.date,
+      originalCheckIn: row.checkIn,
+      originalCheckOut: row.checkOut,
+      newCheckIn,
+      newCheckOut,
+      reason,
+      status: "approved",
+      createdAt: new Date().toISOString(),
+      currentTier: 1,
+      approvedTiers: 1,
+      totalTiers: 1,
+    });
+    logInfo("attendance", `แก้ไขเวลาโดยตรง: ${row.name} (${row.date})`, { employeeId: row.employeeId, date: row.date, newCheckIn, newCheckOut });
+    setEditOpen(false);
+    toast.success("แก้ไขเวลาเรียบร้อย");
   };
 
   const applyAttendanceChange = async (req: TimeEditRequest) => {
@@ -1047,7 +1104,7 @@ const Attendance = () => {
                                   </DropdownMenuTrigger>
                                   <DropdownMenuContent align="end">
                                     <DropdownMenuItem onClick={() => openEdit(row)}>
-                                      <RotateCcw className="w-4 h-4 mr-2" /> ขอแก้ไขเวลา
+                                      <RotateCcw className="w-4 h-4 mr-2" /> {canDirectEdit ? "แก้ไขเวลา" : "ขอแก้ไขเวลา"}
                                     </DropdownMenuItem>
                                   </DropdownMenuContent>
                                 </DropdownMenu>
@@ -1129,8 +1186,8 @@ const Attendance = () => {
                           {(canEditTime || row.employeeId === currentUser?.employeeId) && row.status !== "holiday" && row.status !== "dayoff" ? (
                             <button
                               onClick={() => openEdit(row)}
-                              title="ขอแก้ไขเวลา"
-                              aria-label="ขอแก้ไขเวลา"
+                              title={canDirectEdit ? "แก้ไขเวลา" : "ขอแก้ไขเวลา"}
+                              aria-label={canDirectEdit ? "แก้ไขเวลา" : "ขอแก้ไขเวลา"}
                               className="p-1.5 rounded-lg border hover:bg-muted transition-colors inline-flex items-center justify-center"
                             >
                               <RotateCcw className="w-3.5 h-3.5" />
@@ -1209,7 +1266,7 @@ const Attendance = () => {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-base font-bold">
               <RotateCcw className="w-5 h-5 text-primary" />
-              ขอแก้ไขเวลา — {editingRow?.name}
+              {canDirectEdit ? "แก้ไขเวลา" : "ขอแก้ไขเวลา"} — {editingRow?.name}
             </DialogTitle>
             <DialogDescription className="sr-only">ฟอร์มขอแก้ไขเวลาเข้า-ออกงาน</DialogDescription>
           </DialogHeader>
@@ -1240,7 +1297,7 @@ const Attendance = () => {
               <X className="w-4 h-4" /> ยกเลิก
             </button>
             <button onClick={handleEditSave} className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold text-primary-foreground" style={{ background: "linear-gradient(135deg, hsl(var(--primary)), hsl(31 100% 60%))" }}>
-              <Save className="w-4 h-4" /> ส่งคำขอ
+              <Save className="w-4 h-4" /> {canDirectEdit ? "บันทึก" : "ส่งคำขอ"}
             </button>
           </DialogFooter>
         </DialogContent>
