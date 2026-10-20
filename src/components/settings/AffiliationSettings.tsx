@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Building2, Plus, Edit, Trash2, Check, Briefcase, ChevronDown, ChevronRight } from "lucide-react";
+import { Building2, Plus, Edit, Trash2, Check, Briefcase, ChevronDown, ChevronRight, MoreVertical } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
@@ -111,14 +112,14 @@ const AffiliationSettings = () => {
       <div className="flex justify-between items-center">
         <p className="text-sm text-muted-foreground">{affiliations.length} สังกัด, {totalPositions} ตำแหน่ง</p>
         <div className="flex items-center gap-2">
-          <button onClick={openAddPosGlobal}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold border-2 border-primary text-primary hover:bg-primary/10 transition-colors">
-            <Briefcase className="w-4 h-4" /> เพิ่มตำแหน่งงาน
+          <button onClick={openAddPosGlobal} title="เพิ่มตำแหน่งงาน" aria-label="เพิ่มตำแหน่งงาน"
+            className="flex items-center justify-center gap-2 w-10 h-10 sm:w-auto sm:h-auto sm:px-4 sm:py-2 rounded-xl text-sm font-bold border-2 border-primary text-primary hover:bg-primary/10 transition-colors">
+            <Briefcase className="w-4 h-4" /> <span className="hidden sm:inline">เพิ่มตำแหน่งงาน</span>
           </button>
-          <button onClick={openAddAff}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold text-primary-foreground"
+          <button onClick={openAddAff} title="เพิ่มสังกัด" aria-label="เพิ่มสังกัด"
+            className="flex items-center justify-center gap-2 w-10 h-10 sm:w-auto sm:h-auto sm:px-4 sm:py-2 rounded-xl text-sm font-bold text-primary-foreground"
             style={{ background: "linear-gradient(135deg, hsl(var(--primary)), hsl(31 100% 60%))", boxShadow: "0 4px 12px hsl(var(--primary) / 0.3)" }}>
-            <Plus className="w-4 h-4" /> เพิ่มสังกัด
+            <Plus className="w-4 h-4" /> <span className="hidden sm:inline">เพิ่มสังกัด</span>
           </button>
         </div>
       </div>
@@ -128,28 +129,50 @@ const AffiliationSettings = () => {
           const isExpanded = expandedAffs[aff.id] ?? true;
           return (
             <div key={aff.id} className="card-base overflow-hidden">
-              <div className="p-4 flex items-center gap-4">
+              <div className="p-3 sm:p-4 flex items-center gap-3 sm:gap-4">
                 <button onClick={() => toggleExpand(aff.id)} className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: "hsl(var(--primary) / 0.12)" }}>
                   <Building2 className="w-5 h-5 text-primary" />
                 </button>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <p className="font-semibold text-sm truncate">{aff.name}</p>
-                    <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-muted text-muted-foreground">
-                      {aff.positions.length} ตำแหน่ง
-                    </span>
-                  </div>
+                {/* มือถือ: ชื่อสังกัดบรรทัดบน / จำนวนตำแหน่งบรรทัดล่าง · เดสก์ท็อป: อยู่แถวเดียวกัน */}
+                <div className="flex-1 min-w-0 flex flex-col items-start gap-0.5 sm:flex-row sm:items-center sm:gap-2">
+                  <p className="font-semibold text-sm truncate max-w-full">{aff.name}</p>
+                  <span className="text-[11px] sm:text-xs leading-none px-2 py-1 rounded-full font-medium bg-muted text-muted-foreground flex-shrink-0">
+                    {aff.positions.length} ตำแหน่ง
+                  </span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <button onClick={() => openAddPos(aff.id)} className="p-2 rounded-lg hover:bg-muted transition-colors text-primary" title="เพิ่มตำแหน่ง">
-                    <Plus className="w-4 h-4" />
-                  </button>
-                  <button onClick={() => openEditAff(aff)} className="p-2 rounded-lg hover:bg-muted transition-colors text-muted-foreground">
-                    <Edit className="w-4 h-4" />
-                  </button>
-                  <button onClick={() => setDeleteAffId(aff.id)} className="p-2 rounded-lg hover:bg-destructive/10 transition-colors text-destructive">
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                  {/* มือถือ: รวมปุ่มจัดการไว้ในเมนู ⋮ */}
+                  <div className="sm:hidden">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button className="p-2 rounded-lg hover:bg-muted transition-colors text-muted-foreground" aria-label="จัดการสังกัด">
+                          <MoreVertical className="w-4 h-4" />
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => openAddPos(aff.id)}>
+                          <Plus className="w-4 h-4 mr-2 text-primary" /> เพิ่มตำแหน่ง
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => openEditAff(aff)}>
+                          <Edit className="w-4 h-4 mr-2" /> แก้ไขสังกัด
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setDeleteAffId(aff.id)} className="text-destructive focus:text-destructive">
+                          <Trash2 className="w-4 h-4 mr-2" /> ลบสังกัด
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                  <div className="hidden sm:flex items-center gap-1">
+                    <button onClick={() => openAddPos(aff.id)} className="p-2 rounded-lg hover:bg-muted transition-colors text-primary" title="เพิ่มตำแหน่ง">
+                      <Plus className="w-4 h-4" />
+                    </button>
+                    <button onClick={() => openEditAff(aff)} className="p-2 rounded-lg hover:bg-muted transition-colors text-muted-foreground">
+                      <Edit className="w-4 h-4" />
+                    </button>
+                    <button onClick={() => setDeleteAffId(aff.id)} className="p-2 rounded-lg hover:bg-destructive/10 transition-colors text-destructive">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                   <button onClick={() => toggleExpand(aff.id)} className="p-2 rounded-lg hover:bg-muted transition-colors text-muted-foreground">
                     {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
                   </button>
