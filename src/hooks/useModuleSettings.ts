@@ -45,30 +45,11 @@ export function useModuleSettings() {
     };
     window.addEventListener("module-settings-changed", handleLocalChange);
 
-    // Cross-client realtime sync via DB changes (unique channel name per instance).
-    const channel = supabase
-      .channel(`module-settings-realtime-${Math.random().toString(36).slice(2)}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "company_settings",
-          filter: "key=eq.module_settings",
-        },
-        (payload) => {
-          if (payload.new && "value" in payload.new) {
-            const val = payload.new.value as Record<string, boolean>;
-            const merged = { ...DEFAULT_MODULES, ...val };
-            setModules(merged);
-          }
-        }
-      )
-      .subscribe();
-
+    // ลดโหลด: เดิมเปิด realtime channel ต่อการใช้ hook ทุกครั้ง (~5 ครั้ง/ผู้ใช้)
+    // เอาออกเพื่อกันชน limit การเชื่อมต่อ — การเปิด/ปิดโมดูลเป็นงาน admin ที่นาน ๆ ครั้ง
+    // ภายในแท็บเดียวกัน sync ผ่าน window event อยู่แล้ว ส่วนเครื่องอื่นจะเห็นตอนโหลดหน้าใหม่
     return () => {
       window.removeEventListener("module-settings-changed", handleLocalChange);
-      supabase.removeChannel(channel);
     };
   }, [fetchSettings]);
 

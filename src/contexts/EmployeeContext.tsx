@@ -360,12 +360,12 @@ export const EmployeeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       if (debounceRef.current) clearTimeout(debounceRef.current);
       debounceRef.current = setTimeout(() => fetchEmployees(), 250);
     };
+    // ลดโหลด: ติดตามเฉพาะตาราง employees ตารางเดียว (เดิม 4 ตาราง)
+    // education/work_history/payroll_items เปลี่ยนพร้อมการแก้พนักงานอยู่แล้ว
+    // ซึ่งจะ trigger ผ่าน employees เอง — ลด subscription ต่อผู้ใช้ 3 ตัว
     const channel = supabase
       .channel("employees-realtime")
       .on("postgres_changes", { event: "*", schema: "public", table: "employees" }, debounced)
-      .on("postgres_changes", { event: "*", schema: "public", table: "employee_education" }, debounced)
-      .on("postgres_changes", { event: "*", schema: "public", table: "employee_work_history" }, debounced)
-      .on("postgres_changes", { event: "*", schema: "public", table: "employee_custom_payroll_items" }, debounced)
       .subscribe();
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);

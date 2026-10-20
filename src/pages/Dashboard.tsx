@@ -394,16 +394,14 @@ const Dashboard = () => {
   useEffect(() => {
     if (!currentUser?.id) return;
 
+    // ลดโหลด: ติดตามเฉพาะตารางที่ขับเคลื่อน widget จริง ๆ (เดิม 8 ตาราง → 4)
+    // วันหยุด/แพตเทิร์นวันหยุดเปลี่ยนนาน ๆ ครั้ง จะอัปเดตตอนโหลดหน้าใหม่
     const channel = supabase
       .channel("dashboard-realtime")
       .on("postgres_changes", { event: "*", schema: "public", table: "attendance_records" }, debouncedFetch)
-      .on("postgres_changes", { event: "*", schema: "public", table: "check_in_records" }, debouncedFetch)
       .on("postgres_changes", { event: "*", schema: "public", table: "leave_requests" }, debouncedFetch)
       .on("postgres_changes", { event: "*", schema: "public", table: "overtime_requests" }, debouncedFetch)
       .on("postgres_changes", { event: "*", schema: "public", table: "time_edit_requests" }, debouncedFetch)
-      .on("postgres_changes", { event: "*", schema: "public", table: "company_holidays" }, debouncedFetch)
-      .on("postgres_changes", { event: "*", schema: "public", table: "employee_dayoff_patterns" }, debouncedFetch)
-      .on("postgres_changes", { event: "*", schema: "public", table: "employee_dayoff_overrides" }, debouncedFetch)
       .subscribe();
 
     return () => {
