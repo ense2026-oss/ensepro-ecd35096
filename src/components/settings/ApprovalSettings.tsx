@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plus, X, Loader2 } from "lucide-react";
+import { Plus, X, Loader2, SlidersHorizontal, CalendarDays, Clock } from "lucide-react";
 import SearchableSelect from "@/components/ui/searchable-select";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -138,9 +138,9 @@ const ApprovalSettings = () => {
   };
 
   const TABS = [
-    { key: "basic", label: "ตั้งค่าเบื้องต้น" },
-    { key: "leave", label: "ตั้งค่าผู้อนุมัติการลา" },
-    { key: "time_edit", label: "ตั้งค่าผู้อนุมัติแก้ไขเวลา" },
+    { key: "basic", label: "ตั้งค่าเบื้องต้น", Icon: SlidersHorizontal },
+    { key: "leave", label: "ตั้งค่าผู้อนุมัติการลา", Icon: CalendarDays },
+    { key: "time_edit", label: "ตั้งค่าผู้อนุมัติแก้ไขเวลา", Icon: Clock },
   ] as const;
 
   if (loading && tab === "basic") {
@@ -154,14 +154,17 @@ const ApprovalSettings = () => {
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
-            className="px-4 py-2 rounded-xl text-sm font-medium transition-colors whitespace-nowrap flex-shrink-0"
+            title={t.label}
+            aria-label={t.label}
+            className="flex items-center justify-center gap-2 w-11 h-10 sm:w-auto sm:px-4 sm:py-2 rounded-xl text-sm font-medium transition-colors whitespace-nowrap flex-shrink-0"
             style={{
               background: tab === t.key ? "hsl(var(--primary))" : "transparent",
               color: tab === t.key ? "hsl(var(--primary-foreground))" : "hsl(var(--foreground))",
               border: tab === t.key ? "none" : "1px solid hsl(var(--border))",
             }}
           >
-            {t.label}
+            <t.Icon className="w-4 h-4 flex-shrink-0" />
+            <span className="hidden sm:inline">{t.label}</span>
           </button>
         ))}
       </div>
