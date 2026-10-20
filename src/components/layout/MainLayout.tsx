@@ -161,9 +161,11 @@ const MainLayout = () => {
         <Sidebar collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed(!sidebarCollapsed)} />
       </div>
       <div
-        className={`fixed inset-y-0 left-0 z-[60] lg:hidden transition-transform duration-300 ease-in-out overflow-visible ${
-          mobileSidebarOpen ? "translate-x-0" : "-translate-x-full"
+        // ปิดอยู่ต้องซ่อนทั้งก้อน (invisible) ไม่งั้นปุ่มวงกลมสีเขียวที่ยื่นออกมานอกขอบ (-right-3) จะโผล่ที่ขอบซ้ายของจอ
+        className={`fixed inset-y-0 left-0 z-[60] lg:hidden transition-[transform,visibility] duration-300 ease-in-out overflow-visible ${
+          mobileSidebarOpen ? "translate-x-0 visible" : "-translate-x-full invisible pointer-events-none"
         }`}
+        aria-hidden={!mobileSidebarOpen}
       >
         <Sidebar collapsed={false} onToggle={() => setMobileSidebarOpen(!mobileSidebarOpen)} onNavigate={() => setMobileSidebarOpen(false)} />
       </div>
