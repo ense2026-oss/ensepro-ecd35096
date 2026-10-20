@@ -1013,7 +1013,9 @@ const Payroll = () => {
 
       {/* Table */}
       <div className="card-base overflow-hidden">
-        <div className="overflow-auto max-h-[85dvh] overscroll-x-contain">
+        <p className="md:hidden text-[10px] text-muted-foreground px-3 pt-2 flex items-center gap-1"><ChevronLeft className="w-3 h-3" />ปัดซ้าย-ขวาเพื่อดูคอลัมน์อื่น<ChevronRight className="w-3 h-3" /></p>
+        {/* มือถือ: ให้เลื่อนแนวนอนในตาราง ส่วนแนวตั้งให้หน้าเลื่อนเอง (ตารางแบ่งหน้าละ ≤ 100 แถวอยู่แล้ว) นิ้วจะได้ไม่ติดอยู่ในตาราง */}
+        <div className="overflow-x-auto md:overflow-auto md:max-h-[85dvh] overscroll-x-contain">
           <table className="w-full text-sm whitespace-nowrap">
             <thead className="sticky top-0 z-20">
               <tr style={{ background: "hsl(var(--muted))" }}>
