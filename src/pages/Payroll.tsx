@@ -432,6 +432,9 @@ const Payroll = () => {
   const { affiliations } = useOrg();
   const [sortField, setSortField] = useState<"name" | "salary" | "net">("name");
   const [sortAsc, setSortAsc] = useState(true);
+  // คอลัมน์พนักงาน: ค่าเริ่มต้นยุบไว้ (แสดงแค่รูป) เหมือนหน้า "จัดการกะ"
+  // โดยเฉพาะมือถือจะได้เห็นแค่ 2 คอลัมน์แรก (ลำดับ + รูป) แล้วเลื่อนดูที่เหลือ
+  const [empColCollapsed, setEmpColCollapsed] = useState(true);
   const [payslipOpen, setPayslipOpen] = useState(false);
   const [selectedEmp, setSelectedEmp] = useState<Employee | null>(null);
   const [customItemsOpen, setCustomItemsOpen] = useState(false);
@@ -1015,7 +1018,14 @@ const Payroll = () => {
             <thead className="sticky top-0 z-20">
               <tr style={{ background: "hsl(var(--muted))" }}>
                 <th className="text-right pr-2 pl-1 py-3 font-semibold sticky left-0 z-30 w-[72px]" style={{ background: "hsl(var(--muted))" }}>ลำดับ</th>
-                <th className="text-left pl-2 pr-4 py-3 font-semibold sticky left-[72px] z-30" style={{ background: "hsl(var(--muted))" }}>พนักงาน</th>
+                <th className={`py-3 font-semibold sticky left-[72px] z-30 ${empColCollapsed ? "px-1 w-[56px]" : "text-left pl-2 pr-4"}`} style={{ background: "hsl(var(--muted))" }}>
+                  <div className={`flex items-center ${empColCollapsed ? "justify-center" : "justify-between gap-2"}`}>
+                    {!empColCollapsed && <span>พนักงาน</span>}
+                    <button onClick={() => setEmpColCollapsed((c) => !c)} className="p-1 rounded-lg hover:bg-muted transition-colors" title={empColCollapsed ? "ขยายคอลัมน์พนักงาน" : "ยุบคอลัมน์พนักงาน"}>
+                      {empColCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </th>
                 <th className="text-right px-3 py-3 font-semibold cursor-pointer select-none" onClick={() => toggleSort("salary")}>
                   เงินเดือน <SortIcon field="salary" />
                 </th>
@@ -1039,13 +1049,15 @@ const Payroll = () => {
               {paginatedData.map(({ emp, payroll }, idx) => (
                 <tr key={emp.id} className="border-t hover:bg-muted/30 transition-colors">
                   <td className="text-right pr-2 pl-1 py-3 sticky left-0 z-10 bg-background text-muted-foreground w-[72px]">{(currentPage - 1) * pageSize + idx + 1}</td>
-                  <td className="pl-2 pr-4 py-3 sticky left-[72px] z-10 bg-background">
-                    <div className="flex items-center gap-2.5">
+                  <td className={`py-3 sticky left-[72px] z-10 bg-background ${empColCollapsed ? "px-1" : "pl-2 pr-4"}`}>
+                    <div className={`flex items-center ${empColCollapsed ? "justify-center" : "gap-2.5"}`}>
                       <EmployeeAvatar photoUrl={emp.photoUrl} avatar={emp.avatar} avatarColor={emp.avatarColor} avatarTextColor={emp.avatarTextColor} firstName={emp.firstName} size="sm" rounded="lg" />
-                      <div>
-                        <p className="font-medium leading-tight">{emp.firstName} {emp.lastName}</p>
-                        <p className="text-xs text-muted-foreground">{emp.position}</p>
-                      </div>
+                      {!empColCollapsed && (
+                        <div>
+                          <p className="font-medium leading-tight">{emp.firstName} {emp.lastName}</p>
+                          <p className="text-xs text-muted-foreground">{emp.position}</p>
+                        </div>
+                      )}
                     </div>
                   </td>
                   <td className="text-right px-3 py-3">
@@ -1114,7 +1126,7 @@ const Payroll = () => {
               <tfoot>
                 <tr className="border-t-2 font-semibold" style={{ background: "hsl(var(--muted) / 0.5)" }}>
                   <td className="pr-2 pl-1 py-3 sticky left-0 z-10 w-[72px]" style={{ background: "hsl(var(--muted))" }}></td>
-                  <td className="pl-2 pr-4 py-3 sticky left-[72px] z-10 whitespace-nowrap" style={{ background: "hsl(var(--muted))" }}>รวมทั้งหมด ({filtered.length} คน)</td>
+                  <td className={`py-3 sticky left-[72px] z-10 whitespace-nowrap ${empColCollapsed ? "px-1 text-center" : "pl-2 pr-4"}`} style={{ background: "hsl(var(--muted))" }}>{empColCollapsed ? "รวม" : `รวมทั้งหมด (${filtered.length} คน)`}</td>
                   <td className="text-right px-3 py-3 tabular-nums">{formatCurrency(filtered.reduce((s, r) => s + r.payroll.salary, 0))}</td>
                   <td className="text-right px-3 py-3 tabular-nums">{formatCurrency(filtered.reduce((s, r) => s + r.payroll.otPay, 0))}</td>
                   <td className="text-right px-3 py-3 tabular-nums">{formatCurrency(filtered.reduce((s, r) => s + r.payroll.diligence, 0))}</td>
