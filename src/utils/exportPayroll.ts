@@ -295,8 +295,11 @@ interface PayslipSnapshotLike {
   custom_items: Array<{ name: string; type: "income" | "deduction"; amount: number }>;
 }
 
-export async function exportPayslipPdfFromSnapshot(
-  emp: Pick<Employee, "prefix" | "firstName" | "lastName" | "position" | "dept" | "nationalId">,
+type PayslipEmp = Pick<Employee, "prefix" | "firstName" | "lastName" | "position" | "dept" | "nationalId">;
+
+// สร้างเอกสาร PDF ของสลิปจาก snapshot — ใช้ร่วมกันทั้งตอนดาวน์โหลดและตอนดูตัวอย่าง
+async function buildPayslipDocFromSnapshot(
+  emp: PayslipEmp,
   snap: PayslipSnapshotLike,
   month: string,
   year: string | number,
@@ -329,7 +332,29 @@ export async function exportPayslipPdfFromSnapshot(
   });
   onProgress?.(90);
 
-  doc.save(`Payslip_${emp.firstName}_${emp.lastName}_${month}_${year}.pdf`);
+  return { doc, fileName: `Payslip_${emp.firstName}_${emp.lastName}_${month}_${year}.pdf` };
+}
+
+export async function exportPayslipPdfFromSnapshot(
+  emp: PayslipEmp,
+  snap: PayslipSnapshotLike,
+  month: string,
+  year: string | number,
+  onProgress?: (pct: number) => void,
+) {
+  const { doc, fileName } = await buildPayslipDocFromSnapshot(emp, snap, month, year, onProgress);
+  doc.save(fileName);
   onProgress?.(100);
+}
+
+/** สร้าง PDF สลิปเป็น Blob สำหรับดูตัวอย่างในแอป (ไม่ดาวน์โหลด) */
+export async function buildPayslipPdfBlobFromSnapshot(
+  emp: PayslipEmp,
+  snap: PayslipSnapshotLike,
+  month: string,
+  year: string | number,
+): Promise<{ blob: Blob; fileName: string }> {
+  const { doc, fileName } = await buildPayslipDocFromSnapshot(emp, snap, month, year);
+  return { blob: doc.output("blob"), fileName };
 }
 

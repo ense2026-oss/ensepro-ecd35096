@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePageQuery } from "@/hooks/usePageQuery";
 import { useAuth } from "@/contexts/AuthContext";
-import { Receipt, FileText, Download } from "lucide-react";
+import { Receipt, FileText, Download, Eye } from "lucide-react";
+import PayslipPdfPreviewDialog from "@/components/payroll/PayslipPdfPreviewDialog";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { formatCurrency } from "@/utils/taxCalculation";
@@ -22,6 +23,8 @@ const MyPayslips = () => {
 
   const [rows, setRows] = useState<PayslipWithPeriod[]>([]);
   const [selected, setSelected] = useState<PayslipWithPeriod | null>(null);
+  // สลิปที่กำลังดูตัวอย่าง PDF (กดปุ่มตา) — ไม่ดาวน์โหลด
+  const [previewRow, setPreviewRow] = useState<PayslipWithPeriod | null>(null);
   const [selectedYear, setSelectedYear] = useState<number | "all">("all");
 
   // Cached via React Query: revisiting this page renders instantly from cache and
@@ -67,6 +70,17 @@ const MyPayslips = () => {
     prefix: me.prefix, firstName: me.first_name, lastName: me.last_name,
     position: me.position, dept: me.dept, nationalId: me.national_id,
   } : null, [me]);
+
+  const downloadPdf = async (r: PayslipWithPeriod) => {
+    if (!meForExport) return;
+    const { onProgress, onError } = createDownloadProgressToast("กำลังดาวน์โหลดสลิป");
+    try {
+      const { exportPayslipPdfFromSnapshot } = await import("@/utils/exportPayroll");
+      await exportPayslipPdfFromSnapshot(meForExport, r, THAI_MONTHS[r.period.month - 1], r.period.year + 543, onProgress);
+    } catch (e: any) {
+      onError(e?.message || "ดาวน์โหลดไม่สำเร็จ");
+    }
+  };
 
   // ปี (ค.ศ.) ที่มีสลิป เรียงใหม่สุดก่อน — แสดงเป็น พ.ศ. ในตัวกรอง
   const years = useMemo(
@@ -127,7 +141,41 @@ const MyPayslips = () => {
 
       {displayRows.length > 0 && (
         <div className="card-base overflow-hidden">
-          <table className="w-full text-sm">
+          {/* มือถือ: การ์ด grid 2 คอลัมน์ (สไตล์เดียวกับหน้าอื่น) */}
+          <div className="md:hidden p-3">
+            <div className="grid grid-cols-2 gap-3">
+              {displayRows.map((r, idx) => (
+                <div key={r.id} className="rounded-xl border border-border p-3 flex flex-col gap-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-xs font-semibold truncate">{THAI_MONTHS[r.period.month - 1]} {r.period.year + 543}</p>
+                    <span className="text-[10px] text-muted-foreground tabular-nums shrink-0">#{displayRows.length - idx}</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-[11px]">
+                    <span className="text-muted-foreground">รายได้รวม</span>
+                    <span className="text-right tabular-nums">{formatCurrency(Number(r.gross_pay))}</span>
+                    <span className="text-muted-foreground">รวมหัก</span>
+                    <span className="text-right tabular-nums">{formatCurrency(Number(r.total_deduct))}</span>
+                    <span className="text-muted-foreground">สุทธิ</span>
+                    <span className="text-right tabular-nums font-bold" style={{ color: "hsl(var(--primary))" }}>{formatCurrency(Number(r.net_pay))}</span>
+                  </div>
+                  <div className="flex items-center justify-center gap-1 pt-1 border-t border-border">
+                    <button onClick={() => setPreviewRow(r)} className="p-1.5 rounded-lg hover:bg-muted" title="ดูตัวอย่าง PDF" aria-label="ดูตัวอย่าง PDF">
+                      <Eye className="w-4 h-4" />
+                    </button>
+                    <button onClick={() => setSelected(r)} className="p-1.5 rounded-lg hover:bg-muted" title="ดูรายละเอียด" aria-label="ดูรายละเอียด">
+                      <Receipt className="w-4 h-4" />
+                    </button>
+                    <button onClick={() => downloadPdf(r)} className="p-1.5 rounded-lg hover:bg-muted" title="ดาวน์โหลด PDF" aria-label="ดาวน์โหลด PDF">
+                      <Download className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* คอม: ตาราง */}
+          <table className="w-full text-sm hidden md:table">
             <thead style={{ background: "hsl(var(--muted))" }}>
               <tr>
                 <th className="text-left px-4 py-3 font-semibold w-[56px]">ลำดับ</th>
@@ -135,7 +183,7 @@ const MyPayslips = () => {
                 <th className="text-right px-3 py-3 font-semibold">รายได้รวม</th>
                 <th className="text-right px-3 py-3 font-semibold">รวมหัก</th>
                 <th className="text-right px-3 py-3 font-semibold">เงินได้สุทธิ</th>
-                <th className="text-center px-3 py-3 font-semibold w-32">จัดการ</th>
+                <th className="text-center px-3 py-3 font-semibold w-36">จัดการ</th>
               </tr>
             </thead>
             <tbody>
@@ -150,23 +198,13 @@ const MyPayslips = () => {
                   </td>
                   <td className="text-center px-3 py-3">
                     <div className="flex items-center justify-center gap-1">
-                      <button onClick={() => setSelected(r)} className="p-1.5 rounded-lg hover:bg-muted" title="ดู">
+                      <button onClick={() => setPreviewRow(r)} className="p-1.5 rounded-lg hover:bg-muted" title="ดูตัวอย่าง PDF" aria-label="ดูตัวอย่าง PDF">
+                        <Eye className="w-4 h-4" />
+                      </button>
+                      <button onClick={() => setSelected(r)} className="p-1.5 rounded-lg hover:bg-muted" title="ดูรายละเอียด" aria-label="ดูรายละเอียด">
                         <Receipt className="w-4 h-4" />
                       </button>
-                      <button
-                        onClick={async () => {
-                          if (!meForExport) return;
-                          const { onProgress, onError } = createDownloadProgressToast("กำลังดาวน์โหลดสลิป");
-                          try {
-                            const { exportPayslipPdfFromSnapshot } = await import("@/utils/exportPayroll");
-                            await exportPayslipPdfFromSnapshot(meForExport!, r, THAI_MONTHS[r.period.month - 1], r.period.year + 543, onProgress);
-                          } catch (e: any) {
-                            onError(e?.message || "ดาวน์โหลดไม่สำเร็จ");
-                          }
-                        }}
-                        className="p-1.5 rounded-lg hover:bg-muted"
-                        title="ดาวน์โหลด PDF"
-                      >
+                      <button onClick={() => downloadPdf(r)} className="p-1.5 rounded-lg hover:bg-muted" title="ดาวน์โหลด PDF" aria-label="ดาวน์โหลด PDF">
                         <Download className="w-4 h-4" />
                       </button>
                     </div>
@@ -176,6 +214,18 @@ const MyPayslips = () => {
             </tbody>
           </table>
         </div>
+      )}
+
+      {previewRow && meForExport && (
+        <PayslipPdfPreviewDialog
+          open={!!previewRow}
+          onOpenChange={(v) => { if (!v) setPreviewRow(null); }}
+          title={`สลิป ${THAI_MONTHS[previewRow.period.month - 1]} ${previewRow.period.year + 543}`}
+          build={async () => {
+            const { buildPayslipPdfBlobFromSnapshot } = await import("@/utils/exportPayroll");
+            return buildPayslipPdfBlobFromSnapshot(meForExport, previewRow, THAI_MONTHS[previewRow.period.month - 1], previewRow.period.year + 543);
+          }}
+        />
       )}
 
       {selected && (
