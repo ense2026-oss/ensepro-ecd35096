@@ -161,9 +161,10 @@ const MainLayout = () => {
         <Sidebar collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed(!sidebarCollapsed)} />
       </div>
       <div
-        // ปิดอยู่ต้องซ่อนทั้งก้อน (invisible) ไม่งั้นปุ่มวงกลมสีเขียวที่ยื่นออกมานอกขอบ (-right-3) จะโผล่ที่ขอบซ้ายของจอ
+        // ปิดแล้วเลื่อนออกไปเกินความกว้างเมนูอีก 1.5rem เพื่อให้ปุ่มวงกลมที่ยื่นออกมานอกขอบ (-right-3) เลื่อนหายไปพร้อมกัน
+        // ไม่ค้างที่ขอบจอ แล้วค่อยซ่อน (invisible) ตอนจบแอนิเมชัน
         className={`fixed inset-y-0 left-0 z-[60] lg:hidden transition-[transform,visibility] duration-300 ease-in-out overflow-visible ${
-          mobileSidebarOpen ? "translate-x-0 visible" : "-translate-x-full invisible pointer-events-none"
+          mobileSidebarOpen ? "translate-x-0 visible" : "-translate-x-[calc(100%+1.5rem)] invisible pointer-events-none"
         }`}
         aria-hidden={!mobileSidebarOpen}
       >
