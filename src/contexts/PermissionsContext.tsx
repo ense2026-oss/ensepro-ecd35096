@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { withRetry } from "@/lib/retry";
+import { onTable } from "@/lib/realtimeBus";
 
 // Types
 export type SettingsModuleKey =
@@ -129,14 +130,13 @@ export const PermissionsProvider: React.FC<{ children: React.ReactNode }> = ({ c
       if (debounceRef.current) clearTimeout(debounceRef.current);
       debounceRef.current = setTimeout(() => fetchPermissions(), 250);
     };
-    const channel = supabase
-      .channel("permissions-realtime")
-      .on("postgres_changes", { event: "*", schema: "public", table: "role_permissions" }, debounced)
-      .on("postgres_changes", { event: "*", schema: "public", table: "user_roles" }, debounced)
-      .subscribe();
+    const unsubs = [
+      onTable("role_permissions", debounced),
+      onTable("user_roles", debounced),
+    ];
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
-      supabase.removeChannel(channel);
+      unsubs.forEach((u) => u());
     };
   }, [fetchPermissions]);
 

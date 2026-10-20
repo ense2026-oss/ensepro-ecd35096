@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { notifyApprovers, getApprovalTiers } from "@/utils/notifications";
 import { withRetry } from "@/lib/retry";
 import { logInfo } from "@/lib/systemLog";
+import { onTable } from "@/lib/realtimeBus";
 
 export interface TimeEditRequest {
   id: string;
@@ -159,15 +160,15 @@ export const TimeEditProvider = ({ children }: { children: ReactNode }) => {
       Promise.all([fetchEditRequests(), fetchNotifications()]).finally(() => setLoading(false));
     }, 200);
 
-    const channel = supabase
-      .channel("time-edit-context")
-      .on("postgres_changes", { event: "*", schema: "public", table: "time_edit_requests" }, debouncedFetchEdits)
-      .on("postgres_changes", { event: "*", schema: "public", table: "app_notifications" }, debouncedFetchNotifs)
-      .subscribe();
+    const unsubs = [
+      onTable("time_edit_requests", debouncedFetchEdits),
+      onTable("app_notifications", debouncedFetchNotifs),
+    ];
 
     return () => {
       clearTimeout(initTimer);
       if (debounceRef.current) clearTimeout(debounceRef.current);
+      unsubs.forEach((u) => u());
     };
   }, [user, fetchEditRequests, fetchNotifications, debouncedFetchEdits, debouncedFetchNotifs]);
 

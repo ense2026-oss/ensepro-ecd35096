@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/contexts/PermissionsContext";
 import { withRetry } from "@/lib/retry";
+import { onTable } from "@/lib/realtimeBus";
 
 interface PendingCountsContextType {
   leavePending: number;
@@ -126,18 +127,17 @@ export const PendingCountsProvider = ({ children }: { children: ReactNode }) => 
 
     if (!user) return () => clearTimeout(initTimer);
 
-    const channel = supabase
-      .channel("pending-counts")
-      .on("postgres_changes", { event: "*", schema: "public", table: "app_notifications" }, debouncedRefresh)
-      .on("postgres_changes", { event: "*", schema: "public", table: "leave_requests" }, debouncedRefresh)
-      .on("postgres_changes", { event: "*", schema: "public", table: "time_edit_requests" }, debouncedRefresh)
-      .on("postgres_changes", { event: "*", schema: "public", table: "overtime_requests" }, debouncedRefresh)
-      .subscribe();
+    const unsubs = [
+      onTable("app_notifications", debouncedRefresh),
+      onTable("leave_requests", debouncedRefresh),
+      onTable("time_edit_requests", debouncedRefresh),
+      onTable("overtime_requests", debouncedRefresh),
+    ];
 
     return () => {
       clearTimeout(initTimer);
       if (debounceRef.current) clearTimeout(debounceRef.current);
-      supabase.removeChannel(channel);
+      unsubs.forEach((u) => u());
     };
   }, [user, refreshCounts, debouncedRefresh]);
 

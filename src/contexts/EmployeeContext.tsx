@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { withRetry } from "@/lib/retry";
 import { isStoragePath, uploadEmployeePhoto, removeEmployeePhoto, resolveEmployeePhotoUrls } from "@/lib/employeePhoto";
+import { onTable } from "@/lib/realtimeBus";
 import { toast } from "sonner";
 import { logInfo } from "@/lib/systemLog";
 
@@ -360,16 +361,12 @@ export const EmployeeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       if (debounceRef.current) clearTimeout(debounceRef.current);
       debounceRef.current = setTimeout(() => fetchEmployees(), 250);
     };
-    // ลดโหลด: ติดตามเฉพาะตาราง employees ตารางเดียว (เดิม 4 ตาราง)
-    // education/work_history/payroll_items เปลี่ยนพร้อมการแก้พนักงานอยู่แล้ว
-    // ซึ่งจะ trigger ผ่าน employees เอง — ลด subscription ต่อผู้ใช้ 3 ตัว
-    const channel = supabase
-      .channel("employees-realtime")
-      .on("postgres_changes", { event: "*", schema: "public", table: "employees" }, debounced)
-      .subscribe();
+    // ใช้ channel กลางร่วมกัน (realtimeBus) + ติดตามเฉพาะตาราง employees ตารางเดียว
+    // (ตารางย่อยเปลี่ยนพร้อม employees อยู่แล้ว จึง trigger ผ่าน employees เอง)
+    const unsub = onTable("employees", debounced);
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
-      supabase.removeChannel(channel);
+      unsub();
     };
   }, [userId, fetchEmployees]);
 
