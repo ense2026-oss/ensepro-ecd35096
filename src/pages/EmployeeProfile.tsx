@@ -51,13 +51,14 @@ const Field = ({ label, value, icon: Icon }: { label: string; value: string; ico
   </div>
 );
 
-const InputField = ({ label, value, onChange, type = "text", placeholder }: {
-  label: string; value: string; onChange: (v: string) => void; type?: string; placeholder?: string;
+const InputField = ({ label, value, onChange, type = "text", placeholder, disabled, hint }: {
+  label: string; value: string; onChange: (v: string) => void; type?: string; placeholder?: string; disabled?: boolean; hint?: string;
 }) => (
   <div className="space-y-1.5">
     <label className="text-xs font-medium text-muted-foreground">{label}</label>
-    <input type={type} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder}
-      className="w-full px-3 py-2 text-sm rounded-xl border border-border bg-muted/30 outline-none focus:ring-2 focus:ring-primary/30 transition-all" />
+    <input type={type} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} disabled={disabled}
+      className="w-full px-3 py-2 text-sm rounded-xl border border-border bg-muted/30 outline-none focus:ring-2 focus:ring-primary/30 transition-all disabled:opacity-60 disabled:cursor-not-allowed" />
+    {disabled && hint && <p className="text-[10px] text-muted-foreground">{hint}</p>}
   </div>
 );
 
@@ -379,7 +380,7 @@ const EmployeeProfile = () => {
           <SelectField label="ศาสนา" value={emp.religion} onChange={set("religion")} options={["พุทธ", "คริสต์", "อิสลาม", "อื่นๆ"]} />
           <SelectField label="กรุ๊ปเลือด" value={emp.bloodGroup} onChange={set("bloodGroup")} options={["A", "B", "AB", "O"]} />
           <InputField label="เบอร์โทรศัพท์ (10 หลัก)" value={emp.phone} onChange={set("phone")} type="tel" placeholder="0812345678" />
-          <InputField label="อีเมล" value={emp.email} onChange={set("email")} type="email" />
+          <InputField label="อีเมล" value={emp.email} onChange={set("email")} type="email" disabled={!isAdminOrHr} hint="แก้ไขได้เฉพาะ admin และ hr" />
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-4">
@@ -399,7 +400,7 @@ const EmployeeProfile = () => {
       <SectionLabel>บัตรประชาชน</SectionLabel>
       {isEditing ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <InputField label="เลขบัตรประชาชน (13 หลัก)" value={emp.nationalId} onChange={set("nationalId")} placeholder="1234567890123" />
+          <InputField label="เลขบัตรประชาชน (13 หลัก)" value={emp.nationalId} onChange={set("nationalId")} placeholder="1234567890123" disabled={!isAdminOrHr} hint="แก้ไขได้เฉพาะ admin และ hr" />
           <DatePickerField label="วันที่ออกบัตร" value={emp.idIssueDate} onChange={set("idIssueDate")} />
           <DatePickerField label="วันหมดอายุ" value={emp.idExpireDate} onChange={set("idExpireDate")} />
         </div>

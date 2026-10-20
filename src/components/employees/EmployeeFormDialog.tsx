@@ -38,17 +38,18 @@ const EMPTY: Omit<Employee, "id" | "education" | "workHistory"> = {
   username: "", role: "Employee",
 };
 
-const InputField = ({ label, value, onChange, type = "text", placeholder, required }: {
-  label: string; value: string; onChange: (v: string) => void; type?: string; placeholder?: string; required?: boolean;
+const InputField = ({ label, value, onChange, type = "text", placeholder, required, disabled, hint }: {
+  label: string; value: string; onChange: (v: string) => void; type?: string; placeholder?: string; required?: boolean; disabled?: boolean; hint?: string;
 }) => (
   <div className="space-y-1.5">
     <label className="text-xs font-medium text-muted-foreground">
       {label} {required && <span className="text-destructive">*</span>}
     </label>
     <input
-      type={type} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder}
-      className="w-full px-3 py-2 text-sm rounded-xl border border-border bg-muted/30 outline-none focus:ring-2 focus:ring-primary/30 transition-all"
+      type={type} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} disabled={disabled}
+      className="w-full px-3 py-2 text-sm rounded-xl border border-border bg-muted/30 outline-none focus:ring-2 focus:ring-primary/30 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
     />
+    {disabled && hint && <p className="text-[10px] text-muted-foreground">{hint}</p>}
   </div>
 );
 
@@ -109,6 +110,8 @@ const EmployeeFormDialog = ({ open, onOpenChange, employee, onSave }: EmployeeFo
   const { canAction, getScope } = usePermissions();
   const roleKey = (currentUser?.role || "").toLowerCase();
   const isAdminOrHr = ["admin", "hr"].includes(roleKey);
+  // อีเมล/เลขบัตรประชาชน ตอนแก้ไขข้อมูล แก้ได้เฉพาะ admin/hr (ตอนเพิ่มพนักงานใหม่ยังกรอกได้)
+  const lockSensitive = isEdit && !isAdminOrHr;
   // ตรงกับเงื่อนไขของ edge function admin-update-username: admin/hr หรือ role ที่แก้พนักงานได้ทั้งองค์กร
   const canEditUsername = isAdminOrHr || (canAction(roleKey, "employee", "edit") && getScope(roleKey, "employee") === "all");
   const hasLogin = isEdit && !!employee?.userId;
@@ -408,14 +411,14 @@ const EmployeeFormDialog = ({ open, onOpenChange, employee, onSave }: EmployeeFo
             <InputField label="นามสกุล" value={form.lastName} onChange={set("lastName")} required />
             <InputField label="ชื่อเล่น" value={form.nickname} onChange={set("nickname")} />
             <InputField label="วันเกิด" value={form.birthDate} onChange={set("birthDate")} placeholder="YYYY-MM-DD" />
-            <InputField label="เลขบัตรประชาชน" value={form.nationalId} onChange={set("nationalId")} placeholder="X-XXXX-XXXXX-XX-X" />
+            <InputField label="เลขบัตรประชาชน" value={form.nationalId} onChange={set("nationalId")} placeholder="X-XXXX-XXXXX-XX-X" disabled={lockSensitive} hint="แก้ไขได้เฉพาะ admin และ hr" />
             <SelectField label="สัญชาติ" value={form.nationality} onChange={set("nationality")} options={fieldOptions.nationalities} />
             <SelectField label="ศาสนา" value={form.religion} onChange={set("religion")} options={fieldOptions.religions} />
             <SelectField label="หมู่เลือด" value={form.bloodGroup} onChange={set("bloodGroup")} options={fieldOptions.bloodGroups} />
             <InputField label="วันออกบัตร" value={form.idIssueDate} onChange={set("idIssueDate")} placeholder="YYYY-MM-DD" />
             <InputField label="วันหมดอายุบัตร" value={form.idExpireDate} onChange={set("idExpireDate")} placeholder="YYYY-MM-DD" />
             <InputField label="เบอร์โทรศัพท์" value={form.phone} onChange={set("phone")} type="tel" />
-            <InputField label="อีเมล" value={form.email} onChange={set("email")} type="email" />
+            <InputField label="อีเมล" value={form.email} onChange={set("email")} type="email" disabled={lockSensitive} hint="แก้ไขได้เฉพาะ admin และ hr" />
           </div>
 
           {/* ที่อยู่ */}
