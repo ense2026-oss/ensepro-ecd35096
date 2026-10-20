@@ -8,6 +8,7 @@ import EmployeeAvatar from "@/components/ui/employee-avatar";
 import { usePendingCounts } from "@/contexts/PendingCountsContext";
 import { useTimeEditRequests } from "@/contexts/TimeEditContext";
 import { getNotificationLink } from "@/utils/notifications";
+import headerBg from "@/assets/header-bg.png";
 
 interface TopbarProps {
   onMenuToggle?: () => void;
@@ -74,7 +75,11 @@ const Topbar = ({ onMenuToggle, pageTitle = "Dashboard", pageSubtitle = "ภา�
     <header
       className="h-16 flex items-center justify-between px-4 lg:px-6 border-b z-30 relative"
       style={{
-        background: "hsl(var(--topbar-background))",
+        backgroundColor: "hsl(var(--topbar-background))",
+        backgroundImage: `url(${headerBg})`,
+        backgroundSize: "cover",
+        backgroundPosition: "center bottom",
+        backgroundRepeat: "no-repeat",
         borderColor: "hsl(var(--topbar-border))",
       }}
     >
