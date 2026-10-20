@@ -17,6 +17,7 @@ import { fetchAllRows } from "@/lib/fetchAll";
 import PaginationBar from "@/components/ui/pagination-bar";
 import { notifyApprovers, notifyRequester, getApprovalTiers, notifyTierApprover } from "@/utils/notifications";
 import { prepareUpload } from "@/utils/fileCompression";
+import { useApprovalAssignments, notifyAssignedApprovers } from "@/lib/approvalAssignments";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -37,6 +38,12 @@ const Leave = () => {
   const roleKey = role || "employee";
   const canAdd = canAction(roleKey, "leave", "add");
   const canApprove = canAction(roleKey, "leave", "approve");
+  // ผู้อนุมัติรายบุคคล: พนักงานที่ถูกกำหนดเป็นผู้อนุมัติของคนอื่น อนุมัติใบลาของคนเหล่านั้นได้
+  // แม้ role จะไม่มีสิทธิ์ approve ตามตารางสิทธิ์ (admin/hr ที่มีสิทธิ์ตาม role ยังอนุมัติแทนได้ทุกใบเหมือนเดิม)
+  const { approversOf, approveeIdsOf } = useApprovalAssignments("leave");
+  const myApproveeIds = approveeIdsOf(currentUser?.employeeId);
+  const canApproveRecord = (r: { employeeId?: string }) => canApprove || (!!r.employeeId && myApproveeIds.has(r.employeeId));
+  const canApproveAny = canApprove || myApproveeIds.size > 0;
   // hr/admin (หรือ role ใดที่มีสิทธิ์ลบ module leave): ลบคำขอลาได้ทุกชนิดทุกสถานะ
   const canDeleteLeave = canAction(roleKey, "leave", "delete");
   const scope = getScope(roleKey, "leave");
@@ -46,9 +53,10 @@ const Leave = () => {
 
   // ซ่อนผู้บริหารออกจากรายชื่อ (ยกเว้นตัวเอง) — หน้าเงินเดือน/องค์กรไม่ซ่อน
   const mgmtIds = React.useMemo(() => managementIdSet(allEmployees as any), [allEmployees]);
+  // ผู้บริหารที่ฉันเป็นผู้อนุมัติของเขา ต้องเห็นคำขอด้วย (ไม่ซ่อน)
   const notMgmtOrSelf = React.useCallback(
-    (empId: string | undefined) => !mgmtIds.has(empId || "") || empId === currentUser?.employeeId,
-    [mgmtIds, currentUser?.employeeId],
+    (empId: string | undefined) => !mgmtIds.has(empId || "") || empId === currentUser?.employeeId || myApproveeIds.has(empId || ""),
+    [mgmtIds, currentUser?.employeeId, myApproveeIds],
   );
   const scopedEmployees = React.useMemo(() => {
     const base = allEmployees.filter((e) => !isManagementEmployee(e) || e.id === currentUser?.employeeId);
@@ -165,10 +173,12 @@ const Leave = () => {
 
   const scopedLeaves = React.useMemo(() => {
     const base = leaves.filter((l) => notMgmtOrSelf(l.employeeId));
-    if (scope === "self") return base.filter((l) => l.employeeId === currentUser?.employeeId);
-    if (scope === "department") return base.filter((l) => l.dept === currentDept);
+    // ผู้อนุมัติรายบุคคลเห็นคำขอของลูกทีมตัวเองเพิ่มจากขอบเขตตามสิทธิ์ role
+    const mine = (l: { employeeId?: string }) => !!l.employeeId && myApproveeIds.has(l.employeeId);
+    if (scope === "self") return base.filter((l) => l.employeeId === currentUser?.employeeId || mine(l));
+    if (scope === "department") return base.filter((l) => l.dept === currentDept || mine(l));
     return base;
-  }, [leaves, scope, currentUser?.employeeId, currentDept, notMgmtOrSelf]);
+  }, [leaves, scope, currentUser?.employeeId, currentDept, notMgmtOrSelf, myApproveeIds]);
 
   const filtered = scopedLeaves.filter((l) => filterStatus === "all" || l.status === filterStatus);
 
@@ -177,6 +187,22 @@ const Leave = () => {
   const [leavePage, setLeavePage] = useState(1);
   useEffect(() => { setLeavePage(1); }, [filterStatus]);
   const pagedFiltered = filtered.slice((leavePage - 1) * LEAVE_PAGE_SIZE, leavePage * LEAVE_PAGE_SIZE);
+
+  // ผู้อนุมัติของแต่ละคำขอ (แสดงในรายละเอียด) — ว่าง = ใช้ผู้อนุมัติเดิมตามสิทธิ์ role (admin/hr)
+  const employeeNameById = React.useMemo(
+    () => new Map(allEmployees.map((e) => [e.id, `${e.prefix || ""}${e.firstName} ${e.lastName}`.trim()])),
+    [allEmployees],
+  );
+  const recordsWithApprovers = React.useMemo(
+    () =>
+      pagedFiltered.map((r) => ({
+        ...r,
+        approverNames: approversOf(r.employeeId || "")
+          .map((id) => employeeNameById.get(id))
+          .filter((n): n is string => !!n),
+      })),
+    [pagedFiltered, approversOf, employeeNameById],
+  );
 
   // Upload file to storage
   const uploadFile = async (file: File, leaveId: string): Promise<string | null> => {
@@ -305,13 +331,15 @@ const Leave = () => {
       fetchLeaves();
       toast({ title: "สำเร็จ", description: "ยื่นคำขอลาเรียบร้อยแล้ว" });
 
-      // Notify all configured approvers (any one can approve)
-      notifyApprovers({
-        type: "leave",
+      // แจ้งผู้อนุมัติของพนักงานคนนี้ (คนใดคนหนึ่งอนุมัติก็จบ); ถ้ายังไม่ได้กำหนดใคร
+      // ฝั่ง DB จะ fallback ไปแจ้งผู้อนุมัติเดิม (admin/hr) เอง
+      const notifyParams = {
+        type: "leave" as const,
         title: "คำขอลางานใหม่",
         description: `${record.name} ยื่นขอลา ${record.type} ${record.days} วัน (${record.from} - ${record.to})`,
         targetEmployee: record.name,
-      });
+      };
+      void notifyAssignedApprovers("leave", emp.id, "leave", notifyParams, () => notifyApprovers(notifyParams));
     }
   };
 
@@ -352,6 +380,10 @@ const Leave = () => {
     const record = leaves.find((l) => l.id === id);
     if (!record) return;
     if (!user?.id) return;
+    if (!canApproveRecord(record)) {
+      toast({ title: "ไม่มีสิทธิ์อนุมัติ", description: "คุณไม่ได้เป็นผู้อนุมัติของคำขอนี้", variant: "destructive" });
+      return;
+    }
 
     // Check if this user already approved/rejected this request
     const { data: existingLog } = await supabase
@@ -415,6 +447,11 @@ const Leave = () => {
 
   const handleReject = async (id: string) => {
     if (!user?.id) return;
+    const target = leaves.find((l) => l.id === id);
+    if (target && !canApproveRecord(target)) {
+      toast({ title: "ไม่มีสิทธิ์ดำเนินการ", description: "คุณไม่ได้เป็นผู้อนุมัติของคำขอนี้", variant: "destructive" });
+      return;
+    }
 
     // Check if this user already acted on this request
     const { data: existingLog } = await supabase
@@ -529,12 +566,13 @@ const Leave = () => {
       </div>
 
       <LeaveTable
-        records={pagedFiltered}
+        records={recordsWithApprovers}
         startIndex={(leavePage - 1) * LEAVE_PAGE_SIZE}
         descendingTotal={filtered.length}
-        onApprove={canApprove ? handleApprove : () => {}}
-        onReject={canApprove ? handleReject : () => {}}
-        hideActions={!canApprove}
+        onApprove={canApproveAny ? handleApprove : () => {}}
+        onReject={canApproveAny ? handleReject : () => {}}
+        hideActions={!canApproveAny}
+        canApproveRow={canApproveRecord}
         currentEmployeeId={currentUser?.employeeId}
         onEdit={handleEdit}
         onDelete={(id) => setDeleteId(id)}

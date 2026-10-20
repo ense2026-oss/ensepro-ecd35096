@@ -29,6 +29,8 @@ export interface LeaveRecord {
   currentTier?: number;
   approvedTiers?: number;
   totalTiers?: number;
+  // ชื่อผู้อนุมัติที่ถูกกำหนดให้พนักงานคนนี้ (ว่าง = ใช้ผู้อนุมัติเดิมตามสิทธิ์ role)
+  approverNames?: string[];
 }
 
 const statusConf: Record<string, { label: string; color: string; bg: string }> = {
@@ -42,6 +44,8 @@ interface LeaveTableProps {
   onApprove: (id: string) => void;
   onReject: (id: string) => void;
   hideActions?: boolean;
+  // ตรวจสิทธิ์อนุมัติรายแถว (ผู้อนุมัติรายบุคคลอนุมัติได้เฉพาะคำขอของลูกทีมตัวเอง) — ไม่ส่ง = ทุกแถวตาม hideActions
+  canApproveRow?: (record: LeaveRecord) => boolean;
   currentEmployeeId?: string;
   onEdit?: (record: LeaveRecord) => void;
   onDelete?: (id: string) => void;
@@ -55,8 +59,8 @@ interface LeaveTableProps {
   descendingTotal?: number;
 }
 
-const LeaveTable = ({ records, onApprove, onReject, hideActions = false, currentEmployeeId, onEdit, onDelete, canDeleteAny = false, footer, startIndex = 0, descendingTotal }: LeaveTableProps) => {
-  const hasPending = !hideActions && records.some((r) => r.status === "pending");
+const LeaveTable = ({ records, onApprove, onReject, hideActions = false, canApproveRow, currentEmployeeId, onEdit, onDelete, canDeleteAny = false, footer, startIndex = 0, descendingTotal }: LeaveTableProps) => {
+  const rowCanApprove = (r: LeaveRecord) => !hideActions && r.status === "pending" && (canApproveRow ? canApproveRow(r) : true);
   const [detail, setDetail] = useState<LeaveRecord | null>(null);
 
   const handleViewFile = async (fileUrl: string) => {
@@ -114,7 +118,7 @@ const LeaveTable = ({ records, onApprove, onReject, hideActions = false, current
                     <button onClick={() => setDetail(row)} className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground" title="ดูรายละเอียด">
                       <Eye className="w-4 h-4" />
                     </button>
-                    {hasPending && row.status === "pending" && !hideActions && (
+                    {rowCanApprove(row) && (
                       <>
                         <button onClick={() => onApprove(row.id)} className="p-1.5 rounded-lg hover:bg-muted transition-colors" style={{ color: "hsl(90 100% 30%)" }} title="อนุมัติ">
                           <CheckCircle className="w-4 h-4" />
@@ -227,7 +231,7 @@ const LeaveTable = ({ records, onApprove, onReject, hideActions = false, current
                       <button onClick={() => setDetail(row)} className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground" title="ดูรายละเอียด">
                         <Eye className="w-4 h-4" />
                       </button>
-                      {hasPending && row.status === "pending" && !hideActions && (
+                      {rowCanApprove(row) && (
                         <>
                           <button onClick={() => onApprove(row.id)} className="p-1.5 rounded-lg hover:bg-muted transition-colors" style={{ color: "hsl(90 100% 30%)" }} title="อนุมัติ">
                             <CheckCircle className="w-4 h-4" />
@@ -305,6 +309,16 @@ const LeaveTable = ({ records, onApprove, onReject, hideActions = false, current
                     <p className="text-sm text-muted-foreground">-</p>
                   )}
                 </div>
+                {detail.approverNames && detail.approverNames.length > 0 && (
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">ผู้อนุมัติ (คนใดคนหนึ่งอนุมัติก็ได้)</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {detail.approverNames.map((n) => (
+                        <span key={n} className="text-xs font-medium px-2.5 py-1 rounded-full bg-muted/60">{n}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 <div className="flex items-center gap-2">
                   <p className="text-xs text-muted-foreground">สถานะ:</p>
                   <span className="text-xs font-semibold px-2.5 py-1 rounded-full" style={{ background: c.bg, color: c.color }}>
@@ -318,7 +332,7 @@ const LeaveTable = ({ records, onApprove, onReject, hideActions = false, current
             );
           })()}
           <DialogFooter>
-            {detail?.status === "pending" && !hideActions ? (
+            {detail && rowCanApprove(detail) ? (
               <div className="flex flex-row gap-2 w-full sm:w-auto">
                 <button onClick={() => { if (detail) onReject(detail.id); setDetail(null); }} className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold text-white" style={{ background: "hsl(0 84% 50%)" }}>
                   <XCircle className="w-4 h-4" /> ไม่อนุมัติ

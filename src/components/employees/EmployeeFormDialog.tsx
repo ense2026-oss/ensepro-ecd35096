@@ -6,6 +6,8 @@ import { useOrg } from "@/contexts/OrgContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/contexts/PermissionsContext";
 import { logInfo } from "@/lib/systemLog";
+import ApproverMultiSelect from "@/components/approvals/ApproverMultiSelect";
+import { useApprovalAssignments, saveEmployeeApprovers } from "@/lib/approvalAssignments";
 import { useRoleOptions, matchRoleOption } from "@/hooks/useRoleOptions";
 import { useEmployeeFieldOptions } from "@/hooks/useEmployeeFieldOptions";
 import { processFileUpload } from "@/utils/fileCompression";
@@ -113,6 +115,21 @@ const EmployeeFormDialog = ({ open, onOpenChange, employee, onSave }: EmployeeFo
   const [usernameInput, setUsernameInput] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [showNewPassword, setShowNewPassword] = useState(false);
+
+  // ─── ผู้อนุมัติการลา (กำหนดรายบุคคล — แก้ไขเฉพาะโหมดแก้ไข) ───
+  // เก็บในตาราง approval_assignments แยกจากข้อมูลพนักงาน จึงบันทึกแยกหลังบันทึกข้อมูลหลักสำเร็จ
+  const canEditApprovers = isEdit && canEditUsername;
+  const { approversOf, loading: approversLoading, refetch: refetchApprovers } =
+    useApprovalAssignments("leave", open && canEditApprovers);
+  const [approverIds, setApproverIds] = useState<string[]>([]);
+  const approversInitFor = useRef<string | null>(null);
+  useEffect(() => {
+    if (!open) { approversInitFor.current = null; return; }
+    if (!employee || !canEditApprovers || approversLoading) return;
+    if (approversInitFor.current === employee.id) return; // ตั้งต้นครั้งเดียวต่อการเปิด ไม่ทับสิ่งที่กำลังแก้
+    approversInitFor.current = employee.id;
+    setApproverIds(approversOf(employee.id));
+  }, [open, employee, canEditApprovers, approversLoading, approversOf]);
 
   const isDeptSelected = !!form.dept && form.dept !== "-- เลือกสังกัด --";
 
@@ -288,6 +305,21 @@ const EmployeeFormDialog = ({ open, onOpenChange, employee, onSave }: EmployeeFo
         avatarTextColor: isEdit ? form.avatarTextColor : `hsl(${hue} 70% 35%)`,
         username: savedUsername || `${form.firstName.toLowerCase()}.${form.lastName.charAt(0).toLowerCase()}`,
       });
+
+      // ผู้อนุมัติการลา — บันทึกเมื่อมีการเปลี่ยนแปลงเท่านั้น
+      if (canEditApprovers && employee && approversInitFor.current === employee.id) {
+        const before = [...approversOf(employee.id)].sort().join("|");
+        const after = [...new Set(approverIds)].sort().join("|");
+        if (before !== after) {
+          try {
+            await saveEmployeeApprovers(employee.id, approverIds, "leave");
+            await refetchApprovers();
+            logInfo("account", `ตั้งผู้อนุมัติการลา: ${employee.firstName} ${employee.lastName}`, { employeeId: employee.id, approverIds });
+          } catch (apErr: any) {
+            throw new Error("บันทึกข้อมูลพนักงานแล้ว แต่บันทึกผู้อนุมัติการลาไม่สำเร็จ: " + (apErr?.message || "เกิดข้อผิดพลาด"));
+          }
+        }
+      }
       onOpenChange(false);
     } catch (err: any) {
       setErrors([err?.message || "บันทึกไม่สำเร็จ กรุณาลองใหม่อีกครั้ง"]);
@@ -471,6 +503,25 @@ const EmployeeFormDialog = ({ open, onOpenChange, employee, onSave }: EmployeeFo
                   )}
                 </div>
               )}
+            </>
+          )}
+
+          {/* ผู้อนุมัติการลา — เฉพาะโหมดแก้ไขและผู้ที่มีสิทธิ์ */}
+          {canEditApprovers && (
+            <>
+              <SectionLabel>ผู้อนุมัติการลา</SectionLabel>
+              <div className="space-y-1.5">
+                <p className="text-[11px] text-muted-foreground">
+                  ผู้ที่อนุมัติใบลาของพนักงานคนนี้ได้ — เลือกได้หลายคน <b>คนใดคนหนึ่งอนุมัติก็จบ</b>
+                  · admin/hr อนุมัติแทนได้เสมอ
+                </p>
+                <ApproverMultiSelect
+                  value={approverIds}
+                  onChange={setApproverIds}
+                  excludeEmployeeId={employee?.id}
+                  disabled={approversLoading}
+                />
+              </div>
             </>
           )}
 

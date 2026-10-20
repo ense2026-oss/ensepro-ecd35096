@@ -3,6 +3,7 @@ import { Plus, X, Loader2 } from "lucide-react";
 import SearchableSelect from "@/components/ui/searchable-select";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import LeaveApproverSettings from "@/components/settings/LeaveApproverSettings";
 
 type ApproverType = "role" | "employee";
 
@@ -231,6 +232,11 @@ const ApprovalSettings = () => {
         {saving && <Loader2 className="w-4 h-4 animate-spin" />}
         บันทึกการตั้งค่า
       </button>
+
+      {/* ผู้อนุมัติรายบุคคล (การลา) — ตั้งแยกเป็นรายคนหรือเป็นกลุ่ม; ค่าด้านบนใช้เป็นผู้อนุมัติสำรองเมื่อยังไม่ได้ตั้ง */}
+      <div className="pt-4 mt-2 border-t" style={{ borderColor: "hsl(var(--border))" }}>
+        <LeaveApproverSettings />
+      </div>
     </div>
   );
 };
