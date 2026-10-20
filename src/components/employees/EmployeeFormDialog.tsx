@@ -1,8 +1,11 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogBody, DialogFooter } from "@/components/ui/dialog";
-import { Save, X, ScanFace, Upload, Camera, Loader2 } from "lucide-react";
+import { Save, X, ScanFace, Upload, Camera, Loader2, Eye, EyeOff, KeyRound } from "lucide-react";
 import type { Employee } from "@/contexts/EmployeeContext";
 import { useOrg } from "@/contexts/OrgContext";
+import { useAuth } from "@/contexts/AuthContext";
+import { usePermissions } from "@/contexts/PermissionsContext";
+import { logInfo } from "@/lib/systemLog";
 import { useRoleOptions, matchRoleOption } from "@/hooks/useRoleOptions";
 import { useEmployeeFieldOptions } from "@/hooks/useEmployeeFieldOptions";
 import { processFileUpload } from "@/utils/fileCompression";
@@ -97,6 +100,20 @@ const EmployeeFormDialog = ({ open, onOpenChange, employee, onSave }: EmployeeFo
   const [shiftNames, setShiftNames] = useState<string[]>([]);
   const photoInputRef = useRef<HTMLInputElement>(null);
 
+  // ─── บัญชีเข้าสู่ระบบ (ชื่อผู้ใช้/รหัสผ่าน) — แก้ได้เฉพาะ admin/hr ───
+  // username/password จริงอยู่ใน Supabase Auth ไม่ใช่ตาราง employees จึงต้องเรียก
+  // edge function (service-role) เหมือนหน้าโปรไฟล์ ห้ามแก้ผ่าน updateEmployee ตรง ๆ
+  const { currentUser } = useAuth();
+  const { canAction, getScope } = usePermissions();
+  const roleKey = (currentUser?.role || "").toLowerCase();
+  const isAdminOrHr = ["admin", "hr"].includes(roleKey);
+  // ตรงกับเงื่อนไขของ edge function admin-update-username: admin/hr หรือ role ที่แก้พนักงานได้ทั้งองค์กร
+  const canEditUsername = isAdminOrHr || (canAction(roleKey, "employee", "edit") && getScope(roleKey, "employee") === "all");
+  const hasLogin = isEdit && !!employee?.userId;
+  const [usernameInput, setUsernameInput] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [showNewPassword, setShowNewPassword] = useState(false);
+
   const isDeptSelected = !!form.dept && form.dept !== "-- เลือกสังกัด --";
 
   // Roles come from Settings > สิทธิ์ผู้ใช้งาน. If the employee currently holds a
@@ -169,6 +186,9 @@ const EmployeeFormDialog = ({ open, onOpenChange, employee, onSave }: EmployeeFo
       }
       setErrors([]);
       setSaving(false);
+      setUsernameInput(employee?.username || "");
+      setNewPassword("");
+      setShowNewPassword(false);
     }
   }, [open, employee]);
 
@@ -200,19 +220,73 @@ const EmployeeFormDialog = ({ open, onOpenChange, employee, onSave }: EmployeeFo
       errs.push("รูปแบบอีเมลไม่ถูกต้อง");
     if (!isEdit && !form.email.trim()) errs.push("กรุณากรอกอีเมล เพื่อสร้างบัญชีเข้าใช้งานให้พนักงาน");
     if (!form.role.trim() || isUnknownRole) errs.push("กรุณาเลือกสิทธิ์การใช้งานจากรายการในหน้าตั้งค่า");
+
+    // ตรวจชื่อผู้ใช้/รหัสผ่านใหม่ (เฉพาะโหมดแก้ไขของพนักงานที่มีบัญชีเข้าสู่ระบบ)
+    const nextUsername = usernameInput.trim().toLowerCase();
+    const usernameChanged = hasLogin && canEditUsername && !!nextUsername && nextUsername !== (employee?.username || "");
+    const passwordChanged = hasLogin && isAdminOrHr && newPassword.length > 0;
+    const loginEmail = `${nextUsername}@ensepro.com`;
+    if (usernameChanged) {
+      if (!/^[a-z0-9._-]+$/.test(nextUsername)) errs.push("ชื่อผู้ใช้ใช้ได้เฉพาะ a-z, 0-9, . _ - (ห้ามเว้นวรรค/ภาษาไทย)");
+      // ชื่อผู้ใช้กับอีเมลเข้าสู่ระบบผูกกัน (<ชื่อผู้ใช้>@ensepro.com) — แก้พร้อมกันไม่ได้ กันอีเมลถูกตีกลับ
+      if (form.email.trim().toLowerCase() !== (employee?.email || "").trim().toLowerCase())
+        errs.push("เปลี่ยนชื่อผู้ใช้และอีเมลพร้อมกันไม่ได้ (ชื่อผู้ใช้จะกำหนดอีเมลเข้าสู่ระบบให้อัตโนมัติ) กรุณาแยกบันทึกทีละอย่าง");
+    }
+    if (passwordChanged && newPassword.length < 8) errs.push("รหัสผ่านใหม่ต้องมีอย่างน้อย 8 ตัวอักษร");
     if (errs.length) { setErrors(errs); return; }
 
     const avatar = form.firstName.charAt(0) || "?";
     const hue = Math.floor(Math.random() * 360);
     setSaving(true);
     try {
+      let savedUsername = form.username;
+      let savedEmail = form.email.trim();
+      let savedInitialPassword = form.initialPassword;
+      const isOwn = !!employee && !!currentUser?.employeeId && currentUser.employeeId === employee.id;
+
+      // 1) เปลี่ยนชื่อผู้ใช้ (Auth + employees + profiles ผ่าน service-role)
+      if (usernameChanged) {
+        const { data: fnData, error: fnErr } = await supabase.functions.invoke("admin-update-username", {
+          body: { employeeId: employee!.id, newUsername: nextUsername },
+        });
+        if (fnErr || fnData?.error) throw new Error(fnData?.error || fnErr?.message || "เปลี่ยนชื่อผู้ใช้ไม่สำเร็จ");
+        savedUsername = nextUsername;
+        savedEmail = loginEmail; // ให้ตรงกับที่ฟังก์ชันตั้งไว้ใน Auth/ตาราง จะได้ไม่ถูกบันทึกทับกลับ
+        logInfo("account", `เปลี่ยนชื่อผู้ใช้: ${employee?.firstName || ""} → ${nextUsername}`, { employeeId: employee?.id, newUsername: nextUsername });
+      }
+
+      // 2) รีเซ็ตรหัสผ่าน — ถ้าเป็นบัญชีตัวเองใช้ auth.updateUser ส่วนของคนอื่นต้องใช้ service-role เท่านั้น
+      if (passwordChanged) {
+        try {
+          if (isOwn) {
+            const { error } = await supabase.auth.updateUser({ password: newPassword });
+            if (error) throw error;
+          } else {
+            const targetEmail = usernameChanged ? loginEmail : (employee?.email || "");
+            if (!targetEmail) throw new Error("พนักงานคนนี้ไม่มีอีเมลสำหรับเข้าสู่ระบบ");
+            const { data: fnData, error: fnErr } = await supabase.functions.invoke("admin-reset-password", {
+              body: { email: targetEmail, password: newPassword },
+            });
+            if (fnErr || fnData?.error) throw new Error(fnData?.error || fnErr?.message || "รีเซ็ตรหัสผ่านไม่สำเร็จ");
+          }
+        } catch (pwErr: any) {
+          throw new Error(
+            (usernameChanged ? "เปลี่ยนชื่อผู้ใช้สำเร็จแล้ว แต่" : "") + "รีเซ็ตรหัสผ่านไม่สำเร็จ: " + (pwErr?.message || "เกิดข้อผิดพลาด")
+          );
+        }
+        // admin-reset-password sync employees.initial_password ให้แล้ว — ส่งค่าใหม่ไปด้วยกันบันทึกทับของเก่า
+        savedInitialPassword = newPassword;
+        logInfo("account", isOwn ? "เปลี่ยนรหัสผ่านของตนเอง" : `รีเซ็ตรหัสผ่านของ ${employee?.firstName || "พนักงาน"} ${employee?.lastName || ""}`.trim(), { employeeId: employee?.id, own: isOwn });
+      }
+
       await onSave({
         ...form,
-        email: form.email.trim(),
+        email: savedEmail,
+        initialPassword: savedInitialPassword,
         avatar,
         avatarColor: isEdit ? form.avatarColor : `hsl(${hue} 70% 90%)`,
         avatarTextColor: isEdit ? form.avatarTextColor : `hsl(${hue} 70% 35%)`,
-        username: form.username || `${form.firstName.toLowerCase()}.${form.lastName.charAt(0).toLowerCase()}`,
+        username: savedUsername || `${form.firstName.toLowerCase()}.${form.lastName.charAt(0).toLowerCase()}`,
       });
       onOpenChange(false);
     } catch (err: any) {
@@ -341,6 +415,65 @@ const EmployeeFormDialog = ({ open, onOpenChange, employee, onSave }: EmployeeFo
             />
           </div>
 
+          {/* บัญชีเข้าสู่ระบบ — เฉพาะโหมดแก้ไขและผู้ที่มีสิทธิ์ (admin/hr) */}
+          {isEdit && canEditUsername && (
+            <>
+              <SectionLabel>บัญชีเข้าสู่ระบบ</SectionLabel>
+              {!hasLogin ? (
+                <p className="text-xs text-muted-foreground rounded-xl border border-dashed border-border px-3 py-2.5">
+                  พนักงานคนนี้ยังไม่มีบัญชีเข้าสู่ระบบ จึงยังตั้งชื่อผู้ใช้/รหัสผ่านไม่ได้
+                </p>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-muted-foreground">ชื่อผู้ใช้ (สำหรับเข้าสู่ระบบ)</label>
+                    <input
+                      type="text"
+                      value={usernameInput}
+                      onChange={(e) => setUsernameInput(e.target.value.toLowerCase().replace(/\s+/g, ""))}
+                      placeholder="เช่น areenan.s"
+                      autoComplete="off"
+                      autoCapitalize="none"
+                      autoCorrect="off"
+                      spellCheck={false}
+                      className="w-full px-3 py-2 text-sm rounded-xl border border-border bg-muted/30 outline-none focus:ring-2 focus:ring-primary/30 transition-all font-mono"
+                    />
+                    <p className="text-[10px] text-muted-foreground">
+                      ใช้ a-z, 0-9, . _ - เท่านั้น · อีเมลเข้าสู่ระบบจะเป็น {(usernameInput.trim() || "ชื่อผู้ใช้")}@ensepro.com
+                    </p>
+                  </div>
+                  {isAdminOrHr && (
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+                        <KeyRound className="w-3.5 h-3.5" /> รหัสผ่านใหม่
+                      </label>
+                      <div className="relative">
+                        <input
+                          type={showNewPassword ? "text" : "password"}
+                          value={newPassword}
+                          onChange={(e) => setNewPassword(e.target.value)}
+                          placeholder="เว้นว่างไว้ถ้าไม่ต้องการเปลี่ยน"
+                          autoComplete="new-password"
+                          className="w-full px-3 py-2 pr-10 text-sm rounded-xl border border-border bg-muted/30 outline-none focus:ring-2 focus:ring-primary/30 transition-all"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowNewPassword((v) => !v)}
+                          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                          title={showNewPassword ? "ซ่อนรหัสผ่าน" : "แสดงรหัสผ่าน"}
+                          aria-label={showNewPassword ? "ซ่อนรหัสผ่าน" : "แสดงรหัสผ่าน"}
+                        >
+                          {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                      </div>
+                      <p className="text-[10px] text-muted-foreground">อย่างน้อย 8 ตัวอักษร · มีผลกับการเข้าสู่ระบบของพนักงานทันทีเมื่อกดบันทึก</p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
+          )}
+
           {/* ข้อมูลครอบครัว */}
           <SectionLabel>ข้อมูลครอบครัว</SectionLabel>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -365,13 +498,14 @@ const EmployeeFormDialog = ({ open, onOpenChange, employee, onSave }: EmployeeFo
           </div>
         </DialogBody>
 
-        <DialogFooter className="px-6 pb-6 pt-4 border-t border-border">
+        <DialogFooter className="px-6 pb-6 pt-4 border-t border-border flex-nowrap">
+          {/* มือถือ: ยกเลิก/บันทึกอยู่แถวเดียวกัน แบ่งความกว้างเท่ากัน มีช่องไฟ (gap-2 จาก DialogFooter) */}
           <button onClick={() => onOpenChange(false)}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors">
+            className="flex-1 sm:flex-none justify-center flex items-center gap-2 px-4 py-2 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors">
             <X className="w-4 h-4" /> ยกเลิก
           </button>
           <button onClick={handleSave} disabled={saving}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold text-primary-foreground transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+            className="flex-1 sm:flex-none justify-center flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold text-primary-foreground transition-all disabled:opacity-60 disabled:cursor-not-allowed"
             style={{ background: "linear-gradient(135deg, hsl(var(--primary)), hsl(31 100% 60%))", boxShadow: "0 4px 12px hsl(var(--primary) / 0.3)" }}>
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
             {saving ? "กำลังบันทึก..." : isEdit ? "บันทึก" : "เพิ่มพนักงาน"}

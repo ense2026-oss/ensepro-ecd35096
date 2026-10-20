@@ -57,7 +57,8 @@ const DialogHeader = ({ className, ...props }: React.HTMLAttributes<HTMLDivEleme
 DialogHeader.displayName = "DialogHeader";
 
 const DialogFooter = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
-  <div className={cn("flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 p-5 pt-0 shrink-0", className)} {...props} />
+  // ปุ่มอยู่แถวเดียวกันทั้งมือถือและคอม (ยกเลิกซ้าย/บันทึกขวา) มีช่องไฟ gap-2 — เดิมมือถือซ้อนแนวตั้ง
+  <div className={cn("flex flex-row flex-wrap items-center justify-end gap-2 p-5 pt-0 shrink-0", className)} {...props} />
 );
 
 const DialogBody = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
