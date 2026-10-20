@@ -1,7 +1,6 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Search, Download, CheckCircle, XCircle, Clock, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Save, X, FileText, Check, RotateCcw, CalendarDays, Eye, Upload, Users, MoreVertical } from "lucide-react";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Search, Download, CheckCircle, XCircle, Clock, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Save, X, FileText, Check, RotateCcw, CalendarDays, Eye, Upload, Users } from "lucide-react";
 import { ThaiDatePicker } from "@/components/ui/thai-date-picker";
 import ResponsiveFilters from "@/components/ui/responsive-filters";
 import { format } from "date-fns";
@@ -1094,31 +1093,14 @@ const Attendance = () => {
                           </td>
                           <td className="px-1 py-2 text-center">
                             {canEditRow ? (
-                              canEditTime ? (
-                                // admin / hr / ผู้มีสิทธิ์แก้ไข: รวมเครื่องมือไว้ในเมนู ⋮
-                                <DropdownMenu>
-                                  <DropdownMenuTrigger asChild>
-                                    <button className="p-1.5 rounded-lg border hover:bg-muted transition-colors inline-flex items-center justify-center" aria-label="จัดการ">
-                                      <MoreVertical className="w-4 h-4" />
-                                    </button>
-                                  </DropdownMenuTrigger>
-                                  <DropdownMenuContent align="end">
-                                    <DropdownMenuItem onClick={() => openEdit(row)}>
-                                      <RotateCcw className="w-4 h-4 mr-2" /> {canDirectEdit ? "แก้ไขเวลา" : "ขอแก้ไขเวลา"}
-                                    </DropdownMenuItem>
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
-                              ) : (
-                                // พนักงาน: แสดงไอคอนขอแก้ไขเวลาตรง ๆ
-                                <button
-                                  onClick={() => openEdit(row)}
-                                  title="ขอแก้ไขเวลา"
-                                  aria-label="ขอแก้ไขเวลา"
-                                  className="p-1.5 rounded-lg border hover:bg-muted transition-colors inline-flex items-center justify-center"
-                                >
-                                  <RotateCcw className="w-3.5 h-3.5" />
-                                </button>
-                              )
+                              <button
+                                onClick={() => openEdit(row)}
+                                title={canDirectEdit ? "แก้ไขเวลา" : "ขอแก้ไขเวลา"}
+                                aria-label={canDirectEdit ? "แก้ไขเวลา" : "ขอแก้ไขเวลา"}
+                                className="p-1.5 rounded-lg border hover:bg-muted transition-colors inline-flex items-center justify-center"
+                              >
+                                <RotateCcw className="w-3.5 h-3.5" />
+                              </button>
                             ) : (
                               <span className="text-xs text-muted-foreground">-</span>
                             )}
