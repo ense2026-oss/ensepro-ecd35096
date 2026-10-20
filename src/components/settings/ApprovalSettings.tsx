@@ -42,7 +42,7 @@ const ApprovalSettings = () => {
   const [employees, setEmployees] = useState<{ id: string; name: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [approverTab, setApproverTab] = useState<"leave" | "time_edit">("leave");
+  const [tab, setTab] = useState<"basic" | "leave" | "time_edit">("basic");
 
   useEffect(() => {
     const load = async () => {
@@ -137,126 +137,132 @@ const ApprovalSettings = () => {
     }
   };
 
-  if (loading) {
+  const TABS = [
+    { key: "basic", label: "ตั้งค่าเบื้องต้น" },
+    { key: "leave", label: "ตั้งค่าผู้อนุมัติการลา" },
+    { key: "time_edit", label: "ตั้งค่าผู้อนุมัติแก้ไขเวลา" },
+  ] as const;
+
+  if (loading && tab === "basic") {
     return <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>;
   }
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-muted-foreground">
-        กำหนดผู้อนุมัติได้สูงสุด 3 คนต่อระบบ — เมื่อมีผู้อนุมัติเพียง <span className="font-semibold text-foreground">1 คน</span> อนุมัติ คำขอจะถูกอนุมัติทันที
-      </p>
-
-      {modules.map((module, mi) => (
-        <div key={module.key} className="card-base p-5">
-          <div className="flex items-center justify-between mb-4">
-            <h4 className="font-semibold">{module.name}</h4>
-            <span className="text-xs text-muted-foreground">{module.tiers.length} ผู้อนุมัติ</span>
-          </div>
-          <div className="space-y-3">
-            {module.tiers.map((tier, ti) => (
-              <div key={ti} className="flex items-center gap-3 flex-wrap sm:flex-nowrap">
-                <div
-                  className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
-                  style={{ background: approverColors[ti] || "#ccc", color: "#000" }}
-                >
-                  {ti + 1}
-                </div>
-                <div className="flex-shrink-0">
-                  <p className="text-sm font-medium whitespace-nowrap">
-                    ผู้อนุมัติคนที่ {ti + 1}
-                  </p>
-                </div>
-
-                <select
-                  value={tier.type}
-                  onChange={(e) => updateTier(mi, ti, { type: e.target.value as ApproverType })}
-                  className="px-2 py-2 text-sm rounded-xl border outline-none bg-muted/30 cursor-pointer flex-shrink-0"
-                >
-                  <option value="role">ตาม Role</option>
-                  <option value="employee">ระบุพนักงาน</option>
-                </select>
-
-                {tier.type === "role" ? (
-                  <div className="flex-1 min-w-[140px] min-w-0">
-                    <select
-                      value={tier.value}
-                      onChange={(e) => updateTier(mi, ti, { value: e.target.value })}
-                      className="w-full px-3 py-2 text-sm rounded-xl border outline-none bg-muted/30 cursor-pointer"
-                    >
-                      {roleOptions.map((opt) => (
-                        <option key={opt.value} value={opt.value}>{opt.label}</option>
-                      ))}
-                    </select>
-                  </div>
-                ) : (
-                  <div className="flex-1 min-w-[140px]">
-                    <SearchableSelect
-                      value={tier.value}
-                      onChange={(val) => updateTier(mi, ti, { value: val })}
-                      options={employees.map((emp) => ({ value: emp.id, label: emp.name }))}
-                      placeholder="เลือกพนักงาน"
-                    />
-                  </div>
-                )}
-
-                {module.tiers.length > 1 && (
-                  <button
-                    onClick={() => removeTier(mi, ti)}
-                    className="p-1.5 rounded-lg hover:bg-destructive/10 transition-colors text-destructive flex-shrink-0"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                )}
-              </div>
-            ))}
-          </div>
-          {module.tiers.length < 3 && (
-            <button
-              onClick={() => addTier(mi)}
-              className="mt-3 flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium text-muted-foreground hover:bg-muted/50 transition-colors border border-dashed"
-              style={{ borderColor: "hsl(var(--border))" }}
-            >
-              <Plus className="w-4 h-4" />
-              เพิ่มผู้อนุมัติ
-            </button>
-          )}
-        </div>
-      ))}
-
-      <button
-        onClick={handleSave}
-        disabled={saving}
-        className="px-6 py-2.5 rounded-xl text-sm font-bold text-primary-foreground disabled:opacity-50 flex items-center gap-2"
-        style={{ background: "linear-gradient(135deg, hsl(var(--primary)), hsl(31 100% 60%))", boxShadow: "0 4px 12px hsl(var(--primary) / 0.3)" }}
-      >
-        {saving && <Loader2 className="w-4 h-4 animate-spin" />}
-        บันทึกการตั้งค่า
-      </button>
-
-      {/* ผู้อนุมัติรายบุคคล (การลา) — ตั้งแยกเป็นรายคนหรือเป็นกลุ่ม; ค่าด้านบนใช้เป็นผู้อนุมัติสำรองเมื่อยังไม่ได้ตั้ง */}
-      <div className="pt-4 mt-2 border-t space-y-4" style={{ borderColor: "hsl(var(--border))" }}>
-        <div className="flex gap-2">
-          {([
-            { key: "leave", label: "ผู้อนุมัติการลา" },
-            { key: "time_edit", label: "ผู้อนุมัติแก้ไขเวลา" },
-          ] as const).map((t) => (
-            <button
-              key={t.key}
-              onClick={() => setApproverTab(t.key)}
-              className="px-4 py-2 rounded-xl text-sm font-medium transition-colors"
-              style={{
-                background: approverTab === t.key ? "hsl(var(--primary))" : "transparent",
-                color: approverTab === t.key ? "hsl(var(--primary-foreground))" : "hsl(var(--foreground))",
-                border: approverTab === t.key ? "none" : "1px solid hsl(var(--border))",
-              }}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
-        <LeaveApproverSettings key={approverTab} requestType={approverTab} />
+      <div className="flex gap-2 overflow-x-auto -mx-1 px-1 pb-1">
+        {TABS.map((t) => (
+          <button
+            key={t.key}
+            onClick={() => setTab(t.key)}
+            className="px-4 py-2 rounded-xl text-sm font-medium transition-colors whitespace-nowrap flex-shrink-0"
+            style={{
+              background: tab === t.key ? "hsl(var(--primary))" : "transparent",
+              color: tab === t.key ? "hsl(var(--primary-foreground))" : "hsl(var(--foreground))",
+              border: tab === t.key ? "none" : "1px solid hsl(var(--border))",
+            }}
+          >
+            {t.label}
+          </button>
+        ))}
       </div>
+
+      {tab === "basic" ? (
+        <div className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            กำหนดผู้อนุมัติได้สูงสุด 3 คนต่อระบบ — เมื่อมีผู้อนุมัติเพียง <span className="font-semibold text-foreground">1 คน</span> อนุมัติ คำขอจะถูกอนุมัติทันที
+          </p>
+
+          {modules.map((module, mi) => (
+            <div key={module.key} className="card-base p-5">
+              <div className="flex items-center justify-between mb-4">
+                <h4 className="font-semibold">{module.name}</h4>
+                <span className="text-xs text-muted-foreground">{module.tiers.length} ผู้อนุมัติ</span>
+              </div>
+              <div className="space-y-3">
+                {module.tiers.map((tier, ti) => (
+                  <div key={ti} className="flex items-center gap-3 flex-wrap sm:flex-nowrap">
+                    <div
+                      className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
+                      style={{ background: approverColors[ti] || "#ccc", color: "#000" }}
+                    >
+                      {ti + 1}
+                    </div>
+                    <div className="flex-shrink-0">
+                      <p className="text-sm font-medium whitespace-nowrap">
+                        ผู้อนุมัติคนที่ {ti + 1}
+                      </p>
+                    </div>
+
+                    <select
+                      value={tier.type}
+                      onChange={(e) => updateTier(mi, ti, { type: e.target.value as ApproverType })}
+                      className="px-2 py-2 text-sm rounded-xl border outline-none bg-muted/30 cursor-pointer flex-shrink-0"
+                    >
+                      <option value="role">ตาม Role</option>
+                      <option value="employee">ระบุพนักงาน</option>
+                    </select>
+
+                    {tier.type === "role" ? (
+                      <div className="flex-1 min-w-[140px] min-w-0">
+                        <select
+                          value={tier.value}
+                          onChange={(e) => updateTier(mi, ti, { value: e.target.value })}
+                          className="w-full px-3 py-2 text-sm rounded-xl border outline-none bg-muted/30 cursor-pointer"
+                        >
+                          {roleOptions.map((opt) => (
+                            <option key={opt.value} value={opt.value}>{opt.label}</option>
+                          ))}
+                        </select>
+                      </div>
+                    ) : (
+                      <div className="flex-1 min-w-[140px]">
+                        <SearchableSelect
+                          value={tier.value}
+                          onChange={(val) => updateTier(mi, ti, { value: val })}
+                          options={employees.map((emp) => ({ value: emp.id, label: emp.name }))}
+                          placeholder="เลือกพนักงาน"
+                        />
+                      </div>
+                    )}
+
+                    {module.tiers.length > 1 && (
+                      <button
+                        onClick={() => removeTier(mi, ti)}
+                        className="p-1.5 rounded-lg hover:bg-destructive/10 transition-colors text-destructive flex-shrink-0"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+              {module.tiers.length < 3 && (
+                <button
+                  onClick={() => addTier(mi)}
+                  className="mt-3 flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium text-muted-foreground hover:bg-muted/50 transition-colors border border-dashed"
+                  style={{ borderColor: "hsl(var(--border))" }}
+                >
+                  <Plus className="w-4 h-4" />
+                  เพิ่มผู้อนุมัติ
+                </button>
+              )}
+            </div>
+          ))}
+
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="px-6 py-2.5 rounded-xl text-sm font-bold text-primary-foreground disabled:opacity-50 flex items-center gap-2"
+            style={{ background: "linear-gradient(135deg, hsl(var(--primary)), hsl(31 100% 60%))", boxShadow: "0 4px 12px hsl(var(--primary) / 0.3)" }}
+          >
+            {saving && <Loader2 className="w-4 h-4 animate-spin" />}
+            บันทึกการตั้งค่า
+          </button>
+        </div>
+      ) : (
+        // ผู้อนุมัติรายบุคคล — ค่าในแท็บ "ตั้งค่าเบื้องต้น" ใช้เป็นผู้อนุมัติสำรองเมื่อยังไม่ได้ตั้ง
+        <LeaveApproverSettings key={tab} requestType={tab} />
+      )}
     </div>
   );
 };
