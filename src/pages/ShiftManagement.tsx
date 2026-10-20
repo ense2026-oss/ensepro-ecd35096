@@ -390,7 +390,7 @@ const ShiftManagement = () => {
             </div>
           </div>
 
-          <div ref={calendarScrollRef} className="overflow-auto max-h-[calc(100vh-200px)] cursor-grab touch-none">
+          <div ref={calendarScrollRef} className="overflow-auto max-h-[calc(100dvh-200px)] cursor-grab overscroll-x-contain">
             <p className="sm:hidden text-[10px] text-muted-foreground px-1 pb-1 flex items-center gap-1"><ChevronLeft className="w-3 h-3" />ลากนิ้วเพื่อเลื่อนดูวันที่<ChevronRight className="w-3 h-3" /></p>
             {!gridReady ? (
               <div className="min-h-[400px] flex items-center justify-center text-xs text-muted-foreground">กำลังเตรียมตาราง…</div>
