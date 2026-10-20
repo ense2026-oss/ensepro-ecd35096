@@ -8,16 +8,24 @@ import ApproverMultiSelect from "@/components/approvals/ApproverMultiSelect";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogBody, DialogFooter,
 } from "@/components/ui/dialog";
-import { useApprovalAssignments, saveEmployeeApprovers, applyApproversBulk } from "@/lib/approvalAssignments";
+import { useApprovalAssignments, saveEmployeeApprovers, applyApproversBulk, type ApprovalRequestType } from "@/lib/approvalAssignments";
 import { logInfo } from "@/lib/systemLog";
 
 const PAGE_SIZE = 20;
 
+// ข้อความแยกตามประเภทคำขอ (ตารางเดียวกัน แยกด้วย request_type)
+const LABELS: Record<"leave" | "time_edit", { title: string; what: string; act: string }> = {
+  leave: { title: "ผู้อนุมัติการลา", what: "ใบลา", act: "อนุมัติ" },
+  time_edit: { title: "ผู้อนุมัติแก้ไขเวลา", what: "คำขอแก้ไขเวลา", act: "อนุมัติ/ปฏิเสธ" },
+};
+
 // ตั้งผู้อนุมัติการลาแบบรายบุคคล — ดู/แก้รายคน หรือตั้งทีเดียวทั้งกลุ่มตามสังกัด/ตำแหน่ง
 // (ตัวอย่าง: พขร. ทุกคนใช้ นายสถานี + ผช.นายสถานี แล้วค่อยแก้เฉพาะคนที่ต่างออกไป)
-export default function LeaveApproverSettings() {
+export default function LeaveApproverSettings({ requestType = "leave" }: { requestType?: "leave" | "time_edit" }) {
+  const L = LABELS[requestType];
+  const rt: ApprovalRequestType = requestType;
   const { employees } = useEmployees();
-  const { assignments, loading, refetch, approversOf } = useApprovalAssignments("leave");
+  const { assignments, loading, refetch, approversOf } = useApprovalAssignments(rt);
 
   const people = useMemo(
     () => employees.filter((e) => e.status !== "inactive" && (e.role || "").toLowerCase() !== "admin"),
@@ -68,9 +76,9 @@ export default function LeaveApproverSettings() {
     if (!editId) return;
     setSaving(true);
     try {
-      await saveEmployeeApprovers(editId, editIds, "leave");
+      await saveEmployeeApprovers(editId, editIds, rt);
       await refetch();
-      logInfo("account", `ตั้งผู้อนุมัติการลา: ${nameOf.get(editId) || editId}`, { employeeId: editId, approverIds: editIds });
+      logInfo("account", `ตั้ง${L.title}: ${nameOf.get(editId) || editId}`, { employeeId: editId, approverIds: editIds, requestType: rt });
       toast.success("บันทึกผู้อนุมัติแล้ว");
       setEditId(null);
     } catch (e: any) {
@@ -92,9 +100,9 @@ export default function LeaveApproverSettings() {
     if (!confirm(`${verb}ให้พนักงาน ${filtered.length} คน (ตามตัวกรองที่แสดงอยู่)\nผู้อนุมัติ: ${names}\n\nยืนยันหรือไม่?`)) return;
     setBulkSaving(true);
     try {
-      const res = await applyApproversBulk(filtered.map((e) => e.id), bulkIds, bulkMode, "leave");
+      const res = await applyApproversBulk(filtered.map((e) => e.id), bulkIds, bulkMode, rt);
       await refetch();
-      logInfo("account", `ตั้งผู้อนุมัติการลาเป็นกลุ่ม (${bulkMode}) ${res.employees} คน`, { count: res.employees, approverIds: bulkIds, mode: bulkMode });
+      logInfo("account", `ตั้ง${L.title}เป็นกลุ่ม (${bulkMode}) ${res.employees} คน`, { count: res.employees, approverIds: bulkIds, mode: bulkMode, requestType: rt });
       toast.success(`ตั้งผู้อนุมัติให้ ${res.employees} คนแล้ว`);
       setBulkIds([]);
     } catch (e: any) {
@@ -107,11 +115,11 @@ export default function LeaveApproverSettings() {
   return (
     <div className="space-y-4">
       <div className="card-base p-5 space-y-1.5">
-        <h4 className="font-semibold">ผู้อนุมัติการลา — กำหนดรายบุคคล</h4>
+        <h4 className="font-semibold">{L.title} — กำหนดรายบุคคล</h4>
         <p className="text-sm text-muted-foreground">
-          กำหนดว่าใครอนุมัติใบลาของพนักงานแต่ละคน เลือกได้หลายคน <b className="text-foreground">คนใดคนหนึ่งอนุมัติก็จบ</b> ·
-          ผู้อนุมัติได้รับแจ้งเตือนและกดอนุมัติได้เฉพาะใบลาของลูกทีมตัวเอง ·
-          พนักงานที่ยังไม่ได้ตั้ง ใช้ผู้อนุมัติเดิมตามสิทธิ์ของ role (admin/hr อนุมัติแทนได้ทุกใบเสมอ)
+          กำหนดว่าใครอนุมัติ{L.what}ของพนักงานแต่ละคน เลือกได้หลายคน <b className="text-foreground">คนใดคนหนึ่งอนุมัติก็จบ</b> ·
+          ผู้อนุมัติได้รับแจ้งเตือนและกด{L.act}ได้เฉพาะ{L.what}ของลูกทีมตัวเอง ·
+          พนักงานที่ยังไม่ได้ตั้ง ใช้ผู้อนุมัติเดิมตามสิทธิ์ของ role (admin/hr ดำเนินการแทนได้ทุกรายการเสมอ)
         </p>
         <p className="text-xs text-muted-foreground flex items-center gap-1.5">
           <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
@@ -222,9 +230,9 @@ export default function LeaveApproverSettings() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="text-base font-bold pb-[10px]">
-              ผู้อนุมัติการลา — {editing ? `${editing.prefix || ""}${editing.firstName} ${editing.lastName}` : ""}
+              {L.title} — {editing ? `${editing.prefix || ""}${editing.firstName} ${editing.lastName}` : ""}
             </DialogTitle>
-            <DialogDescription className="sr-only">กำหนดผู้อนุมัติการลาของพนักงาน</DialogDescription>
+            <DialogDescription className="sr-only">กำหนด{L.title}ของพนักงาน</DialogDescription>
           </DialogHeader>
           <DialogBody>
             <ApproverMultiSelect value={editIds} onChange={setEditIds} excludeEmployeeId={editId || undefined} />

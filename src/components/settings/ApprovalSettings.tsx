@@ -42,6 +42,7 @@ const ApprovalSettings = () => {
   const [employees, setEmployees] = useState<{ id: string; name: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [approverTab, setApproverTab] = useState<"leave" | "time_edit">("leave");
 
   useEffect(() => {
     const load = async () => {
@@ -234,8 +235,27 @@ const ApprovalSettings = () => {
       </button>
 
       {/* ผู้อนุมัติรายบุคคล (การลา) — ตั้งแยกเป็นรายคนหรือเป็นกลุ่ม; ค่าด้านบนใช้เป็นผู้อนุมัติสำรองเมื่อยังไม่ได้ตั้ง */}
-      <div className="pt-4 mt-2 border-t" style={{ borderColor: "hsl(var(--border))" }}>
-        <LeaveApproverSettings />
+      <div className="pt-4 mt-2 border-t space-y-4" style={{ borderColor: "hsl(var(--border))" }}>
+        <div className="flex gap-2">
+          {([
+            { key: "leave", label: "ผู้อนุมัติการลา" },
+            { key: "time_edit", label: "ผู้อนุมัติแก้ไขเวลา" },
+          ] as const).map((t) => (
+            <button
+              key={t.key}
+              onClick={() => setApproverTab(t.key)}
+              className="px-4 py-2 rounded-xl text-sm font-medium transition-colors"
+              style={{
+                background: approverTab === t.key ? "hsl(var(--primary))" : "transparent",
+                color: approverTab === t.key ? "hsl(var(--primary-foreground))" : "hsl(var(--foreground))",
+                border: approverTab === t.key ? "none" : "1px solid hsl(var(--border))",
+              }}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+        <LeaveApproverSettings key={approverTab} requestType={approverTab} />
       </div>
     </div>
   );

@@ -20,6 +20,7 @@ import { notifyRequester, notifyTierApprover } from "@/utils/notifications";
 import EmployeeAvatar from "@/components/ui/employee-avatar";
 import FaceScanFileImportDialog from "@/components/attendance/FaceScanFileImportDialog";
 import PaginationBar from "@/components/ui/pagination-bar";
+import { useApprovalAssignments } from "@/lib/approvalAssignments";
 import { usePageQuery, unwrapAll } from "@/hooks/usePageQuery";
 import { fetchAllRows } from "@/lib/fetchAll";
 
@@ -117,6 +118,12 @@ const Attendance = () => {
   const { role, user, currentUser } = useAuth();
   const { canAction, getScope } = usePermissions();
   const canApproveTime = canAction(role, 'attendance', 'approve');
+  // ผู้อนุมัติแก้ไขเวลารายบุคคล: อนุมัติ/ปฏิเสธคำขอของลูกทีมที่ถูกกำหนดได้ แม้ role จะไม่มีสิทธิ์ approve
+  // (ผ่านฟังก์ชันฐานข้อมูล decide_time_edit_request — ไม่ต้องมีสิทธิ์เขียนตารางเวลาโดยตรง)
+  const { approveeIdsOf: timeEditApproveeIdsOf } = useApprovalAssignments("time_edit");
+  const myTimeEditApproveeIds = timeEditApproveeIdsOf(currentUser?.employeeId);
+  const canDecideRequest = (r: { employeeId?: string }) =>
+    canApproveTime || (!!r.employeeId && myTimeEditApproveeIds.has(r.employeeId));
   const canEditTime = canAction(role, 'attendance', 'edit');
   const attendanceScope = getScope(role, 'attendance');
   const canExport = attendanceScope !== 'self';
@@ -600,9 +607,37 @@ const Attendance = () => {
     refetchAttendance();
   };
 
+  // ตัดสินคำขอผ่านฟังก์ชันฐานข้อมูล (ใช้เมื่อเป็นผู้อนุมัติที่ถูกกำหนดแต่ role ไม่มีสิทธิ์ approve)
+  const decideViaRpc = async (req: TimeEditRequest, action: "approve" | "reject") => {
+    const { error } = await (supabase.rpc as any)("decide_time_edit_request", { p_request_id: req.id, p_action: action });
+    if (error) {
+      toast.error(error.message || "ดำเนินการไม่สำเร็จ");
+      return;
+    }
+    updateRequestStatus(req.id, action === "approve" ? "approved" : "rejected");
+    setDetailOpen(false);
+    if (action === "approve") {
+      toast.success("อนุมัติคำขอแก้ไขเวลาเรียบร้อย");
+      refetchAttendance();
+    } else {
+      toast.success("ปฏิเสธคำขอแก้ไขเวลาเรียบร้อย");
+    }
+    notifyRequester(req.employeeId, {
+      type: "attendance",
+      title: action === "approve" ? "คำขอแก้ไขเวลาได้รับการอนุมัติ" : "คำขอแก้ไขเวลาไม่ได้รับการอนุมัติ",
+      description: `คำขอแก้ไขเวลา ${req.date} (เข้า ${req.newCheckIn} / ออก ${req.newCheckOut}) ${action === "approve" ? "ได้รับการอนุมัติแล้ว" : "ไม่ได้รับการอนุมัติ"}`,
+      targetEmployee: req.employeeName,
+    });
+  };
+
   const handleApprove = async (reqId: string) => {
     const req = editRequests.find((r) => r.id === reqId);
     if (!req || !user?.id) return;
+    if (!canDecideRequest(req)) {
+      toast.error("คุณไม่ใช่ผู้อนุมัติของคำขอนี้");
+      return;
+    }
+    if (!canApproveTime) return decideViaRpc(req, "approve");
 
     // Prevent the same approver from acting twice
     const { data: existingLog } = await supabase
@@ -666,6 +701,11 @@ const Attendance = () => {
   const handleReject = async (reqId: string) => {
     const req = editRequests.find((r) => r.id === reqId);
     if (!req || !user?.id) return;
+    if (!canDecideRequest(req)) {
+      toast.error("คุณไม่ใช่ผู้อนุมัติของคำขอนี้");
+      return;
+    }
+    if (!canApproveTime) return decideViaRpc(req, "reject");
 
     const { data: existingLog } = await supabase
       .from("approval_logs")
@@ -1190,7 +1230,7 @@ const Attendance = () => {
             </div>
           )}
           <DialogFooter className="gap-2">
-            {detailReq?.status === "pending" && canApproveTime ? (
+            {detailReq?.status === "pending" && canDecideRequest(detailReq) ? (
               <div className="flex flex-row gap-2 w-full sm:w-auto">
                 <button onClick={() => detailReq && handleReject(detailReq.id)} className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold text-white" style={{ background: "hsl(0 84% 50%)" }}>
                   <X className="w-4 h-4" /> ไม่อนุมัติ

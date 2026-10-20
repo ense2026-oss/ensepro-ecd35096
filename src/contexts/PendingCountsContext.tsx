@@ -103,35 +103,41 @@ export const PendingCountsProvider = ({ children }: { children: ReactNode }) => 
       return count ?? 0;
     };
 
-    // ผู้อนุมัติรายบุคคล: นับใบลา pending ของลูกทีมที่อยู่นอกขอบเขตตามสิทธิ์ role เพิ่มด้วย
+    // ผู้อนุมัติรายบุคคล: นับคำขอ pending ของลูกทีมที่อยู่นอกขอบเขตตามสิทธิ์ role เพิ่มด้วย
     // (scope "all" นับครบอยู่แล้ว) — ถ้ายังไม่มีตาราง/ไม่ได้กำหนดใคร จะได้ 0
-    const getAssignedApproveeLeaveCount = async (): Promise<number> => {
+    const getAssignedApproveeCount = async (
+      requestType: "leave" | "time_edit",
+      table: "leave_requests" | "time_edit_requests",
+      module: string,
+    ): Promise<number> => {
       if (!employeeId) return 0;
-      const leaveScope = getScope(roleKey, "leave");
-      if (leaveScope === "all") return 0;
+      const reqScope = getScope(roleKey, module);
+      if (reqScope === "all") return 0;
       const { data: links, error: linkErr } = await (supabase as any)
         .from("approval_assignments")
         .select("employee_id")
-        .eq("request_type", "leave")
+        .eq("request_type", requestType)
         .eq("approver_employee_id", employeeId);
       if (linkErr || !links?.length) return 0;
       const ids = links.map((r: { employee_id: string }) => r.employee_id);
       let q = supabase
-        .from("leave_requests")
+        .from(table)
         .select("*, employees!inner(dept)", { count: "exact", head: true })
         .eq("status", "pending")
         .in("employee_id", ids);
-      if (leaveScope === "department" && currentUser?.dept) q = q.neq("employees.dept", currentUser.dept);
+      if (reqScope === "department" && currentUser?.dept) q = q.neq("employees.dept", currentUser.dept);
       const { count } = await q;
       return count ?? 0;
     };
 
-    const [leaveBase, assignedLeave, timeEditCount, otCount] = await Promise.all([
+    const [leaveBase, assignedLeave, timeEditBase, assignedTimeEdit, otCount] = await Promise.all([
       getScopedCount("leave_requests", "leave"),
-      getAssignedApproveeLeaveCount(),
+      getAssignedApproveeCount("leave", "leave_requests", "leave"),
       getScopedCount("time_edit_requests", "attendance"),
+      getAssignedApproveeCount("time_edit", "time_edit_requests", "attendance"),
       getScopedCount("overtime_requests", "ot"),
     ]);
+    const timeEditCount = timeEditBase + assignedTimeEdit;
     const leaveCount = leaveBase + assignedLeave;
 
     setLeavePending(leaveCount);

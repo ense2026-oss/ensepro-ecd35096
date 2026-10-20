@@ -5,6 +5,7 @@ import { notifyApprovers, getApprovalTiers } from "@/utils/notifications";
 import { withRetry } from "@/lib/retry";
 import { logInfo } from "@/lib/systemLog";
 import { onTable } from "@/lib/realtimeBus";
+import { notifyAssignedApprovers } from "@/lib/approvalAssignments";
 
 export interface TimeEditRequest {
   id: string;
@@ -195,13 +196,15 @@ export const TimeEditProvider = ({ children }: { children: ReactNode }) => {
     // Refresh the list immediately so the new request shows right away, instead
     // of waiting for the debounced realtime event (matches the snappy OT page).
     fetchEditRequests();
-    // Notify all configured approvers (any one can approve)
-    notifyApprovers({
-      type: "attendance",
+    // แจ้งผู้อนุมัติของพนักงานคนนี้ (คนใดคนหนึ่งอนุมัติก็จบ); ถ้ายังไม่ได้กำหนดใคร ฝั่ง DB จะ fallback
+    // ไปแจ้งผู้อนุมัติเดิม (admin/hr) เอง — ถ้ายังไม่มีฟังก์ชันใหม่จะใช้การแจ้งเตือนเดิม
+    const notifyParams = {
+      type: "attendance" as const,
       title: "คำขอแก้ไขเวลาใหม่",
       description: `${req.employeeName} ขอแก้ไขเวลา ${req.date} → เข้า ${req.newCheckIn} / ออก ${req.newCheckOut}`,
       targetEmployee: req.employeeName,
-    });
+    };
+    void notifyAssignedApprovers("time_edit", req.employeeId, "time_edit", notifyParams, () => notifyApprovers(notifyParams));
   }, [fetchEditRequests]);
 
   const updateRequestStatus = useCallback(async (id: string, status: "approved" | "rejected") => {

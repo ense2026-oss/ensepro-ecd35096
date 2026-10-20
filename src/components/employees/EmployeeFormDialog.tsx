@@ -131,6 +131,19 @@ const EmployeeFormDialog = ({ open, onOpenChange, employee, onSave }: EmployeeFo
     setApproverIds(approversOf(employee.id));
   }, [open, employee, canEditApprovers, approversLoading, approversOf]);
 
+  // ผู้อนุมัติแก้ไขเวลา (ชนิดเดียวกัน คนละ request_type)
+  const { approversOf: timeEditApproversOf, loading: timeEditLoading, refetch: refetchTimeEditApprovers } =
+    useApprovalAssignments("time_edit", open && canEditApprovers);
+  const [timeEditApproverIds, setTimeEditApproverIds] = useState<string[]>([]);
+  const timeEditInitFor = useRef<string | null>(null);
+  useEffect(() => {
+    if (!open) { timeEditInitFor.current = null; return; }
+    if (!employee || !canEditApprovers || timeEditLoading) return;
+    if (timeEditInitFor.current === employee.id) return;
+    timeEditInitFor.current = employee.id;
+    setTimeEditApproverIds(timeEditApproversOf(employee.id));
+  }, [open, employee, canEditApprovers, timeEditLoading, timeEditApproversOf]);
+
   const isDeptSelected = !!form.dept && form.dept !== "-- เลือกสังกัด --";
 
   // Roles come from Settings > สิทธิ์ผู้ใช้งาน. If the employee currently holds a
@@ -317,6 +330,21 @@ const EmployeeFormDialog = ({ open, onOpenChange, employee, onSave }: EmployeeFo
             logInfo("account", `ตั้งผู้อนุมัติการลา: ${employee.firstName} ${employee.lastName}`, { employeeId: employee.id, approverIds });
           } catch (apErr: any) {
             throw new Error("บันทึกข้อมูลพนักงานแล้ว แต่บันทึกผู้อนุมัติการลาไม่สำเร็จ: " + (apErr?.message || "เกิดข้อผิดพลาด"));
+          }
+        }
+      }
+
+      // ผู้อนุมัติแก้ไขเวลา — บันทึกเมื่อมีการเปลี่ยนแปลงเท่านั้น
+      if (canEditApprovers && employee && timeEditInitFor.current === employee.id) {
+        const before = [...timeEditApproversOf(employee.id)].sort().join("|");
+        const after = [...new Set(timeEditApproverIds)].sort().join("|");
+        if (before !== after) {
+          try {
+            await saveEmployeeApprovers(employee.id, timeEditApproverIds, "time_edit");
+            await refetchTimeEditApprovers();
+            logInfo("account", `ตั้งผู้อนุมัติแก้ไขเวลา: ${employee.firstName} ${employee.lastName}`, { employeeId: employee.id, approverIds: timeEditApproverIds });
+          } catch (apErr: any) {
+            throw new Error("บันทึกข้อมูลพนักงานแล้ว แต่บันทึกผู้อนุมัติแก้ไขเวลาไม่สำเร็จ: " + (apErr?.message || "เกิดข้อผิดพลาด"));
           }
         }
       }
@@ -520,6 +548,19 @@ const EmployeeFormDialog = ({ open, onOpenChange, employee, onSave }: EmployeeFo
                   onChange={setApproverIds}
                   excludeEmployeeId={employee?.id}
                   disabled={approversLoading}
+                />
+              </div>
+              <SectionLabel>ผู้อนุมัติแก้ไขเวลา</SectionLabel>
+              <div className="space-y-1.5">
+                <p className="text-[11px] text-muted-foreground">
+                  ผู้ที่อนุมัติ/ปฏิเสธคำขอแก้ไขเวลาเข้า-ออกงานของพนักงานคนนี้ได้ — เลือกได้หลายคน <b>คนใดคนหนึ่งอนุมัติก็จบ</b>
+                  · admin/hr ดำเนินการแทนได้เสมอ
+                </p>
+                <ApproverMultiSelect
+                  value={timeEditApproverIds}
+                  onChange={setTimeEditApproverIds}
+                  excludeEmployeeId={employee?.id}
+                  disabled={timeEditLoading}
                 />
               </div>
             </>
