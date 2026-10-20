@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect, useCallback, Fragment } from "react";
+import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Search, Download, CheckCircle, XCircle, Clock, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Save, X, FileText, Check, RotateCcw, CalendarDays, Eye, Upload, Users } from "lucide-react";
 import { ThaiDatePicker } from "@/components/ui/thai-date-picker";
@@ -967,84 +967,92 @@ const Attendance = () => {
         <>
           {/* Table */}
           <div className="card-base overflow-hidden">
-            {/* Mobile: ตารางกะทัดรัด 2 บรรทัดต่อแถว — รูป/ตำแหน่ง | เข้า/ออก | สถานะ | จัดการ (ตารางเต็มแสดงตั้งแต่ md ขึ้นไป) */}
+            {/* Mobile: ตารางกะทัดรัด 2 บรรทัดต่อแถว — วันที่ | รูป/ตำแหน่ง | เข้า/ออก | OT | สถานะ | จัดการ (ตารางเต็มแสดงตั้งแต่ md ขึ้นไป) */}
             <div className="md:hidden">
               {loading ? (
                 <p className="text-center py-6 text-sm text-muted-foreground">กำลังโหลด...</p>
               ) : displayRows.length === 0 ? (
                 <p className="text-center py-6 text-sm text-muted-foreground">ไม่พบข้อมูล</p>
               ) : (
-                <table className="w-full table-fixed">
-                  <colgroup>
-                    <col style={{ width: "27%" }} />
-                    <col style={{ width: "34%" }} />
-                    <col style={{ width: "27%" }} />
-                    <col style={{ width: "12%" }} />
-                  </colgroup>
+                <div className="overflow-x-auto overscroll-x-contain">
+                <table className="w-full">
                   <thead>
                     <tr className="border-b" style={{ borderColor: "hsl(var(--border))" }}>
-                      {["พนักงาน", "เวลา", "สถานะ", "จัดการ"].map((h, i) => (
-                        <th key={h} className={`px-2 py-2 text-[10px] font-semibold text-muted-foreground whitespace-nowrap ${i === 0 ? "text-center" : i === 3 ? "text-center" : "text-left"}`}>{h}</th>
+                      {["วันที่", "พนักงาน", "เวลา", "OT", "สถานะ", "จัดการ"].map((h, i) => (
+                        <th key={h} className={`px-1 py-2 text-[10px] font-semibold text-muted-foreground whitespace-nowrap ${i === 1 || i === 5 ? "text-center" : "text-left"}`}>{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
-                    {pagedRows.map((row, idx) => {
+                    {pagedRows.map((row) => {
                       const conf = statusConf[row.status] || statusConf.present;
                       const Icon = conf.icon;
                       const canEditRow = (canEditTime || row.employeeId === currentUser?.employeeId) && row.status !== "holiday" && row.status !== "dayoff";
-                      const showDate = idx === 0 || pagedRows[idx - 1].date !== row.date;
                       const fmtTime = (t?: string) => (t && t !== "-" ? `${t.replace(":", ".")} น.` : "-");
+                      const shortTime = (t?: string) => (t && t !== "-" ? t.replace(":", ".") : "-");
+                      const dateText = formatThaiShort(row.date);
+                      const cut = dateText.lastIndexOf(" ");
+                      const dayMonth = cut > 0 ? dateText.slice(0, cut) : dateText;
+                      const year = cut > 0 ? dateText.slice(cut + 1) : "";
+                      const hasOt = !!(row.otIn || row.otOut) || row.ot > 0;
                       return (
-                        <Fragment key={row.id}>
-                          {showDate && (
-                            <tr style={{ background: "hsl(var(--muted) / 0.5)" }}>
-                              <td colSpan={4} className="px-2 py-1 text-[11px] font-semibold">{formatThaiShort(row.date)}</td>
-                            </tr>
-                          )}
-                          <tr className="border-b" style={{ borderColor: "hsl(var(--border))" }}>
-                            <td className="px-2 py-2">
-                              <div className="flex flex-col items-center gap-0.5 min-w-0">
-                                <EmployeeAvatar photoUrl={photoMap.get(row.employeeId)} firstName={row.name} size="sm" rounded="full" />
-                                <span className="text-[10px] leading-tight text-muted-foreground text-center w-full truncate">{positionMap.get(row.employeeId) || row.dept || "-"}</span>
-                              </div>
-                            </td>
-                            <td className="px-2 py-2 text-[11px] leading-tight">
-                              <p className="whitespace-nowrap">
-                                <span className="text-muted-foreground">เข้า : </span>
-                                <span className={`font-semibold ${row.late ? "text-orange-500" : ""}`}>{fmtTime(row.checkIn)}</span>
-                              </p>
-                              <p className="whitespace-nowrap mt-1">
-                                <span className="text-muted-foreground">ออก : </span>
-                                <span className="font-semibold">{fmtTime(row.checkOut)}</span>
-                              </p>
-                            </td>
-                            <td className="px-2 py-2">
-                              <div className="inline-flex items-center gap-1 text-[10px] leading-tight font-semibold px-1.5 py-1 rounded-full max-w-full" style={{ background: conf.bg, color: conf.color }}>
-                                <Icon className="w-3 h-3 flex-shrink-0" style={{ color: conf.color }} />
-                                <span className="truncate">{row.note || conf.label}</span>
-                              </div>
-                            </td>
-                            <td className="px-1 py-2 text-center">
-                              {canEditRow ? (
-                                <button
-                                  onClick={() => openEdit(row)}
-                                  title="ขอแก้ไขเวลา"
-                                  aria-label="ขอแก้ไขเวลา"
-                                  className="p-1.5 rounded-lg border hover:bg-muted transition-colors inline-flex items-center justify-center"
-                                >
-                                  <RotateCcw className="w-3.5 h-3.5" />
-                                </button>
-                              ) : (
-                                <span className="text-xs text-muted-foreground">-</span>
-                              )}
-                            </td>
-                          </tr>
-                        </Fragment>
+                        <tr key={row.id} className="border-b" style={{ borderColor: "hsl(var(--border))" }}>
+                          <td className="px-1 py-2 text-[10px] leading-tight whitespace-nowrap">
+                            <p className="font-semibold">{dayMonth}</p>
+                            <p className="text-muted-foreground mt-1">{year}</p>
+                          </td>
+                          <td className="px-1 py-2">
+                            <div className="flex flex-col items-center gap-0.5 w-12">
+                              <EmployeeAvatar photoUrl={photoMap.get(row.employeeId)} firstName={row.name} size="sm" rounded="full" />
+                              <span className="text-[10px] leading-tight text-muted-foreground text-center w-full truncate">{positionMap.get(row.employeeId) || row.dept || "-"}</span>
+                            </div>
+                          </td>
+                          <td className="px-1 py-2 text-[10px] leading-tight whitespace-nowrap">
+                            <p>
+                              <span className="text-muted-foreground">เข้า : </span>
+                              <span className={`font-semibold ${row.late ? "text-orange-500" : ""}`}>{fmtTime(row.checkIn)}</span>
+                            </p>
+                            <p className="mt-1">
+                              <span className="text-muted-foreground">ออก : </span>
+                              <span className="font-semibold">{fmtTime(row.checkOut)}</span>
+                            </p>
+                          </td>
+                          <td className="px-1 py-2 text-[10px] leading-tight whitespace-nowrap">
+                            {hasOt ? (
+                              <>
+                                <p className="font-mono" style={{ color: "hsl(270 70% 45%)" }}>{shortTime(row.otIn)} - {shortTime(row.otOut)}</p>
+                                <p className="mt-1 font-semibold" style={{ color: row.ot > 0 ? "hsl(90 100% 30%)" : undefined }}>{row.ot > 0 ? `+${row.ot} ชม.` : "-"}</p>
+                              </>
+                            ) : (
+                              <span className="text-muted-foreground">-</span>
+                            )}
+                          </td>
+                          <td className="px-1 py-2">
+                            <div className="inline-flex items-center gap-1 text-[10px] leading-tight font-semibold px-1.5 py-1 rounded-full whitespace-nowrap" style={{ background: conf.bg, color: conf.color }}>
+                              <Icon className="w-3 h-3 flex-shrink-0" style={{ color: conf.color }} />
+                              {row.note || conf.label}
+                            </div>
+                          </td>
+                          <td className="px-1 py-2 text-center">
+                            {canEditRow ? (
+                              <button
+                                onClick={() => openEdit(row)}
+                                title="ขอแก้ไขเวลา"
+                                aria-label="ขอแก้ไขเวลา"
+                                className="p-1.5 rounded-lg border hover:bg-muted transition-colors inline-flex items-center justify-center"
+                              >
+                                <RotateCcw className="w-3.5 h-3.5" />
+                              </button>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">-</span>
+                            )}
+                          </td>
+                        </tr>
                       );
                     })}
                   </tbody>
                 </table>
+                </div>
               )}
             </div>
             <div className="overflow-x-auto hidden md:block">
