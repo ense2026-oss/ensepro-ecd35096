@@ -1,4 +1,5 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
+import * as PopoverPrimitive from "@radix-ui/react-popover";
 import { Search, ChevronDown, X, Check } from "lucide-react";
 import EmployeeAvatar from "@/components/ui/employee-avatar";
 
@@ -34,7 +35,6 @@ const SearchableSelect = ({
 }: SearchableSelectProps) => {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
-  const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const selectedOption = options.find((o) => o.value === value);
@@ -47,29 +47,19 @@ const SearchableSelect = ({
       )
     : options;
 
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setOpen(false);
-        setSearch("");
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  useEffect(() => {
-    if (open && inputRef.current) {
-      inputRef.current.focus();
-    }
-  }, [open]);
+  const handleOpenChange = (next: boolean) => {
+    setOpen(next);
+    if (!next) setSearch("");
+  };
 
   return (
-    <div ref={containerRef} className={`relative ${className}`}>
+    // ใช้ Popover (portal ไปที่ body) เพื่อให้รายการลอยพ้นกรอบของ Dialog/การ์ดที่มี overflow ได้
+    <PopoverPrimitive.Root open={open} onOpenChange={handleOpenChange}>
+    <div className={className}>
+      <PopoverPrimitive.Trigger asChild>
       <button
         type="button"
         disabled={disabled}
-        onClick={() => setOpen(!open)}
         className="w-full flex items-center justify-between px-3 py-2.5 text-sm rounded-xl border outline-none bg-muted/30 cursor-pointer hover:bg-muted/50 transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed"
       >
         <span className={`flex items-center gap-2 min-w-0 ${selectedOption ? "text-foreground" : "text-muted-foreground"}`}>
@@ -101,9 +91,19 @@ const SearchableSelect = ({
           <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`} />
         </div>
       </button>
+      </PopoverPrimitive.Trigger>
 
-      {open && (
-        <div className="absolute z-50 mt-1 w-full rounded-xl border bg-popover shadow-lg overflow-hidden animate-in fade-in-0 zoom-in-95">
+      <PopoverPrimitive.Portal>
+        <PopoverPrimitive.Content
+          align="start"
+          sideOffset={4}
+          collisionPadding={8}
+          // Dialog (react-remove-scroll) บล็อก wheel/touch ที่อยู่นอก content ของมัน — กันไม่ให้เลื่อนรายการไม่ได้
+          onWheel={(e) => e.stopPropagation()}
+          onTouchMove={(e) => e.stopPropagation()}
+          onOpenAutoFocus={(e) => { e.preventDefault(); inputRef.current?.focus(); }}
+          className="z-[100] w-[var(--radix-popover-trigger-width)] rounded-xl border bg-popover text-popover-foreground shadow-lg overflow-hidden outline-none animate-in fade-in-0 zoom-in-95"
+        >
           <div className="flex items-center gap-2 px-3 py-2 border-b">
             <Search className="w-4 h-4 text-muted-foreground shrink-0" />
             <input
@@ -120,7 +120,7 @@ const SearchableSelect = ({
               </button>
             )}
           </div>
-          <div className="max-h-56 overflow-y-auto custom-scroll">
+          <div className="max-h-[min(14rem,var(--radix-popover-content-available-height))] overflow-y-auto custom-scroll">
             {filtered.length === 0 ? (
               <div className="px-3 py-4 text-center text-sm text-muted-foreground">ไม่พบผลลัพธ์</div>
             ) : (
@@ -158,9 +158,10 @@ const SearchableSelect = ({
               ))
             )}
           </div>
-        </div>
-      )}
+        </PopoverPrimitive.Content>
+      </PopoverPrimitive.Portal>
     </div>
+    </PopoverPrimitive.Root>
   );
 };
 
