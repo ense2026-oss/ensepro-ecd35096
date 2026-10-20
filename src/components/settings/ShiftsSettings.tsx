@@ -110,7 +110,7 @@ const ShiftsSettings = () => {
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {shifts.map((shift) => (
-          <div key={shift.id} className="card-base p-5 border-t-4" style={{ borderTopColor: shift.color }}>
+          <div key={shift.id} className="card-base p-5 border-t-[14px]" style={{ borderTopColor: shift.color }}>
             <div className="flex items-center justify-between mb-3">
               <span className="font-bold font-display">{shift.name}</span>
               <div className="flex gap-1">
