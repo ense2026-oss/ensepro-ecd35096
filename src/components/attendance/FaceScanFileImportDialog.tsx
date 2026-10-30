@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogBody, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,8 @@ import { Upload, FileText, AlertCircle, CheckCircle2, XCircle, Download } from "
 import { toast } from "sonner";
 import { useEmployees } from "@/contexts/EmployeeContext";
 import SearchableSelect from "@/components/ui/searchable-select";
+import { fetchAllRows } from "@/lib/fetchAll";
+import { dedupePunches, pairPunches, buildShiftResolver, type ShiftRow, type ShiftAssignmentRow } from "@/lib/scanPunches";
 
 interface FaceScanFileImportDialogProps {
   open: boolean;
@@ -57,6 +59,26 @@ export const FaceScanFileImportDialog = ({
   const [progress, setProgress] = useState(0);
   const [result, setResult] = useState({ inserted: 0, updated: 0, skipped: 0, linked: 0, unmatched: 0 });
   const [processing, setProcessing] = useState(false);
+  // กะของพนักงาน — ใช้ผูกคู่เข้า-ออกของกะข้ามเที่ยงคืน (โหลดตอนเปิดหน้าต่าง ถ้าโหลดไม่ได้ก็ทำงานแบบตามวันปฏิทินเหมือนเดิม)
+  const [shiftRows, setShiftRows] = useState<ShiftRow[]>([]);
+  const [shiftAssignments, setShiftAssignments] = useState<ShiftAssignmentRow[]>([]);
+
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const [shifts, assigns] = await Promise.all([
+          fetchAllRows<ShiftRow>((from, to) => supabase.from("shifts").select("id, name, start_time, end_time").range(from, to)),
+          fetchAllRows<ShiftAssignmentRow>((from, to) => supabase.from("shift_assignments").select("employee_id, shift_id, start_date, end_date").range(from, to)),
+        ]);
+        if (!cancelled) { setShiftRows(shifts); setShiftAssignments(assigns); }
+      } catch {
+        /* ไม่มีข้อมูลกะ — ใช้การจัดวันตามปฏิทินแบบเดิม */
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [open]);
 
   const pinToEmployee = useMemo(() => {
     const map = new Map<string, string>();
@@ -225,31 +247,44 @@ export const FaceScanFileImportDialog = ({
     };
   }, [rows, effectivePinToEmployee]);
 
-  const dailyRecords = useMemo<DailyRecord[]>(() => {
-    const groups = new Map<string, ParsedRow[]>();
+  // รวมสแกนเป็นรายวัน: กรองสแกนซ้ำ (ภายใน 2 นาที) + ผูกคู่เข้า-ออกของกะข้ามเที่ยงคืนตามกะของพนักงาน
+  const processed = useMemo(() => {
+    const shiftText = new Map(employees.map((e) => [e.id, e.shift || ""]));
+    const shiftOf = buildShiftResolver(shiftRows, shiftAssignments, shiftText);
+
+    const perEmployee = new Map<string, ParsedRow[]>();
     for (const r of rows) {
-      if (!effectivePinToEmployee.has(r.pin)) continue;
-      const key = `${effectivePinToEmployee.get(r.pin)}|${r.date}`;
-      const list = groups.get(key) || [];
+      const empId = effectivePinToEmployee.get(r.pin);
+      if (!empId) continue;
+      const list = perEmployee.get(empId) || [];
       list.push(r);
-      groups.set(key, list);
+      perEmployee.set(empId, list);
     }
 
     const records: DailyRecord[] = [];
-    for (const [key, list] of groups.entries()) {
-      list.sort((a, b) => a.time.localeCompare(b.time));
-      const [employeeId, date] = key.split("|");
-      records.push({
-        employeeId,
-        date,
-        checkIn: list[0].time,
-        checkOut: list.length > 1 ? list[list.length - 1].time : "-",
-        serialNumber: list[0].serialNumber,
-        rawName: list[0].name,
-      });
+    let dupRemoved = 0;
+    let overnightPaired = 0;
+    for (const [employeeId, list] of perEmployee.entries()) {
+      const { kept, removed } = dedupePunches(list.map((r) => ({ date: r.date, time: r.time })));
+      dupRemoved += removed;
+      const paired = pairPunches(kept, (date) => shiftOf(employeeId, date));
+      overnightPaired += paired.overnightPaired;
+      const first = list[0];
+      for (const d of paired.days) {
+        records.push({
+          employeeId,
+          date: d.date,
+          checkIn: d.checkIn,
+          checkOut: d.checkOut,
+          serialNumber: first.serialNumber,
+          rawName: first.name,
+        });
+      }
     }
-    return records.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : a.employeeId.localeCompare(b.employeeId)));
-  }, [rows, effectivePinToEmployee]);
+    records.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : a.employeeId.localeCompare(b.employeeId)));
+    return { records, dupRemoved, overnightPaired };
+  }, [rows, effectivePinToEmployee, employees, shiftRows, shiftAssignments]);
+  const dailyRecords = processed.records;
 
   const sampleUnmatched = useMemo(() => {
     const map = new Map<string, string>();
@@ -323,7 +358,8 @@ export const FaceScanFileImportDialog = ({
         if (hasExisting && overwrite) {
           const exIn = existing.check_in && existing.check_in !== "-" ? existing.check_in : null;
           const exOut = existing.check_out && existing.check_out !== "-" ? existing.check_out : null;
-          if (exIn && exIn < checkIn) checkIn = exIn;
+          if (checkIn === "-") checkIn = exIn || "-"; // กะข้ามคืนที่มีแต่สแกนออก: คงเวลาเข้าเดิม
+          else if (exIn && exIn < checkIn) checkIn = exIn;
           if (checkOut === "-") checkOut = exOut || "-";
           else if (exOut && exOut > checkOut) checkOut = exOut;
         }
@@ -462,6 +498,12 @@ export const FaceScanFileImportDialog = ({
                   <Badge variant="outline" className="font-mono">
                     SN: {preview.serialNumber}
                   </Badge>
+                )}
+                {processed.dupRemoved > 0 && (
+                  <Badge variant="outline">กรองสแกนซ้ำ {processed.dupRemoved} ครั้ง</Badge>
+                )}
+                {processed.overnightPaired > 0 && (
+                  <Badge variant="outline">ผูกคู่กะข้ามเที่ยงคืน {processed.overnightPaired} วัน</Badge>
                 )}
               </div>
 
