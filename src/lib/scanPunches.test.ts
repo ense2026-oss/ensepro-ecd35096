@@ -119,3 +119,47 @@ describe("buildShiftResolver", () => {
     expect(r("e5", "2026-10-01")).toBeNull();
   });
 });
+
+import { parseReportRows, resolveSingleScan } from "./scanPunches";
+
+describe("parseReportRows", () => {
+  const hdr = ["รหัสที่เครื่อง", "ชื่อ-นามสกุล", "วันที่", "เข้า", "ออก"];
+  it("อ่านตามหัวคอลัมน์ แปลงรหัส/วันที่/เวลา", () => {
+    const rows = parseReportRows([
+      hdr,
+      ["1/1", "อัณณ์ชญา", "03-10-2026", "", "17:53"],
+      ["2/2", "อิทธิพล", "04-10-2026", "8:14", "16:37"],
+      ["", "", "", "", ""],
+    ]);
+    expect(rows).toEqual([
+      { pin: "1", name: "อัณณ์ชญา", date: "2026-10-03", checkIn: "", checkOut: "17:53" },
+      { pin: "2", name: "อิทธิพล", date: "2026-10-04", checkIn: "08:14", checkOut: "16:37" },
+    ]);
+  });
+  it("ไฟล์รายงานเต็ม (คอลัมน์เยอะ/ลำดับต่าง) อ่านได้เหมือนกัน", () => {
+    const rows = parseReportRows([
+      ["ลำดับ", "รหัสที่เครื่อง", "ชื่อ-นามสกุล", "แผนก", "วันที่", "สถานะ", "เข้า", "ออก"],
+      ["1", "9/9", "ทดสอบ", "x", "01-10-2026", "วันทำงาน", "07:01", "16:30"],
+    ]);
+    expect(rows).toEqual([{ pin: "9", name: "ทดสอบ", date: "2026-10-01", checkIn: "07:01", checkOut: "16:30" }]);
+  });
+  it("หัวคอลัมน์ไม่ครบ = null", () => {
+    expect(parseReportRows([["a", "b"], ["1", "2"]])).toBeNull();
+  });
+});
+
+describe("resolveSingleScan", () => {
+  it("ใช้จุดกึ่งกลางกะ", () => {
+    expect(resolveSingleScan("08:10", { start: 480, end: 1020 })).toBe("in");
+    expect(resolveSingleScan("17:20", { start: 480, end: 1020 })).toBe("out");
+    expect(resolveSingleScan("06:28", { start: 420, end: 960 })).toBe("in");
+  });
+  it("กะข้ามคืน", () => {
+    expect(resolveSingleScan("18:05", { start: 1080, end: 120 })).toBe("in");
+    expect(resolveSingleScan("01:50", { start: 1080, end: 120 })).toBe("out");
+  });
+  it("ไม่รู้กะ: ก่อนเที่ยง = เข้า", () => {
+    expect(resolveSingleScan("09:00", null)).toBe("in");
+    expect(resolveSingleScan("18:00", null)).toBe("out");
+  });
+});

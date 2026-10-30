@@ -11,7 +11,7 @@ import { toast } from "sonner";
 import { useEmployees } from "@/contexts/EmployeeContext";
 import SearchableSelect from "@/components/ui/searchable-select";
 import { fetchAllRows } from "@/lib/fetchAll";
-import { dedupePunches, pairPunches, buildShiftResolver, type ShiftRow, type ShiftAssignmentRow } from "@/lib/scanPunches";
+import { dedupePunches, pairPunches, buildShiftResolver, parseReportRows, resolveSingleScan, type ShiftRow, type ShiftAssignmentRow, type ReportDayRow } from "@/lib/scanPunches";
 
 interface FaceScanFileImportDialogProps {
   open: boolean;
@@ -60,6 +60,8 @@ export const FaceScanFileImportDialog = ({
   const [result, setResult] = useState({ inserted: 0, updated: 0, skipped: 0, linked: 0, unmatched: 0 });
   const [processing, setProcessing] = useState(false);
   // กะของพนักงาน — ใช้ผูกคู่เข้า-ออกของกะข้ามเที่ยงคืน (โหลดตอนเปิดหน้าต่าง ถ้าโหลดไม่ได้ก็ทำงานแบบตามวันปฏิทินเหมือนเดิม)
+  // ไฟล์ Excel รายงานเข้า-ออก: มีเวลาเข้า/ออกรายวันอยู่แล้ว (ไม่ใช่รายการสแกนดิบ) จึงไม่ต้องจับคู่จากลำดับเวลา
+  const [dayRows, setDayRows] = useState<ReportDayRow[]>([]);
   const [shiftRows, setShiftRows] = useState<ShiftRow[]>([]);
   const [shiftAssignments, setShiftAssignments] = useState<ShiftAssignmentRow[]>([]);
 
@@ -205,21 +207,45 @@ export const FaceScanFileImportDialog = ({
         });
       }
 
+      setDayRows([]);
       setRows(parsed);
       setStep("preview");
     };
     reader.readAsText(selectedFile, "UTF-8");
   }, []);
 
+  const parseExcelFile = useCallback(async (selectedFile: File) => {
+    try {
+      const XLSX = await import("xlsx");
+      const wb = XLSX.read(await selectedFile.arrayBuffer(), { type: "array" });
+      const sheet = wb.Sheets[wb.SheetNames[0]];
+      const aoa = XLSX.utils.sheet_to_json<unknown[]>(sheet, { header: 1, defval: "", raw: false });
+      const days = parseReportRows(aoa);
+      if (!days) {
+        toast.error("ไม่พบหัวคอลัมน์ รหัสที่เครื่อง / วันที่ / เข้า / ออก ในไฟล์ Excel");
+        return;
+      }
+      const used = days.filter((d) => d.checkIn || d.checkOut);
+      setDayRows(used);
+      setRows(used.map((d) => ({ pin: d.pin, name: d.name, serialNumber: "Excel", date: d.date, time: d.checkIn || d.checkOut })));
+      setStep("preview");
+    } catch {
+      toast.error("อ่านไฟล์ Excel ไม่สำเร็จ");
+    }
+  }, []);
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = e.target.files?.[0];
     if (!selected) return;
-    if (!selected.name.toLowerCase().endsWith(".txt")) {
-      toast.error("รองรับเฉพาะไฟล์ .txt ที่ export จากเครื่องสแกน");
+    const lower = selected.name.toLowerCase();
+    const isExcel = lower.endsWith(".xlsx") || lower.endsWith(".xls");
+    if (!isExcel && !lower.endsWith(".txt")) {
+      toast.error("รองรับไฟล์ .txt (UDISKLOG) หรือ .xlsx รายงานเข้า-ออก");
       return;
     }
     setFile(selected);
-    parseFile(selected);
+    if (isExcel) void parseExcelFile(selected);
+    else parseFile(selected);
   };
 
   const preview = useMemo<PreviewStat>(() => {
@@ -264,6 +290,36 @@ export const FaceScanFileImportDialog = ({
     const records: DailyRecord[] = [];
     let dupRemoved = 0;
     let overnightPaired = 0;
+    let singleResolved = 0;
+
+    if (dayRows.length > 0) {
+      // รายงาน Excel: เวลาเข้า/ออกรายวันมาครบแล้ว — เข้า=ออก (สแกนครั้งเดียว) ตัดสินตามกะ, ออก<เข้า คือกะข้ามเที่ยงคืน
+      const merged = new Map<string, DailyRecord>();
+      for (const d of dayRows) {
+        const employeeId = effectivePinToEmployee.get(d.pin);
+        if (!employeeId) continue;
+        let inT = d.checkIn;
+        let outT = d.checkOut;
+        if (inT && outT && inT === outT) {
+          singleResolved++;
+          if (resolveSingleScan(inT, shiftOf(employeeId, d.date)) === "in") outT = "";
+          else inT = "";
+        }
+        if (inT && outT && outT < inT) overnightPaired++;
+        const key = `${employeeId}|${d.date}`;
+        const prev = merged.get(key);
+        if (prev) {
+          if (inT && (prev.checkIn === "-" || inT < prev.checkIn)) prev.checkIn = inT;
+          if (outT && (prev.checkOut === "-" || outT > prev.checkOut)) prev.checkOut = outT;
+        } else {
+          merged.set(key, { employeeId, date: d.date, checkIn: inT || "-", checkOut: outT || "-", serialNumber: "Excel", rawName: d.name });
+        }
+      }
+      records.push(...merged.values());
+      records.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : a.employeeId.localeCompare(b.employeeId)));
+      return { records, dupRemoved, overnightPaired, singleResolved };
+    }
+
     for (const [employeeId, list] of perEmployee.entries()) {
       const { kept, removed } = dedupePunches(list.map((r) => ({ date: r.date, time: r.time })));
       dupRemoved += removed;
@@ -282,8 +338,8 @@ export const FaceScanFileImportDialog = ({
       }
     }
     records.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : a.employeeId.localeCompare(b.employeeId)));
-    return { records, dupRemoved, overnightPaired };
-  }, [rows, effectivePinToEmployee, employees, shiftRows, shiftAssignments]);
+    return { records, dupRemoved, overnightPaired, singleResolved };
+  }, [rows, dayRows, effectivePinToEmployee, employees, shiftRows, shiftAssignments]);
   const dailyRecords = processed.records;
 
   const sampleUnmatched = useMemo(() => {
@@ -436,6 +492,7 @@ export const FaceScanFileImportDialog = ({
   const reset = () => {
     setFile(null);
     setRows([]);
+    setDayRows([]);
     setStep("upload");
     setOverwrite(true);
     setManualLinks({});
@@ -465,15 +522,15 @@ export const FaceScanFileImportDialog = ({
                 <div className="mx-auto w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-3">
                   <Upload className="w-6 h-6 text-primary" />
                 </div>
-                <h3 className="font-medium mb-1">เลือกไฟล์ .txt</h3>
+                <h3 className="font-medium mb-1">เลือกไฟล์ .txt หรือ .xlsx</h3>
                 <p className="text-sm text-muted-foreground mb-4">
-                  ไฟล์ต้องเป็นรูปแบบ UDISKLOG ที่ export จากเครื่องสแกน (คั่นด้วย Tab)
+                  .txt = UDISKLOG ที่ export จากเครื่องสแกน (คั่นด้วย Tab) · .xlsx = รายงานเข้า-ออกที่มีคอลัมน์ รหัสที่เครื่อง, วันที่, เข้า, ออก
                 </p>
                 <label className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold cursor-pointer"
                   style={{ background: "hsl(var(--primary))", color: "hsl(var(--primary-foreground))" }}>
                   <FileText className="w-4 h-4" />
                   เลือกไฟล์
-                  <input type="file" accept=".txt" className="hidden" onChange={handleFileChange} />
+                  <input type="file" accept=".txt,.xlsx,.xls" className="hidden" onChange={handleFileChange} />
                 </label>
               </Card>
             </div>
@@ -501,6 +558,9 @@ export const FaceScanFileImportDialog = ({
                 )}
                 {processed.dupRemoved > 0 && (
                   <Badge variant="outline">กรองสแกนซ้ำ {processed.dupRemoved} ครั้ง</Badge>
+                )}
+                {processed.singleResolved > 0 && (
+                  <Badge variant="outline">สแกนครั้งเดียว {processed.singleResolved} วัน (ตัดสินเข้า/ออกตามกะ)</Badge>
                 )}
                 {processed.overnightPaired > 0 && (
                   <Badge variant="outline">ผูกคู่กะข้ามเที่ยงคืน {processed.overnightPaired} วัน</Badge>

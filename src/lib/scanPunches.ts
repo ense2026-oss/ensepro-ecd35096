@@ -154,3 +154,78 @@ export function buildShiftResolver(
     return fromText(employeeShiftText.get(employeeId) || "");
   };
 }
+
+/* ───────────── รายงานเข้า-ออกแบบ Excel (.xlsx) ─────────────
+ * คอลัมน์ที่ใช้: "รหัสที่เครื่อง" (เช่น 1/1), "ชื่อ-นามสกุล", "วันที่" (dd-MM-yyyy ค.ศ.), "เข้า", "ออก"
+ * อ่านตามหัวคอลัมน์ ไม่ใช่ตามลำดับ จึงใช้ได้ทั้งไฟล์ย่อ 5 คอลัมน์และไฟล์รายงานเต็ม
+ */
+export interface ReportDayRow {
+  pin: string;
+  name: string;
+  date: string; // yyyy-MM-dd
+  checkIn: string; // "" ถ้าไม่มี
+  checkOut: string; // "" ถ้าไม่มี
+}
+
+const REPORT_HEADERS = { pin: "รหัสที่เครื่อง", name: "ชื่อ-นามสกุล", date: "วันที่", checkIn: "เข้า", checkOut: "ออก" } as const;
+
+const cleanTime = (v: unknown): string => {
+  const t = String(v ?? "").trim();
+  const m = t.match(/^(\d{1,2}):(\d{2})/);
+  return m ? `${m[1].padStart(2, "0")}:${m[2]}` : "";
+};
+
+const toISOFromReportDate = (v: unknown): string => {
+  const t = String(v ?? "").trim();
+  let m = t.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/); // dd-MM-yyyy
+  if (m) {
+    let y = parseInt(m[3], 10);
+    if (y > 2400) y -= 543;
+    return `${y}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}`;
+  }
+  m = t.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$/); // yyyy-MM-dd
+  return m ? `${m[1]}-${m[2].padStart(2, "0")}-${m[3].padStart(2, "0")}` : "";
+};
+
+/** แปลงตาราง (แถวแรก = หัวคอลัมน์) เป็นรายวัน; คืน null ถ้าหัวคอลัมน์ไม่ครบ */
+export function parseReportRows(aoa: unknown[][]): ReportDayRow[] | null {
+  const headerIdx = aoa.findIndex((r) => r.some((c) => String(c ?? "").trim() === REPORT_HEADERS.pin));
+  if (headerIdx < 0) return null;
+  const header = aoa[headerIdx].map((c) => String(c ?? "").trim());
+  const col = {
+    pin: header.indexOf(REPORT_HEADERS.pin),
+    name: header.indexOf(REPORT_HEADERS.name),
+    date: header.indexOf(REPORT_HEADERS.date),
+    checkIn: header.indexOf(REPORT_HEADERS.checkIn),
+    checkOut: header.indexOf(REPORT_HEADERS.checkOut),
+  };
+  if (col.pin < 0 || col.date < 0 || col.checkIn < 0 || col.checkOut < 0) return null;
+
+  const out: ReportDayRow[] = [];
+  for (const r of aoa.slice(headerIdx + 1)) {
+    const pin = String(r[col.pin] ?? "").trim().split("/")[0].trim();
+    const date = toISOFromReportDate(r[col.date]);
+    if (!pin || !date) continue;
+    out.push({
+      pin,
+      name: col.name >= 0 ? String(r[col.name] ?? "").trim() : "",
+      date,
+      checkIn: cleanTime(r[col.checkIn]),
+      checkOut: cleanTime(r[col.checkOut]),
+    });
+  }
+  return out;
+}
+
+/**
+ * ตัดสินแถวที่ "เข้า = ออก" (สแกนครั้งเดียว): ถ้ารู้กะ ใช้จุดกึ่งกลางกะแยก (ก่อนกึ่งกลาง = เข้า, หลังกึ่งกลาง = ออก)
+ * ไม่รู้กะใช้ 12:00 เป็นเกณฑ์
+ */
+export function resolveSingleScan(time: string, shift: ShiftWindow | null): "in" | "out" {
+  const t = toMinutes(time);
+  if (!shift) return t < 12 * 60 ? "in" : "out";
+  const len = shift.end > shift.start ? shift.end - shift.start : shift.end + 1440 - shift.start;
+  // ระยะจากเวลาเริ่มกะ (นาที) ในช่วง (-720, 720]; มาก่อนเริ่มกะเป็นค่าลบ = เข้า
+  const d = ((t - shift.start + 720 + 1440) % 1440) - 720;
+  return d <= len / 2 ? "in" : "out";
+}
