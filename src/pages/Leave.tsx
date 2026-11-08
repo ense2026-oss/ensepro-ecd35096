@@ -193,15 +193,22 @@ const Leave = () => {
     () => new Map(allEmployees.map((e) => [e.id, `${e.prefix || ""}${e.firstName} ${e.lastName}`.trim()])),
     [allEmployees],
   );
+  // รูปพนักงานโหลดทีหลังใน EmployeeContext (เซ็นลิงก์จาก Storage) — อ่านสดตอนแสดงผล ไม่ฝังไว้ในผล query
+  // (ไม่งั้นรายการที่แคชไว้ก่อนรูปมาจะไม่มีรูปไปตลอด)
+  const photoByEmployeeId = React.useMemo(
+    () => new Map(allEmployees.map((e) => [e.id, e.photoUrl])),
+    [allEmployees],
+  );
   const recordsWithApprovers = React.useMemo(
     () =>
       pagedFiltered.map((r) => ({
         ...r,
+        photoUrl: photoByEmployeeId.get(r.employeeId || "") || r.photoUrl,
         approverNames: approversOf(r.employeeId || "")
           .map((id) => employeeNameById.get(id))
           .filter((n): n is string => !!n),
       })),
-    [pagedFiltered, approversOf, employeeNameById],
+    [pagedFiltered, approversOf, employeeNameById, photoByEmployeeId],
   );
 
   // Upload file to storage
