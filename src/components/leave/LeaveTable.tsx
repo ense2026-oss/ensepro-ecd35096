@@ -73,76 +73,63 @@ const LeaveTable = ({ records, onApprove, onReject, hideActions = false, canAppr
 
   return (
     <div className="card-base overflow-hidden">
-      {/* Mobile: 2-column card grid (same style as the OT request page) */}
-      <div className="md:hidden p-3">
+      {/* Mobile: ตารางกะทัดรัด (ลำดับ | ชื่อ | ประเภท | จำนวนวัน | จัดการ) — อนุมัติ/ไม่อนุมัติทำในหน้าต่างรายละเอียด (ปุ่มตา) */}
+      <div className="md:hidden">
         {records.length === 0 ? (
           <div className="text-center py-8 text-sm text-muted-foreground">ไม่พบข้อมูล</div>
         ) : (
-          <div className="grid grid-cols-2 gap-3">
-            {records.map((row, idx) => {
-              const conf = statusConf[row.status] || statusConf.pending;
-              const isOwnPending = row.employeeId === currentEmployeeId && row.status === "pending";
-              const num = descendingTotal != null ? descendingTotal - startIndex - idx : startIndex + idx + 1;
-              return (
-                <div key={row.id} className="rounded-xl border border-border p-3 flex flex-col gap-2">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span className="text-[10px] text-muted-foreground tabular-nums shrink-0">#{num}</span>
-                    <EmployeeAvatar photoUrl={row.photoUrl} firstName={row.name} size="sm" rounded="lg" />
-                    <div className="min-w-0">
-                      <p className="text-xs font-semibold truncate" title={row.name}>{row.name}</p>
-                      {row.dept && <p className="text-[10px] text-muted-foreground truncate">{row.dept}</p>}
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-[11px]">
-                    <span className="text-muted-foreground">ประเภท</span>
-                    <span className="font-medium text-right truncate">{row.type}</span>
-                    <span className="text-muted-foreground">วันที่</span>
-                    <span className="text-right">{row.from} – {row.to}</span>
-                    <span className="text-muted-foreground">จำนวนวัน</span>
-                    <span className="font-bold text-right" style={{ color: "#FF870F" }}>{row.days} วัน</span>
-                  </div>
-                  {row.reason && <p className="text-[11px] text-muted-foreground line-clamp-2">เหตุผล: {row.reason}</p>}
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full" style={{ background: conf.bg, color: conf.color }}>
-                      {conf.label}{row.status === "pending" && (row.totalTiers || 1) > 1 ? ` (${row.approvedTiers || 0}/${row.totalTiers})` : ""}
-                    </span>
-                    {row.file && row.fileUrl ? (
-                      <button onClick={() => handleViewFile(row.fileUrl!)} className="inline-flex items-center gap-1 text-[10px] font-medium" style={{ color: "#FF870F" }} title="ดูไฟล์">
-                        <FileText className="w-3 h-3" /> ไฟล์
-                      </button>
-                    ) : row.file ? (
-                      <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground" title="มีไฟล์"><FileText className="w-3 h-3" /></span>
-                    ) : null}
-                  </div>
-                  <div className="flex items-center justify-center gap-1 pt-1 border-t border-border">
-                    <button onClick={() => setDetail(row)} className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground" title="ดูรายละเอียด">
-                      <Eye className="w-4 h-4" />
-                    </button>
-                    {rowCanApprove(row) && (
-                      <>
-                        <button onClick={() => onApprove(row.id)} className="p-1.5 rounded-lg hover:bg-muted transition-colors" style={{ color: "hsl(90 100% 30%)" }} title="อนุมัติ">
-                          <CheckCircle className="w-4 h-4" />
+          <table className="w-full table-fixed">
+            <colgroup>
+              <col style={{ width: "10%" }} />
+              <col style={{ width: "32%" }} />
+              <col style={{ width: "19%" }} />
+              <col style={{ width: "14%" }} />
+              <col style={{ width: "25%" }} />
+            </colgroup>
+            <thead>
+              <tr className="border-b" style={{ borderColor: "hsl(var(--border))" }}>
+                {["ลำดับ", "ชื่อ", "ประเภท", "จำนวนวัน", "จัดการ"].map((h, i) => (
+                  <th key={h} className={`py-2 px-1 text-[10px] font-semibold text-muted-foreground ${i === 0 || i === 4 ? "text-center" : "text-left"}`}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {records.map((row, idx) => {
+                const isOwnPending = row.employeeId === currentEmployeeId && row.status === "pending";
+                const num = descendingTotal != null ? descendingTotal - startIndex - idx : startIndex + idx + 1;
+                return (
+                  <tr key={row.id} className="border-b" style={{ borderColor: "hsl(var(--border))" }}>
+                    <td className="px-1 py-2 text-center text-[11px] text-muted-foreground tabular-nums">{num}</td>
+                    <td className="px-1 py-2">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <EmployeeAvatar photoUrl={row.photoUrl} firstName={row.name} size="sm" rounded="lg" />
+                        <span className="text-[11px] font-semibold leading-tight line-clamp-2 break-words min-w-0">{row.name}</span>
+                      </div>
+                    </td>
+                    <td className="px-1 py-2 text-[11px] leading-tight break-words">{row.type}</td>
+                    <td className="px-1 py-2 text-[11px] font-bold whitespace-nowrap" style={{ color: "#FF870F" }}>{row.days} วัน</td>
+                    <td className="px-1 py-2">
+                      <div className="flex items-center justify-center gap-0.5">
+                        <button onClick={() => setDetail(row)} className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground" title="ดูรายละเอียด" aria-label="ดูรายละเอียด">
+                          <Eye className="w-4 h-4" />
                         </button>
-                        <button onClick={() => onReject(row.id)} className="p-1.5 rounded-lg hover:bg-muted transition-colors text-destructive" title="ไม่อนุมัติ">
-                          <XCircle className="w-4 h-4" />
-                        </button>
-                      </>
-                    )}
-                    {isOwnPending && onEdit && (
-                      <button onClick={() => onEdit(row)} className="p-1.5 rounded-lg hover:bg-muted transition-colors text-primary" title="แก้ไข">
-                        <Pencil className="w-4 h-4" />
-                      </button>
-                    )}
-                    {(isOwnPending || canDeleteAny) && onDelete && (
-                      <button onClick={() => onDelete(row.id)} className="p-1.5 rounded-lg hover:bg-muted transition-colors text-destructive" title="ลบ">
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+                        {isOwnPending && onEdit && (
+                          <button onClick={() => onEdit(row)} className="p-1.5 rounded-lg hover:bg-muted transition-colors text-primary" title="แก้ไข" aria-label="แก้ไข">
+                            <Pencil className="w-4 h-4" />
+                          </button>
+                        )}
+                        {(isOwnPending || canDeleteAny) && onDelete && (
+                          <button onClick={() => onDelete(row.id)} className="p-1.5 rounded-lg hover:bg-muted transition-colors text-destructive" title="ลบ" aria-label="ลบ">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         )}
       </div>
 
