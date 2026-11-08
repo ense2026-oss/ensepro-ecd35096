@@ -73,28 +73,29 @@ const LeaveTable = ({ records, onApprove, onReject, hideActions = false, canAppr
 
   return (
     <div className="card-base overflow-hidden">
-      {/* Mobile: ตารางกะทัดรัด (ลำดับ | ชื่อ | ประเภท | จำนวนวัน | จัดการ) — อนุมัติ/ไม่อนุมัติทำในหน้าต่างรายละเอียด (ปุ่มตา) */}
+      {/* Mobile: ตารางกะทัดรัด 2 บรรทัดต่อแถว (ลำดับ | ชื่อ | ประเภท+จำนวนวัน | สถานะ+เหตุผล | จัดการ) — อนุมัติ/ไม่อนุมัติทำในหน้าต่างรายละเอียด (ปุ่มตา) */}
       <div className="md:hidden">
         {records.length === 0 ? (
           <div className="text-center py-8 text-sm text-muted-foreground">ไม่พบข้อมูล</div>
         ) : (
           <table className="w-full table-fixed">
             <colgroup>
-              <col style={{ width: "10%" }} />
-              <col style={{ width: "32%" }} />
-              <col style={{ width: "19%" }} />
-              <col style={{ width: "14%" }} />
+              <col style={{ width: "8%" }} />
               <col style={{ width: "25%" }} />
+              <col style={{ width: "19%" }} />
+              <col style={{ width: "28%" }} />
+              <col style={{ width: "20%" }} />
             </colgroup>
             <thead>
               <tr className="border-b" style={{ borderColor: "hsl(var(--border))" }}>
-                {["ลำดับ", "ชื่อ", "ประเภท", "จำนวนวัน", "จัดการ"].map((h, i) => (
+                {["ลำดับ", "ชื่อ", "ประเภท / วัน", "สถานะ / เหตุผล", "จัดการ"].map((h, i) => (
                   <th key={h} className={`py-2 px-1 text-[10px] font-semibold text-muted-foreground ${i === 0 || i === 4 ? "text-center" : "text-left"}`}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {records.map((row, idx) => {
+                const conf = statusConf[row.status] || statusConf.pending;
                 const isOwnPending = row.employeeId === currentEmployeeId && row.status === "pending";
                 const num = descendingTotal != null ? descendingTotal - startIndex - idx : startIndex + idx + 1;
                 return (
@@ -106,10 +107,18 @@ const LeaveTable = ({ records, onApprove, onReject, hideActions = false, canAppr
                         <span className="text-[11px] font-semibold leading-tight line-clamp-2 break-words min-w-0">{row.name}</span>
                       </div>
                     </td>
-                    <td className="px-1 py-2 text-[11px] leading-tight break-words">{row.type}</td>
-                    <td className="px-1 py-2 text-[11px] font-bold whitespace-nowrap" style={{ color: "#FF870F" }}>{row.days} วัน</td>
+                    <td className="px-1 py-2 leading-tight">
+                      <p className="text-[11px] font-medium break-words">{row.type}</p>
+                      <p className="mt-1 text-[11px] font-bold whitespace-nowrap" style={{ color: "#FF870F" }}>{row.days} วัน</p>
+                    </td>
+                    <td className="px-1 py-2 leading-tight min-w-0">
+                      <span className="inline-block max-w-full truncate align-top text-[10px] font-semibold px-1.5 py-0.5 rounded-full" style={{ background: conf.bg, color: conf.color }}>
+                        {conf.label}{row.status === "pending" && (row.totalTiers || 1) > 1 ? ` (${row.approvedTiers || 0}/${row.totalTiers})` : ""}
+                      </span>
+                      <p className="mt-1 text-[10px] text-muted-foreground truncate" title={row.reason}>{row.reason || "-"}</p>
+                    </td>
                     <td className="px-1 py-2">
-                      <div className="flex items-center justify-center gap-0.5">
+                      <div className="flex flex-wrap items-center justify-center gap-0.5">
                         <button onClick={() => setDetail(row)} className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground" title="ดูรายละเอียด" aria-label="ดูรายละเอียด">
                           <Eye className="w-4 h-4" />
                         </button>
